@@ -8,6 +8,7 @@ package org.keymaerax.btactics
 import org.keymaerax.bellerophon._
 import org.keymaerax.btactics.ArithmeticSimplification._
 import org.keymaerax.btactics.DebuggingTactics.{print, printIndexed}
+import org.keymaerax.btactics.DifferentialEquationCalculus._
 import org.keymaerax.btactics.SequentCalculus._
 import org.keymaerax.btactics.TacticFactory._
 import org.keymaerax.btactics.TactixLibrary._

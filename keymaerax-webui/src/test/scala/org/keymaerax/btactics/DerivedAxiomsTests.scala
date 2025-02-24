@@ -463,12 +463,13 @@ class DerivedAxiomsTests extends TacticTestBase(registerAxTactics = None) {
 
       TactixLibrary.proveBy(
         dgZeroEquilibrium,
-        SequentCalculus
-          .implyR(1) & dG("y' = ( (-c*x^(n-1)) / 2)*y".asDifferentialProgram, Some("x*y^2=0&y>0".asFormula))(1) &
+        SequentCalculus.implyR(1) & DifferentialEquationCalculus
+          .dG("y' = ( (-c*x^(n-1)) / 2)*y".asDifferentialProgram, Some("x*y^2=0&y>0".asFormula))(1) &
           HilbertCalculus.boxAnd(1, 0 :: Nil) &
           DifferentialTactics.diffInd()(1, 0 :: 0 :: Nil) &
-          dG("z' = (c*x^(n-1)/4) * z".asDifferentialProgram, Some("y*z^2 = 1".asFormula))(1, 0 :: 1 :: Nil) &
-          dI()(1, 0 :: 1 :: 0 :: Nil) & QE,
+          DifferentialEquationCalculus
+            .dG("z' = (c*x^(n-1)/4) * z".asDifferentialProgram, Some("y*z^2 = 1".asFormula))(1, 0 :: 1 :: Nil) &
+          DifferentialEquationCalculus.dI()(1, 0 :: 1 :: 0 :: Nil) & QE,
       ) shouldBe Symbol("proved")
     },
   )

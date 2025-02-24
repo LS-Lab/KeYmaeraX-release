@@ -190,20 +190,23 @@ class ImplicitFunctionTests extends TacticTestBase {
   }
 
   it should "work with DI (1)" in withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
-    withMathematica { _ => proveBy("x =1 ==> [{x' = exp(x)}] x > 0".asSequent, dI()(1)) shouldBe Symbol("proved") }
+    withMathematica { _ =>
+      proveBy("x =1 ==> [{x' = exp(x)}] x > 0".asSequent, DifferentialEquationCalculus.dI()(1)) shouldBe
+        Symbol("proved")
+    }
   }
 
   it should "work with DI (2)" in withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
     withMathematica { _ =>
       val s = "x>=0&y>=0&z>=0 ==> [{x' = exp(y), y' = exp(z), z'=1}] x+y+z>=0".asSequent
-      proveBy(s, dI()(1)) shouldBe Symbol("proved")
+      proveBy(s, DifferentialEquationCalculus.dI()(1)) shouldBe Symbol("proved")
     }
   }
 
   it should "work with DI (3)" in withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
     withMathematica { _ =>
       val s = "x=5 ==> [{x' = sin(x) + 1}] x>=0".asSequent
-      proveBy(s, dI()(1)) shouldBe Symbol("proved")
+      proveBy(s, DifferentialEquationCalculus.dI()(1)) shouldBe Symbol("proved")
     }
   }
 

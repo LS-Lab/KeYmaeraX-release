@@ -44,7 +44,7 @@ class ApproximatorTests extends TacticTestBase {
               |c<=1+-t^2/2+t^4/24+-t^6/720+t^8/40320 &
               |s<=t+-t^3/6+t^5/120+-t^7/5040+t^9/362880)""".stripMargin.asFormula
     val t = SequentCalculus.implyR(1) & Approximator.circularApproximate("s".asVariable, "c".asVariable, Number(5))(1) &
-      TactixLibrary.dW(1) & TactixLibrary.QE
+      DifferentialEquationCalculus.dW(1) & TactixLibrary.QE
     proveBy(f, t) shouldBe Symbol("proved")
   })
 
@@ -52,20 +52,20 @@ class ApproximatorTests extends TacticTestBase {
     val f = "c=1 & s=0 & t=0->[blah := something;][{s'=c,c'=-s,t'=1}](c>=1+-t^2/2+t^4/24+-t^6/720)".asFormula
     val t = SequentCalculus
       .implyR(1) & Approximator.circularApproximate("s".asVariable, "c".asVariable, Number(5))(1, 1 :: Nil) &
-      TactixLibrary.dW(1, 1 :: Nil) & HilbertCalculus.assignb(1) &
+      DifferentialEquationCalculus.dW(1, 1 :: Nil) & HilbertCalculus.assignb(1) &
       TactixLibrary.QE // @todo the tactic that does this successively.
     proveBy(f, t) shouldBe Symbol("proved")
   })
 
   it should "prove initial bounds for cos" in withMathematica(_ => {
     val f = "c=1&s=0&t=0 -> [{s'=c,c'=-s,t'=1 & s^2 + c^2 = 1}]c <= 1".asFormula
-    val t = SequentCalculus.implyR(1) & TactixLibrary.dW(1) & TactixLibrary.QE
+    val t = SequentCalculus.implyR(1) & DifferentialEquationCalculus.dW(1) & TactixLibrary.QE
     proveBy(f, t) shouldBe Symbol("proved")
   })
 
   it should "prove initial bounds for sin" in withMathematica(_ => {
     val f = "c=1&s=0&t=0 -> [{s'=c,c'=-s,t'=1&(true&s^2+c^2=1)&c<=1}]s<=t".asFormula
-    val t = SequentCalculus.implyR(1) & TactixLibrary.dI()(1) & TactixLibrary.QE
+    val t = SequentCalculus.implyR(1) & DifferentialEquationCalculus.dI()(1) & TactixLibrary.QE
     proveBy(f, t) shouldBe Symbol("proved")
   })
 
@@ -82,7 +82,7 @@ class ApproximatorTests extends TacticTestBase {
       "t=0 & e=1 -> [{e'=e,t'=1 & e >= 1}](e>=1+t+t^2/2+t^3/6+t^4/24+t^5/120+t^6/720+t^7/5040+t^8/40320+t^9/362880)"
         .asFormula
     val t = SequentCalculus.implyR(1) & Approximator.expApproximate("e".asVariable, Number(10))(1) &
-      TactixLibrary.dW(1) & TactixLibrary.QE
+      DifferentialEquationCalculus.dW(1) & TactixLibrary.QE
     val result = proveBy(f, t)
     result shouldBe Symbol("proved")
   })
@@ -97,7 +97,7 @@ class ApproximatorTests extends TacticTestBase {
     val f =
       "t=0 & e=1 -> [{e'=e,t'=1}](e>=1+t+t^2/2+t^3/6+t^4/24+t^5/120+t^6/720+t^7/5040+t^8/40320+t^9/362880)".asFormula
     val t = SequentCalculus.implyR(1) & Approximator.expApproximate("e".asVariable, Number(10))(1) &
-      TactixLibrary.dW(1) & TactixLibrary.QE
+      DifferentialEquationCalculus.dW(1) & TactixLibrary.QE
     proveBy(f, t) shouldBe Symbol("proved")
   })
 
@@ -105,7 +105,7 @@ class ApproximatorTests extends TacticTestBase {
     val f = "t=0 & e=1 -> [z:=0;][{e'=e,t'=1}](e>=1+t+t^2/2+t^3/6+t^4/24+t^5/120+t^6/720+t^7/5040+t^8/40320+t^9/362880)"
       .asFormula
     val t = SequentCalculus.implyR(1) & Approximator.expApproximate("e".asVariable, Number(10))(1) &
-      HilbertCalculus.assignb(1) & TactixLibrary.dW(1) & TactixLibrary.QE
+      HilbertCalculus.assignb(1) & DifferentialEquationCalculus.dW(1) & TactixLibrary.QE
     proveBy(f, t) shouldBe Symbol("proved")
   })
 
@@ -134,8 +134,8 @@ class ApproximatorTests extends TacticTestBase {
   "autoApproximate" should "approximate exp" taggedAs DeploymentTest in withMathematica(_ => {
     val f =
       "t=0 & e=1 -> [{e'=e,t'=1}](e>=1+t+t^2/2+t^3/6+t^4/24+t^5/120+t^6/720+t^7/5040+t^8/40320+t^9/362880)".asFormula
-    val t = SequentCalculus.implyR(1) & Approximator.autoApproximate(Number(10))(1) & TactixLibrary.dW(1) &
-      TactixLibrary.QE
+    val t = SequentCalculus.implyR(1) & Approximator.autoApproximate(Number(10))(1) &
+      DifferentialEquationCalculus.dW(1) & TactixLibrary.QE
     proveBy(f, t) shouldBe Symbol("proved")
   })
 
@@ -144,8 +144,8 @@ class ApproximatorTests extends TacticTestBase {
               |s>=t+-t^3/6+t^5/120+-t^7/5040 &
               |c<=1+-t^2/2+t^4/24+-t^6/720+t^8/40320 &
               |s<=t+-t^3/6+t^5/120+-t^7/5040+t^9/362880)""".stripMargin.asFormula
-    val t = SequentCalculus.implyR(1) & Approximator.autoApproximate(Number(5))(1) & TactixLibrary.dW(1) &
-      TactixLibrary.QE
+    val t = SequentCalculus.implyR(1) & Approximator.autoApproximate(Number(5))(1) &
+      DifferentialEquationCalculus.dW(1) & TactixLibrary.QE
     proveBy(f, t) shouldBe Symbol("proved")
 
   })
@@ -155,7 +155,7 @@ class ApproximatorTests extends TacticTestBase {
   "In-context proofs" should "prove cut in context using ceat" ignore withMathematica(_ => {
     val f = "[{x'=v,v'=a&1=1}](false)".asFormula
 
-    val fact = Approximator.dcInCtx(f, "1+1=2".asFormula, TactixLibrary.dI()(1))
+    val fact = Approximator.dcInCtx(f, "1+1=2".asFormula, DifferentialEquationCalculus.dI()(1))
 
     println(fact.prettyString)
 
@@ -167,7 +167,7 @@ class ApproximatorTests extends TacticTestBase {
   it should "prove cut in context using ceat with helper method" ignore withMathematica(_ => {
     val f = "[{x'=v,v'=a&1=1}](false)".asFormula
     val cut = "1+1=2".asFormula
-    val cutProof = TactixLibrary.dI()(1)
+    val cutProof = DifferentialEquationCalculus.dI()(1)
     proveBy(f, Approximator.extendEvDomAndProve(f, cut, cutProof)(1)).subgoals.length shouldBe 1
   })
 
@@ -176,10 +176,11 @@ class ApproximatorTests extends TacticTestBase {
     val cut = "1+1=2".asFormula
     println(proveBy(
       f,
-      TactixLibrary.dC(cut)(Position(1, 1 :: Nil)) <
+      DifferentialEquationCalculus.dC(cut)(Position(1, 1 :: Nil)) <
         (
           UnifyUSCalculus.nil,
-          TactixLibrary.dI()(Position(1, 1 :: Nil)) & (TactixLibrary.QE | (HilbertCalculus.G(1) & TactixLibrary.QE)),
+          DifferentialEquationCalculus.dI()(Position(1, 1 :: Nil)) &
+            (TactixLibrary.QE | (HilbertCalculus.G(1) & TactixLibrary.QE)),
         ),
     ))
   })

@@ -15,22 +15,6 @@ import scala.collection.immutable._
 import scala.reflect.runtime.universe
 
 /**
- * Differential Equation Calculus for differential dynamic logic.
- * @author
- *   Andre Platzer
- * @author
- *   Stefan Mitsch
- * @see
- *   [[HilbertCalculus]]
- */
-object DifferentialEquationCalculus extends TacticProvider with DifferentialEquationCalculus {
-
-  /** @inheritdoc */
-  override def getInfo: (Class[_], universe.Type) =
-    (DifferentialEquationCalculus.getClass, universe.typeOf[DifferentialEquationCalculus.type])
-}
-
-/**
  * Differential Equation Calculus for differential dynamic logic. Basic axioms for differential equations are in
  * [[HilbertCalculus]].
  *
@@ -62,7 +46,11 @@ object DifferentialEquationCalculus extends TacticProvider with DifferentialEqua
  * @todo
  *   \@Tactic only partially implemented so far
  */
-trait DifferentialEquationCalculus {
+object DifferentialEquationCalculus extends TacticProvider {
+
+  /** @inheritdoc */
+  override def getInfo: (Class[_], universe.Type) =
+    (DifferentialEquationCalculus.getClass, universe.typeOf[DifferentialEquationCalculus.type])
 
   /**
    * ***************************************************************** Differential Equation Proof Rules
@@ -382,7 +370,7 @@ trait DifferentialEquationCalculus {
     inputs = "y[y]:variable;;a(x):term;;b(x):term;;P[y]:option[formula]",
   )
   def dGold(y: Variable, t1: Term, t2: Term, p: Option[Formula]): DependentPositionWithAppliedInputTactic =
-    TactixLibrary.dG(AtomicODE(DifferentialSymbol(y), Plus(Times(t1, y), t2)), p)
+    dG(AtomicODE(DifferentialSymbol(y), Plus(Times(t1, y), t2)), p)
 
   // more DI/DC/DG variants
 

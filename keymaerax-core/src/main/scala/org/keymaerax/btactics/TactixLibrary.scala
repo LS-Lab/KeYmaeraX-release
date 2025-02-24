@@ -53,8 +53,6 @@ import scala.util.Try
  *   - [[HilbertCalculus]]: Hilbert Calculus for differential dynamic logic.
  *   - [[SequentCalculus]]: Sequent Calculus for propositional and first-order logic.
  *   - [[HybridProgramCalculus]]: Hybrid program derived proof rules for differential dynamic logic.
- *
- * The tactic library also includes important proof calculus subcollections:
  *   - [[DifferentialEquationCalculus]]: Differential equation proof rules for differential dynamic logic.
  *
  * @author
@@ -84,7 +82,7 @@ import scala.util.Try
  */
 @nowarn("msg=match may not be exhaustive") @nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
 @nowarn("cat=deprecation&origin=org.keymaerax.bellerophon.DependentTwoPositionTactic")
-object TactixLibrary extends TacticProvider with DifferentialEquationCalculus {
+object TactixLibrary extends TacticProvider {
 
   /** @inheritdoc */
   override def getInfo: (Class[_], universe.Type) = (TactixLibrary.getClass, universe.typeOf[TactixLibrary.type])
@@ -374,7 +372,7 @@ object TactixLibrary extends TacticProvider with DifferentialEquationCalculus {
                     expandAllDefs(Nil) & UnifyUSCalculus.chase(pp ++ PosInExpr(1 :: Nil)) &
                       SimplifierV3.simplify(pp ++ PosInExpr(1 :: Nil)) & odeR(pp)
                   )
-                } else Some(solve(pp)) // @note doesn't work in context of equivalence
+                } else Some(DifferentialEquationCalculus.solve(pp)) // @note doesn't work in context of equivalence
               case _ => None
             },
           )
@@ -411,9 +409,9 @@ object TactixLibrary extends TacticProvider with DifferentialEquationCalculus {
 
       val autoStep = SequentCalculus.id | SaturateTactic(onAll(doStep(index)(Symbol("R")))) |
         SaturateTactic(onAll(doStep(index)(Symbol("L")))) | Idioms.doIf(_.subgoals.exists(!_.isFOL))(
-          loop(Symbol("R")) | expandAllDefs(Nil) & odeR(Symbol("R")) | solve(Symbol("R")) | solve(Symbol("L")) |
-            DLBySubst.safeabstractionb(Symbol("R")) | odeInContext(odeR)(Symbol("R")) |
-            odeInContext(odeR)(Symbol("L")) | hpExpand
+          loop(Symbol("R")) | expandAllDefs(Nil) & odeR(Symbol("R")) | DifferentialEquationCalculus.solve(Symbol("R")) |
+            DifferentialEquationCalculus.solve(Symbol("L")) | DLBySubst.safeabstractionb(Symbol("R")) |
+            odeInContext(odeR)(Symbol("R")) | odeInContext(odeR)(Symbol("L")) | hpExpand
         ) | PropositionalTactics.autoMP(Symbol("L")) | UnifyUSCalculus.nil
 
       onAll(decomposeToODE) & onAll(Idioms.doIf(!_.isProved)(
@@ -736,7 +734,7 @@ object TactixLibrary extends TacticProvider with DifferentialEquationCalculus {
         // @todo problematic if ODE is used in a scripted proof but also annotations are present!
         invs
           .map(inv =>
-            dC(inv.formula)(pos) & Idioms.doIf(_.subgoals.size == 2)(Idioms.<(
+            DifferentialEquationCalculus.dC(inv.formula)(pos) & Idioms.doIf(_.subgoals.size == 2)(Idioms.<(
               UnifyUSCalculus.skip,
               // @todo pass invariant supplier to tactics via interpreter (as part of BelleProvable)
               (if (pos.isTopLevel) SaturateTactic(
@@ -768,11 +766,12 @@ object TactixLibrary extends TacticProvider with DifferentialEquationCalculus {
   private def ODEfinish(preferDw: Boolean) = anon((pos: Position, seq: Sequent) =>
     seq.sub(pos) match {
       // make progress on nonFOL postcondition (mathematicaSplittingODE only handles FOL postcondition)
-      case Some(Box(ODESystem(_, q), p)) if pos.isTopLevel && q != True && !p.isFOL => dWPlus(pos)
+      case Some(Box(ODESystem(_, q), p)) if pos.isTopLevel && q != True && !p.isFOL =>
+        DifferentialEquationCalculus.dWPlus(pos)
       case _ if pos.isTopLevel =>
         if (preferDw) {
           lazy val defaultFinish = DifferentialTactics.diffInd()(pos) |
-            dWPlus(pos) & SaturateTactic(alphaRule) & SimplifierV3.fullSimplify &
+            DifferentialEquationCalculus.dWPlus(pos) & SaturateTactic(alphaRule) & SimplifierV3.fullSimplify &
             (autoMonotonicityTransform & smartHide & QE & done | QE & done) |
             DifferentialTactics.mathematicaSplittingODE(pos)
 
@@ -787,7 +786,10 @@ object TactixLibrary extends TacticProvider with DifferentialEquationCalculus {
                       SaturateTactic(HilbertCalculus.Dassignb(pos)) & ToolTactics.prepareQE(Nil, UnifyUSCalculus.nil),
                     ),
                 )
-                val dwBase = proveBy(seq, dWPlus(pos) & SaturateTactic(alphaRule) & SimplifierV3.fullSimplify)
+                val dwBase = proveBy(
+                  seq,
+                  DifferentialEquationCalculus.dWPlus(pos) & SaturateTactic(alphaRule) & SimplifierV3.fullSimplify,
+                )
                 val dwPlain = proveBy(dwBase, ToolTactics.prepareQE(Nil, UnifyUSCalculus.nil))
                 val dwSmartBase = proveBy(dwBase, autoMonotonicityTransform)
                 val dwSmart = proveBy(dwSmartBase, smartHide & ToolTactics.prepareQE(Nil, UnifyUSCalculus.nil))

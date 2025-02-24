@@ -17,7 +17,7 @@ import org.keymaerax.btactics.SequentCalculus._
 import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.btactics.UnifyUSCalculus._
 import org.keymaerax.btactics.macros._
-import org.keymaerax.btactics.{BelleLabels, Idioms, TacticTestBase}
+import org.keymaerax.btactics.{BelleLabels, DifferentialEquationCalculus, Idioms, TacticTestBase}
 import org.keymaerax.core.Sequent
 import org.keymaerax.infrastruct.{AntePosition, SuccPosition}
 import org.keymaerax.lemma.{Lemma, LemmaDBFactory}
@@ -144,7 +144,7 @@ class ProofTreeTests extends TacticTestBase {
         .runTactic(
           "guest",
           ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false),
-          solve(1),
+          DifferentialEquationCalculus.solve(1),
           "solve",
           wait = true,
         ) should have message "Position 1 does not point to a differential equation, but to [x:=x+1;]x>0"

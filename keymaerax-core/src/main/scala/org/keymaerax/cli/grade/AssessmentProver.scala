@@ -25,6 +25,7 @@ import org.keymaerax.btactics.{
   Ax,
   ConfigurableGenerator,
   DebuggingTactics,
+  DifferentialEquationCalculus,
   FixedGenerator,
   HilbertCalculus,
   HybridProgramCalculus,
@@ -1357,10 +1358,9 @@ object AssessmentProver {
         .isEmpty,
       "Invariant " + inv.prettyString + " does not mention free variables",
     )
-    KeYmaeraXProofChecker(60.seconds, Declaration(Map.empty))(dI(auto = Symbol("cex"))(1))(Sequent(
-      IndexedSeq(inv),
-      IndexedSeq(Box(ode, inv)),
-    ))
+    KeYmaeraXProofChecker(60.seconds, Declaration(Map.empty))(DifferentialEquationCalculus.dI(auto = Symbol("cex"))(1))(
+      Sequent(IndexedSeq(inv), IndexedSeq(Box(ode, inv)))
+    )
   }
 
   /** Checks that formula `h` is equivalent differential invariant to formula `e`, i.e. (e<->h) & (e' -> h') */

@@ -153,7 +153,8 @@ class ContinuousInvariantTests extends TacticTestBase {
         "c()>0 & Kp()=2 & Kd()=3 & 5/4*(x-xr())^2 + (x-xr())*v/2 + v^2/4 < c()".asFormula,
       ) shouldBe true
 
-      proveBy(entry.model.asInstanceOf[Formula], implyR(1) & dI()(1)) shouldBe Symbol("proved")
+      proveBy(entry.model.asInstanceOf[Formula], implyR(1) & DifferentialEquationCalculus.dI()(1)) shouldBe
+        Symbol("proved")
     }
   }
 

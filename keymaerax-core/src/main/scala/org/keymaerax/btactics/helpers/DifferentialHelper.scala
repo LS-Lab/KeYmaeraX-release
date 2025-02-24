@@ -433,7 +433,7 @@ object DifferentialHelper {
     TactixLibrary
       .proveBy(
         Box(ODESystem(ode, True), fml),
-        TactixLibrary.dI(Symbol("diffInd"))(1) <
+        DifferentialEquationCalculus.dI(Symbol("diffInd"))(1) <
           (
             UnifyUSCalculus.skip,
             HilbertCalculus.Dassignb(1) *

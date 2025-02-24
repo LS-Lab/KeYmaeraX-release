@@ -6,6 +6,7 @@
 package org.keymaerax.btactics
 
 import org.keymaerax.bellerophon.OnAll
+import org.keymaerax.btactics.DifferentialEquationCalculus._
 import org.keymaerax.btactics.PolynomialArithV2._
 import org.keymaerax.btactics.SequentCalculus._
 import org.keymaerax.btactics.TactixLibrary._

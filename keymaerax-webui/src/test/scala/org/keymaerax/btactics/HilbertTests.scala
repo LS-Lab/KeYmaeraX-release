@@ -265,7 +265,7 @@ class HilbertTests extends TacticTestBase {
         implyR(1) &
           // @todo the problem is that DI should be used in show prereq branch of useAt instead of defaulting to master
           DC("5<=x".asFormula)(1) < (
-            debug("DC to DI") & dI()(1),
+            debug("DC to DI") & DifferentialEquationCalculus.dI()(1),
             debug("DC to DW") & DW(1) & abstractionb(1) & QE
           ),
       ) shouldBe Symbol("proved")
@@ -501,7 +501,7 @@ class HilbertTests extends TacticTestBase {
       implyR(1) &
         chase(3, 3)(1) &
         // @todo need to locate diffInd to after update prefix
-        dI()(1, 1 :: Nil) &
+        DifferentialEquationCalculus.dI()(1, 1 :: Nil) &
         assignb(1) & // handle updates
         QE,
     ) shouldBe Symbol("proved")
@@ -522,7 +522,7 @@ class HilbertTests extends TacticTestBase {
       Sequent(IndexedSeq(), IndexedSeq("x>=5 -> [x:=x+1;{x'=2}]x>=5".asFormula)),
       implyR(1) & chase(1) &
         // @todo need to locate diffInd to after update prefix
-        dI()(1, 1 :: Nil) &
+        DifferentialEquationCalculus.dI()(1, 1 :: Nil) &
         assignb(1) & // handle updates
         QE,
     ) shouldBe Symbol("proved")

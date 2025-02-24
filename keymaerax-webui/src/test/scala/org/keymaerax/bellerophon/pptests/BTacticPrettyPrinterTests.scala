@@ -7,7 +7,14 @@ package org.keymaerax.bellerophon.pptests
 
 import org.keymaerax.bellerophon.{ReflectiveExpressionBuilder, SaturateTactic}
 import org.keymaerax.bellerophon.parser.{BellePrettyPrinter, DLBelleParser}
-import org.keymaerax.btactics.{FixedGenerator, HybridProgramCalculus, SequentCalculus, TacticTestBase, TactixLibrary}
+import org.keymaerax.btactics.{
+  DifferentialEquationCalculus,
+  FixedGenerator,
+  HybridProgramCalculus,
+  SequentCalculus,
+  TacticTestBase,
+  TactixLibrary,
+}
 import org.keymaerax.infrastruct.PosInExpr
 import org.keymaerax.parser.StringConverter._
 import org.keymaerax.tags.UsualTest
@@ -71,13 +78,13 @@ class BTacticPrettyPrinterTests extends TacticTestBase {
   }
 
   "Input tactic" should "print list input" in withTactics {
-    val tactic = TactixLibrary.dC("x>0".asFormula :: "x>2".asFormula :: Nil)(1)
+    val tactic = DifferentialEquationCalculus.dC("x>0".asFormula :: "x>2".asFormula :: Nil)(1)
     BellePrettyPrinter(tactic) shouldBe "dC(\"x>0::x>2::nil\", 1)"
     roundTrip("dC(\"x>0::x>2::nil\", 1)")
   }
 
   it should "print empty list input" in withTactics {
-    val tactic = TactixLibrary.dC(Nil)(1)
+    val tactic = DifferentialEquationCalculus.dC(Nil)(1)
     BellePrettyPrinter(tactic) shouldBe "dC(\"nil\", 1)"
     roundTrip("dC(\"nil\", 1)")
   }

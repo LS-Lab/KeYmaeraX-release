@@ -117,10 +117,11 @@ class MoreSimpleBelleParserTests extends TacticTestBase {
 
   it should "parse fancy dG" in withTactics {
     parser("""dG("y' = 0",1)""") should
-      (be(TactixLibrary.dG("y'=0".asDifferentialProgram, None)(1)) or be(TactixLibrary.dG("y'=0".asFormula, None)(1)))
+      (be(DifferentialEquationCalculus.dG("y'=0".asDifferentialProgram, None)(1)) or
+        be(DifferentialEquationCalculus.dG("y'=0".asFormula, None)(1)))
     parser("""dG("y' = 0", "1=1",1)""") should
-      (be(TactixLibrary.dG("y'=0".asDifferentialProgram, Some("1=1".asFormula))(1)) or
-        be(TactixLibrary.dG("y'=0".asFormula, Some("1=1".asFormula))(1)))
+      (be(DifferentialEquationCalculus.dG("y'=0".asDifferentialProgram, Some("1=1".asFormula))(1)) or
+        be(DifferentialEquationCalculus.dG("y'=0".asFormula, Some("1=1".asFormula))(1)))
   }
 
   it should "parse multiple nested arguments" in withTactics {

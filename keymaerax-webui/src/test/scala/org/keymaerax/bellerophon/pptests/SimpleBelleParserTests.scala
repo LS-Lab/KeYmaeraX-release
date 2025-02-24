@@ -214,7 +214,8 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
   }
 
   it should "parse a built-in tactic that takes a whole list of arguments" in {
-    tacticParser("diffInvariant(\"1=1\", 1)") shouldBe (round trip TactixLibrary.diffInvariant("1=1".asFormula)(1))
+    tacticParser("diffInvariant(\"1=1\", 1)") shouldBe (round trip DifferentialEquationCalculus
+      .diffInvariant("1=1".asFormula)(1))
   }
 
   it should "Parse a loop tactic and print it back out" in {
@@ -244,7 +245,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
   }
 
   it should "parse a tactic without sole list argument specified" in {
-    tacticParser("dC(\"nil\", 1)") shouldBe (round trip TactixLibrary.dC(List.empty)(1))
+    tacticParser("dC(\"nil\", 1)") shouldBe (round trip DifferentialEquationCalculus.dC(List.empty)(1))
     tacticParser("dC(1)") shouldBe tacticParser("dC(\"nil\", 1)")
   }
 
@@ -920,7 +921,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
           )
       ),
     )
-    tactic shouldBe TactixLibrary.dC("f(x)".asFormula)(1)
+    tactic shouldBe DifferentialEquationCalculus.dC("f(x)".asFormula)(1)
   }
 
   it should "not default expand but elaborate model definitions in tactics" in {
@@ -940,7 +941,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
           )
       ),
     )
-    tactic shouldBe TactixLibrary.dC("x>g()".asFormula)(1)
+    tactic shouldBe DifferentialEquationCalculus.dC("x>g()".asFormula)(1)
   }
 
   // endregion
@@ -953,11 +954,11 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
   }
 
   it should "parse formula arguments" in {
-    tacticParser("dC(\"x>0\",1)") shouldBe (round trip TactixLibrary.dC("x>0".asFormula)(1))
+    tacticParser("dC(\"x>0\",1)") shouldBe (round trip DifferentialEquationCalculus.dC("x>0".asFormula)(1))
   }
 
   it should "parse list formula arguments" in {
-    tacticParser("dC(\"x>0 :: y<1 :: nil\",1)") shouldBe (round trip TactixLibrary
+    tacticParser("dC(\"x>0 :: y<1 :: nil\",1)") shouldBe (round trip DifferentialEquationCalculus
       .dC("x>0".asFormula :: "y<1".asFormula :: Nil)(1))
   }
 
@@ -980,7 +981,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
   }
 
   it should "parse mixed arguments" in {
-    tacticParser("dG(\"{z'=-1*z+0}\",\"x*z^2=1\",1)") shouldBe (round trip TactixLibrary
+    tacticParser("dG(\"{z'=-1*z+0}\",\"x*z^2=1\",1)") shouldBe (round trip DifferentialEquationCalculus
       .dG("{z'=-1*z+0}".asProgram, Some("x*z^2=1".asFormula))(1))
   }
 
@@ -1076,19 +1077,20 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
   // region New dG syntax
 
   "new dG syntax" should "round trip ghosts" in {
-    "dG(\"y'=1\", 1)"
-      .asTactic should (be(dG("y'=1".asFormula, None)(1)) and (print as "dG(\"y'=1\", 1)") and (reparse fromPrint))
-    "dG(\"{y'=1}\", \"x*y=5\", 1)".asTactic should (be(dG("{y'=1}".asProgram, Some("x*y=5".asFormula))(1)) and (
-      print as "dG(\"{y'=1}\", \"x*y=5\", 1)"
+    "dG(\"y'=1\", 1)".asTactic should (be(DifferentialEquationCalculus.dG("y'=1".asFormula, None)(1)) and (
+      print as "dG(\"y'=1\", 1)"
     ) and (reparse fromPrint))
-    "dG(\"y'=0*y+1\", \"x*y^2=1\", 1)".asTactic should (be(dG("y'=0*y+1".asFormula, Some("x*y^2=1".asFormula))(1)) and (
-      print as "dG(\"y'=0*y+1\", \"x*y^2=1\", 1)"
+    "dG(\"{y'=1}\", \"x*y=5\", 1)".asTactic should (be(
+      DifferentialEquationCalculus.dG("{y'=1}".asProgram, Some("x*y=5".asFormula))(1)
+    ) and (print as "dG(\"{y'=1}\", \"x*y=5\", 1)") and (reparse fromPrint))
+    "dG(\"y'=0*y+1\", \"x*y^2=1\", 1)".asTactic should (be(
+      DifferentialEquationCalculus.dG("y'=0*y+1".asFormula, Some("x*y^2=1".asFormula))(1)
+    ) and (print as "dG(\"y'=0*y+1\", \"x*y^2=1\", 1)") and (reparse fromPrint))
+    "dG(\"y'=1/2*y\", 1)".asTactic should (be(DifferentialEquationCalculus.dG("y'=1/2*y".asFormula, None)(1)) and (
+      print as "dG(\"y'=1/2*y\", 1)"
     ) and (reparse fromPrint))
-    "dG(\"y'=1/2*y\", 1)".asTactic should (
-      be(dG("y'=1/2*y".asFormula, None)(1)) and (print as "dG(\"y'=1/2*y\", 1)") and (reparse fromPrint)
-    )
     "dG(\"{y'=1/2*y}\", \"x*y^2=1\", 1)".asTactic should (be(
-      dG("{y'=1/2*y}".asProgram, Some("x*y^2=1".asFormula))(1)
+      DifferentialEquationCalculus.dG("{y'=1/2*y}".asProgram, Some("x*y^2=1".asFormula))(1)
     ) and (print as "dG(\"{y'=1/2*y}\", \"x*y^2=1\", 1)") and (reparse fromPrint))
   }
 

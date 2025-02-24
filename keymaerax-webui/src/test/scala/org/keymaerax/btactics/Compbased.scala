@@ -451,7 +451,7 @@ class Compbased extends TacticTestBase {
                       | & (v = 0 | abs(x-xo) > v^2 / (2*B()) + V()*(v/B())
                       |          | abs(y-yo) > v^2 / (2*B()) + V()*(v/B()))""".stripMargin.asFormula
 
-    def di(a: String): DependentPositionTactic = diffInvariant(
+    def di(a: String): DependentPositionTactic = DifferentialEquationCalculus.diffInvariant(
       "0<=t".asFormula :: "dx^2 + dy^2 = 1".asFormula :: s"v = old(v) + $a*t".asFormula ::
         s"-t * (v - $a/2*t) <= x - old(x) & x - old(x) <= t * (v - $a/2*t)".asFormula ::
         s"-t * (v - $a/2*t) <= y - old(y) & y - old(y) <= t * (v - $a/2*t)"
@@ -460,7 +460,8 @@ class Compbased extends TacticTestBase {
     )
 
     val dw: BelleExpr = exhaustiveEqR2L(hide = true)(Symbol("Llast")) * 5 /* 5 old(...) in DI */ &
-      SaturateTactic(andL(Symbol("L"))) & print("Before diffWeaken") & dW(1) & print("After diffWeaken")
+      SaturateTactic(andL(Symbol("L"))) & print("Before diffWeaken") & DifferentialEquationCalculus.dW(1) &
+      print("After diffWeaken")
 
     val simpQE = SaturateTactic(alphaRule) & SimplifierV3.fullSimpTac() & printIndexed("SimpQE") & speculativeQE
 

@@ -65,7 +65,10 @@ class ArithmeticSimplificationTests extends TacticTestBase {
     val goal = "x>y, y>z, a>0, z>0 ==> [{x'=1}]x>0".asSequent
     val result = proveBy(goal, smartHide)
     result.subgoals.loneElement shouldBe "x>y, y>z, z>0 ==> [{x'=1}]x>0".asSequent
-    proveBy(result.subgoals.loneElement, diffInvariant("x>0".asFormula)(1) & dW(1) & QE) shouldBe Symbol("proved")
+    proveBy(
+      result.subgoals.loneElement,
+      DifferentialEquationCalculus.diffInvariant("x>0".asFormula)(1) & DifferentialEquationCalculus.dW(1) & QE,
+    ) shouldBe Symbol("proved")
   }
 
   "smartSuccHide" should "simplify x=1 ==> x-1,y=1 to x=1 ==> x=1" in {

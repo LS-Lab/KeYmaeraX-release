@@ -7,6 +7,7 @@ package org.keymaerax.btactics
 
 import org.keymaerax.bellerophon._
 import org.keymaerax.btactics.AnonymousLemmas._
+import org.keymaerax.btactics.DifferentialEquationCalculus._
 import org.keymaerax.btactics.DifferentialTactics._
 import org.keymaerax.btactics.HilbertCalculus._
 import org.keymaerax.btactics.Idioms._
@@ -73,7 +74,7 @@ object ODEInvariance extends TacticProvider {
   private[btactics] lazy val contAx = remember(
     "f(||) > 0 -> <{t_'=1,c&f(||)>=0}>t_!=g()".asFormula,
     implyR(1) &
-      dR("f(||)>0".asFormula)(1) < (
+      DifferentialEquationCalculus.dR("f(||)>0".asFormula)(1) < (
         cutL("1!=0 & f(||)>0".asFormula)(-1) < (
           implyRi & byUS(Ax.Cont), hideR(1) & implyR(1) & andR(1) < (hideL(-1) & QE, id)
         ),

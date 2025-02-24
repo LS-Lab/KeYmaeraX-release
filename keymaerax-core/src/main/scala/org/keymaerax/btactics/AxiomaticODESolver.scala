@@ -667,7 +667,7 @@ object AxiomaticODESolver {
             Imply(ctx(modal.replaceAt(PosInExpr(0 :: 1 :: Nil), And(e, cut))), fml),
             SeqTactic(
               SequentCalculus.implyR(1),
-              TactixLibrary.dC(cut)(if (polarity > 0) 1 else -1, odePos),
+              DifferentialEquationCalculus.dC(cut)(if (polarity > 0) 1 else -1, odePos),
               BranchTactic(
                 SequentCalculus.close,
                 SeqTactic(
@@ -867,7 +867,7 @@ object AxiomaticODESolver {
           Imply(fml, ctx(modal.replaceAt(PosInExpr(0 :: 1 :: Nil), e))),
           SeqTactic(
             SequentCalculus.implyR(1),
-            TactixLibrary.dC(soln)(if (polarity > 0) -1 else 1, odePos),
+            DifferentialEquationCalculus.dC(soln)(if (polarity > 0) -1 else 1, odePos),
             BranchTactic(
               SequentCalculus.close,
               SeqTactic(

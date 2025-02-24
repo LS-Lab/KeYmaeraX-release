@@ -7,6 +7,7 @@ package org.keymaerax.bellerophon
 
 import org.keymaerax.GlobalState
 import org.keymaerax.bellerophon.parser.BellePrettyPrinter
+import org.keymaerax.btactics.DifferentialEquationCalculus._
 import org.keymaerax.btactics.SequentCalculus._
 import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.btactics.UnifyUSCalculus._

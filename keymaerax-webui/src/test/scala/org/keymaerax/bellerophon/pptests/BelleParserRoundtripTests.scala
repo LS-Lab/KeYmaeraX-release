@@ -9,6 +9,7 @@ import org.keymaerax.bellerophon._
 import org.keymaerax.bellerophon.parser.BellePrettyPrinter
 import org.keymaerax.btactics.{
   ArithmeticSimplification,
+  DifferentialEquationCalculus,
   HybridProgramCalculus,
   SequentCalculus,
   TacticTestBase,
@@ -69,23 +70,25 @@ class BelleParserRoundtripTests extends TacticTestBase {
   }
 
   it should "input tactic diffCut" in withTactics {
-    roundTrip(TactixLibrary.dC("x>0".asFormula)(1), """dC("x>0", 1)""")
+    roundTrip(DifferentialEquationCalculus.dC("x>0".asFormula)(1), """dC("x>0", 1)""")
   }
 
   it should "input tactic dG" in withTactics {
-    roundTrip(TactixLibrary.dG("y'=0".asFormula, Some("1=1".asFormula))(1), """dG("y'=0", "1=1", 1)""")
+    roundTrip(DifferentialEquationCalculus.dG("y'=0".asFormula, Some("1=1".asFormula))(1), """dG("y'=0", "1=1", 1)""")
     roundTrip(
-      TactixLibrary.dG(ODESystem(AtomicODE(DifferentialSymbol("x".asVariable), "5*x+2".asTerm), True), None)(1),
+      DifferentialEquationCalculus
+        .dG(ODESystem(AtomicODE(DifferentialSymbol("x".asVariable), "5*x+2".asTerm), True), None)(1),
       """dG("{x'=5*x+2}", 1)""",
     )
     roundTrip(
-      TactixLibrary
+      DifferentialEquationCalculus
         .dG(ODESystem(AtomicODE(DifferentialSymbol("x".asVariable), "5*x+2".asTerm), True), Some("x>0".asFormula))(1),
       """dG("{x'=5*x+2}", "x>0", 1)""",
     )
     // parsing from AtomicODE allowed to result in ODESystem, but will print as ODESystem (see roundtrip above)
     belleParser("""dG("{x'=5*x+2}", 1)""") shouldBe
-      TactixLibrary.dG(ODESystem(AtomicODE(DifferentialSymbol("x".asVariable), "5*x+2".asTerm), True), None)(1)
+      DifferentialEquationCalculus
+        .dG(ODESystem(AtomicODE(DifferentialSymbol("x".asVariable), "5*x+2".asTerm), True), None)(1)
   }
 
   it should "input tactic cut, cutL, cutR" in withTactics {
@@ -115,7 +118,7 @@ class BelleParserRoundtripTests extends TacticTestBase {
   }
 
   it should "input tactic diffInvariant" in withTactics {
-    roundTrip(TactixLibrary.diffInvariant("x^2=1".asFormula)(1), """diffInvariant("x^2=1", 1)""")
+    roundTrip(DifferentialEquationCalculus.diffInvariant("x^2=1".asFormula)(1), """diffInvariant("x^2=1", 1)""")
   }
 
   it should "two-position tactic cohide2" in withTactics { roundTrip(SequentCalculus.cohide2(-1, 1), "coHide2(-1, 1)") }

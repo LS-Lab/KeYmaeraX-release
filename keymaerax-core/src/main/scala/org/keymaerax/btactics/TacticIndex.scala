@@ -166,7 +166,7 @@ class DefaultTacticIndex extends TacticIndex {
         Left(one(new Fixed(p ++ childPos, c)))
       }
     case TactixLibrary.ODE => (_: Sequent, p: Position) => Left(one(new Fixed(p)))
-    case TactixLibrary.solve => (_: Sequent, p: Position) => Left(one(new Fixed(p)))
+    case DifferentialEquationCalculus.solve => (_: Sequent, p: Position) => Left(one(new Fixed(p)))
     case PropositionalTactics.autoMP => (s: Sequent, p: Position) =>
         if (p.isTopLevel) Left(one(new Fixed(p.checkAnte.checkTop)))
         else Right(one(left(s, p) :: right(s, p) :: Nil))
@@ -214,14 +214,15 @@ class DefaultTacticIndex extends TacticIndex {
         val bv = StaticSemantics.boundVars(a)
         a match {
           case _: ODESystem if bv.intersect(StaticSemantics.freeVars(p)).isEmpty =>
-            (TactixLibrary.solve :: Nil, TactixLibrary.dW :: Nil)
+            (DifferentialEquationCalculus.solve :: Nil, DifferentialEquationCalculus.dW :: Nil)
           case _: ODESystem if !bv.intersect(StaticSemantics.freeVars(p)).isEmpty =>
-            (TactixLibrary.solve :: Nil, TactixLibrary.ODE :: TactixLibrary.solve :: Nil)
+            (DifferentialEquationCalculus.solve :: Nil, TactixLibrary.ODE :: DifferentialEquationCalculus.solve :: Nil)
           case _ => (TactixLibrary.step :: Nil, DLBySubst.safeabstractionb :: TactixLibrary.step :: Nil)
         }
       case Diamond(a, _) if !a.isInstanceOf[ODESystem] && !a.isInstanceOf[Loop] =>
         (TactixLibrary.step :: Nil, TactixLibrary.step :: Nil)
-      case Diamond(a, _) if a.isInstanceOf[ODESystem] => (TactixLibrary.solve :: Nil, TactixLibrary.solve :: Nil)
+      case Diamond(a, _) if a.isInstanceOf[ODESystem] =>
+        (DifferentialEquationCalculus.solve :: Nil, DifferentialEquationCalculus.solve :: Nil)
       case Forall(xs, _) =>
         if (xs.forall(_.isInstanceOf[BaseVariable])) (TacticIndex.allLStutter :: Nil, SequentCalculus.allR :: Nil)
         else if (xs.forall(_.isInstanceOf[DifferentialSymbol]))

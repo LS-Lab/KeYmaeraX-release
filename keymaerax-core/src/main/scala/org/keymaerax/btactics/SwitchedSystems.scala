@@ -7,6 +7,7 @@ package org.keymaerax.btactics
 
 import org.keymaerax.bellerophon._
 import org.keymaerax.btactics.AnonymousLemmas.remember
+import org.keymaerax.btactics.DifferentialEquationCalculus._
 import org.keymaerax.btactics.HilbertCalculus._
 import org.keymaerax.btactics.SequentCalculus._
 import org.keymaerax.btactics.TacticFactory.{anon, inputanon}

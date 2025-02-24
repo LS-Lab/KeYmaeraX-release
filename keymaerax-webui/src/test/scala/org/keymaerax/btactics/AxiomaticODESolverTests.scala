@@ -7,6 +7,7 @@ package org.keymaerax.btactics
 
 import org.keymaerax.bellerophon._
 import org.keymaerax.btactics.AxiomaticODESolver._
+import org.keymaerax.btactics.DifferentialEquationCalculus._
 import org.keymaerax.btactics.SequentCalculus._
 import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.btactics.helpers.DifferentialHelper
@@ -34,7 +35,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
 
   "Selection sort" should "not have a match error" in withMathematica { _ =>
     val ode = "[{posLead'=velLead,velLead'=A,posCtrl'=velCtrl,velCtrl'=a,t'=1}] true".asFormula
-    proveBy(ode, TactixLibrary.solve(1) & TactixLibrary.unfoldProgramNormalize) shouldBe Symbol("proved")
+    proveBy(ode, solve(1) & TactixLibrary.unfoldProgramNormalize) shouldBe Symbol("proved")
   }
 
   "Selection sort" should "achieve intended permutation" in withMathematica { _ =>

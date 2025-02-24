@@ -7,6 +7,7 @@ package org.keymaerax.btactics
 
 import org.keymaerax.Logging
 import org.keymaerax.bellerophon._
+import org.keymaerax.btactics.DifferentialEquationCalculus._
 import org.keymaerax.btactics.FOQuantifierTactics.allInstantiateInverse
 import org.keymaerax.btactics.HilbertCalculus._
 import org.keymaerax.btactics.SequentCalculus._

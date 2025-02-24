@@ -9,6 +9,7 @@ import org.keymaerax.bellerophon._
 import org.keymaerax.btactics.AnonymousLemmas._
 import org.keymaerax.btactics.ArithmeticSimplification.smartHide
 import org.keymaerax.btactics.BelleLabels.{replaceTxWith, startTx}
+import org.keymaerax.btactics.DifferentialEquationCalculus._
 import org.keymaerax.btactics.HilbertCalculus._
 import org.keymaerax.btactics.Idioms._
 import org.keymaerax.btactics.SequentCalculus._
@@ -485,7 +486,7 @@ private object DifferentialTactics extends TacticProvider with Logging {
       // @note assumes that first subgoal is desired result, see diffCut
       // @note UnifyUSCalculus leaves prereq open at last succedent position
       if (R.size == 1) {
-        TactixLibrary.dC(R.head)(pos) < (
+        DifferentialEquationCalculus.dC(R.head)(pos) < (
           skip, DifferentialEquationCalculus
             .dIX(SuccPosition.base0(sequent.succ.size - 1, pos.inExpr)) & OnAll(QE & done) & done
         )
@@ -494,7 +495,7 @@ private object DifferentialTactics extends TacticProvider with Logging {
           DifferentialEquationCalculus
             .dIX(SuccPosition.base0(sequent.succ.size - 1, pos.inExpr)) & OnAll(QE & done) & done
         )
-        TactixLibrary.dC(R)(pos) < (diffIndAllButFirst: _*)
+        DifferentialEquationCalculus.dC(R)(pos) < (diffIndAllButFirst: _*)
       }
   }
 

@@ -8,6 +8,7 @@ package org.keymaerax.btactics
 import cc.redberry.rings.scaladsl.syntax._
 import org.keymaerax.bellerophon._
 import org.keymaerax.btactics.Ax.boxTrueAxiom
+import org.keymaerax.btactics.DifferentialEquationCalculus._
 import org.keymaerax.btactics.SequentCalculus._
 import org.keymaerax.btactics.TacticFactory._
 import org.keymaerax.btactics.TactixLibrary._

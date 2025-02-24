@@ -1061,7 +1061,8 @@ private object ToolTactics extends TacticProvider {
     lazy val skipAt = anon((_: Position, _: Sequent) => skip)
 
     lazy val step = seq(pos.top) match {
-      case Box(ODESystem(_, _), _) => diffInvariant(ensuredFormula)(pos.top) & dW(pos.top)
+      case Box(ODESystem(_, _), _) => DifferentialEquationCalculus.diffInvariant(ensuredFormula)(pos.top) &
+          DifferentialEquationCalculus.dW(pos.top)
       case Box(Loop(_), _) => HybridProgramCalculus.loop(ensuredFormula)(pos.top) & Idioms.<(master(), skip, master())
       case Box(Test(_), _) => HilbertCalculus.testb(pos.top) & implyR(pos.top)
       case Box(_, _) => TactixLibrary.step(pos.top)

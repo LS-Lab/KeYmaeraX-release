@@ -429,7 +429,8 @@ class ImplicitAxTests extends TacticTestBase {
 
     val pr = proveBy(
       GreaterEqual(FuncOf(exp, "x^2".asTerm), Number(1)),
-      diffUnfold("x^2".asTerm, Number(0))(1) < (QE, ODE(1), dC("v=0".asFormula)(1) < (ODE(1), ODE(1))),
+      diffUnfold("x^2".asTerm, Number(0))(1) <
+        (QE, ODE(1), DifferentialEquationCalculus.dC("v=0".asFormula)(1) < (ODE(1), ODE(1))),
     )
 
     pr shouldBe Symbol("proved")
@@ -469,7 +470,11 @@ class ImplicitAxTests extends TacticTestBase {
     val pr = proveBy(
       Equal(Plus(Power(FuncOf(sin, "z".asTerm), Number(2)), Power(FuncOf(cos, "z".asTerm), Number(2))), Number(1)),
       diffUnfold(Variable("z"), Number(0))(1) <
-        (QE, dI(Symbol("full"))(1), dI(Symbol("diffInd"))(1) < (id, Dassignb(1) & QE)),
+        (
+          QE,
+          DifferentialEquationCalculus.dI(Symbol("full"))(1),
+          DifferentialEquationCalculus.dI(Symbol("diffInd"))(1) < (id, Dassignb(1) & QE),
+        ),
     )
     pr shouldBe Symbol("proved")
   }
@@ -557,7 +562,7 @@ class ImplicitAxTests extends TacticTestBase {
 
     val pr = proveBy(
       "t=0&x<=1 -> [{x'=x*(2*t-1),t'=1}](t=1->x<=1)".asFormula,
-      implyR(1) & andL(-1) & dC(diffcut)(1) < (DW(1) & G(1) & QE, dbx(None)(1)),
+      implyR(1) & andL(-1) & DifferentialEquationCalculus.dC(diffcut)(1) < (DW(1) & G(1) & QE, dbx(None)(1)),
     )
 
     pr shouldBe Symbol("proved")

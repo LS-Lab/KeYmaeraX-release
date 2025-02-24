@@ -151,7 +151,8 @@ object InvariantProvers {
                       (localInv: Formula) => {
                         logger.debug("loopPostMaster local " + localInv)
                         DebuggingTactics.debug("local") &
-                          dC(localInv)(pos) < (dW(pos) & QE, DifferentialTactics.mathematicaODE(pos)) & done &
+                          DifferentialEquationCalculus.dC(localInv)(pos) <
+                          (DifferentialEquationCalculus.dW(pos) & QE, DifferentialTactics.mathematicaODE(pos)) & done &
                           DebuggingTactics.debug("success")
                       },
                     )

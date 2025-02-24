@@ -19,7 +19,14 @@ import org.keymaerax.bellerophon.{
   SeqTactic,
   Using,
 }
-import org.keymaerax.btactics.{DebuggingTactics, SequentCalculus, TactixInit, TactixLibrary, UnifyUSCalculus}
+import org.keymaerax.btactics.{
+  DebuggingTactics,
+  DifferentialEquationCalculus,
+  SequentCalculus,
+  TactixInit,
+  TactixLibrary,
+  UnifyUSCalculus,
+}
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.{PosInExpr, SuccPosition}
 import org.keymaerax.parser.ParseExceptionMatchers.{mention, pointAt}
@@ -249,16 +256,17 @@ class DLBelleParserTests
   it should "parse nil and empty list syntax" in { parse("expandAllDefs(\"nil\")") shouldBe parse("expandAllDefs()") }
 
   it should "parse dC" in {
-    parse("""dC("x>=0 :: y=1 :: nil", 1)""") shouldBe TactixLibrary.dC(List("x>=0".asFormula, "y=1".asFormula))(1)
-    parse("""dC("x>=0 :: nil", 1)""") shouldBe TactixLibrary.dC(List("x>=0".asFormula))(1)
-    parse("""dC("x>=0", 1)""") shouldBe TactixLibrary.dC(List("x>=0".asFormula))(1)
+    parse("""dC("x>=0 :: y=1 :: nil", 1)""") shouldBe
+      DifferentialEquationCalculus.dC(List("x>=0".asFormula, "y=1".asFormula))(1)
+    parse("""dC("x>=0 :: nil", 1)""") shouldBe DifferentialEquationCalculus.dC(List("x>=0".asFormula))(1)
+    parse("""dC("x>=0", 1)""") shouldBe DifferentialEquationCalculus.dC(List("x>=0".asFormula))(1)
   }
 
   it should "parse dG" in {
-    parse("""dG("t'=1", 1)""") shouldBe TactixLibrary.dG("t'=1".asFormula, None)(1)
-    parse("""dG("{t'=1}", 1)""") shouldBe TactixLibrary.dG("{t'=1}".asProgram, None)(1)
+    parse("""dG("t'=1", 1)""") shouldBe DifferentialEquationCalculus.dG("t'=1".asFormula, None)(1)
+    parse("""dG("{t'=1}", 1)""") shouldBe DifferentialEquationCalculus.dG("{t'=1}".asProgram, None)(1)
     parse("""dG("{y'=-y}", "x*y^2=1", 1)""") shouldBe
-      TactixLibrary.dG("{y'=-y}".asProgram, Some("x*y^2=1".asFormula))(1)
+      DifferentialEquationCalculus.dG("{y'=-y}".asProgram, Some("x*y^2=1".asFormula))(1)
   }
 
   it should "parse strings" in { parse("""print("Test")""") shouldBe DebuggingTactics.printX("Test") }
@@ -280,14 +288,15 @@ class DLBelleParserTests
 
   it should "elaborate tactic reserved symbols" in {
     parse("""dC("x^2+y^2=const", 1)""") shouldBe
-      TactixLibrary.dC(List(Equal("x^2+y^2".asTerm, FuncOf(TacticReservedSymbols.const, Nothing))))(1)
+      DifferentialEquationCalculus.dC(List(Equal("x^2+y^2".asTerm, FuncOf(TacticReservedSymbols.const, Nothing))))(1)
   }
 
   it should "not elaborate when tactic reserved symbols are declared as variables" in {
     parse(
       """dC("abbrv=const", 1)""",
       Declaration(Map(Name("abbrv", None) -> Signature(None, Real, None, Right(None), UnknownLocation))),
-    ) shouldBe TactixLibrary.dC(List(Equal("abbrv".asVariable, FuncOf(TacticReservedSymbols.const, Nothing))))(1)
+    ) shouldBe
+      DifferentialEquationCalculus.dC(List(Equal("abbrv".asVariable, FuncOf(TacticReservedSymbols.const, Nothing))))(1)
     parse(
       """dC("x^2+y^2=const", 1)""",
       Declaration(Map(
@@ -295,7 +304,7 @@ class DLBelleParserTests
         Name("x", None) -> Signature(None, Real, None, Right(None), UnknownLocation),
         Name("y", None) -> Signature(None, Real, None, Right(None), UnknownLocation),
       )),
-    ) shouldBe TactixLibrary.dC(List(Equal("x^2+y^2".asTerm, Variable("const"))))(1)
+    ) shouldBe DifferentialEquationCalculus.dC(List(Equal("x^2+y^2".asTerm, Variable("const"))))(1)
   }
 
   it should "report missing arguments" in {

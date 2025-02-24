@@ -9,6 +9,7 @@ import org.keymaerax.bellerophon.parser.BelleParser
 import org.keymaerax.bellerophon.{OnAll, SaturateTactic}
 import org.keymaerax.btactics.ArithmeticSimplification._
 import org.keymaerax.btactics.DebuggingTactics.{print, printIndexed}
+import org.keymaerax.btactics.DifferentialEquationCalculus._
 import org.keymaerax.btactics.HilbertCalculus._
 import org.keymaerax.btactics.SequentCalculus._
 import org.keymaerax.btactics.TactixLibrary._

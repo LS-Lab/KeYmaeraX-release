@@ -108,7 +108,8 @@ object Approximator extends TacticProvider with Logging {
 
       // dI handles the normal case, ODE handles the base case.
       val proofOfCut = DebuggingTactics.debug("Trying to prove by proofOfCut", DEBUG) &
-        (TactixLibrary.dI()(pos) | TactixLibrary.ODE(pos)) & DebuggingTactics.done("Expected dI to succeed.")
+        (DifferentialEquationCalculus.dI()(pos) | TactixLibrary.ODE(pos)) &
+        DebuggingTactics.done("Expected dI to succeed.")
 
       val qAtoms = sequent.sub(pos ++ PosInExpr(0 :: Nil)) match {
         case Some(ODESystem(_, q)) => FormulaTools.conjuncts(q).toSet
@@ -119,7 +120,7 @@ object Approximator extends TacticProvider with Logging {
         cuts
           .filter(!FormulaTools.conjuncts(_).toSet.subsetOf(qAtoms))
           .map(cut => {
-            TactixLibrary.dC(cut)(pos) <
+            DifferentialEquationCalculus.dC(cut)(pos) <
               (UnifyUSCalculus.nil, DebuggingTactics.debug("Trying to prove this by dI or by ODE", DEBUG) & proofOfCut)
           })
       }
@@ -161,9 +162,11 @@ object Approximator extends TacticProvider with Logging {
       val radiusIsConst = Equal(radius, FuncOf(Function("old", None, Real, Real), radius))
 
       // Prove that (c,s) is a circle.
-      val isOnCircle = TactixLibrary.dC(radiusIsConst)(pos) <
-        (UnifyUSCalculus.nil, TactixLibrary.dI()(pos) & DebuggingTactics.done("Expected dI to succeed")) &
-        DebuggingTactics.assertProvableSize(1) & DebuggingTactics.debug(s"Successfully cut isOnCircle", DEBUG)
+      val isOnCircle = DifferentialEquationCalculus.dC(radiusIsConst)(pos) <
+        (
+          UnifyUSCalculus.nil,
+          DifferentialEquationCalculus.dI()(pos) & DebuggingTactics.done("Expected dI to succeed"),
+        ) & DebuggingTactics.assertProvableSize(1) & DebuggingTactics.debug(s"Successfully cut isOnCircle", DEBUG)
 
       val cuts = interleave(cosCuts, sinCuts)
       logger.debug(s"Taylor Approximator performing these cuts: ${cuts.mkString("\n")}")
@@ -178,12 +181,12 @@ object Approximator extends TacticProvider with Logging {
         .filter(!FormulaTools.conjuncts(_).toSet.subsetOf(qAtoms))
         .map(cut =>
           DebuggingTactics.debug("Cutting " + cut.prettyString) &
-            TactixLibrary.dC(cut)(pos) <
+            DifferentialEquationCalculus.dC(cut)(pos) <
             (
               UnifyUSCalculus.nil,
               // dW&QE handles the base case, dI handles all others.
               DebuggingTactics.debug("Trying to prove next bound: ", DEBUG) &
-                (TactixLibrary.dI()(pos) | (TactixLibrary.dW(pos) & QE)) &
+                (DifferentialEquationCalculus.dI()(pos) | (DifferentialEquationCalculus.dW(pos) & QE)) &
                 DebuggingTactics.done("Expected dI to succeed"),
             ) & DebuggingTactics.assertProvableSize(1) & DebuggingTactics.debug(s"Successfully cut $cut", DEBUG)
         )
@@ -255,7 +258,7 @@ object Approximator extends TacticProvider with Logging {
       TactixLibrary.proveBy(
         fact,
         DebuggingTactics.debug(s"Trying to prove lemma $fact", DEBUG) & SequentCalculus.implyR(1) &
-          TactixLibrary.dC(cut)(1) <
+          DifferentialEquationCalculus.dC(cut)(1) <
           (
             DebuggingTactics.debug("lemma branch 1: closeId", DEBUG) & SequentCalculus.id & DebuggingTactics.done,
             DebuggingTactics.debug("lemma branch 2: use provided tactic to prove cut", DEBUG) &
