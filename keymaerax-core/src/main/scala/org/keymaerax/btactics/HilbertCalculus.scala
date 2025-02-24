@@ -651,12 +651,6 @@ trait HilbertCalculus {
 
 }
 
-object Derive extends TacticProvider with Derive {
-
-  /** @inheritdoc */
-  override def getInfo: (Class[_], universe.Type) = (Derive.getClass, universe.typeOf[Derive.type])
-}
-
 /**
  * Derive: provides individual differential axioms bundled as [[HilbertCalculus.derive]].
  *
@@ -669,7 +663,11 @@ object Derive extends TacticProvider with Derive {
  * @see
  *   [[HilbertCalculus.derive]]
  */
-trait Derive {
+object Derive extends TacticProvider {
+
+  /** @inheritdoc */
+  override def getInfo: (Class[_], universe.Type) = (Derive.getClass, universe.typeOf[Derive.type])
+
   import TacticFactory._
   import UnifyUSCalculus._
 
