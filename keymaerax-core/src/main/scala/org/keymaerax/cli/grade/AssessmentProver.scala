@@ -25,6 +25,7 @@ import org.keymaerax.btactics.{
   ConfigurableGenerator,
   DebuggingTactics,
   FixedGenerator,
+  HilbertCalculus,
   Invariant,
   InvariantHint,
   PolynomialArithV2,
@@ -1446,9 +1447,10 @@ object AssessmentProver {
           cohideOnlyL(AntePos(ai)) & cohideOnlyR(SuccPos(si)) &
             cut(Box(bbody, af)) <
             (
-              useAt(Ax.I)(-2, 1 :: Nil) & boxAnd(-2) & prop & done,
+              useAt(Ax.I)(-2, 1 :: Nil) & HilbertCalculus.boxAnd(-2) & prop & done,
               hideR(1) & implyRi & useAt(Ax.IIinduction, PosInExpr(1 :: Nil))(1) &
-                useAt(Ax.iterateb)(1, 1 :: 0 :: Nil) & G(1) & implyR(1) & andL(-1) & hideL(-1) & chase(-1) & chase(1),
+                useAt(Ax.iterateb)(1, 1 :: 0 :: Nil) & HilbertCalculus.G(1) & implyR(1) & andL(-1) & hideL(-1) &
+                chase(-1) & chase(1),
             )
       }
     }

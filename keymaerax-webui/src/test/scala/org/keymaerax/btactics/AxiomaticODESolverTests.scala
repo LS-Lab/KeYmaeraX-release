@@ -610,8 +610,8 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
                     |""".stripMargin
       val problem: Formula = ArchiveParser.parseAsFormula(model)
 
-      val t: BelleExpr = implyR(1) & composeb(1) & assignb(1) & AxiomaticODESolver.axiomaticSolve()(1) & allR(1) &
-        implyR(1) & implyR(1) & assignb(1) & QE
+      val t: BelleExpr = implyR(1) & HilbertCalculus.composeb(1) & HilbertCalculus.assignb(1) &
+        AxiomaticODESolver.axiomaticSolve()(1) & allR(1) & implyR(1) & implyR(1) & HilbertCalculus.assignb(1) & QE
 
       val result: ProvableSig = proveBy(problem, t)
       result.isProved shouldBe false

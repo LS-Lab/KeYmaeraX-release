@@ -593,7 +593,7 @@ object TaylorModelTactics extends Logging {
       Imply(numericAssumption, boxTMEnclosure),
       debugTac("start") & implyR(1) & debugTac("pre push") & useAt(postEq, PosInExpr(0 :: Nil))(1, 1 :: Nil) &
         debugTac("post push") & tocTac("pre dIClosed") & useAt(domain_rewrite, PosInExpr(0 :: Nil))(1, 0 :: 1 :: Nil) &
-        debugTac("pre dIClosed") & boxAnd(1) & andR(1) & Idioms.<(cohideR(1) & byUS(Ax.DWbase), skip) &
+        debugTac("pre dIClosed") & HilbertCalculus.boxAnd(1) & andR(1) & Idioms.<(cohideR(1) & byUS(Ax.DWbase), skip) &
         odeTac.dIClosed(1) &
         Idioms.<(
           // Initial Condition
@@ -682,7 +682,7 @@ object TaylorModelTactics extends Logging {
             // time step is nonnegative
             (andL(-1) & hideL(-2)) * 2 & andL(-1) & (andL(-1) & hideL(-3)) & SaturateTactic(andL(-2) & hideL(-3)) & QE &
               done,
-            boxAnd(1) & andR(1) & Idioms.<(
+            HilbertCalculus.boxAnd(1) & andR(1) & Idioms.<(
               // safety throughout first step
               andL(-1) & hideL(-2) & andL(-1) & andL(-1) & hideL(-3) &
                 cutR(boxTMEnclosure)(1) /* TODO: does a dC here yield better structure and less overhead? */ & Idioms.<(
@@ -905,7 +905,7 @@ object TaylorModelTactics extends Logging {
             case Imply(_, Box(_, cut_fml)) => cut_fml
             case _ => throw new RuntimeException("Instantiated Taylor model lemma not of expected shape")
           }
-          debugTac("Starting to do something") & DC(cut_fml)(pos) & Idioms.<(
+          debugTac("Starting to do something") & HilbertCalculus.DC(cut_fml)(pos) & Idioms.<(
             skip,
             useAt(lemma2, PosInExpr(1 :: Nil))(1) & debugTac("Used Lemma") & andR(1) & Idioms.<(
               id,

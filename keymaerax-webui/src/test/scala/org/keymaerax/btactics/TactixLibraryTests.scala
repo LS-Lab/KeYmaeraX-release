@@ -6,6 +6,7 @@
 package org.keymaerax.btactics
 
 import org.keymaerax.bellerophon._
+import org.keymaerax.btactics.HilbertCalculus._
 import org.keymaerax.btactics.TacticFactory._
 import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.btactics.UnifyUSCalculus._

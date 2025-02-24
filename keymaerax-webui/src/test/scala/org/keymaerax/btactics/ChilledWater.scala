@@ -8,6 +8,7 @@ package org.keymaerax.btactics
 import org.keymaerax.bellerophon.Find._
 import org.keymaerax.bellerophon._
 import org.keymaerax.btactics.DebuggingTactics.printIndexed
+import org.keymaerax.btactics.HilbertCalculus._
 import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.btactics.UnifyUSCalculus._
 import org.keymaerax.parser.StringConverter._

@@ -21,7 +21,7 @@ class AxiomaticRuleTests extends TacticTestBase {
   "[] monotone" should "work" in withTactics {
     val result = proveBy(
       Sequent(immutable.IndexedSeq("[x:=1;]x>0".asFormula), immutable.IndexedSeq("[x:=1;]x>-1".asFormula)),
-      TactixLibrary.monb,
+      HilbertCalculus.monb,
     )
 
     result.subgoals should have size 1
@@ -32,7 +32,7 @@ class AxiomaticRuleTests extends TacticTestBase {
   "<> monotone" should "work" in withTactics {
     val result = proveBy(
       Sequent(immutable.IndexedSeq("<x:=1;>x>0".asFormula), immutable.IndexedSeq("<x:=1;>x>-1".asFormula)),
-      TactixLibrary.mond,
+      HilbertCalculus.mond,
     )
 
     result.subgoals should have size 1
@@ -41,7 +41,7 @@ class AxiomaticRuleTests extends TacticTestBase {
   }
 
   "G" should "work" in withTactics {
-    val result = proveBy("[x:=1;]x>0".asFormula, TactixLibrary.G(1))
+    val result = proveBy("[x:=1;]x>0".asFormula, HilbertCalculus.G(1))
 
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty

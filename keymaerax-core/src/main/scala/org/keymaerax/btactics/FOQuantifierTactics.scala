@@ -173,7 +173,7 @@ protected object FOQuantifierTactics extends TacticProvider {
 
           // @note stuttering needed for instantiating with terms in cases \forall x [x:=x+1;]x>0, plain useAt won't work
           // @todo forward tactic
-          def assignbFw = TactixLibrary.proveBy(_: ProvableSig, assignb(pos))
+          def assignbFw = TactixLibrary.proveBy(_: ProvableSig, HilbertCalculus.assignb(pos))
 
           (pr(DLBySubst.stutterFw(x)(pos ++ PosInExpr(0 :: Nil)).computeResult _, 0)(assignPreprocess, 0)(
             cutLRFw(ctx(assign))(pos.topLevel).computeResult _,
@@ -262,7 +262,7 @@ protected object FOQuantifierTactics extends TacticProvider {
           // @note stuttering needed for instantiating with terms in cases \exists x [x:=x+1;]x>0, plain useAt won't work
 
           // @todo forward tactic
-          def assignbFw = TactixLibrary.proveBy(_: ProvableSig, assignb(pos))
+          def assignbFw = TactixLibrary.proveBy(_: ProvableSig, HilbertCalculus.assignb(pos))
 
           (pr(DLBySubst.stutterFw(x)(pos ++ PosInExpr(0 :: Nil)).computeResult _, 0)(assignPreprocess, 0)(
             cutLRFw(ctx(assign))(pos.topLevel).computeResult _,

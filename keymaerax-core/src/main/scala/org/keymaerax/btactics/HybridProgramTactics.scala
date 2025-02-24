@@ -45,9 +45,9 @@ private object HybridProgramTactics extends TacticProvider {
 
   @nowarn("msg=match may not be exhaustive")
   private def decomposeChoices(ctrl: Program, pos: Position): BelleExpr = ctrl match {
-    case Compose(l, r) => TactixLibrary.composeb(pos) & decomposeChoices(l, pos)
+    case Compose(l, r) => HilbertCalculus.composeb(pos) & decomposeChoices(l, pos)
     case Choice(l, r) => {
-      TactixLibrary.choiceb(pos) & TactixLibrary.andR(1) < (decomposeChoices(l, pos), decomposeChoices(r, pos))
+      HilbertCalculus.choiceb(pos) & TactixLibrary.andR(1) < (decomposeChoices(l, pos), decomposeChoices(r, pos))
     }
   }
 

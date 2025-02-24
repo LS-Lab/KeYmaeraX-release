@@ -5,7 +5,7 @@
 
 package org.keymaerax.core
 
-import org.keymaerax.btactics.{Ax, TacticTestBase, TactixLibrary, UnifyUSCalculus}
+import org.keymaerax.btactics.{Ax, HilbertCalculus, TacticTestBase, TactixLibrary, UnifyUSCalculus}
 import org.keymaerax.infrastruct.RenUSubst
 import org.keymaerax.parser.StringConverter._
 import org.keymaerax.pt.ProvableSig
@@ -242,7 +242,7 @@ class URenameTests extends TacticTestBase(registerAxTactics = Some("z3")) {
 //    val proof = proof1
     import TactixLibrary._
     val proof = TactixLibrary
-      .proveBy("(x+y)'=x'+y'".asFormula, derive(1, 0 :: Nil) & UnifyUSCalculus.byUS(Ax.equalReflexive))
+      .proveBy("(x+y)'=x'+y'".asFormula, HilbertCalculus.derive(1, 0 :: Nil) & UnifyUSCalculus.byUS(Ax.equalReflexive))
     proof shouldBe Symbol("proved")
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("(x+y)'=x'+y'".asFormula))
     a[CoreException] shouldBe thrownBy {

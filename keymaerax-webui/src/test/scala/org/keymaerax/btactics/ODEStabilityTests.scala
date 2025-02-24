@@ -816,7 +816,8 @@ class ODEStabilityTests extends TacticTestBase {
                       )(1) <
                         (
                           hideL(-3) & ODE(1),
-                          boxAnd(1) & andR(1) < (dWPlus(1) & allL(-3) & allL(-3) & prop, hideL(-3) & ODE(1)),
+                          HilbertCalculus.boxAnd(1) &
+                            andR(1) < (dWPlus(1) & allL(-3) & allL(-3) & prop, hideL(-3) & ODE(1)),
                         ),
                     ),
                 ),

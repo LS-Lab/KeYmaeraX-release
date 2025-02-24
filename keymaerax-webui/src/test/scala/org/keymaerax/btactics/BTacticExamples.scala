@@ -112,7 +112,6 @@ class BTacticExamples extends TacticTestBase {
   }
 
   it should "prove with steps <a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))" in withTactics {
-    import TactixLibrary._
     // Proof by pointing with steps of  |- <a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))
     val proof = TactixLibrary.proveBy(
       Sequent(IndexedSeq(), IndexedSeq("<a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))".asFormula)),
@@ -121,16 +120,16 @@ class BTacticExamples extends TacticTestBase {
       UnifyUSCalculus.useAt(Ax.diamond, PosInExpr(1 :: Nil))(1, 0 :: Nil) &
         // |- !__[a;++b;]!p(x)__  <->  <a;>p(x) | <b;>p(x)
         // step "[++] choice" axiom forward at the indicated position
-        stepAt(1, 0 :: 0 :: Nil) &
+        HilbertCalculus.stepAt(1, 0 :: 0 :: Nil) &
         // |- __!([a;]!p(x) & [b;]!p(x))__  <-> <a;>p(x) | <b;>p(x)
         // step deMorgan forward at the indicated position
-        stepAt(1, 0 :: Nil) &
+        HilbertCalculus.stepAt(1, 0 :: Nil) &
         // |- __![a;]!p(x)__ | ![b;]!p(x)  <-> <a;>p(x) | <b;>p(x)
         // step "<> diamond" forward at the indicated position
-        stepAt(1, 0 :: 0 :: Nil) &
+        HilbertCalculus.stepAt(1, 0 :: 0 :: Nil) &
         // |- <a;>p(x) | __![b;]!p(x)__  <-> <a;>p(x) | <b;>p(x)
         // step "<> diamond" forward at the indicated position
-        stepAt(1, 0 :: 1 :: Nil) &
+        HilbertCalculus.stepAt(1, 0 :: 1 :: Nil) &
         // |- <a;>p(x) | <b;>p(x)  <-> <a;>p(x) | <b;>p(x)
         UnifyUSCalculus.byUS(Ax.equivReflexive),
     )
@@ -146,13 +145,13 @@ class BTacticExamples extends TacticTestBase {
       UnifyUSCalculus.CEat(TactixLibrary.proveBy("x*(x+1)=x^2+x".asFormula, QE))(1, 1 :: 0 :: 1 :: 1 :: Nil) &
         // |- x*(x+1)>=0 -> [y:=0;x:=x*(x+1);]x>=y by CE/CQ using x*(x+1)=x^2+x
         // step uses top-level operator [;]
-        stepAt(1, 1 :: Nil) &
+        HilbertCalculus.stepAt(1, 1 :: Nil) &
         // |- x*(x+1)>=0 -> [y:=0;][x:=x*(x+1);]x>=y
         // step uses top-level operator [:=]
-        stepAt(1, 1 :: Nil) &
+        HilbertCalculus.stepAt(1, 1 :: Nil) &
         // |- x*(x+1)>=0 -> [x:=x*(x+1);]x>=0
         // step uses top-level [:=]
-        stepAt(1, 1 :: Nil) &
+        HilbertCalculus.stepAt(1, 1 :: Nil) &
         // |- x*(x+1)>=0 -> x*(x+1)>=0
         prop,
     )

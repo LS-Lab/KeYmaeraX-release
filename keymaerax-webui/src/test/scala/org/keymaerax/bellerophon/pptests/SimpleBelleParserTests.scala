@@ -709,7 +709,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
 
   "def tactic parser" should "parse a simple example" in {
     val tactic = tacticParser("tactic t as (assignb('R))")
-    tactic shouldBe (round trip DefTactic("t", TactixLibrary.assignb(Symbol("R"))))
+    tactic shouldBe (round trip DefTactic("t", HilbertCalculus.assignb(Symbol("R"))))
   }
 
   it should "print indented" in {
@@ -728,7 +728,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
 
   it should "parse multipe tactic defs" in {
     val tactic = tacticParser("tactic t as (assignb('R)) ; tactic s as (implyR(1))")
-    tactic shouldBe (round trip DefTactic("t", TactixLibrary.assignb(Symbol("R"))) & DefTactic(
+    tactic shouldBe (round trip DefTactic("t", HilbertCalculus.assignb(Symbol("R"))) & DefTactic(
       "s",
       TactixLibrary.implyR(1),
     ))
@@ -736,13 +736,13 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
 
   it should "parse a simple example with application" in {
     val tactic = tacticParser("tactic t as (assignb('R)) ; implyR(1) ; t")
-    val tDef = DefTactic("t", TactixLibrary.assignb(Symbol("R")))
+    val tDef = DefTactic("t", HilbertCalculus.assignb(Symbol("R")))
     tactic shouldBe (round trip tDef & (TactixLibrary.implyR(1) & ApplyDefTactic(tDef)))
   }
 
   it should "parse with multiple application" in {
     val tactic = tacticParser("tactic t as (assignb('R)) ; andR(1) ; <(t ; prop ; done, prop ; doall(t))")
-    val tDef = DefTactic("t", TactixLibrary.assignb(Symbol("R")))
+    val tDef = DefTactic("t", HilbertCalculus.assignb(Symbol("R")))
     tactic shouldBe (round trip tDef & (andR(1) < (
       ApplyDefTactic(tDef) & (TactixLibrary.prop & TactixLibrary.done),
       TactixLibrary.prop & OnAll(ApplyDefTactic(tDef))
@@ -757,7 +757,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
     val tactic = tacticParser(
       "tactic t as (assignb('R)) ; andR(1) ; <(t ; prop ; done, prop ; doall(tactic t as (unfold) ; t); t)"
     )
-    val tDef1 = DefTactic("t", TactixLibrary.assignb(Symbol("R")))
+    val tDef1 = DefTactic("t", HilbertCalculus.assignb(Symbol("R")))
     val tDef2 = DefTactic("t", TactixLibrary.unfoldProgramNormalize)
     tactic shouldBe (round trip tDef1 & (andR(1) < (
       ApplyDefTactic(tDef1) & (TactixLibrary.prop & TactixLibrary.done),
@@ -767,7 +767,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
 
   it should "allow nested defs" in {
     val tactic = tacticParser("tactic t as (tactic s as (assignb('R)) ; andR(1) ; <(s, s)) ; t")
-    val sDef = DefTactic("s", TactixLibrary.assignb(Symbol("R")))
+    val sDef = DefTactic("s", HilbertCalculus.assignb(Symbol("R")))
     val tDef = DefTactic("t", sDef & andR(1) < (ApplyDefTactic(sDef), ApplyDefTactic(sDef)))
     tactic shouldBe (round trip tDef & ApplyDefTactic(tDef))
   }

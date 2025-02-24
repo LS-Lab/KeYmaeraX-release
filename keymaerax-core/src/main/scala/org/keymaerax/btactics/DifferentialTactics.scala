@@ -9,6 +9,7 @@ import org.keymaerax.bellerophon._
 import org.keymaerax.btactics.AnonymousLemmas._
 import org.keymaerax.btactics.ArithmeticSimplification.smartHide
 import org.keymaerax.btactics.BelleLabels.{replaceTxWith, startTx}
+import org.keymaerax.btactics.HilbertCalculus._
 import org.keymaerax.btactics.Idioms._
 import org.keymaerax.btactics.SimplifierV3._
 import org.keymaerax.btactics.TacticFactory._

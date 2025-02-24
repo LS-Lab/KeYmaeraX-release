@@ -8,6 +8,7 @@ package org.keymaerax.btactics
 import org.keymaerax.bellerophon._
 import org.keymaerax.btactics.Ax.boxTrueAxiom
 import org.keymaerax.btactics.BelleLabels._
+import org.keymaerax.btactics.HilbertCalculus._
 import org.keymaerax.btactics.Idioms._
 import org.keymaerax.btactics.TacticFactory._
 import org.keymaerax.btactics.TactixLibrary._

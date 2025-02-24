@@ -5,7 +5,6 @@
 
 package org.keymaerax.btactics
 
-import org.keymaerax.bellerophon.TacticStatistics
 import org.keymaerax.btactics.ODELiveness._
 import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.btactics.UnifyUSCalculus._
@@ -583,7 +582,8 @@ class ODELivenessTests extends TacticTestBase {
       ) & useAt(Ax.commaCommuteD)(1) &
       dBDG("2".asTerm, 2)(1) <
       (
-        cohideOnlyL(-2) & vDG("t'=1".asDifferentialProgram)(-1) & useAt(Ax.commaCommute)(-1) & monb & QE,
+        cohideOnlyL(-2) & vDG("t'=1".asDifferentialProgram)(-1) & useAt(Ax.commaCommute)(-1) & HilbertCalculus.monb &
+          QE,
         cohideR(1) & byUS(Ax.TExgt),
       )
 

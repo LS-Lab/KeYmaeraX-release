@@ -5,6 +5,7 @@
 
 package org.keymaerax.btactics
 
+import org.keymaerax.btactics.HilbertCalculus._
 import org.keymaerax.btactics.ImplicitAx._
 import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
@@ -504,8 +505,8 @@ class ImplicitAxTests extends TacticTestBase {
       diffUnfold(Variable("x"), Number(0))(1) <
         (
           QE,
-          ODEInvariance.dgVdbx(G, p1 :: p2 :: Nil)(1) & DW(1) & TactixLibrary.G(1) & QE,
-          ODEInvariance.dgVdbx(Gn, p1 :: p2 :: Nil)(1) & DW(1) & TactixLibrary.G(1) & QE,
+          ODEInvariance.dgVdbx(G, p1 :: p2 :: Nil)(1) & DW(1) & HilbertCalculus.G(1) & QE,
+          ODEInvariance.dgVdbx(Gn, p1 :: p2 :: Nil)(1) & DW(1) & HilbertCalculus.G(1) & QE,
         ),
     )
     pr shouldBe Symbol("proved")

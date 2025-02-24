@@ -6,7 +6,7 @@
 package org.keymaerax.bellerophon
 
 import org.keymaerax.Logging
-import org.keymaerax.btactics.{Ax, TacticFactory, TactixLibrary, UnifyUSCalculus}
+import org.keymaerax.btactics.{Ax, HilbertCalculus, TacticFactory, TactixLibrary, UnifyUSCalculus}
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.Augmentors._
 import org.keymaerax.infrastruct.{Position, RenUSubst, RestrictedBiDiUnificationMatch}
@@ -732,7 +732,7 @@ abstract class BelleBaseInterpreter(
                             case None => false
                           }
                         )
-                      TactixLibrary.assignb(AntePos(i)) * StaticSemantics.symbols(arg).size
+                      HilbertCalculus.assignb(AntePos(i)) * StaticSemantics.symbols(arg).size
                     } else if (fn == "q_") {
                       val i = seq
                         .succ
@@ -742,7 +742,7 @@ abstract class BelleBaseInterpreter(
                             case None => false
                           }
                         )
-                      TactixLibrary.assignb(SuccPos(i)) * StaticSemantics.symbols(arg).size
+                      HilbertCalculus.assignb(SuccPos(i)) * StaticSemantics.symbols(arg).size
                     } else throw new BelleCriticalException(
                       "Implementation error in Using: expected abbreviated p_ or q_"
                     ) {}

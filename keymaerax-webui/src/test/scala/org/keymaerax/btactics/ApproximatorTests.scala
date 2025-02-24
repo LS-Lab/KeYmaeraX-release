@@ -52,7 +52,7 @@ class ApproximatorTests extends TacticTestBase {
     val f = "c=1 & s=0 & t=0->[blah := something;][{s'=c,c'=-s,t'=1}](c>=1+-t^2/2+t^4/24+-t^6/720)".asFormula
     val t = TactixLibrary
       .implyR(1) & Approximator.circularApproximate("s".asVariable, "c".asVariable, Number(5))(1, 1 :: Nil) &
-      TactixLibrary.dW(1, 1 :: Nil) & TactixLibrary.assignb(1) &
+      TactixLibrary.dW(1, 1 :: Nil) & HilbertCalculus.assignb(1) &
       TactixLibrary.QE // @todo the tactic that does this successively.
     proveBy(f, t) shouldBe Symbol("proved")
   })
@@ -105,7 +105,7 @@ class ApproximatorTests extends TacticTestBase {
     val f = "t=0 & e=1 -> [z:=0;][{e'=e,t'=1}](e>=1+t+t^2/2+t^3/6+t^4/24+t^5/120+t^6/720+t^7/5040+t^8/40320+t^9/362880)"
       .asFormula
     val t = TactixLibrary.implyR(1) & Approximator.expApproximate("e".asVariable, Number(10))(1) &
-      TactixLibrary.assignb(1) & TactixLibrary.dW(1) & TactixLibrary.QE
+      HilbertCalculus.assignb(1) & TactixLibrary.dW(1) & TactixLibrary.QE
     proveBy(f, t) shouldBe Symbol("proved")
   })
 
@@ -179,7 +179,7 @@ class ApproximatorTests extends TacticTestBase {
       TactixLibrary.dC(cut)(Position(1, 1 :: Nil)) <
         (
           UnifyUSCalculus.nil,
-          TactixLibrary.dI()(Position(1, 1 :: Nil)) & (TactixLibrary.QE | (TactixLibrary.G(1) & TactixLibrary.QE)),
+          TactixLibrary.dI()(Position(1, 1 :: Nil)) & (TactixLibrary.QE | (HilbertCalculus.G(1) & TactixLibrary.QE)),
         ),
     ))
   })

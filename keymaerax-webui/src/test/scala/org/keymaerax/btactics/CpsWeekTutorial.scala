@@ -278,7 +278,8 @@ class CpsWeekTutorial extends TacticTestBase {
           (
             skip,
             Idioms.doIf(_.subgoals.head.ante.contains(accCond))(hideL(Symbol("L"), accCond)) &
-              (boxAnd(Symbol("R")) & andR(Symbol("R")) < (dI()(Symbol("R")), skip)) * 3 & dI()(Symbol("R")) & done,
+              (HilbertCalculus.boxAnd(Symbol("R")) & andR(Symbol("R")) < (dI()(Symbol("R")), skip)) * 3 &
+              dI()(Symbol("R")) & done,
           )
       }
 

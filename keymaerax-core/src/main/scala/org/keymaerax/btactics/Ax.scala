@@ -8,6 +8,7 @@ package org.keymaerax.btactics
 import org.keymaerax.Logging
 import org.keymaerax.bellerophon._
 import org.keymaerax.btactics.FOQuantifierTactics.allInstantiateInverse
+import org.keymaerax.btactics.HilbertCalculus._
 import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.btactics.UnifyUSCalculus._
 import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
@@ -22,8 +23,8 @@ import org.keymaerax.pt._
 import org.keymaerax.tools.ToolEvidence
 
 import scala.annotation.nowarn
-import scala.collection.immutable._
 import scala.collection.immutable
+import scala.collection.immutable._
 
 /**
  * Central Database of Derived Axioms and Derived Axiomatic Rules, including information about core axioms and axiomatic
@@ -2314,7 +2315,7 @@ object Ax extends Logging {
             /* use */ implyR(1) & hideL(-2) & /* monb fails renaming substitution */ implyRi & CMon(
               PosInExpr(1 :: Nil)
             ) & propClose,
-            /* show */ implyR(1) & TactixLibrary.boxAnd(1) & propClose
+            /* show */ implyR(1) & HilbertCalculus.boxAnd(1) & propClose
           )
       ),
   )
@@ -5937,7 +5938,7 @@ object Ax extends Logging {
       useAt(ally, PosInExpr(0 :: Nil))(-1) & // allL/*(dbx_internal)*/(-1) &
       useAt(commaCommute)(-1) &
       cutR("[{c{|y_,z_|},y_'=(-(g(|y_,z_|)/2))*y_+0&q(|y_,z_|)}](e_(|y_,z_|)*y_^2>=0 & y_ > 0)".asFormula)(1) < (
-        TactixLibrary.boxAnd(1) & andR(1) < (
+        HilbertCalculus.boxAnd(1) & andR(1) < (
           useAt(DI)(1) & implyR(1) & andR(1) < (
             hideL(-4) & hideL(-1) &
               byUS(TactixLibrary.proveBy(
@@ -6021,7 +6022,7 @@ object Ax extends Logging {
     implyR(1) & implyR(1) &
       useAt(dbxEqArith)(Symbol("Llast")) & andL(Symbol("Llast")) &
       useAt(dbxEqArith)(1, PosInExpr(1 :: Nil)) &
-      TactixLibrary.boxAnd(1) & andR(1) < (
+      HilbertCalculus.boxAnd(1) & andR(1) < (
         hideL(-3) & exchangeL(-1, -2) & implyRi &
           useAt(Ax.DBXge, PosInExpr(1 :: Nil))(1) & monb &
           byUS(TactixLibrary.proveBy("f()=g() ==> f()>=g()".asSequent, QE & done)),
@@ -8779,7 +8780,7 @@ object Ax extends Logging {
       useExpansionAt(diamond)(1) &
       useExpansionAt(diamond)(-2) &
       notL(-2) & notR(1) & implyRi()(-1, 1) &
-      useAt(DR, PosInExpr(1 :: Nil))(1) & TactixLibrary.boxAnd(1) & andR(1) < (
+      useAt(DR, PosInExpr(1 :: Nil))(1) & HilbertCalculus.boxAnd(1) & andR(1) < (
         HilbertCalculus.DW(1) & G(1) & implyR(1) & id,
         id
       ),

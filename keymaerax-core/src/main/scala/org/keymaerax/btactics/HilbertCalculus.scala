@@ -21,21 +21,6 @@ import scala.reflect.runtime.universe
 
 /**
  * Hilbert Calculus for differential dynamic logic.
- * @author
- *   Andre Platzer
- * @author
- *   Stefan Mitsch
- * @see
- *   [[HilbertCalculus]]
- */
-object HilbertCalculus extends TacticProvider with HilbertCalculus {
-
-  /** @inheritdoc */
-  override def getInfo: (Class[_], universe.Type) = (HilbertCalculus.getClass, universe.typeOf[HilbertCalculus.type])
-}
-
-/**
- * Hilbert Calculus for differential dynamic logic.
  *
  * Provides the axioms and axiomatic proof rules from Figure 2 and Figure 3 in: Andre Platzer.
  * [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]].
@@ -68,9 +53,9 @@ object HilbertCalculus extends TacticProvider with HilbertCalculus {
  *   Andre Platzer. [[https://doi.org/10.1109/LICS.2012.64 The complete proof theory of hybrid systems]]. ACM/IEEE
  *   Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012
  * @see
- *   [[HilbertCalculus.stepAt()]]
+ *   [[HilbertCalculus.stepAt]]
  * @see
- *   [[HilbertCalculus.derive()]]
+ *   [[HilbertCalculus.derive]]
  * @see
  *   [[org.keymaerax.core.AxiomBase]]
  * @see
@@ -80,7 +65,11 @@ object HilbertCalculus extends TacticProvider with HilbertCalculus {
  * @Tactic
  *   completed
  */
-trait HilbertCalculus {
+object HilbertCalculus extends TacticProvider {
+
+  /** @inheritdoc */
+  override def getInfo: (Class[_], universe.Type) = (HilbertCalculus.getClass, universe.typeOf[HilbertCalculus.type])
+
   import TacticFactory._
   import UnifyUSCalculus._
 

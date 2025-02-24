@@ -12,6 +12,7 @@ import org.keymaerax.btactics.macros._
 import org.keymaerax.btactics.{
   ConfigurableGenerator,
   FixedGenerator,
+  HilbertCalculus,
   Invariant,
   InvariantGenerator,
   TacticTestBase,
@@ -263,7 +264,7 @@ class ScriptedRequestTests extends TacticTestBase {
           l3 should have(Symbol("goal")(Some("x>=1 ==> [x:=x+1;]x>=1".asSequent)))
       }
 
-      tacticRunner("(2,2)", assignb(1))
+      tacticRunner("(2,2)", HilbertCalculus.assignb(1))
       inside(new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponse(t)) {
         case AgendaAwesomeResponse(_, _, root, l1 :: l2 :: l3 :: Nil, _, _, _, _) =>
           root should have(Symbol("goal")(Some("==> x>=2 -> [{x:=x+1;}*]x>=0".asSequent)))
@@ -684,7 +685,7 @@ class ScriptedRequestTests extends TacticTestBase {
         ProofSession(proofId.toString, FixedGenerator(Nil), FixedGenerator(Nil), Declaration(Map()))
       val tacticRunner = runTactic(db, t, proofId) _
 
-      val response = tacticRunner("()", choiceb(1, 1 :: Nil))
+      val response = tacticRunner("()", HilbertCalculus.choiceb(1, 1 :: Nil))
       response shouldBe a[ErrorResponse]
       response should have(Symbol("msg")(
         """Axiom choiceb [a;++b;]p(||)<->[a;]p(||)&[b;]p(||) cannot be applied: The shape of
@@ -709,7 +710,7 @@ class ScriptedRequestTests extends TacticTestBase {
         ProofSession(proofId.toString, FixedGenerator(Nil), FixedGenerator(Nil), Declaration(Map()))
       val tacticRunner = runTactic(db, t, proofId) _
 
-      val response = tacticRunner("()", choiceb(2))
+      val response = tacticRunner("()", HilbertCalculus.choiceb(2))
       response shouldBe a[ErrorResponse]
       response should have(Symbol("msg")(
         "choiceb(2): applied at position 2 may point outside the positions of the goal Provable{\n==> 1:  x>=0&v>=0->[v:=v;]<{x'=v}>x>=0\tImply\n  from\n==> 1:  x>=0&v>=0->[v:=v;]<{x'=v}>x>=0\tImply}"

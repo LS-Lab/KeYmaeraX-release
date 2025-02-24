@@ -159,10 +159,10 @@ private object ProofRuleTactics extends TacticProvider with Logging {
     inputanon { (pos: Position, sequent: Sequent) =>
       sequent.sub(pos) match {
         case Some(Forall(DifferentialSymbol(v) :: Nil, p)) => DLBySubst.stutter(v)(pos) & boundRename(v, repl)(pos) &
-            assignb(pos)
+            HilbertCalculus.assignb(pos)
         case Some(Forall((v: BaseVariable) :: Nil, _)) => boundRename(v, repl)(pos)
         case Some(Exists(DifferentialSymbol(v) :: Nil, p)) => DLBySubst.stutter(v)(pos) & boundRename(v, repl)(pos) &
-            assignb(pos)
+            HilbertCalculus.assignb(pos)
         case Some(Exists((v: BaseVariable) :: Nil, _)) => boundRename(v, repl)(pos)
         case Some(Box(Assign(v, _), _)) => boundRename(v, repl)(pos)
         case Some(Box(AssignAny(v), _)) => boundRename(v, repl)(pos)

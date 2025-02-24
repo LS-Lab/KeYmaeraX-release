@@ -50,9 +50,9 @@ import scala.util.Try
  *
  * Other big tactic libraries are:
  *   - [[UnifyUSCalculus]]: Automatic unification-based Uniform Substitution Calculus with indexing.
+ *   - [[HilbertCalculus]]: Hilbert Calculus for differential dynamic logic.
  *
  * The tactic library also includes important proof calculus subcollections:
- *   - [[HilbertCalculus]]: Hilbert Calculus for differential dynamic logic.
  *   - [[SequentCalculus]]: Sequent Calculus for propositional and first-order logic.
  *   - [[HybridProgramCalculus]]: Hybrid program derived proof rules for differential dynamic logic.
  *   - [[DifferentialEquationCalculus]]: Differential equation proof rules for differential dynamic logic.
@@ -85,11 +85,7 @@ import scala.util.Try
 @nowarn("msg=match may not be exhaustive") @nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
 @nowarn("cat=deprecation&origin=org.keymaerax.bellerophon.DependentTwoPositionTactic")
 object TactixLibrary
-    extends TacticProvider
-    with HilbertCalculus
-    with SequentCalculus
-    with DifferentialEquationCalculus
-    with HybridProgramCalculus {
+    extends TacticProvider with SequentCalculus with DifferentialEquationCalculus with HybridProgramCalculus {
 
   /** @inheritdoc */
   override def getInfo: (Class[_], universe.Type) = (TactixLibrary.getClass, universe.typeOf[TactixLibrary.type])
@@ -160,8 +156,10 @@ object TactixLibrary
         classOf[Throwable],
         (ex: Throwable) =>
           seq.sub(pos) match {
-            case Some(p @ Box(_: Assign, _)) => if (index(pos.isAnte)(p).isDefined) assignb(pos) else throw ex
-            case Some(p @ Diamond(_: Assign, _)) => if (index(pos.isAnte)(p).isDefined) assignd(pos) else throw ex
+            case Some(p @ Box(_: Assign, _)) =>
+              if (index(pos.isAnte)(p).isDefined) HilbertCalculus.assignb(pos) else throw ex
+            case Some(p @ Diamond(_: Assign, _)) =>
+              if (index(pos.isAnte)(p).isDefined) HilbertCalculus.assignd(pos) else throw ex
             case _ => throw ex
           },
       )
@@ -784,7 +782,7 @@ object TactixLibrary
                   DifferentialTactics.diffInd(auto = Symbol("diffInd"))(pos) <
                     (
                       ToolTactics.prepareQE(Nil, UnifyUSCalculus.nil),
-                      SaturateTactic(Dassignb(pos)) & ToolTactics.prepareQE(Nil, UnifyUSCalculus.nil),
+                      SaturateTactic(HilbertCalculus.Dassignb(pos)) & ToolTactics.prepareQE(Nil, UnifyUSCalculus.nil),
                     ),
                 )
                 val dwBase = proveBy(seq, dWPlus(pos) & SaturateTactic(alphaRule) & SimplifierV3.fullSimplify)

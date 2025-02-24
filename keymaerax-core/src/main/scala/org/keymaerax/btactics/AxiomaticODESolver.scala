@@ -7,6 +7,7 @@ package org.keymaerax.btactics
 
 import org.keymaerax.bellerophon._
 import org.keymaerax.btactics.AnonymousLemmas._
+import org.keymaerax.btactics.HilbertCalculus._
 import org.keymaerax.btactics.TacticFactory._
 import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.btactics.UnifyUSCalculus._
@@ -671,7 +672,7 @@ object AxiomaticODESolver {
                 SeqTactic(
                   TactixLibrary.cohideR(Symbol("Rlast")),
                   DebuggingTactics.debug("Normalizing", ODE_DEBUGGER),
-                  TactixLibrary.assignb(1) * contextSize,
+                  HilbertCalculus.assignb(1) * contextSize,
                   DebuggingTactics.debug("diffInd", ODE_DEBUGGER),
                   DifferentialTactics.diffInd()(1),
                   DebuggingTactics.done,
@@ -830,7 +831,7 @@ object AxiomaticODESolver {
         SeqTactic(
           DLBySubst.stutter(xx)(pp ++ PosInExpr(1 :: Nil)),
           UnifyUSCalculus.useAt(rewrite, if (polarity >= 0) PosInExpr(1 :: Nil) else PosInExpr(0 :: Nil), subst)(pp),
-          TactixLibrary.assignb(pp ++ PosInExpr(1 :: Nil)),
+          HilbertCalculus.assignb(pp ++ PosInExpr(1 :: Nil)),
         )
       })(pos) * odeSize,
       if (polarity > 0) UnifyUSCalculus.useAt(rewrite3, PosInExpr(1 :: Nil))(pos) else UnifyUSCalculus.skip,
@@ -871,7 +872,7 @@ object AxiomaticODESolver {
               SeqTactic(
                 TactixLibrary.cohideR(Symbol("Rlast")),
                 DebuggingTactics.debug("Normalizing", ODE_DEBUGGER),
-                TactixLibrary.assignb(1) * (odeSize + 1),
+                HilbertCalculus.assignb(1) * (odeSize + 1),
                 DebuggingTactics.debug("diffInd", ODE_DEBUGGER),
                 DifferentialTactics.diffInd()(1),
                 DebuggingTactics.done,

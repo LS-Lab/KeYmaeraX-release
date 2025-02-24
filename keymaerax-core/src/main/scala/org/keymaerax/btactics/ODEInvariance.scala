@@ -8,6 +8,7 @@ package org.keymaerax.btactics
 import org.keymaerax.bellerophon._
 import org.keymaerax.btactics.AnonymousLemmas._
 import org.keymaerax.btactics.DifferentialTactics._
+import org.keymaerax.btactics.HilbertCalculus._
 import org.keymaerax.btactics.Idioms._
 import org.keymaerax.btactics.ODELiveness.vDG
 import org.keymaerax.btactics.SimplifierV3._

@@ -7,6 +7,7 @@ package org.keymaerax.btactics
 
 import org.keymaerax.bellerophon._
 import org.keymaerax.btactics.AnonymousLemmas._
+import org.keymaerax.btactics.HilbertCalculus._
 import org.keymaerax.btactics.ODEInvariance._
 import org.keymaerax.btactics.PropositionalTactics.implyRi
 import org.keymaerax.btactics.SimplifierV3.ineqNormalize

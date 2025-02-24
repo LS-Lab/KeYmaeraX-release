@@ -12,6 +12,7 @@ import org.keymaerax.bellerophon.{
   Let,
   TacticInapplicableFailure,
 }
+import org.keymaerax.btactics.HilbertCalculus._
 import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.btactics.UnifyUSCalculus._
 import org.keymaerax.btactics.macros._

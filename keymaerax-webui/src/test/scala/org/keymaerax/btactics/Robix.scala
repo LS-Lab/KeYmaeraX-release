@@ -91,7 +91,7 @@ class Robix extends TacticTestBase {
                       |   |abs(y-yo) > v^2 / (2*B()) )""".stripMargin.asFormula
 
     val augmentTime = HilbertCalculus.DGC("t".asVariable, Number(1))(1) & DLBySubst.assignbExists(Number(0))(1) &
-      assignb(1)
+      HilbertCalculus.assignb(1)
 
     def di(a: String): DependentPositionTactic = diffInvariant(
       // @todo allow old(t) in multiple formulas
