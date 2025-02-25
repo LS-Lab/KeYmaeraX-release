@@ -11,16 +11,10 @@ import org.keymaerax.bellerophon._
 import org.keymaerax.btactics.macros._
 import org.keymaerax.core._
 import org.keymaerax.core.btactics.annotations.Derivation
-import org.keymaerax.infrastruct._
-import org.reflections.Reflections
-import org.reflections.scanners.Scanners
 
 import java.lang.reflect.{Field, InvocationTargetException}
 import scala.annotation.{nowarn, tailrec}
-import scala.collection.mutable
-import scala.jdk.CollectionConverters.CollectionHasAsScala
 import scala.language.implicitConversions
-import scala.reflect.runtime.{universe => ru}
 
 /**
  * Central list of all derivation steps (axioms, derived axioms, proof rules, tactics) with meta information of relevant
@@ -68,120 +62,6 @@ object DerivationInfoRegistry extends Logging {
     case AppliedBuiltinTwoPositionTactic(n, _, _) => locate(n)
     // @todo probably more cases
     case _ => None
-  }
-
-  ////////////////////////////////////////////////////////
-  // Assemble above derivation infos in [[allInfo]] registry
-  ////////////////////////////////////////////////////////
-
-  /**
-   * We need to force the right-hand side of every tactic definition to evaluate, which requires passing in arguments to
-   * every "def" of a tactic. Subtly, it's ok for these arguments to be dummies, because we're not actually interpreting
-   * the tactic on a Provable, just creating a BelleExpr without interpreting that BelleExpr
-   */
-  private def instantiateArg(ai: String): Any = {
-    ai match {
-      case "Number" | "Term" | "Expression" => Number(0)
-      case "String" => ""
-      case "Variable" => Variable("x")
-      case "Formula" => True
-      case "InvariantGenerator" => FixedGenerator(Nil)
-      case "SubstitutionPair" => SubstitutionPair(Nothing, Nothing)
-      case "PosInExpr" => PosInExpr()
-      case "Option" => None
-      case "List" => Nil
-    }
-  }
-
-  /** Apply a reflected method with well-typed dummy arguments (for its side effects) */
-  private def applyMirror(m: ru.MethodMirror, argSyms: List[ru.Symbol]): Unit = {
-    val args = argSyms.map((theSymbol: ru.Symbol) => theSymbol.info.typeConstructor.toString.split('.').last)
-    args match {
-      // If [[m]] is a tactic, determine and instantiate correct argument types
-      case Nil => m()
-      case _ =>
-        val arguments = args.map(instantiateArg)
-        m(arguments: _*)
-    }
-  }
-
-  /** Initialize TacticInfo for all @Tactic annotations in given class `cl` */
-  private def initClass(cl: Class[_], tpe: ru.Type): Unit = {
-    // @TODO: Reduce code duplication
-    /* Collect fields and methods of class */
-    val fields = cl.getDeclaredFields.filter(f => classOf[BelleExpr].isAssignableFrom(f.getType))
-    val methods = cl.getDeclaredMethods.filter(f => classOf[BelleExpr].isAssignableFrom(f.getReturnType))
-    val mirror = ru.runtimeMirror(getClass.getClassLoader)
-    // access the singleton object
-    val moduleMirror = mirror.reflectModule(tpe.termSymbol.asModule)
-    val im = mirror.reflect(moduleMirror.instance)
-
-    /*  @Tactic and friends disappear during compilation, but they replace themselves with @InternalAnnotation
-     *  which we use here to identify annotated fields, which must be executed in order to initialize TacticInfos*/
-    // @note lazy vals have a "hidden" getter method that does the initialization
-    val keptFields = fields.filter(fn => {
-      tpe
-        .member(ru.TermName(fn.getName))
-        .alternatives
-        .flatMap(_.annotations)
-        .exists(_.tree.tpe.typeSymbol.toString == "InternalAnnotation")
-    })
-    val fieldFields = keptFields.map(fn => (fn, tpe.member(ru.TermName(fn.getName)).asMethod.getter.asMethod))
-    val methodFields: mutable.ArraySeq[(String, ru.MethodSymbol)] = methods.flatMap(fn => {
-      val mem = tpe.member(ru.TermName(fn.getName))
-      /* Overloaded values are considered terms (not methods), and have a list of alternatives, which might be annotated.
-       * In this case, we are only interested in the alternative that was actually annotated, not the whole method*/
-      if (mem.isTerm && mem.asTerm.isOverloaded) {
-        mem
-          .asTerm
-          .alternatives
-          .filter(_.annotations.exists(_.tree.tpe.typeSymbol.name.toString == "InternalAnnotation"))
-          .map(c => (fn.getName, c.asMethod))
-      } else if (mem.annotations.exists(_.tree.tpe.typeSymbol.name.toString == "InternalAnnotation")) {
-        mutable.ArraySeq((fn.getName, mem.asMethod))
-      } else { mutable.ArraySeq() }
-    })
-    val fieldMirrors = fieldFields.map({ case (x, y) => (x, im.reflectMethod(y)) })
-    val methodMirrors = methodFields.map({ case (x, y) => (x, im.reflectMethod(y)) })
-    val failures = mutable.Buffer.empty[(String, Throwable)]
-    methodMirrors
-      .indices
-      .foreach(idx => {
-        try {
-          val (_, fm) = methodMirrors(idx)
-          /* Type signature of function needed in order to generate well-typed arguments */
-          val argSyms = fm.symbol.typeSignature.paramLists.headOption.getOrElse(Nil)
-          // NB: allInfo gets updated automatically when touching each field/method
-          applyMirror(fm, argSyms)
-        } catch {
-          case e: Throwable =>
-            failures += (methodFields(idx)._1 -> e)
-            logger.warn("WARNING: Failed to initialize @Tactic.", e)
-        }
-      })
-    if (failures.nonEmpty) throw new Exception(
-      s"WARNING: Encountered $failures method failures when trying to initialize @Tactic in ${cl.getName}. Unable to initialize:\n" +
-        failures.map(_._1).mkString("\n"),
-      failures.head._2,
-    )
-    fieldMirrors
-      .indices
-      .foreach(idx => {
-        try {
-          val (fn, fm) = fieldMirrors(idx)
-          val argSyms = tpe.member(ru.TermName(fn.getName)).asMethod.typeSignature.paramLists.headOption.getOrElse(Nil)
-          applyMirror(fm, argSyms)
-        } catch {
-          case e: Throwable =>
-            failures += (keptFields(idx).getName -> e)
-            logger.warn("WARNING: Failed to initialize @Tactic.", e)
-        }
-      })
-    if (failures.nonEmpty) throw new Exception(
-      s"WARNING: Encountered $failures field failures when trying to initialize @Tactic in ${cl.getName}. Unable to initialize:\n" +
-        failures.map(_._1).mkString("\n"),
-      failures.head._2,
-    )
   }
 
   /** Evaluate the field of a Scala object and register it with the global [[DerivationInfo]] object. */
@@ -274,19 +154,7 @@ object DerivationInfoRegistry extends Logging {
       println()
     }
 
-    // Search and initialize tactic providers (provide @Tactic-annotated methods)
-    val reflections = new Reflections("org.keymaerax.btactics")
-    val tacticProviderTypes = reflections.get(Scanners.SubTypes.of(classOf[TacticProvider]).asClass())
-    val instances = tacticProviderTypes.asScala.map(_.getField("MODULE$").get(()).asInstanceOf[TacticProvider])
-    val objects = instances.map(_.getInfo)
-    objects.foreach({ case (cl, ct) => initClass(cl, ct) })
-
     DerivationInfo._initStatus = DerivationInfo.InitComplete
     if (derivationErrors.nonEmpty) { throw derivationErrors.head._2 }
   }
-
-  ////////////////////////////////////////////////////////
-  // End of derivation infos in [[allInfo]] registry
-  ////////////////////////////////////////////////////////
-
 }

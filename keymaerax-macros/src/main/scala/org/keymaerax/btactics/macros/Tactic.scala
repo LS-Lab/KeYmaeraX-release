@@ -521,10 +521,15 @@ object TacticMacro {
 
     val baseType = definition.returnType
     val baseTerm = getBaseTerm
+    val baseCall = definition match {
+      case d: Definition.DefParams => q"${d.declName}(..${definitionArgs.map(ai => Ident(TermName(ai.name)))})"
+      case d: Definition.Def => q"${d.declName}"
+      case d: Definition.Val => q"${d.declName}"
+    }
 
     def argInfoToValDef(info: ArgInfo): ValDef = ValDef(Modifiers(), TermName(info.name), typeName(info), EmptyTree)
 
-    val (curriedTerm, _) = definitionArgs.foldRight[(Tree, Tree)]((baseTerm, baseType))({ case (arg, (acc, accTy)) =>
+    val (curriedTerm, _) = definitionArgs.foldRight[(Tree, Tree)]((baseCall, baseType))({ case (arg, (acc, accTy)) =>
       val argTy = typeName(arg)
       val funTy = tq"""org.keymaerax.btactics.macros.TypedFunc[$argTy, $accTy]"""
       val argDef = argInfoToValDef(arg)
@@ -563,87 +568,108 @@ object TacticMacro {
 
     val expr = q"((_: Unit) => ($curriedTerm))"
 
-    val info = returnType match {
-      case "DependentTactic" | "BuiltInTactic" | "BelleExpr" => q"""
-        new org.keymaerax.btactics.macros.PlainTacticInfo(
-          codeName = ${args.name},
-          display = ${astForDisplayInfo(display)(c)},
-          needsGenerator = $needsGenerator,
-          revealInternalSteps = ${args.revealInternalSteps},
-        )(theExpr = $expr)
-      """
+    val (infoType, info) = returnType match {
+      case "DependentTactic" | "BuiltInTactic" | "BelleExpr" => (
+          tq"org.keymaerax.btactics.macros.PlainTacticInfo",
+          q"""
+            new org.keymaerax.btactics.macros.PlainTacticInfo(
+              codeName = ${args.name},
+              display = ${astForDisplayInfo(display)(c)},
+              needsGenerator = $needsGenerator,
+              revealInternalSteps = ${args.revealInternalSteps},
+            )(theExpr = $expr)
+          """,
+        )
 
-      case "InputTactic" | "StringInputTactic" => q"""
-        new org.keymaerax.btactics.macros.InputTacticInfo(
-          codeName = ${args.name},
-          display = ${astForDisplayInfo(display)(c)},
-          inputs = ${displayInputs.map(ai => astForArgInfo(ai)(c))},
-          needsGenerator = $needsGenerator,
-          revealInternalSteps = ${args.revealInternalSteps},
-        )(theExpr = $expr)
-      """
+      case "InputTactic" | "StringInputTactic" => (
+          tq"org.keymaerax.btactics.macros.InputTacticInfo",
+          q"""
+            new org.keymaerax.btactics.macros.InputTacticInfo(
+              codeName = ${args.name},
+              display = ${astForDisplayInfo(display)(c)},
+              inputs = ${displayInputs.map(ai => astForArgInfo(ai)(c))},
+              needsGenerator = $needsGenerator,
+              revealInternalSteps = ${args.revealInternalSteps},
+            )(theExpr = $expr)
+          """,
+        )
 
       case "DependentPositionTactic" | "BuiltInLeftTactic" | "BuiltInRightTactic" | "BuiltInPositionTactic" |
-          "CoreLeftTactic" | "CoreRightTactic" => q"""
-        new org.keymaerax.btactics.macros.PositionTacticInfo(
-          codeName = ${args.name},
-          display = ${astForDisplayInfo(display)(c)},
-          needsGenerator = $needsGenerator,
-          revealInternalSteps = ${args.revealInternalSteps},
-        )(theExpr = $expr)
-      """
+          "CoreLeftTactic" | "CoreRightTactic" => (
+          tq"org.keymaerax.btactics.macros.PositionTacticInfo",
+          q"""
+            new org.keymaerax.btactics.macros.PositionTacticInfo(
+              codeName = ${args.name},
+              display = ${astForDisplayInfo(display)(c)},
+              needsGenerator = $needsGenerator,
+              revealInternalSteps = ${args.revealInternalSteps},
+            )(theExpr = $expr)
+          """,
+        )
 
-      case "InputPositionTactic" | "DependentPositionWithAppliedInputTactic" => q"""
-        new org.keymaerax.btactics.macros.InputPositionTacticInfo(
-          codeName = ${args.name},
-          display = ${astForDisplayInfo(display)(c)},
-          inputs = ${displayInputs.map(ai => astForArgInfo(ai)(c))},
-          needsGenerator = $needsGenerator,
-          revealInternalSteps = ${args.revealInternalSteps},
-        )(theExpr = $expr)
-      """
+      case "InputPositionTactic" | "DependentPositionWithAppliedInputTactic" => (
+          tq"org.keymaerax.btactics.macros.InputPositionTacticInfo",
+          q"""
+            new org.keymaerax.btactics.macros.InputPositionTacticInfo(
+              codeName = ${args.name},
+              display = ${astForDisplayInfo(display)(c)},
+              inputs = ${displayInputs.map(ai => astForArgInfo(ai)(c))},
+              needsGenerator = $needsGenerator,
+              revealInternalSteps = ${args.revealInternalSteps},
+            )(theExpr = $expr)
+          """,
+        )
 
-      case "DependentTwoPositionTactic" | "InputTwoPositionTactic" | "BuiltInTwoPositionTactic" => q"""
-        new org.keymaerax.btactics.macros.TwoPositionTacticInfo(
-          codeName = ${args.name},
-          display = ${astForDisplayInfo(display)(c)},
-          needsGenerator = $needsGenerator,
-        )(theExpr = $expr)
-      """
+      case "DependentTwoPositionTactic" | "InputTwoPositionTactic" | "BuiltInTwoPositionTactic" => (
+          tq"org.keymaerax.btactics.macros.TwoPositionTacticInfo",
+          q"""
+            new org.keymaerax.btactics.macros.TwoPositionTacticInfo(
+              codeName = ${args.name},
+              display = ${astForDisplayInfo(display)(c)},
+              needsGenerator = $needsGenerator,
+            )(theExpr = $expr)
+          """,
+        )
 
-      case "AppliedBuiltInTwoPositionTactic" => q"""
-        new org.keymaerax.btactics.macros.InputTwoPositionTacticInfo(
-          codeName = ${args.name},
-          display = ${astForDisplayInfo(display)(c)},
-          needsGenerator = $needsGenerator,
-        )(theExpr = $expr)
-      """
+      case "AppliedBuiltInTwoPositionTactic" => (
+          tq"org.keymaerax.btactics.macros.InputTwoPositionTacticInfo",
+          q"""
+            new org.keymaerax.btactics.macros.InputTwoPositionTacticInfo(
+              codeName = ${args.name},
+              display = ${astForDisplayInfo(display)(c)},
+              needsGenerator = $needsGenerator,
+            )(theExpr = $expr)
+          """,
+        )
 
       case _ =>
         c.abort(definition.returnType.pos, s"@Tactic return type must be one of ${KNOWN_TACTIC_TYPES.mkString(", ")}")
     }
 
-    // Add annotation for runtime reflection-based detection of tactics.
-    val mods = Modifiers(
-      definition.mods.flags,
-      definition.mods.privateWithin,
-      q"new org.keymaerax.btactics.macros.InternalAnnotation()" :: definition.mods.annotations,
-    )
+    // Using args.name instead of declName because in some places,
+    // multiple @Tactic-s are defined on overloaded methods of the same declName.
+    val declInfoName: TermName = TermName(s"${args.name}InfoFromTacticMacro")
 
     // Macro cannot introduce new statements or declarations, so introduce a library call which achieves our goal of
     // registering the tactic info to the global tactic info table.
     val result = definition match {
       case d: Definition.DefParams => q"""
-        $mods def ${d.declName}(..$definitionArgsExprs): ${d.returnType} =
-          org.keymaerax.btactics.macros.DerivationInfo.registerL($baseTerm, $info)
+        ${d.mods} def ${d.declName}(..$definitionArgsExprs): ${d.returnType} = $baseTerm
+
+        @org.keymaerax.core.btactics.annotations.Derivation
+        val $declInfoName: $infoType = $info
       """
       case d: Definition.Def => q"""
-        $mods def ${d.declName}: ${d.returnType} =
-          org.keymaerax.btactics.macros.DerivationInfo.registerL($baseTerm, $info)
+        ${d.mods} def ${d.declName}: ${d.returnType} = $baseTerm
+
+        @org.keymaerax.core.btactics.annotations.Derivation
+        val $declInfoName: $infoType = $info
       """
       case d: Definition.Val => q"""
-        $mods val ${d.declName}: ${d.returnType} =
-          org.keymaerax.btactics.macros.DerivationInfo.registerL($baseTerm, $info)
+        ${d.mods} val ${d.declName}: ${d.returnType} = $baseTerm
+
+        @org.keymaerax.core.btactics.annotations.Derivation
+        val $declInfoName: $infoType = $info
       """
     }
 
