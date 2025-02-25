@@ -176,7 +176,7 @@ object SequentCalculus extends TacticProvider {
     displayConclusion = "¬P, Γ |- Δ",
   )
   val notL: CoreLeftTactic = coreanon { (pr: ProvableSig, pos: AntePosition) => pr(NotLeft(pos.checkTop), 0) }
-  private[btactics] val notLInfo: TacticInfo = TacticInfo("notL")
+  private[btactics] lazy val notLInfo: TacticInfo = TacticInfo("notL")
 
   /** !R Not right: move an negation in the succedent to the antecedent ([[org.keymaerax.core.NotRight NotRight]]) */
   @Tactic(
@@ -187,7 +187,7 @@ object SequentCalculus extends TacticProvider {
     displayConclusion = "Γ |- ¬P, Δ",
   )
   val notR: CoreRightTactic = coreanon { (pr: ProvableSig, pos: SuccPosition) => pr(NotRight(pos.checkTop), 0) }
-  private[btactics] val notRInfo: TacticInfo = TacticInfo("notR")
+  private[btactics] lazy val notRInfo: TacticInfo = TacticInfo("notR")
 
   /**
    * &L And left: split a conjunction in the antecedent into separate assumptions ([[org.keymaerax.core.AndLeft
@@ -201,7 +201,7 @@ object SequentCalculus extends TacticProvider {
     displayConclusion = "P∧Q, Γ |- Δ",
   )
   val andL: CoreLeftTactic = coreanon { (pr: ProvableSig, pos: AntePosition) => pr(AndLeft(pos.checkTop), 0) }
-  private[btactics] val andLInfo: TacticInfo = TacticInfo("andL")
+  private[btactics] lazy val andLInfo: TacticInfo = TacticInfo("andL")
 
   /**
    * Inverse of [[andL]].
@@ -228,7 +228,7 @@ object SequentCalculus extends TacticProvider {
   val andR: DependentPositionTactic = anon { (pos: Position, seq: Sequent) =>
     corelabelledby("andR", Right(andRRule), And.unapply, pos, seq)
   }
-  private[btactics] val andRInfo: TacticInfo = TacticInfo("andR")
+  private[btactics] lazy val andRInfo: TacticInfo = TacticInfo("andR")
   @Tactic(
     name = "andRRule",
     displayName = Some("∧R"),
@@ -252,7 +252,7 @@ object SequentCalculus extends TacticProvider {
   val orL: DependentPositionTactic = anon { (pos: Position, seq: Sequent) =>
     corelabelledby("orL", Left(orLRule), Or.unapply, pos, seq)
   }
-  private[btactics] val orLInfo: TacticInfo = TacticInfo("orL")
+  private[btactics] lazy val orLInfo: TacticInfo = TacticInfo("orL")
   @Tactic(
     name = "orLRule",
     displayName = Some("∨L"),
@@ -285,7 +285,7 @@ object SequentCalculus extends TacticProvider {
     displayConclusion = "Γ |- P∨Q, Δ",
   )
   val orR: CoreRightTactic = coreanon { (pr: ProvableSig, pos: SuccPosition) => pr(OrRight(pos.checkTop), 0) }
-  private[btactics] val orRInfo: TacticInfo = TacticInfo("orR")
+  private[btactics] lazy val orRInfo: TacticInfo = TacticInfo("orR")
 
   /**
    * ->L Imply left: use an implication in the antecedent by proving its left-hand side on one branch and using its
@@ -301,7 +301,7 @@ object SequentCalculus extends TacticProvider {
   val implyL: DependentPositionTactic = anon { (pos: Position, seq: Sequent) =>
     corelabelledby("implyL", Left(implyLRule), Imply.unapply, pos, seq)
   }
-  private[btactics] val implyLInfo: TacticInfo = TacticInfo("implyL")
+  private[btactics] lazy val implyLInfo: TacticInfo = TacticInfo("implyL")
   @Tactic(
     name = "implyLRule",
     displayName = Some("→L"),
@@ -323,7 +323,7 @@ object SequentCalculus extends TacticProvider {
     displayConclusion = "Γ |- P→Q, Δ",
   )
   val implyR: CoreRightTactic = coreanon { (pr: ProvableSig, pos: SuccPosition) => pr(ImplyRight(pos.checkTop), 0) }
-  private[btactics] val implyRInfo: TacticInfo = TacticInfo("implyR")
+  private[btactics] lazy val implyRInfo: TacticInfo = TacticInfo("implyR")
 
   /**
    * Inverse of [[implyR]].
@@ -361,7 +361,7 @@ object SequentCalculus extends TacticProvider {
       (l: Formula, r: Formula) => (And(l, r).prettyString, And(Not(l), Not(r)).prettyString),
     )
   }
-  private[btactics] val equivLInfo: TacticInfo = TacticInfo("equivL")
+  private[btactics] lazy val equivLInfo: TacticInfo = TacticInfo("equivL")
   @Tactic(
     name = "equivLRule",
     displayName = Some("↔L"),
@@ -391,7 +391,7 @@ object SequentCalculus extends TacticProvider {
       (l: Formula, r: Formula) => (And(l, r).prettyString, And(Not(l), Not(r)).prettyString),
     )
   }
-  private[btactics] val equivRInfo: TacticInfo = TacticInfo("equivR")
+  private[btactics] lazy val equivRInfo: TacticInfo = TacticInfo("equivR")
   @Tactic(
     name = "equivRRule",
     displayName = Some("↔R"),
@@ -558,7 +558,7 @@ object SequentCalculus extends TacticProvider {
     displayConclusion = "Γ |- ∀x p(x), Δ",
   )
   val allR: BuiltInPositionTactic = FOQuantifierTactics.allSkolemize
-  private[btactics] val allRInfo: TacticInfo = TacticInfo("allR")
+  private[btactics] lazy val allRInfo: TacticInfo = TacticInfo("allR")
   @Tactic(
     name = "allRi",
     displayName = Some("∀Ri"),
@@ -596,7 +596,7 @@ object SequentCalculus extends TacticProvider {
 
   /** all left: instantiate a universal quantifier in the antecedent by itself. */
   val allL: DependentPositionTactic = allL(None)
-  private[btactics] val allLInfo: TacticInfo = TacticInfo("allL")
+  private[btactics] lazy val allLInfo: TacticInfo = TacticInfo("allL")
 
   /** all left: instantiate a universal quantifier in the antecedent by the term obtained from position `instPos`. */
   // @todo turn this into a more general function that obtains data from the sequent.
@@ -695,7 +695,7 @@ object SequentCalculus extends TacticProvider {
   val existsL: BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
     FOQuantifierTactics.existsSkolemize(pos).computeResult(provable)
   }
-  private[btactics] val existsLInfo: TacticInfo = TacticInfo("existsL")
+  private[btactics] lazy val existsLInfo: TacticInfo = TacticInfo("existsL")
   @Tactic(
     name = "existsLi",
     displayName = Some("∃Li"),
@@ -736,7 +736,7 @@ object SequentCalculus extends TacticProvider {
 
   /** exists right: instantiate an existential quantifier for x in the succedent by itself as a witness */
   val existsR: DependentPositionTactic = existsR(None)
-  private[btactics] val existsRInfo: TacticInfo = TacticInfo("existsR")
+  private[btactics] lazy val existsRInfo: TacticInfo = TacticInfo("existsR")
 
   /**
    * exists right: instantiate an existential quantifier in the succedent by a concrete term obtained from position

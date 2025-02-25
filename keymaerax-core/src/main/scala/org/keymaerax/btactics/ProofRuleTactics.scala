@@ -254,13 +254,13 @@ private object ProofRuleTactics extends TacticProvider with Logging {
     requireOneSubgoal(provable, "closeTrue")
     provable(core.CloseTrue(pos.top), 0)
   }
-  private[btactics] val closeTrueInfo: TacticInfo = TacticInfo("closeTrue")
+  private[btactics] lazy val closeTrueInfo: TacticInfo = TacticInfo("closeTrue")
 
   @deprecated("Use SequentCalculus.closeF instead") @Tactic(name = "closeFalse")
   private[btactics] val closeFalse: BuiltInLeftTactic = anon { (provable: ProvableSig, pos: AntePosition) =>
     requireOneSubgoal(provable, "closeFalse")
     provable(core.CloseFalse(pos.top), 0)
   }
-  private[btactics] val closeFalseInfo: TacticInfo = TacticInfo("closeFalse")
+  private[btactics] lazy val closeFalseInfo: TacticInfo = TacticInfo("closeFalse")
 
 }

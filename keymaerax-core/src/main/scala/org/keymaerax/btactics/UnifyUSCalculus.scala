@@ -2975,7 +2975,7 @@ object UnifyUSCalculus extends TacticProvider {
    */
   @Tactic(name = "chase", displayNameLong = Some("Decompose"))
   val chase: BuiltInPositionTactic = anon { chase(3, 3, AxIndex.axiomsFor(_: Expression)).computeResult _ }
-  private[btactics] val chaseInfo: TacticInfo = TacticInfo("chase")
+  private[btactics] lazy val chaseInfo: TacticInfo = TacticInfo("chase")
 
   /**
    * Chases the expression at the indicated position forward. Unlike [[chase]] descends into formulas and terms
@@ -2989,7 +2989,7 @@ object UnifyUSCalculus extends TacticProvider {
     if (chased != expanded) chased else pr
   }
 
-  private[btactics] val deepChaseInfo: TacticInfo = TacticInfo("deepChase")
+  private[btactics] lazy val deepChaseInfo: TacticInfo = TacticInfo("deepChase")
 
   /**
    * Chase with bounded breadth and giveUp to stop.
