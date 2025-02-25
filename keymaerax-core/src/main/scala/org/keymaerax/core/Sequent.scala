@@ -63,11 +63,6 @@ final case class AntePos private[keymaerax] (private[core] val index: Int) exten
   private[keymaerax] val getIndex: Int = index
 }
 
-object AntePos {
-  // The visibility of a case class constructor does not affect its apply method.
-  private[keymaerax] def apply(index: Int): AntePos = new AntePos(index)
-}
-
 /**
  * Antecedent Positions of formulas in a sequent, i.e. on the right of the sequent arrow.
  *
@@ -80,11 +75,6 @@ final case class SuccPos private[keymaerax] (private[core] val index: Int) exten
 
   /** The position 0-indexed in succedent. */
   private[keymaerax] val getIndex: Int = index
-}
-
-object SuccPos {
-  // The visibility of a case class constructor does not affect its apply method.
-  private[keymaerax] def apply(index: Int): SuccPos = new SuccPos(index)
 }
 
 object SeqPos {

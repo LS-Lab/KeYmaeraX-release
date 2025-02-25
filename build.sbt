@@ -14,10 +14,10 @@ ThisBuild / scalacOptions ++= Seq(
   // Scala 3 migration warnings and backported changes. See `scalac -Xsource:help` for more info.
   // https://docs.scala-lang.org/scala3/guides/migration/tooling-scala2-xsource3.html
   "-Xsource:3",
+  "-Xsource-features:case-apply-copy-access",
   // TODO Fix all of these warnings instead of silencing them
   "-Wconf:msg=Double definition will be detected:s",
   "-Wconf:msg=any2stringadd:s",
-  "-Wconf:msg=case-apply-copy-access:s",
   "-Wconf:msg=case-companion-function:s",
   "-Wconf:msg=infer-override:s",
   "-Wconf:msg=lambda-parens:s",

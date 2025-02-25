@@ -580,11 +580,6 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
  *   [[Provable$.startProof(goal:edu\.cmu\.cs\.ls\.keymaerax\.core\.Sequent):edu\.cmu\.cs\.ls\.keymaerax\.core\.Provable*]]
  */
 object Provable {
-  // Prevent construction of Provables outside the Provable class and companion object.
-  // For some reason, declaring a case class constructor as private doesn't affect the generated apply method.
-  // Hence we need to define it manually to make it private.
-  private def apply(conclusion: Sequent, subgoals: immutable.IndexedSeq[Sequent]): Provable =
-    new Provable(conclusion, subgoals)
 
   /** Position types for the subgoals of a Provable. */
   type Subgoal = Int
