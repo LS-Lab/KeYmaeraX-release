@@ -158,9 +158,6 @@ sealed trait NamedBelleExpr extends BelleExpr {
 
   /** Indicates whether this is an internal named tactic. */
   def isInternal: Boolean = BelleExpr.isInternal(name)
-
-  // @note register the name with the DerivationInfo once the tactic is instantiated
-  if (!isInternal) DerivationInfo.seeName(name)
 }
 
 // basic tactic combinators

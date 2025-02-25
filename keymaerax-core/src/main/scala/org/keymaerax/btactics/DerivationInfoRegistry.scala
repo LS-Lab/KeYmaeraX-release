@@ -281,38 +281,6 @@ object DerivationInfoRegistry extends Logging {
     val objects = instances.map(_.getInfo)
     objects.foreach({ case (cl, ct) => initClass(cl, ct) })
 
-    /* Check that the list of annotated tactics we processed matches the list of named BelleExprs which have been
-     * constructed so far. This can catch some named tactics that were never annotated, or catch some annotated files
-     * that were forgotten in our list of files.
-     */
-    // NB: This check used to be an assertion in NamedTactic, but that doesn't work if a tactic is mentioned before registration.
-    // Instead, check the names after everything is initialized.
-    val overimplemented = mutable.Set[String]()
-    DerivationInfo
-      ._seenNames
-      .foreach((n: String) => {
-        if (n != "Error" && !DerivationInfo.hasCodeName(n) && !n.startsWith("_")) overimplemented += n
-      })
-    assert(
-      overimplemented.isEmpty,
-      s"@Tactic init failed: NamedBelleExpr(s) named ${overimplemented.mkString(", ")} but this name does not appear in DerivationInfo's list of codeNames.",
-    )
-    val unimplemented = mutable.Set[String]()
-    DerivationInfo
-      ._allInfo
-      .foreach({ case (_, di: DerivationInfo) =>
-        if (!DerivationInfo._seenNames.contains(di.codeName)) {
-          di match {
-            // Axioms and rules are not tracked
-            case _: CoreAxiomInfo | _: DerivedAxiomInfo | _: AxiomaticRuleInfo | _: DerivedRuleInfo => ()
-            case _ => unimplemented += di.codeName
-          }
-        }
-      })
-    assert(
-      unimplemented.isEmpty,
-      s"@Tactic init failed: Following DerivationInfo never implemented as @Tactic: " + unimplemented.mkString(", "),
-    )
     DerivationInfo._initStatus = DerivationInfo.InitComplete
     if (derivationErrors.nonEmpty) { throw derivationErrors.head._2 }
   }

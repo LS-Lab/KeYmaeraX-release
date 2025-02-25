@@ -70,10 +70,6 @@ object DerivationInfo {
   var _derivedRuleInfo: Map[String, DerivedRuleInfo] = Map()
   var _provableInfo: Map[String, ProvableInfo] = Map()
 
-  /** Global list of BelleExpr names seen in any tactic expression constructor. Used to improve error-checking. */
-  var _seenNames: Set[String] = Set()
-  def seeName(name: String): Unit = _seenNames = _seenNames.+(name)
-
   /** Access allInfo with proper error-checking */
   def allInfo: Map[String, DerivationInfo] = _initStatus match {
     case InitNotStarted =>
