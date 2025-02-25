@@ -18,7 +18,6 @@ import org.keymaerax.parser.StringConverter._
 import org.keymaerax.pt.ProvableSig
 
 import scala.annotation.nowarn
-import scala.reflect.runtime.universe
 
 /**
  * Approximations
@@ -36,11 +35,7 @@ import scala.reflect.runtime.universe
  * @author
  *   Nathan Fulton
  */
-object Approximator extends TacticProvider with Logging {
-
-  /** @inheritdoc */
-  override def getInfo: (Class[_], universe.Type) = (Approximator.getClass, universe.typeOf[Approximator.type])
-
+object Approximator extends Logging {
   // region The [[approximate]] tactic with helpers for figuring out which approximation to use.
 
   private val DEBUG = false // Configuration(Configuration.Keys.DEBUG) == "true"

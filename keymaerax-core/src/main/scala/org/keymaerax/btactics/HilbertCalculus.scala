@@ -17,7 +17,6 @@ import org.keymaerax.pt.ProvableSig
 
 import scala.collection.immutable._
 import scala.collection.mutable.ListBuffer
-import scala.reflect.runtime.universe
 
 /**
  * Hilbert Calculus for differential dynamic logic.
@@ -65,11 +64,7 @@ import scala.reflect.runtime.universe
  * @Tactic
  *   completed
  */
-object HilbertCalculus extends TacticProvider {
-
-  /** @inheritdoc */
-  override def getInfo: (Class[_], universe.Type) = (HilbertCalculus.getClass, universe.typeOf[HilbertCalculus.type])
-
+object HilbertCalculus {
   import TacticFactory._
   import UnifyUSCalculus._
 
@@ -652,11 +647,7 @@ object HilbertCalculus extends TacticProvider {
  * @see
  *   [[HilbertCalculus.derive]]
  */
-object Derive extends TacticProvider {
-
-  /** @inheritdoc */
-  override def getInfo: (Class[_], universe.Type) = (Derive.getClass, universe.typeOf[Derive.type])
-
+object Derive {
   import TacticFactory._
   import UnifyUSCalculus._
 

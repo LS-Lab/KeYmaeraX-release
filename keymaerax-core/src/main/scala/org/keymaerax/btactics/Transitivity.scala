@@ -13,7 +13,6 @@ import org.keymaerax.parser.StringConverter._
 
 import scala.annotation.nowarn
 import scala.collection.immutable
-import scala.reflect.runtime.universe
 
 /**
  * Proves goals of the form `a>=b,b>=c |- a >= c` with arbitrarily many intermediate (in)equalities.
@@ -27,11 +26,7 @@ import scala.reflect.runtime.universe
  * @author
  *   Nathan Fulton
  */
-object Transitivity extends TacticProvider {
-
-  /** @inheritdoc */
-  override def getInfo: (Class[_], universe.Type) = (Transitivity.getClass, universe.typeOf[Transitivity.type])
-
+object Transitivity {
   @Tactic(
     name = "closeTransitive",
     displayName = Some("Close Transitive"),

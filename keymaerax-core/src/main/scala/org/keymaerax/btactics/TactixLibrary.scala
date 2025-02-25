@@ -28,7 +28,6 @@ import org.slf4j.LoggerFactory
 import java.io.File
 import scala.annotation.nowarn
 import scala.collection.immutable.{List, _}
-import scala.reflect.runtime.universe
 import scala.util.Try
 
 /**
@@ -82,11 +81,7 @@ import scala.util.Try
  */
 @nowarn("msg=match may not be exhaustive") @nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
 @nowarn("cat=deprecation&origin=org.keymaerax.bellerophon.DependentTwoPositionTactic")
-object TactixLibrary extends TacticProvider {
-
-  /** @inheritdoc */
-  override def getInfo: (Class[_], universe.Type) = (TactixLibrary.getClass, universe.typeOf[TactixLibrary.type])
-
+object TactixLibrary {
   private val logger = LoggerFactory.getLogger(getClass) // @note instead of "with Logging" to avoid cyclic dependencies
 
   // active invariant generators etc.

@@ -27,15 +27,10 @@ import org.keymaerax.pt._
 import org.slf4j.LoggerFactory
 
 import scala.annotation.nowarn
-import scala.reflect.runtime.universe
 
 /** Derives axioms from implicit (differential) definitions */
 @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
-object ImplicitAx extends TacticProvider {
-
-  /** @inheritdoc */
-  override def getInfo: (Class[_], universe.Type) = (ImplicitAx.getClass, universe.typeOf[ImplicitAx.type])
-
+object ImplicitAx {
   private val namespace = "implicitax"
   private val logger = LoggerFactory.getLogger(getClass) // @note instead of "with Logging" to avoid cyclic dependencies
 

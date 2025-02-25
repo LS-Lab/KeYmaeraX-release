@@ -35,7 +35,6 @@ import scala.annotation.nowarn
 import scala.collection.immutable
 import scala.collection.immutable._
 import scala.collection.mutable.ListBuffer
-import scala.reflect.runtime.universe
 
 /**
  * Implements ODE tactics based on the differential equation axiomatization.
@@ -48,11 +47,7 @@ import scala.reflect.runtime.universe
  *   Science, LICS'18, ACM 2018.
  */
 
-object ODEInvariance extends TacticProvider {
-
-  /** @inheritdoc */
-  override def getInfo: (Class[_], universe.Type) = (ODEInvariance.getClass, universe.typeOf[ODEInvariance.type])
-
+object ODEInvariance {
   private val namespace = "odeinvariance"
   private val logger = LoggerFactory.getLogger(getClass) // @note instead of "with Logging" to avoid cyclic dependencies
   private val debugTactic = false

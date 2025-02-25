@@ -18,7 +18,6 @@ import org.keymaerax.infrastruct.{AntePosition, PosInExpr, Position, SuccPositio
 import org.keymaerax.pt.ProvableSig
 
 import scala.annotation.nowarn
-import scala.reflect.runtime.universe
 
 /**
  * Sequent Calculus for propositional and first-order logic.
@@ -42,11 +41,7 @@ import scala.reflect.runtime.universe
 @nowarn("msg=match may not be exhaustive")
 @nowarn("cat=deprecation&origin=org.keymaerax.btactics.ProofRuleTactics.closeTrue")
 @nowarn("cat=deprecation&origin=org.keymaerax.btactics.ProofRuleTactics.closeFalse")
-object SequentCalculus extends TacticProvider {
-
-  /** @inheritdoc */
-  override def getInfo: (Class[_], universe.Type) = (SequentCalculus.getClass, universe.typeOf[SequentCalculus.type])
-
+object SequentCalculus {
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Propositional tactics
 

@@ -26,7 +26,6 @@ import org.keymaerax.pt.ProvableSig
 
 import scala.annotation.nowarn
 import scala.collection.mutable.ListBuffer
-import scala.reflect.runtime.universe
 import scala.util.{Failure, Success, Try}
 
 /**
@@ -34,11 +33,7 @@ import scala.util.{Failure, Success, Try}
  *
  * Created by nfulton on 11/3/15.
  */
-private object DLBySubst extends TacticProvider {
-
-  /** @inheritdoc */
-  override def getInfo: (Class[_], universe.Type) = (DLBySubst.getClass, universe.typeOf[DLBySubst.type])
-
+private object DLBySubst {
   private[btactics] lazy val monb2 = byUS(Ax.monb2)
 
   /** whether games are currently allowed */

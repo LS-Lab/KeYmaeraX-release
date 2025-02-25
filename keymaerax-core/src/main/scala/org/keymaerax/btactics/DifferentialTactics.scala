@@ -34,7 +34,6 @@ import org.keymaerax.{Configuration, Logging}
 
 import scala.annotation.{nowarn, tailrec}
 import scala.collection.immutable.{IndexedSeq, List, Nil, Seq}
-import scala.reflect.runtime.universe
 import scala.util.Try
 
 /**
@@ -45,12 +44,7 @@ import scala.util.Try
  * @see
  *   [[TactixLibrary.DW]], [[TactixLibrary.DC]]
  */
-private object DifferentialTactics extends TacticProvider with Logging {
-
-  /** @inheritdoc */
-  override def getInfo: (Class[_], universe.Type) =
-    (DifferentialTactics.getClass, universe.typeOf[DifferentialTactics.type])
-
+private object DifferentialTactics extends Logging {
   private val namespace = "differentialtactics"
 
   // QE with default timeout for use in ODE tactics (timeout in seconds)

@@ -13,26 +13,20 @@ import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.btactics.UnifyUSCalculus._
 import org.keymaerax.btactics.arithmetic.signanalysis.{Sign, SignAnalysis}
 import org.keymaerax.btactics.macros.{DisplayLevel, Tactic}
-import org.keymaerax.btactics.{DebuggingTactics, Idioms, SimplifierV3, TacticProvider, ToolTactics}
+import org.keymaerax.btactics.{DebuggingTactics, Idioms, SimplifierV3, ToolTactics}
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import org.keymaerax.infrastruct.{AntePosition, ExpressionTraversal, PosInExpr, SuccPosition}
 import org.keymaerax.parser.InterpretedSymbols
 
 import scala.collection.mutable.ListBuffer
-import scala.reflect.runtime.universe
 
 /**
  * Tactics for simplifying arithmetic sub-goals.
  * @author
  *   Stefan Mitsch
  */
-object ArithmeticSpeculativeSimplification extends TacticProvider {
-
-  /** @inheritdoc */
-  override def getInfo: (Class[_], universe.Type) =
-    (ArithmeticSpeculativeSimplification.getClass, universe.typeOf[ArithmeticSpeculativeSimplification.type])
-
+object ArithmeticSpeculativeSimplification {
   private val DEBUG = false
 
   /**

@@ -22,7 +22,6 @@ import org.keymaerax.tools.ext.QETacticTool
 import java.math.{MathContext, RoundingMode}
 import scala.annotation.{nowarn, tailrec}
 import scala.collection.immutable._
-import scala.reflect.runtime.universe
 
 /**
  * Interval Arithmetic
@@ -30,12 +29,7 @@ import scala.reflect.runtime.universe
  * @author
  *   Fabian Immler
  */
-object IntervalArithmeticV2 extends TacticProvider {
-
-  /** @inheritdoc */
-  override def getInfo: (Class[_], universe.Type) =
-    (IntervalArithmeticV2.getClass, universe.typeOf[IntervalArithmeticV2.type])
-
+object IntervalArithmeticV2 {
   def mathematicaFriendly(d: BigDecimal): Term =
     Times(Number(BigDecimal(d.bigDecimal.unscaledValue())), Power(Number(10), Number(-d.scale)))
 

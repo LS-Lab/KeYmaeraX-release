@@ -28,16 +28,11 @@ import org.keymaerax.{core, Logging}
 
 import scala.annotation.{nowarn, tailrec}
 import scala.collection.immutable.{::, List, Nil}
-import scala.reflect.runtime.universe
 import scala.util.Try
 
 /** [[PropositionalTactics]] provides tactics for propositional reasoning. */
 @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
-private[keymaerax] object PropositionalTactics extends TacticProvider with Logging {
-
-  /** @inheritdoc */
-  override def getInfo: (Class[_], universe.Type) =
-    (PropositionalTactics.getClass, universe.typeOf[PropositionalTactics.type])
+private[keymaerax] object PropositionalTactics extends Logging {
 
   /**
    * Inverse of [[SequentCalculus.implyR]].

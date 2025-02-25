@@ -7,15 +7,12 @@ package org.keymaerax.btactics
 
 import org.keymaerax.bellerophon._
 import org.keymaerax.btactics.TacticFactory._
-import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.btactics.macros.{DisplayLevel, Tactic, TacticInfo}
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.Augmentors.SequentAugmentor
 import org.keymaerax.infrastruct.{AntePosition, Position, SuccPosition}
 import org.keymaerax.pt.ProvableSig
 import org.keymaerax.{core, Logging}
-
-import scala.reflect.runtime.universe
 
 /**
  * Implementation: [[ProofRuleTactics]] contains tactical implementations of the propositional sequent calculus and
@@ -26,10 +23,7 @@ import scala.reflect.runtime.universe
  * @see
  *   [[SequentCalculus]]
  */
-private object ProofRuleTactics extends TacticProvider with Logging {
-
-  /** @inheritdoc */
-  override def getInfo: (Class[_], universe.Type) = (ProofRuleTactics.getClass, universe.typeOf[ProofRuleTactics.type])
+private object ProofRuleTactics extends Logging {
 
   /** Throw exception if there is more than one open subgoal on the provable. */
   @inline

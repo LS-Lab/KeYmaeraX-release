@@ -21,7 +21,6 @@ import org.keymaerax.infrastruct.{PosInExpr, Position}
 import org.keymaerax.parser.StringConverter._
 
 import scala.annotation.{nowarn, tailrec}
-import scala.reflect.runtime.universe
 
 /**
  * Provides support for generating switched system models under various switching mechanisms.
@@ -29,11 +28,7 @@ import scala.reflect.runtime.universe
  * Also provides proof automation for stability proofs
  */
 
-object SwitchedSystems extends TacticProvider {
-
-  /** @inheritdoc */
-  override def getInfo: (Class[_], universe.Type) = (SwitchedSystems.getClass, universe.typeOf[SwitchedSystems.type])
-
+object SwitchedSystems {
   private val namespace = "switchedsys"
   private val debugTactic = false
   private val expDepth = 3 // Taylor expansion for exp, todo: make configurable?

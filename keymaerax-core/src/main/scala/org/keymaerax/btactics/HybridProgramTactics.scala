@@ -11,7 +11,6 @@ import org.keymaerax.core._
 import org.keymaerax.infrastruct.Position
 
 import scala.annotation.nowarn
-import scala.reflect.runtime.universe
 
 /**
  * Implementation: Tactics for manipulating box/diamond properties about hybrid programs.
@@ -19,12 +18,7 @@ import scala.reflect.runtime.universe
  * @author
  *   Nathan Fulton
  */
-private object HybridProgramTactics extends TacticProvider {
-
-  /** @inheritdoc */
-  override def getInfo: (Class[_], universe.Type) =
-    (HybridProgramTactics.getClass, universe.typeOf[HybridProgramTactics.type])
-
+private object HybridProgramTactics {
   import TacticFactory._
   import org.keymaerax.infrastruct.Augmentors._
 

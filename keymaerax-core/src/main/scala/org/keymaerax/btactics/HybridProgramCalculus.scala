@@ -11,8 +11,6 @@ import org.keymaerax.btactics.macros.{DisplayLevel, Tactic}
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.Position
 
-import scala.reflect.runtime.universe
-
 /**
  * Hybrid Program Calculus for differential dynamic logic. Basic axioms for hybrid programs are in [[HilbertCalculus]].
  *
@@ -46,11 +44,7 @@ import scala.reflect.runtime.universe
  * @Tactic
  *   complete
  */
-object HybridProgramCalculus extends TacticProvider {
-
-  /** @inheritdoc */
-  override def getInfo: (Class[_], universe.Type) =
-    (HybridProgramCalculus.getClass, universe.typeOf[HybridProgramCalculus.type])
+object HybridProgramCalculus {
 
   /**
    * ***************************************************************** Hybrid Program Proof Rules

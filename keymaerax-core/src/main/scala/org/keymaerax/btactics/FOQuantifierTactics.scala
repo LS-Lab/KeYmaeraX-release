@@ -18,14 +18,9 @@ import org.keymaerax.parser.StringConverter._
 import org.keymaerax.pt.ProvableSig
 
 import scala.collection.immutable._
-import scala.reflect.runtime.universe
 
 /** Implementation: [[FOQuantifierTactics]] provides tactics for instantiating quantifiers. */
-protected object FOQuantifierTactics extends TacticProvider {
-
-  /** @inheritdoc */
-  override def getInfo: (Class[_], universe.Type) =
-    (FOQuantifierTactics.getClass, universe.typeOf[FOQuantifierTactics.type])
+protected object FOQuantifierTactics {
 
   /** Proves exists by duality from universal base tactic */
   // @todo use "exists eliminate" instead

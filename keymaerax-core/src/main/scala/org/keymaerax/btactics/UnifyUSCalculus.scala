@@ -27,7 +27,6 @@ import org.slf4j.LoggerFactory
 
 import scala.annotation.nowarn
 import scala.collection.immutable._
-import scala.reflect.runtime.universe
 import scala.util.Try
 
 /**
@@ -96,7 +95,7 @@ import scala.util.Try
  * @Tactic
  *   completed
  */
-object UnifyUSCalculus extends TacticProvider {
+object UnifyUSCalculus {
   private val logger = LoggerFactory.getLogger(getClass) // @note instead of "with Logging" to avoid cyclic dependencies
   /** Whether to use a liberal context via replaceAt instead of proper Context substitutions */
   private val LIBERAL = Context.GUARDED
@@ -3341,7 +3340,4 @@ object UnifyUSCalculus extends TacticProvider {
       }
     case _ => defaultMatcher
   }
-
-  /** @inheritdoc */
-  override def getInfo: (Class[_], universe.Type) = (UnifyUSCalculus.getClass, universe.typeOf[UnifyUSCalculus.type])
 }

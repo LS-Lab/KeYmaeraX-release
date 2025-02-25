@@ -23,7 +23,6 @@ import org.keymaerax.pt.ProvableSig
 
 import scala.annotation.nowarn
 import scala.collection.immutable._
-import scala.reflect.runtime.universe
 import scala.util.Try
 
 /**
@@ -39,11 +38,7 @@ import scala.util.Try
  * Created by yongkiat on 12/19/16.
  */
 
-object SimplifierV3 extends TacticProvider {
-
-  /** @inheritdoc */
-  override def getInfo: (Class[_], universe.Type) = (SimplifierV3.getClass, universe.typeOf[SimplifierV3.type])
-
+object SimplifierV3 {
   private val namespace = "simplifierv3"
 
   private val pA = PredOf(Function("A_", None, Unit, Bool), Nothing)

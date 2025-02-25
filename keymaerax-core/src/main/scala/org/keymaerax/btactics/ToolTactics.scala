@@ -30,7 +30,6 @@ import org.keymaerax.tools.qe.MathematicaOpSpec
 import scala.annotation.{nowarn, tailrec}
 import scala.collection.immutable._
 import scala.math.Ordering.Implicits._
-import scala.reflect.runtime.universe
 import scala.util.{Failure, Success, Try}
 
 /**
@@ -40,11 +39,7 @@ import scala.util.{Failure, Success, Try}
  * @author
  *   Stefan Mitsch
  */
-private object ToolTactics extends TacticProvider {
-
-  /** @inheritdoc */
-  override def getInfo: (Class[_], universe.Type) = (ToolTactics.getClass, universe.typeOf[ToolTactics.type])
-
+private object ToolTactics {
   private val namespace = "tooltactics"
 
   @Tactic(name = "useSolver")

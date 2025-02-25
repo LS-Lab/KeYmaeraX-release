@@ -12,7 +12,6 @@ import org.keymaerax.core._
 import org.keymaerax.infrastruct.Position
 
 import scala.collection.immutable._
-import scala.reflect.runtime.universe
 
 /**
  * Differential Equation Calculus for differential dynamic logic. Basic axioms for differential equations are in
@@ -46,11 +45,7 @@ import scala.reflect.runtime.universe
  * @todo
  *   \@Tactic only partially implemented so far
  */
-object DifferentialEquationCalculus extends TacticProvider {
-
-  /** @inheritdoc */
-  override def getInfo: (Class[_], universe.Type) =
-    (DifferentialEquationCalculus.getClass, universe.typeOf[DifferentialEquationCalculus.type])
+object DifferentialEquationCalculus {
 
   /**
    * ***************************************************************** Differential Equation Proof Rules

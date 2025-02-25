@@ -22,7 +22,6 @@ import org.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import org.keymaerax.parser.StringConverter._
 
 import scala.annotation.nowarn
-import scala.reflect.runtime.universe
 
 /**
  * Tactic to prove system safety from isolated component and compatibility proofs.
@@ -34,11 +33,7 @@ import scala.reflect.runtime.universe
  * @author
  *   Stefan Mitsch
  */
-object ComponentSystem extends TacticProvider {
-
-  /** @inheritdoc */
-  override def getInfo: (Class[_], universe.Type) = (ComponentSystem.getClass, universe.typeOf[ComponentSystem.type])
-
+object ComponentSystem {
   private val namespace = "components"
 
   /** STTT Lemma 1 Corollaries */
