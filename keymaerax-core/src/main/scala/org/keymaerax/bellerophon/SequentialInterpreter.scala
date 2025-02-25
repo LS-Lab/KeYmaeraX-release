@@ -589,7 +589,7 @@ abstract class BelleBaseInterpreter(
             }
           }
           // cannot come here
-          ???
+          (???)
         case e => throw new IllFormedTacticApplicationException(
             "SearchAndRescueAgain expected sub-derivation after running common"
           )

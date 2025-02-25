@@ -63,7 +63,7 @@ object ProofChecker {
           case _: Exception =>
             val axiomFml = AxiomInfo(axiomName).provable.conclusion
             val node = proofNode(axiomFml)
-            ??? // @todo proveBy(node, US(USubst(scala.collection.immutable.Seq()), axiomName))
+            (???) // @todo proveBy(node, US(USubst(scala.collection.immutable.Seq()), axiomName))
         }
       case RuleApplication(child, rule, subgoal) => apply(child)(rule, subgoal)
       case RuleTerm(name) =>
