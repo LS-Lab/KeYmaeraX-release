@@ -5,26 +5,27 @@
 
 package org.keymaerax.btactics
 
-import org.keymaerax.bellerophon._
+import cc.redberry.rings.scaladsl.ringMethods
+import org.keymaerax.bellerophon.*
 import org.keymaerax.btactics.PolynomialArithV2.{
   NonPolynomialArithmeticException,
   NonSupportedDivisorException,
   NonSupportedExponentException,
 }
-import org.keymaerax.btactics.TacticFactory._
-import org.keymaerax.btactics.TactixLibrary._
-import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
-import org.keymaerax.btactics.macros._
-import org.keymaerax.core._
-import org.keymaerax.infrastruct.Augmentors._
-import org.keymaerax.infrastruct._
-import org.keymaerax.parser.StringConverter._
+import org.keymaerax.btactics.TacticFactory.*
+import org.keymaerax.btactics.TactixLibrary.*
+import org.keymaerax.btactics.macros.*
+import org.keymaerax.btactics.macros.DerivationInfoAugmentors.*
+import org.keymaerax.core.*
+import org.keymaerax.infrastruct.*
+import org.keymaerax.infrastruct.Augmentors.*
+import org.keymaerax.parser.StringConverter.*
 import org.keymaerax.pt.ProvableSig
 import org.keymaerax.tools.ext.RingsLibrary
 import org.keymaerax.tools.qe.BigDecimalQETool
 
 import scala.annotation.nowarn
-import scala.collection.immutable._
+import scala.collection.immutable.*
 
 /**
  * Polynomial Ring:
@@ -402,7 +403,7 @@ case class TwoThreeTreePolynomialRing(
     variableOrdering: Ordering[Term],
     monomialOrdering: Ordering[IndexedSeq[(Term, Int)]],
 ) extends PolynomialRing {
-  import PolynomialArithV2Helpers._
+  import PolynomialArithV2Helpers.*
   val constL = constR("l_")
   val constR_ = constR("r_")
   val constCl = constR("cl_")
@@ -1922,7 +1923,7 @@ case class TwoThreeTreePolynomialRing(
         a: ringsLibrary.Ring,
         b: ringsLibrary.Ring,
     ): (ringsLibrary.Ring, ringsLibrary.Ring, ringsLibrary.Ring) = {
-      import ringsLibrary._
+      import ringsLibrary.*
       val gcd = ring.gcd(a, b)
       val ra = ring.divideExact(a, gcd)
       val rb = ring.divideExact(b, gcd)

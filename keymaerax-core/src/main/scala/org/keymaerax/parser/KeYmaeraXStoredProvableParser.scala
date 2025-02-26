@@ -5,7 +5,7 @@
 
 package org.keymaerax.parser
 
-import org.keymaerax.core.{Formula, Sequent}
+import org.keymaerax.core.{Ensures, Formula, Sequent}
 import org.keymaerax.parser.KeYmaeraXLexer.TokenStream
 
 import scala.collection.immutable

@@ -5,7 +5,7 @@
 
 package org.keymaerax.parser
 
-import fastparse.{P, ParsingRun, Pass, Whitespace}
+import fastparse.{EagerOps, P, ParsingRun, Pass, Whitespace}
 
 object DLParserUtils {
 

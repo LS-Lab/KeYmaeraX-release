@@ -5,7 +5,7 @@
 
 package org.keymaerax.parser
 
-import org.keymaerax.core.{Function, Real, Unit}
+import org.keymaerax.core.{Ensures, Function, Real, Unit}
 
 /** Lists function symbols that have special meaning in tactics. */
 object TacticReservedSymbols {
