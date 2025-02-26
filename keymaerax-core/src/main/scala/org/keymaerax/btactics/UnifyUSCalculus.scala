@@ -1099,10 +1099,10 @@ trait UnifyUSCalculus {
 
                   // @todo assumes no more context around remainder (no other examples so far)
                   val (conclusion, equiv, commute, op) = remainder match {
-                    case Equiv(DotFormula, other) => (other, Equiv(remR, other), p.isSucc, Equiv)
-                    case Equiv(other, DotFormula) => (other, Equiv(other, remR), p.isAnte, Equiv)
-                    case Imply(DotFormula, other) => (other, Imply(remR, other), p.isSucc, Imply)
-                    case Imply(other, DotFormula) => (other, Imply(other, remR), p.isAnte, Imply)
+                    case Equiv(DotFormula, other) => (other, Equiv(remR, other), p.isSucc, CecoEquiv)
+                    case Equiv(other, DotFormula) => (other, Equiv(other, remR), p.isAnte, CecoEquiv)
+                    case Imply(DotFormula, other) => (other, Imply(remR, other), p.isSucc, CecoImply)
+                    case Imply(other, DotFormula) => (other, Imply(other, remR), p.isAnte, CecoImply)
                     //              case Equal(DotTerm, other) => (other, if (p.isSucc) TactixLibrary.useAt(DerivedAxioms.equalCommute)(1) else ident)
                     //              case Equal(other, DotTerm) => (other, if (p.isAnte) TactixLibrary.useAt(DerivedAxioms.equalCommute)(1) else ident)
                   }
@@ -1152,6 +1152,10 @@ trait UnifyUSCalculus {
     }
   }
 
+  sealed trait CondEquivCongruenceOp
+  final object CecoEquiv extends CondEquivCongruenceOp
+  final object CecoImply extends CondEquivCongruenceOp
+
   /* Specialized congruence reasoning for the questions arising in the axiomatic ODE solver DC step */
   @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   private def condEquivCongruence(
@@ -1159,7 +1163,7 @@ trait UnifyUSCalculus {
       towards: PosInExpr,
       subPos: PosInExpr,
       commute: Boolean,
-      op: (Formula, Formula) => Formula,
+      op: CondEquivCongruenceOp,
   ): ProvableSig => ProvableSig = (provable: ProvableSig) =>
     context match {
       case Box(_, p) if towards.head == 1 => (
@@ -1221,8 +1225,8 @@ trait UnifyUSCalculus {
       )
       case DotFormula =>
         val ponensAndPassThrough = op match {
-          case Equiv => if (commute) Ax.ponensAndPassthrough_coEquiv else Ax.ponensAndPassthrough_Equiv
-          case Imply => if (commute) Ax.ponensAndPassthrough_coImply else Ax.ponensAndPassthrough_Imply
+          case CecoEquiv => if (commute) Ax.ponensAndPassthrough_coEquiv else Ax.ponensAndPassthrough_Equiv
+          case CecoImply => if (commute) Ax.ponensAndPassthrough_coImply else Ax.ponensAndPassthrough_Imply
         }
         provable(useAt(ponensAndPassThrough)(1, subPos).computeResult _, 0)
     }
