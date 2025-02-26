@@ -15,7 +15,10 @@ ThisBuild / scalacOptions ++= Seq(
   // https://docs.scala-lang.org/scala3/guides/migration/tooling-scala2-xsource3.html
   "-Xsource:3",
   "-Xsource-features:case-apply-copy-access",
-  // TODO Fix all of these warnings instead of silencing them
+  // According to the Scala 3 docs, scala.annotation.elidable is ignored in Scala 3.
+  // Instead, one should use `inline if` to produce the same behavior.
+  // https://scala-lang.org/api/3.x/scala/annotation/elidable.html
+  // TODO Fix this after migrating to Scala 3
   "-Wconf:msg=scala.annotation.elidable is ignored:s",
 
   // Required for macros
