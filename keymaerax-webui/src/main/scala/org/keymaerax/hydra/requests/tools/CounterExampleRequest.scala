@@ -144,7 +144,7 @@ class CounterExampleRequest(
                   TactixLibrary.alphaRule | TactixLibrary.allR(Symbol("R")) | TactixLibrary.existsL(Symbol("L"))
                 ),
               )
-              val fml = skolemized.subgoals.map(_.toFormula).reduceRight(And)
+              val fml = skolemized.subgoals.map(_.toFormula).reduceRight(And.apply)
               val withAssumptions = additionalAssumptions match {
                 case Some(a) => Imply(a, fml)
                 case None => fml

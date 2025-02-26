@@ -482,7 +482,7 @@ class PolynomialArithV2Tests extends TacticTestBase {
   it should "approx polynomials" in withMathematica { _ =>
     import PolynomialArithV2Helpers._
     import ring23._
-    val t = (1 to 9).map(i => Times(Divide(Number(1), Number(i)), Power("x".asTerm, Number(i)))).reduceLeft(Plus)
+    val t = (1 to 9).map(i => Times(Divide(Number(1), Number(i)), Power("x".asTerm, Number(i)))).reduceLeft(Plus.apply)
     val (prv, a, r) = ofTerm(t).asInstanceOf[TreePolynomial].approx(5)
     a.treeSketch shouldBe
       "[[[., x^1, .], 0.5 x^2, [., 0.3333 x^3, .]], 0.25 x^4, {[., 0.2 x^5, .], 0.1666 x^6, [., 0.1428 x^7, .], 0.125 x^8, [., 0.1111 x^9, .]}]"

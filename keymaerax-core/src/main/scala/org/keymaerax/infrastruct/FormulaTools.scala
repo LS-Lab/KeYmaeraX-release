@@ -65,8 +65,8 @@ object FormulaTools extends Logging {
 
   /** Reassociates conjunctions and disjunctions into their default right-associative case. */
   def reassociate(fml: Formula): Formula = fml match {
-    case Or(l, r) => (disjuncts(l) ++ disjuncts(r)).map(reassociate).reduceRight(Or)
-    case And(l, r) => (conjuncts(l) ++ conjuncts(r)).map(reassociate).reduceRight(And)
+    case Or(l, r) => (disjuncts(l) ++ disjuncts(r)).map(reassociate).reduceRight(Or.apply)
+    case And(l, r) => (conjuncts(l) ++ conjuncts(r)).map(reassociate).reduceRight(And.apply)
     case _ => fml
   }
 
@@ -157,12 +157,12 @@ object FormulaTools extends Logging {
   def distributeOrOverAnd(fml: Formula): Formula = fml match {
     case Or(l, r) =>
       val (conjunctions, others) = (disjuncts(l) ++ disjuncts(r)).partition(_.isInstanceOf[And])
-      (disjuncts(conjunctions.map(distributeOrOverAnd)) ++ others).reduceRight(Or)
+      (disjuncts(conjunctions.map(distributeOrOverAnd)) ++ others).reduceRight(Or.apply)
     case And(l, r) =>
       val (disjunctions, others) = (conjuncts(l) ++ conjuncts(r)).partition(_.isInstanceOf[Or])
       combinations(disjunctions.map(disjunctiveNormalForm).map(disjuncts))
-        .map(o => (o ++ others).reduceRight(And))
-        .reduceRight(Or)
+        .map(o => (o ++ others).reduceRight(And.apply))
+        .reduceRight(Or.apply)
     case f => f
   }
 

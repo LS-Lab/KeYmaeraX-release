@@ -496,15 +496,15 @@ object ImplicitAx extends TacticProvider {
 
     // The list of LHS variables x__1, x__2, ..., x__dim
     val xLHS = indices.map(i => BaseVariable("x_", Some(i)))
-    val sort = (indices :+ 0).map(_ => Real).reduceRight(Tuple)
+    val sort = (indices :+ 0).map(_ => Real).reduceRight(Tuple.apply)
     val RHSfunc = indices.map(i => Function("f_", Some(i), sort, Real))
     // The application f_(x_) where x_ is written as a tuple of the right sort  (x_1,(x_2,(...))
-    val RHSxarg = (xLHS :+ tvar).reduceRight(Pair)
+    val RHSxarg = (xLHS :+ tvar).reduceRight(Pair.apply)
     val xRHS = RHSfunc.map { f => FuncOf(f, RHSxarg) }
 
     val gFunc = indices.map(i => Function("g_", Some(i), Real, Real))
     val gApp = gFunc.map { f => FuncOf(f, tvar) }
-    val garg = (gApp :+ tvar).reduceRight(Pair)
+    val garg = (gApp :+ tvar).reduceRight(Pair.apply)
     val gRHS = RHSfunc.map { f => FuncOf(f, garg) }
 
     val tode = AtomicODE(DifferentialSymbol(tvar), trhs)
@@ -517,10 +517,10 @@ object ImplicitAx extends TacticProvider {
       tode,
     )
 
-    val eqs = (xLHS zip gApp).map(c => Equal(c._1, c._2)).reduceRight(And)
-    val deqs = (xLHS zip gApp).map(c => Equal(DifferentialSymbol(c._1), Differential(c._2))).reduceRight(And)
+    val eqs = (xLHS zip gApp).map(c => Equal(c._1, c._2)).reduceRight(And.apply)
+    val deqs = (xLHS zip gApp).map(c => Equal(DifferentialSymbol(c._1), Differential(c._2))).reduceRight(And.apply)
 
-    val gdeqs = (gApp zip gRHS).map(c => Equal(Differential(c._1), c._2)).reduceRight(And)
+    val gdeqs = (gApp zip gRHS).map(c => Equal(Differential(c._1), c._2)).reduceRight(And.apply)
 
     val fml = Imply(Box(ODESystem(xODE, True), eqs), Box(tassign, gdeqs))
 
@@ -562,13 +562,13 @@ object ImplicitAx extends TacticProvider {
     // The list of LHS variables y__1, y__2, ..., y__dim
     val yLHS = indices.map(i => BaseVariable("y_", Some(i)))
     // The sort of RHS functions and predicates is (real,(real,...)) n times
-    val sort = indices.map(_ => Real).reduceRight(Tuple)
+    val sort = indices.map(_ => Real).reduceRight(Tuple.apply)
     val RHSfunc = indices.map(i => Function("f_", Some(i), sort, Real))
     // The application f_(x_) where x_ is written as a tuple of the right sort  (x_1,(x_2,(...))
-    val RHSxarg = xLHS.reduceRight(Pair)
+    val RHSxarg = xLHS.reduceRight(Pair.apply)
     val xRHS = RHSfunc.map { f => FuncOf(f, RHSxarg) }
     // The application f_(y_) where y_ is written as a tuple of the right sort (y_1,(y_2,(...))
-    val RHSyarg = yLHS.reduceRight(Pair)
+    val RHSyarg = yLHS.reduceRight(Pair.apply)
     val yRHS = RHSfunc.map { f => FuncOf(f, RHSyarg) }
 
     // pred
@@ -593,7 +593,7 @@ object ImplicitAx extends TacticProvider {
 
     val fml = Imply(px, Box(ODESystem(xODE, xDom), Diamond(ODESystem(xODER, xDom), px)))
 
-    val eqs = (xLHS zip yLHS).map(c => Equal(c._1, c._2)).reduceRight(And)
+    val eqs = (xLHS zip yLHS).map(c => Equal(c._1, c._2)).reduceRight(And.apply)
     val npost = And(eqs, Not(Diamond(ODESystem(yODER, yDom), py)))
     val ndia = Diamond(ODESystem(xODE, xDom), npost)
     val cutfml = yLHS.foldLeft(ndia: Formula)((f, c) => Exists(c :: Nil, f))
@@ -603,7 +603,7 @@ object ImplicitAx extends TacticProvider {
     val extac = xLHS.foldLeft(skip: BelleExpr)((t, v) => existsR(v)(1) & t)
 
     val zLHS = indices.map(i => BaseVariable("z_", Some(i)))
-    val eqs2 = (zLHS zip xLHS).map(c => Equal(c._1, c._2)).reduceRight(And)
+    val eqs2 = (zLHS zip xLHS).map(c => Equal(c._1, c._2)).reduceRight(And.apply)
     val cutfml2 = zLHS.foldLeft(eqs2: Formula)((f, c) => Exists(c :: Nil, f))
     val eqr2l = (0 to dim - 1).foldLeft(skip: BelleExpr)((p, t) => exhaustiveEqR2L(-2 - t) & p)
 
@@ -662,9 +662,9 @@ object ImplicitAx extends TacticProvider {
 
     val dim = odels.length
     val indices = 1 to dim
-    val sort = indices.map(_ => Real).reduceRight(Tuple)
+    val sort = indices.map(_ => Real).reduceRight(Tuple.apply)
 
-    val RHSodearg = odeLHS.reduceRight(Pair)
+    val RHSodearg = odeLHS.reduceRight(Pair.apply)
     val px = PredOf(Function("p_", None, sort, Bool), RHSodearg)
     val odeDom = PredOf(Function("q_", None, sort, Bool), RHSodearg)
     val oder = odels.map { case (x, rhs) => AtomicODE(x, Neg(rhs)) }.reduceRight(DifferentialProduct.apply)
@@ -740,7 +740,7 @@ object ImplicitAx extends TacticProvider {
 
     val equations = canonPr.map(p => p.conclusion.succ(0).sub(PosInExpr(0 :: Nil)).get.asInstanceOf[Equal])
     val parDerPre = partialDer(equations.length)
-    val equationsAnd = equations.reduceRight(And)
+    val equationsAnd = equations.reduceRight(And.apply)
     val xLHS = (1 to dim).map(i => BaseVariable("x_", Some(i)))
     val zLHS = (1 to dim).map(i => BaseVariable("z_", Some(i)))
     val tab = (xLHS zip zLHS).foldLeft(parDerPre)((t, v) => t(URename(v._1, v._2)))
@@ -853,7 +853,7 @@ object ImplicitAx extends TacticProvider {
         val v = eq.left.asInstanceOf[Variable]
         Assign(v, eq.right): Program
       })
-      .reduceRight(Compose)
+      .reduceRight(Compose.apply)
 
     val t = inits.last.asInstanceOf[Equal].left.asInstanceOf[Variable]
 

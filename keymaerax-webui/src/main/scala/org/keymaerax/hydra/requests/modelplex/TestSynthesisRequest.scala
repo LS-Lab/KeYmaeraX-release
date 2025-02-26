@@ -90,7 +90,7 @@ class TestSynthesisRequest(
 
     val Imply(True, cond) = monitorCond.subgoals.head.toFormula
 
-    val assumptionsCond = assumptions.reduceOption(And).getOrElse(True)
+    val assumptionsCond = assumptions.reduceOption(And.apply).getOrElse(True)
     val testSpecs: List[(String, Formula)] = testKinds
       .map({
         case ("compliant", true) => Some("compliant" -> cond)

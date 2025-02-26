@@ -91,7 +91,7 @@ class CreateControlledStabilityTemplateRequest(
               case (d, Test(True)) => if (odes.exists(_._1 == d)) Some(Test(Equal(mode, modeOf(d)))) else None
               case (d, tp) => if (odes.exists(_._1 == d)) Some(Compose(Test(Equal(mode, modeOf(d))), tp)) else Some(tp)
             })
-            .reduceRightOption(Choice)
+            .reduceRightOption(Choice.apply)
           prg match {
             case Test(True) => initTransitions
             case _ => Some(initTransitions.map(Compose(prg, _)).getOrElse(prg))

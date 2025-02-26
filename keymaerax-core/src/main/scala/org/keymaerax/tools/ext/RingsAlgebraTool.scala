@@ -126,7 +126,7 @@ class RingsLibrary(terms: Iterable[Term]) {
     val ls1 = monomials.map(fromRing)
 
     val ls2 = ls1.filterNot(t => t == Number(0))
-    if (ls2.isEmpty) Number(0) else ls2.tail.fold(ls2.head)(Plus)
+    if (ls2.isEmpty) Number(0) else ls2.tail.fold(ls2.head)(Plus.apply)
   }
 
   // TODO: this is probably available somewhere in the library but I can't find it

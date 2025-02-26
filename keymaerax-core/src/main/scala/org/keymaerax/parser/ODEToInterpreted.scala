@@ -140,14 +140,14 @@ object ODEToInterpreted {
         .reduce[DifferentialProgram](DifferentialProduct(_, _))
     )
 
-    val goal = syst.map { case (v, _, i) => Equal(v, i) }.reduceRight(And)
+    val goal = syst.map { case (v, _, i) => Equal(v, i) }.reduceRight(And.apply)
 
     system.map { case (v, _, _) =>
       val otherVars = system.map(_._1).filter(_ != v)
 
       val assignments = otherVars
-        .map(AssignAny)
-        .foldRight(Compose(Assign(v, DotTerm(idx = Some(0))), Assign(tVar, DotTerm(idx = Some(1)))))(Compose)
+        .map(AssignAny.apply)
+        .foldRight(Compose(Assign(v, DotTerm(idx = Some(0))), Assign(tVar, DotTerm(idx = Some(1)))))(Compose.apply)
 
       Function(
         v.name,

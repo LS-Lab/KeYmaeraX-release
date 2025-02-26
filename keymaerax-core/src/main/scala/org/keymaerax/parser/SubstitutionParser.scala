@@ -20,7 +20,7 @@ object SubstitutionParser {
    */
   def parseSubstitutionPair(
       s: String,
-      matcher: (Expression, Expression) => SubstitutionPair = SubstitutionPair,
+      matcher: (Expression, Expression) => SubstitutionPair = SubstitutionPair.apply,
   ): SubstitutionPair = {
     val exprs =
       if (s.startsWith("(") && s.endsWith(")")) s.stripPrefix("(").stripSuffix(")").split("~>") else s.split("~>")

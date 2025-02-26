@@ -134,7 +134,7 @@ protected object FOQuantifierTactics extends TacticProvider {
                       case _: DifferentialSymbol => false
                       case _ => true
                     })
-                    .map(DifferentialSymbol)
+                    .map(DifferentialSymbol.apply)
                     .toSet
                 )
                 .isEmpty && (quantified.isEmpty || vars.contains(quantified.get)) =>
@@ -366,7 +366,7 @@ protected object FOQuantifierTactics extends TacticProvider {
         )
       }
       // @todo bound renaming of x' not supported
-      if (StaticSemantics.freeVars(p).symbols.intersect(xs.map(DifferentialSymbol).toSet[Variable]).nonEmpty) {
+      if (StaticSemantics.freeVars(p).symbols.intersect(xs.map(DifferentialSymbol.apply).toSet[Variable]).nonEmpty) {
         // @note bound renaming at pos not allowed, so rename everywhere else with stuttering and bound renaming
         val np = namePairs.toMap
         // @todo assignEquality forward tactic

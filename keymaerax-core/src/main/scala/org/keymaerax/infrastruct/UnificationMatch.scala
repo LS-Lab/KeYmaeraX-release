@@ -475,7 +475,7 @@ abstract class SchematicUnificationMatch extends BaseMatcher {
     case FuncOf(f: Function, t) => e2 match {
         case FuncOf(g, t2) if f == g => unify(t, t2)
         // otherwise DotTerm abstraction of all occurrences of the argument
-        case _ => unifyApplicationOf(FuncOf, f, t, e2)
+        case _ => unifyApplicationOf(FuncOf.apply, f, t, e2)
       }
     case Nothing => if (e1 == e2) id else ununifiable(e1, e2)
     case _: DotTerm => unifier(e1, e2)
@@ -529,7 +529,7 @@ abstract class SchematicUnificationMatch extends BaseMatcher {
     case PredOf(f: Function, t) => e2 match {
         case PredOf(g, t2) if f == g => unify(t, t2)
         // otherwise DotTerm abstraction of all occurrences of the argument
-        case _ => unifyApplicationOf(PredOf, f, t, e2)
+        case _ => unifyApplicationOf(PredOf.apply, f, t, e2)
       }
     case PredicationalOf(f: Function, DotFormula) => unifier(e1, e2)
     case PredicationalOf(c, fml) => e2 match {

@@ -183,7 +183,7 @@ object SimplifierV2 {
       case FuncOf(fn, c) if c != Nothing =>
         val args = FormulaTools.argumentList(c)
         val simp = args.map(termSimp)
-        val nArgs = simp.map(_._1).reduce[Term](Pair)
+        val nArgs = simp.map(_._1).reduce[Term](Pair.apply)
         val pref = if (args.size <= 1) 0 :: Nil else 0 :: 0 :: Nil
         val tactic = simp
           .zipWithIndex
@@ -944,8 +944,8 @@ object SimplifierV2 {
   // This might be slightly too unpredictable for some purposes, so use simpTac instead
   // was "fullSimplify"
   lazy val fullSimpTac: DependentTactic = anon((seq: Sequent) => {
-    val succOr = seq.succ.reduceRightOption(Or).getOrElse(False)
-    val anteAnd = seq.ante.reduceRightOption(And).getOrElse(True)
+    val succOr = seq.succ.reduceRightOption(Or.apply).getOrElse(False)
+    val anteAnd = seq.ante.reduceRightOption(And.apply).getOrElse(True)
     val (ff, pr) = formulaSimp(Imply(anteAnd, succOr), IndexedSeq())
     ff match {
       case Imply(l, r) =>
@@ -970,7 +970,7 @@ object SimplifierV2 {
         val (ctx, cutPos, commute) =
           if (pos.isSucc) (sequent.ante, pos, commuteEquivR(1))
           else (sequent.ante.patch(pos.top.getIndex, Nil, 1), SuccPosition.base0(sequent.succ.length), skip)
-        val ctxAnd = ctx.reduceRightOption(And).getOrElse(True)
+        val ctxAnd = ctx.reduceRightOption(And.apply).getOrElse(True)
         val (ff, pr) = formulaSimp(Imply(ctxAnd, f), IndexedSeq())
 
         cutAt(ff)(pos) <

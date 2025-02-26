@@ -44,7 +44,7 @@ class QETest extends TacticTestBase {
   it should "neither return $Failed nor complain about stale answer if $Failed" in withMathematica { qeTool =>
     val t = "a".asVariable
     import org.keymaerax.core._
-    def eq(n: Int) = Equal(Times(Number(n), t), (0 until n).map(_ => t).reduce(Plus))
+    def eq(n: Int) = Equal(Times(Number(n), t), (0 until n).map(_ => t).reduce(Plus.apply))
     val n = 250
 
     /**

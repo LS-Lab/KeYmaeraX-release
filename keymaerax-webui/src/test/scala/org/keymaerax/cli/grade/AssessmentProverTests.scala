@@ -693,14 +693,15 @@ class AssessmentProverTests extends TacticTestBase {
   }
 
   "QE equivalence" should "prove simple examples" in withZ3 { _ =>
-    AssessmentProver.qe("x>=0".asFormula, "0<=x".asFormula, Equiv)
-    AssessmentProver.qe("x>=4".asFormula, "x>=0 & x^2>=16".asFormula, Equiv) shouldBe Symbol("proved")
-    AssessmentProver.qe("x=1".asFormula, "x^2>=1 & x^2<=x".asFormula, Equiv) shouldBe Symbol("proved")
+    AssessmentProver.qe("x>=0".asFormula, "0<=x".asFormula, Equiv.apply)
+    AssessmentProver.qe("x>=4".asFormula, "x>=0 & x^2>=16".asFormula, Equiv.apply) shouldBe Symbol("proved")
+    AssessmentProver.qe("x=1".asFormula, "x^2>=1 & x^2<=x".asFormula, Equiv.apply) shouldBe Symbol("proved")
     withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
-      AssessmentProver.qe("x>=4".asFormula, "abs(x)>=4 & abs(x)<=x".asFormula, Equiv) shouldBe Symbol("proved")
+      AssessmentProver.qe("x>=4".asFormula, "abs(x)>=4 & abs(x)<=x".asFormula, Equiv.apply) shouldBe Symbol("proved")
     }
-    AssessmentProver.qe("x>=4".asFormula, "\\forall y (0<=y&y<=4 -> x>=y)".asFormula, Equiv) shouldBe Symbol("proved")
-    AssessmentProver.qe("x>=4".asFormula, "\\exists y (y>=2 & x>=y^2)".asFormula, Equiv) shouldBe Symbol("proved")
+    AssessmentProver
+      .qe("x>=4".asFormula, "\\forall y (0<=y&y<=4 -> x>=y)".asFormula, Equiv.apply) shouldBe Symbol("proved")
+    AssessmentProver.qe("x>=4".asFormula, "\\exists y (y>=2 & x>=y^2)".asFormula, Equiv.apply) shouldBe Symbol("proved")
   }
 
   "Syntactic sequent equality" should "prove simple examples" in {
@@ -2008,7 +2009,7 @@ class AssessmentProverTests extends TacticTestBase {
       val earlierSols = earlierGraders.map(_._2._2)
       val maxSols = (earlierSols.map(_.size) :+ mainSols.size).max
       val sols = (earlierSols.map(n => n ++ List.fill(maxSols - n.size)(n.last)) :+
-        (mainSols ++ List.fill(maxSols - mainSols.size)(mainSols.last))).transpose.map(MultiArtifact)
+        (mainSols ++ List.fill(maxSols - mainSols.size)(mainSols.last))).transpose.map(MultiArtifact.apply)
       // same for nosols, but fill in missing nosols with earlier sols (nosol on main answer is wrong even for earlier correct answer)
       val earlierNosols = earlierGraders.map(_._2._3)
       val maxNosols = (earlierNosols.map(_.size) :+ mainNosols.size).max
@@ -2019,7 +2020,7 @@ class AssessmentProverTests extends TacticTestBase {
         })
       val nosols = (paddedNosols :+ (mainNosols ++ List.fill(maxNosols - mainNosols.size)(TextArtifact(None))))
         .transpose
-        .map(MultiArtifact)
+        .map(MultiArtifact.apply)
       (grader, sols, nosols)
     case q: OneChoiceQuestion =>
       val (correct, incorrect) = q.choices.partition(_.isCorrect) match {

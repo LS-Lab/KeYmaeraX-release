@@ -132,7 +132,7 @@ object ComponentSystem extends TacticProvider {
             .sorted[NamedSymbol]
 
           val dots = prgVars.zipWithIndex.map({ case (v, i) => v -> DotTerm(Real, Some(i)) })
-          val args = prgVars.reduceOption(Pair).getOrElse(Nothing)
+          val args = prgVars.reduceOption(Pair.apply).getOrElse(Nothing)
           val q = PredOf(Function("q_", None, args.sort, Bool), args)
 
           val swapped = proveBy(
@@ -197,8 +197,8 @@ object ComponentSystem extends TacticProvider {
         val (xs, ys) = DifferentialHelper.atomicOdes(ode).partition(o => keep.contains(o.xp.x))
         val (hs, qs) =
           FormulaTools.conjuncts(hq).partition(StaticSemantics.freeVars(_).intersect(ys.map(_.xp.x).toSet).isEmpty)
-        val h = hs.reduceOption(And).getOrElse(True)
-        val q = qs.reduceOption(And).getOrElse(True)
+        val h = hs.reduceOption(And.apply).getOrElse(True)
+        val q = qs.reduceOption(And.apply).getOrElse(True)
         require(
           StaticSemantics.freeVars(p).intersect(ys.map(_.xp.x).toSet).isEmpty,
           "Postcondition p must be independent of ys",
@@ -333,7 +333,7 @@ object ComponentSystem extends TacticProvider {
           .getOrElse(skip)
 
         val lemma4 = proveBy(
-          Imply(Box(abv.map(AssignAny).reduceRightOption(Compose).getOrElse(Test(True)), p), have),
+          Imply(Box(abv.map(AssignAny.apply).reduceRightOption(Compose.apply).getOrElse(Test(True)), p), have),
           implyR(1) & abstractionb(1) & approximate & decompose & id,
         )
         useAt(lemma4, PosInExpr(1 :: Nil))(pos)
@@ -488,7 +488,7 @@ object ComponentSystem extends TacticProvider {
           case _: Test => false
           case _ => true
         })
-        (p1.reduce(Compose) -> tail.head.asInstanceOf[Test]) +: ports(tail.tail)
+        (p1.reduce(Compose.apply) -> tail.head.asInstanceOf[Test]) +: ports(tail.tail)
       }
     }
     ports(atoms(program))
@@ -1140,7 +1140,8 @@ object ComponentSystem extends TacticProvider {
     if (
       StaticSemantics
         .freeVars(
-          (FormulaTools.conjuncts(invuse).toSet -- FormulaTools.conjuncts(invbase)).reduceOption(And).getOrElse(True)
+          (FormulaTools.conjuncts(invuse).toSet -- FormulaTools
+            .conjuncts(invbase)).reduceOption(And.apply).getOrElse(True)
         )
         .toSet
         .exists(_.isInstanceOf[Variable])
@@ -1148,7 +1149,8 @@ object ComponentSystem extends TacticProvider {
     if (
       StaticSemantics
         .freeVars(
-          (FormulaTools.conjuncts(invstepa).toSet -- FormulaTools.conjuncts(invbase)).reduceOption(And).getOrElse(True)
+          (FormulaTools.conjuncts(invstepa).toSet -- FormulaTools
+            .conjuncts(invbase)).reduceOption(And.apply).getOrElse(True)
         )
         .toSet
         .exists(_.isInstanceOf[Variable])

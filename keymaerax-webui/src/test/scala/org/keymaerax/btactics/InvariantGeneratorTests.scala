@@ -1004,7 +1004,7 @@ class NonlinearExamplesTester(
   /** Removes all proof hints from invariant candidates and merges diff-cut chains into a single simplified formula. */
   private def stripHints(candidates: List[Invariant]): List[Invariant] = {
     // strip hints and merge diff cut chain
-    val stripMerged = candidates.map(_.formula).reduce(And)
+    val stripMerged = candidates.map(_.formula).reduce(And.apply)
     val simplified = SimplifierV3
       .formulaSimp(stripMerged, immutable.HashSet.empty, SimplifierV3.defaultFaxs, SimplifierV3.defaultTaxs)
       ._1

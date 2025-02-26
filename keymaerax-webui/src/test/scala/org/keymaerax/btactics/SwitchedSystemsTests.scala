@@ -841,7 +841,7 @@ class SwitchedSystemsTests extends TacticTestBase {
     val stab = stableOrigin(tt)
 
     val vars = List("x1", "x2").map(_.asVariable)
-    val normsq = vars.map(e => Power(e, Number(2))).reduceLeft(Plus) // ||x||^2
+    val normsq = vars.map(e => Power(e, Number(2))).reduceLeft(Plus.apply) // ||x||^2
 
     val eps = Variable("eps")
     val del = Variable("del")
@@ -850,12 +850,12 @@ class SwitchedSystemsTests extends TacticTestBase {
 
     val w = Variable("w_")
 
-    val epsgeq = lyaps.map(t => GreaterEqual(t, w)).reduceLeft(And)
+    val epsgeq = lyaps.map(t => GreaterEqual(t, w)).reduceLeft(And.apply)
 
     val epsbound = vars.foldRight(Imply(Equal(normsq, epssq), epsgeq): Formula)((v, f) => Forall(v :: Nil, f))
     val epsw = Exists(w :: Nil, And(Greater(w, Number(0)), epsbound))
 
-    val delless = lyaps.map(t => Less(t, w)).reduceLeft(And)
+    val delless = lyaps.map(t => Less(t, w)).reduceLeft(And.apply)
     val delw = And(
       And(Greater(del, Number(0)), Less(del, eps)),
       vars.foldRight(Imply(Less(normsq, delsq), delless): Formula)((v, f) => Forall(v :: Nil, f)),
@@ -865,7 +865,8 @@ class SwitchedSystemsTests extends TacticTestBase {
 
     val u = Variable("u_")
 
-    val lexp = lyaps.zipWithIndex.map(fi => And(Equal(u, Number(fi._2)), Less(Times(fi._1, exp), w))).reduceLeft(Or)
+    val lexp =
+      lyaps.zipWithIndex.map(fi => And(Equal(u, Number(fi._2)), Less(Times(fi._1, exp), w))).reduceLeft(Or.apply)
 
     val invariant = And(And("s_>=0".asFormula, Less(normsq, epssq)), lexp)
 

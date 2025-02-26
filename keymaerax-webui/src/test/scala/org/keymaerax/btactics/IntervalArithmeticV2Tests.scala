@@ -286,7 +286,7 @@ class IntervalArithmeticV2Tests extends TacticTestBase {
 
   "proveBinop" should "prove binary operations" in withMathematica { qeTool =>
     val (res, _, _) = IntervalArithmeticV2
-      .proveBinop(qeTool)(10)(IndexedSeq())(Plus)("0.1".asTerm, "0.3".asTerm)("0.4".asTerm, "0.8".asTerm)
+      .proveBinop(qeTool)(10)(IndexedSeq())(Plus.apply)("0.1".asTerm, "0.3".asTerm)("0.4".asTerm, "0.8".asTerm)
     res shouldBe Symbol("proved")
     res.conclusion.succ.loneElement shouldBe
       "\\forall i1_ \\forall i2_ (0.1<=i1_&i1_<=0.3&0.4<=i2_&i2_<=0.8->5*10^(-1)<=i1_+i2_&i1_+i2_<=11*10^(-1))"
@@ -294,7 +294,7 @@ class IntervalArithmeticV2Tests extends TacticTestBase {
   }
 
   "proveUnop" should "prove unary operations" in withMathematica { qeTool =>
-    val (res, _, _) = IntervalArithmeticV2.proveUnop(qeTool)(10)(IndexedSeq())(Neg)("0.1".asTerm, "0.3".asTerm)
+    val (res, _, _) = IntervalArithmeticV2.proveUnop(qeTool)(10)(IndexedSeq())(Neg.apply)("0.1".asTerm, "0.3".asTerm)
     res shouldBe Symbol("proved")
     res.conclusion.succ.loneElement shouldBe
       "\\forall i1_ (0.1<=i1_&i1_<=0.3->(-3)*10^(-1)<=-i1_&-i1_<=(-1)*10^(-1))".asFormula

@@ -273,7 +273,7 @@ private[keymaerax] object PropositionalTactics extends TacticProvider with Loggi
           // @todo usually includes too many assumptions
           val notsuccs = seq
             .succ
-            .map(Not)
+            .map(Not.apply)
             .map(
               SimplifierV3
                 .formulaSimp(
@@ -285,7 +285,7 @@ private[keymaerax] object PropositionalTactics extends TacticProvider with Loggi
                 ._1
             )
           val antes = seq.ante.patch(pos.index0, List.empty, 1)
-          val assms = (notsuccs ++ antes).reduceRightOption(And).getOrElse(True)
+          val assms = (notsuccs ++ antes).reduceRightOption(And.apply).getOrElse(True)
           val mpShow =
             Sequent(scala.collection.immutable.IndexedSeq(), scala.collection.immutable.IndexedSeq(Imply(assms, p)))
           // @todo tactic with timeouts results in proof repeatability issues
@@ -1067,8 +1067,10 @@ private[keymaerax] object PropositionalTactics extends TacticProvider with Loggi
    *   [[FormulaTools.reassociate]]
    */
   def rightAssociate(fml: Formula): (Formula, ProvableSig) = fml match {
-    case Or(l, r) => timed(rightAssociateStep(l, r, FormulaTools.disjuncts, Or, propOr), "Right associate step or")
-    case And(l, r) => timed(rightAssociateStep(l, r, FormulaTools.conjuncts, And, propAnd), "Right associate step and")
+    case Or(l, r) =>
+      timed(rightAssociateStep(l, r, FormulaTools.disjuncts, Or.apply, propOr), "Right associate step or")
+    case And(l, r) =>
+      timed(rightAssociateStep(l, r, FormulaTools.conjuncts, And.apply, propAnd), "Right associate step and")
     case _ => (
         fml,
         ProvableSig
@@ -1144,7 +1146,7 @@ private[keymaerax] object PropositionalTactics extends TacticProvider with Loggi
           ProvableSig.startPlainProof(Equiv(p, p))(Ax.equivReflexive.provable(USubst(List(SubstitutionPair(px, p)))), 0),
         )
       )
-      val result = inner.map(_._1).reduceRight(Or)
+      val result = inner.map(_._1).reduceRight(Or.apply)
       val innerDisjuncts = inner.map(_._1).map(FormulaTools.disjuncts)
       val resultProof = timed(
         ProvableSig.startPlainProof(Equiv(fml, result))(
@@ -1165,15 +1167,15 @@ private[keymaerax] object PropositionalTactics extends TacticProvider with Loggi
       if (disjunctions.nonEmpty) {
         val inner = disjunctions.map(orDistAnd)
         val innerDisjuncts = inner.map(_._1).map(FormulaTools.disjuncts)
-        val c = FormulaTools.combinations(innerDisjuncts).map(_.reduceRight(And))
+        val c = FormulaTools.combinations(innerDisjuncts).map(_.reduceRight(And.apply))
 
         if (others.nonEmpty) {
-          val o = others.reduceRight(And)
-          val result = c.map(And(_, o)).reduceRight(Or)
+          val o = others.reduceRight(And.apply)
+          val result = c.map(And(_, o)).reduceRight(Or.apply)
 
-          val dand = disjunctions.reduceRight(And)
+          val dand = disjunctions.reduceRight(And.apply)
           val dAndO = And(dand, o)
-          val cor = c.reduceRight(Or)
+          val cor = c.reduceRight(Or.apply)
           val cOrO = And(cor, o)
 
           // branch on disjunctions left (original formula) and close by assumption
@@ -1189,7 +1191,7 @@ private[keymaerax] object PropositionalTactics extends TacticProvider with Loggi
                 .indices
                 .foldRight(ralpha)({ case (i, p) =>
                   val s = p.subgoals(i)
-                  val j = s.succ.indexOf(s.ante.reduceRight(And))
+                  val j = s.succ.indexOf(s.ante.reduceRight(And.apply))
                   p(cohideOnlyR(SuccPos(j)), i)(propAnd, i)
                 })
             }
@@ -1270,8 +1272,8 @@ private[keymaerax] object PropositionalTactics extends TacticProvider with Loggi
 
           (result, resultProof)
         } else {
-          val result = c.reduceRight(Or)
-          val rearranged = disjunctions.reduceRight(And)
+          val result = c.reduceRight(Or.apply)
+          val rearranged = disjunctions.reduceRight(And.apply)
           val disjuncts = disjunctions.flatMap(FormulaTools.disjuncts)
           val combineProof = timed(
             ProvableSig

@@ -318,8 +318,8 @@ object Augmentors {
 
     /** Convert a sequent to its equivalent formula `/\antes -> \/succs` */
     def toFormula: Formula = {
-      val anteAnd = seq.ante.reduceRightOption(And).getOrElse(True)
-      val succOr = seq.succ.reduceRightOption(Or).getOrElse(False)
+      val anteAnd = seq.ante.reduceRightOption(And.apply).getOrElse(True)
+      val succOr = seq.succ.reduceRightOption(Or.apply).getOrElse(False)
       // @note don't optimize true-> and ->false, since otherwise we'll have to deal with two special cases
       Imply(anteAnd, succOr)
     }

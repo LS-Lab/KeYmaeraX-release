@@ -615,7 +615,7 @@ private object ToolTactics extends TacticProvider {
     )
     hidePredicates & toSingleFormula & rcf(qeTool) &
       (if (reformatAssumptions && s.ante.exists(!_.isInstanceOf[PredOf])) Idioms.doIf(!_.isProved)(
-         cut(s.ante.filterNot(_.isInstanceOf[PredOf]).reduceRight(And)) <
+         cut(s.ante.filterNot(_.isInstanceOf[PredOf]).reduceRight(And.apply)) <
            (SaturateTactic(andL(Symbol("L"))) & SimplifierV3.fullSimpTac(), QE & done)
        )
        else Idioms.nil)
@@ -939,10 +939,10 @@ private object ToolTactics extends TacticProvider {
 
     val boundVars = StaticSemantics.boundVars(sequent(pos.top))
     val gaFull =
-      if (pos.isSucc) (sequent.ante ++ sequent.succ.patch(pos.top.getIndex, Nil, 1).map(Not))
+      if (pos.isSucc) (sequent.ante ++ sequent.succ.patch(pos.top.getIndex, Nil, 1).map(Not.apply))
         .flatMap(FormulaTools.conjuncts)
         .filter(_.isFOL)
-      else (sequent.ante.patch(pos.top.getIndex, Nil, 1) ++ sequent.succ.map(Not))
+      else (sequent.ante.patch(pos.top.getIndex, Nil, 1) ++ sequent.succ.map(Not.apply))
         .flatMap(FormulaTools.conjuncts)
         .filter(_.isFOL)
 
@@ -952,7 +952,7 @@ private object ToolTactics extends TacticProvider {
         filters: List[IndexedSeq[Formula] => IndexedSeq[Formula]],
     ): (ProvableSig, IndexedSeq[Formula]) = {
       val filteredAssumptions = filters.head(assumptions)
-      lazy val filteredAssumptionsFml = filteredAssumptions.reduceOption(And).getOrElse(True)
+      lazy val filteredAssumptionsFml = filteredAssumptions.reduceOption(And.apply).getOrElse(True)
       val pr =
         if (filteredAssumptions.isEmpty) proveBy(Imply(src, tgt), master())
         else if (polarity > 0) proveBy(Imply(And(filteredAssumptionsFml, src), tgt), master())
@@ -1023,7 +1023,7 @@ private object ToolTactics extends TacticProvider {
     if (fact.isProved && ga.isEmpty) useAt(fact, key)(pos)
     else if (fact.isProved && ga.nonEmpty) useAt(fact, key)(pos) &
       (if (polarity < 0) Idioms.<(skip, cohideOnlyR(Symbol("Rlast")) & master() & done | master())
-       else cutAt(ga.reduce(And))(pos) & Idioms.<(
+       else cutAt(ga.reduce(And.apply))(pos) & Idioms.<(
          // @todo ensureAt only closes branch when original conjecture is true
          ensureAt(pos) & OnAll(cohideOnlyR(pos) & master() & done | master() & done),
          pushIn(pos.inExpr)(pos.top),

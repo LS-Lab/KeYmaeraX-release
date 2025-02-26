@@ -199,7 +199,7 @@ class MathematicaToKeYmaera extends M2KConverter[KExpr] {
   /** Convert the arguments of a function and combine with fn into a FuncOf */
   protected def convertFunction(fn: Function, args: Array[MExpr]): KExpr = {
     assert(args.length <= 2, "Pairs are expected to be represented as nested lists (at most 2 args), but got " + args)
-    val arguments = args.map(convert).map(_.asInstanceOf[Term]).reduceRightOption[Term](Pair).getOrElse(Nothing)
+    val arguments = args.map(convert).map(_.asInstanceOf[Term]).reduceRightOption[Term](Pair.apply).getOrElse(Nothing)
     FuncOf(fn, arguments)
   }
 
@@ -221,7 +221,7 @@ class MathematicaToKeYmaera extends M2KConverter[KExpr] {
     }
 
     // conjunction of converted individual inequalities
-    extractInequalities(e.args).reduceRight(And)
+    extractInequalities(e.args).reduceRight(And.apply)
   }
 
   // reporting

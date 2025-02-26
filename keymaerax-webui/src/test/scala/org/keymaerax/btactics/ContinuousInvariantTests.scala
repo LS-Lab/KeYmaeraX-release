@@ -57,7 +57,8 @@ class ContinuousInvariantTests extends TacticTestBase {
       pegasusInvariants should have size 3
       val invariants = pegasusInvariants.take(pegasusInvariants.size - 1)
       val candidate = pegasusInvariants.last
-      candidate shouldBe invariants.map(_.formula).reduce(And) -> Some(InvariantHint.Pegasus(isInvariant = true, None))
+      candidate shouldBe
+        invariants.map(_.formula).reduce(And.apply) -> Some(InvariantHint.Pegasus(isInvariant = true, None))
     }
 
   it should "generate invariants for nonlinear benchmarks with Pegasus" taggedAs ExtremeTest in withMathematica {
@@ -122,7 +123,7 @@ class ContinuousInvariantTests extends TacticTestBase {
           println("\n" + name)
           val Imply(_, Box(ode @ ODESystem(_, _), _)) = model
           annotatedInvariants.products.get(ode) match {
-            case Some(invs) => tool.lzzCheck(ode, invs.map(_.formula).reduce(And)) shouldBe true
+            case Some(invs) => tool.lzzCheck(ode, invs.map(_.formula).reduce(And.apply)) shouldBe true
             case None => // no invariant to fast-check
           }
           println(name + " done")

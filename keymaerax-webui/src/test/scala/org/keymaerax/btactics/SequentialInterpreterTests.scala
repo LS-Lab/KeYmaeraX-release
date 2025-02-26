@@ -703,10 +703,10 @@ class SequentialInterpreterTests extends TacticTestBase {
   }
 
   it should "confirm that interpreter debug information slows down search" taggedAs SlowTest in withMathematica { _ =>
-    val ante = (1 to 100).map(i => Equal(Variable("x", Some(i)), Number(1))).reduce(And)
+    val ante = (1 to 100).map(i => Equal(Variable("x", Some(i)), Number(1))).reduce(And.apply)
     val succ = (1 to 50)
       .map(i => Box(Assign(Variable("y", Some(i)), Number(2)), Greater(Variable("y", Some(i)), Number(1))))
-      .reduce(Or)
+      .reduce(Or.apply)
 
     // should take about 1min
     failAfter(2 minutes) {
@@ -721,10 +721,10 @@ class SequentialInterpreterTests extends TacticTestBase {
   }
 
   it should "not spend extensive time searching positions without debug information" in withMathematica { _ =>
-    val ante = (1 to 100).map(i => Equal(Variable("x", Some(i)), Number(1))).reduce(And)
+    val ante = (1 to 100).map(i => Equal(Variable("x", Some(i)), Number(1))).reduce(And.apply)
     val succ = (1 to 50)
       .map(i => Box(Assign(Variable("y", Some(i)), Number(2)), Greater(Variable("y", Some(i)), Number(1))))
-      .reduce(Or)
+      .reduce(Or.apply)
 
     // should take about 500ms
     failAfter(2 seconds) {

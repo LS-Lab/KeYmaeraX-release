@@ -214,7 +214,7 @@ object AxiomaticODESolver {
             ._1
         )
         .filterNot(f => f == True || f == False) // @todo improve DI
-        .reduceOption(And).getOrElse(True)
+        .reduceOption(And.apply).getOrElse(True)
 
       // @note do not simplify dependent formulas in postcondition, since diamond solver relies on duplicated formulas
       val simpSol =

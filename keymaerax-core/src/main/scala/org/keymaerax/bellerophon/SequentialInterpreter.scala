@@ -686,8 +686,8 @@ abstract class BelleBaseInterpreter(
           def abbrv(f: Formula, i: Int, name: String): (PredOf, Option[SubstitutionPair]) = {
             val fv = StaticSemantics.freeVars(f).toSet.toList
             val dots = fv.zipWithIndex.map({ case (v, i) => (v, DotTerm(Real, Some(i))) })
-            val arg = dots.map(_._1).reduceRightOption(Pair).getOrElse(Nothing)
-            val dotsArg = dots.map(_._2).reduceRightOption(Pair).getOrElse(Nothing)
+            val arg = dots.map(_._1).reduceRightOption(Pair.apply).getOrElse(Nothing)
+            val dotsArg = dots.map(_._2).reduceRightOption(Pair.apply).getOrElse(Nothing)
             val fDots = dots.foldRight(f)({ case ((what, repl), f) => Box(Assign(what, repl), f) })
             val fn = Function(name, Some(i), arg.sort, Bool, None)
             (PredOf(fn, arg), Some(SubstitutionPair(PredOf(fn, dotsArg), fDots)))

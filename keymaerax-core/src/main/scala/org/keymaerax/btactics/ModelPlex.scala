@@ -170,7 +170,7 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
           case _ => false
         })
         require(boxes.size == 1, "Expected a single box property, but got " + boxes.mkString(","))
-        Imply((assumptions ++ negAssumptions.map(Not)).reduceRightOption(And).getOrElse(True), boxes.head)
+        Imply((assumptions ++ negAssumptions.map(Not.apply)).reduceRightOption(And.apply).getOrElse(True), boxes.head)
       case _ => throw new IllegalArgumentException(
           "Unsupported shape of formula " + f
             .prettyString + "; formula must be propositionally equivalent to A -> [prg;]P"
@@ -281,12 +281,12 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
       val preEstimator = unobservable
         .filter(_._2.isDefined)
         .map({ case (_, Some(e)) => e })
-        .reduceRightOption(And)
+        .reduceRightOption(And.apply)
         .getOrElse(True)
 
       val postEqs = unobservableStateVars
         .keys
-        .foldRight[Formula](vars.map(v => Equal(postVar(v), v)).reduceRight(And))((v, f) =>
+        .foldRight[Formula](vars.map(v => Equal(postVar(v), v)).reduceRight(And.apply))((v, f) =>
           postEstimators.get(v) match {
             case Some(e) => Exists(postVar(v) :: Nil, And(e, f))
             case _ => Exists(postVar(v) :: Nil, f)
@@ -372,7 +372,7 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
     val monitor = apply(vars, kind)(formula)
     val ModelPlexConjecture(_, monitorConjecture, assumptions) =
       createMonitorSpecificationConjecture(formula, vars, unobservable)
-    Imply(assumptions.reduceOption(And).getOrElse(True), Imply(monitor, monitorConjecture))
+    Imply(assumptions.reduceOption(And.apply).getOrElse(True), Imply(monitor, monitorConjecture))
   }
 
   private def doReplaceOld(t: Term, x0: Map[Variable, Variable]): Term = ExpressionTraversal
@@ -458,8 +458,8 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
                 case Some(Box(ODESystem(ode, _), _)) if !diffInvariants.contains(ode) =>
                   diffInvariants += (ode -> (
                     DifferentialHelper
-                      .extractInitialConditions(Some(ode))(p.subgoals.head.ante.reduceOption(And).getOrElse(True))
-                      .reduceRightOption(And)
+                      .extractInitialConditions(Some(ode))(p.subgoals.head.ante.reduceOption(And.apply).getOrElse(True))
+                      .reduceRightOption(And.apply)
                       .getOrElse(True),
                     di
                   ))
@@ -467,7 +467,7 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
                   if (StaticSemantics.freeVars(di).intersect(senseVars).toSet.nonEmpty) {
                     val (init, prevDi) = diffInvariants(ode)
                     val newDi = FormulaTools.conjuncts(di).diff(FormulaTools.conjuncts(prevDi))
-                    if (newDi.nonEmpty) diffInvariants += (ode -> (init, And(prevDi, newDi.reduceRight(And))))
+                    if (newDi.nonEmpty) diffInvariants += (ode -> (init, And(prevDi, newDi.reduceRight(And.apply))))
                   }
               }
           }
@@ -527,7 +527,7 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
     val origOdeAtoms = DifferentialHelper.atomicOdes(origOde)
     diffInvariants
       .map({ case (ode, (initial, di)) =>
-        val reassociatedDi = FormulaTools.conjuncts(di).reduceRightOption(And).getOrElse(True)
+        val reassociatedDi = FormulaTools.conjuncts(di).reduceRightOption(And.apply).getOrElse(True)
         if (diffInvariants.size > 1) {
           val diff = DifferentialHelper.atomicOdes(ode).filterNot(origOdeAtoms.contains)
           val rhsStartValues = diff.map(x => Equal(origOdeAtoms.find(a => a.xp == x.xp).get.e, x.e))
@@ -547,7 +547,7 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
             })
             .toSet
           val initialConditions =
-            (FormulaTools.conjuncts(initial) ++ varStartValues).reduceRightOption(And).getOrElse(True)
+            (FormulaTools.conjuncts(initial) ++ varStartValues).reduceRightOption(And.apply).getOrElse(True)
           val oldifiedInitialConditions = DifferentialHelper
             .getPrimedVariables(ode)
             .foldLeft[Formula](initialConditions)((f, v) =>
@@ -556,7 +556,7 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
           Imply(replaceOld(oldifiedInitialConditions, x0), replaceOld(reassociatedDi, x0))
         } else replaceOld(reassociatedDi, x0)
       })
-      .reduceRightOption(And)
+      .reduceRightOption(And.apply)
       .getOrElse(True)
   }
 
@@ -592,7 +592,11 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
           .toList
           .sorted[NamedSymbol]
         val x0 = plantVars.map(v => v -> BaseVariable(v.name, TacticHelper.freshIndexInFormula(v.name, fml))).toMap
-        val x0Ghosts = x0.toList.sortBy[NamedSymbol](_._1).map({ case (v, g) => Assign(g, v) }).reduceRight(Compose)
+        val x0Ghosts = x0
+          .toList
+          .sortBy[NamedSymbol](_._1)
+          .map({ case (v, g) => Assign(g, v) })
+          .reduceRight(Compose.apply)
 
         val pl = proofListener(name, plantVars.toSet, /*q, */ x0, defs)
         LazySequentialInterpreter(pl :: /*qeDurationListener::*/ Nil)(
@@ -622,7 +626,10 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
         val internalVars = StaticSemantics.freeVars(diffInvariants).toSet.filter(_.name.endsWith("_"))
 
         // @note tactics (e.g., ODE's nilpotentsolve) may introduce internal symbols that become "plant" variables
-        val nondetPlant = (plantVars ++ internalVars).map(AssignAny).sortBy[NamedSymbol](_.x).reduceRight(Compose)
+        val nondetPlant = (plantVars ++ internalVars)
+          .map(AssignAny.apply)
+          .sortBy[NamedSymbol](_.x)
+          .reduceRight(Compose.apply)
         val odeGuard = if (evolDomain == True) diffInvariants else And(evolDomain, diffInvariants)
         val guardedPlant = Compose(Test(odeGuard), Compose(nondetPlant, Test(odeGuard)))
         val body = measure match {
@@ -713,7 +720,7 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
       .conjuncts(initCond)
       .filter(StaticSemantics.freeVars(_).intersect(StaticSemantics.boundVars(sysPrg)).isEmpty)
       .map(replace(_, consts))
-      .reduceRightOption(And)
+      .reduceRightOption(And.apply)
       .getOrElse(True)
     val monitor = replace(apply(vars, kind)(expandedModel), consts)
     val senseVars: List[Variable] = StaticSemantics
@@ -736,7 +743,7 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
           .isEmpty
       )
       .map(replace(_, consts))
-      .reduceRightOption(And)
+      .reduceRightOption(And.apply)
       .getOrElse(True)
 
     val x0 = Map[Variable, Term]()
@@ -765,7 +772,7 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
     val rep2 = rep1.map(replace(_, consts))
     val rep3 = rep2.map(replace(_, olds))
     val rep4 = rep3.distinct
-    val plantMonitor = rep4.reduceRight(And)
+    val plantMonitor = rep4.reduceRight(And.apply)
 
     val sensePreVars = senseVars.map(v => BaseVariable(v.name, Some(v.index.getOrElse(-1) + 1)) -> v).toMap
     val odeLemmas = pl
@@ -782,7 +789,8 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
 
     val monitor0 = replace(monitor, vars.map(v => postVar(v) -> v).toMap)
 
-    def skipPostfixedAssignments(assignments: Seq[Program]): Program = (assignments :+ Test(True)).reduceRight(Compose)
+    def skipPostfixedAssignments(assignments: Seq[Program]): Program = (assignments :+ Test(True))
+      .reduceRight(Compose.apply)
     def skipPostfixFallback(fb: Program): Program = {
       def decompose(prg: Program): Seq[Program] = prg match {
         case Compose(l, r) => decompose(l) ++ decompose(r)
@@ -792,16 +800,16 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
     }
 
     // consts:=*;
-    val readConsts = skipPostfixedAssignments(consts.values.toList.sorted[NamedSymbol].map(AssignAny))
+    val readConsts = skipPostfixedAssignments(consts.values.toList.sorted[NamedSymbol].map(AssignAny.apply))
     // senseVars+:=*; ?plantMonitor; senseVars:=senseVars+;
-    val readInitialSensors = skipPostfixedAssignments(senseVars.map(AssignAny))
-    val readSensors = skipPostfixedAssignments(sensePostVars.values.toList.sorted[NamedSymbol].map(AssignAny))
-    val readCtrls = skipPostfixedAssignments(ctrlVars.sorted[NamedSymbol].map(AssignAny))
+    val readInitialSensors = skipPostfixedAssignments(senseVars.map(AssignAny.apply))
+    val readSensors = skipPostfixedAssignments(sensePostVars.values.toList.sorted[NamedSymbol].map(AssignAny.apply))
+    val readCtrls = skipPostfixedAssignments(ctrlVars.sorted[NamedSymbol].map(AssignAny.apply))
     val copySensors = skipPostfixedAssignments(sensePostVars.toList.sortBy[NamedSymbol](_._1).map(Assign.tupled))
 
     val sense = Compose(readSensors, Compose(Test(plantMonitor), copySensors))
     // ctrlVars+:=*;
-    val ctrl = skipPostfixedAssignments(ctrlVars.map(postVar).map(AssignAny))
+    val ctrl = skipPostfixedAssignments(ctrlVars.map(postVar).map(AssignAny.apply))
     // senseVars\ctrlVars:=senseVars
     val nonCtrlState = skipPostfixedAssignments(
       (senseVars.toSet -- ctrlVars.toSet).toList.sorted[NamedSymbol].map(v => postVar(v) -> v).map(Assign.tupled)
@@ -817,7 +825,7 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
     val act = Choice(Test(monitor), fallbackCtrl)
 
     val upsilonConjuncts = vars.sorted[NamedSymbol].map(v => Equal(postVar(v), v))
-    val upsilon = upsilonConjuncts.reduce(And)
+    val upsilon = upsilonConjuncts.reduce(And.apply)
 
     // ctrlVars+:=ctrlVars
     val tempCtrl = skipPostfixedAssignments(vars.map(v => Assign(postVar(v), v)))
@@ -1255,12 +1263,12 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
     def createSystemApprox(atoms: List[AtomicODE], h: Term): Program = {
       val initial: Map[Variable, Variable] =
         atoms.map({ case AtomicODE(DifferentialSymbol(x), _) => x -> TacticHelper.freshNamedSymbol(x, sequent) }).toMap
-      val initials = initial.map({ case (v, v0) => Assign(v0, v) }).reduce(Compose)
+      val initials = initial.map({ case (v, v0) => Assign(v0, v) }).reduce(Compose.apply)
       val eulerSteps: Program = atoms
         .map({ case AtomicODE(DifferentialSymbol(x), f) =>
           Assign(x, Plus(x, Times(h, initial.foldLeft(f)({ case (ff, (y, y0)) => ff.replaceFree(y, y0) }))))
         })
-        .reduce(Compose)
+        .reduce(Compose.apply)
       Compose(initials, eulerSteps)
     }
 
@@ -1270,7 +1278,7 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
       val ys: Map[Variable, Variable] =
         primed.map(x => x -> TacticHelper.freshNamedSymbol(Variable("y" + x.name, x.index, x.sort), sequent)).toMap
       val py = ys.foldLeft(p)({ case (pp, (x, y)) => pp.replaceFree(x, y) })
-      val norm = ys.map({ case (x, y) => Power(Minus(x, y), Number(2)) }).reduce(Plus)
+      val norm = ys.map({ case (x, y) => Power(Minus(x, y), Number(2)) }).reduce(Plus.apply)
       val marginP = And(Less(norm, Power(e, Number(2))), py)
       // Exists(ys.values.toList, margin)
       ys.foldLeft[Formula](marginP)({ case (m, (_, y)) => Exists(y :: Nil, m) })
@@ -1894,7 +1902,7 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
     case Some(t) =>
       val simplified = t.simplify(qeFml, assumptions)
       val backSubst = And(
-        assumptions.reduceOption(And).getOrElse(True),
+        assumptions.reduceOption(And.apply).getOrElse(True),
         signature
           .foldLeft[Formula](simplified)((fml, t) => fml.replaceAll(Variable(t.name, t.index), FuncOf(t, Nothing))),
       )

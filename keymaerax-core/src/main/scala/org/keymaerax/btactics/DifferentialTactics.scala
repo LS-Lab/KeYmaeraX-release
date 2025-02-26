@@ -1012,10 +1012,10 @@ private object DifferentialTactics extends TacticProvider with Logging {
         val constFacts = sequent
           .zipWithPositions
           .flatMap({ case (fml, pos) =>
-            if (pos.isAnte) FormulaTools.conjuncts(fml) else FormulaTools.conjuncts(fml).map(Not)
+            if (pos.isAnte) FormulaTools.conjuncts(fml) else FormulaTools.conjuncts(fml).map(Not.apply)
           })
           .filter(f => StaticSemantics.freeVars(f).intersect(primedVars).isEmpty)
-          .reduceRightOption(And)
+          .reduceRightOption(And.apply)
 
         val p = constFacts match {
           case Some(f) => And(a.constraint, f)
@@ -1107,13 +1107,13 @@ private object DifferentialTactics extends TacticProvider with Logging {
           val (anteCuts, succCuts) = cutFmls(seq)
           val cuts = anteCuts ++ succCuts
           val odeAfterCut =
-            if (cuts.isEmpty) box else Box(ODESystem(a.ode, And(a.constraint, cuts.reduceRight(And))), p)
+            if (cuts.isEmpty) box else Box(ODESystem(a.ode, And(a.constraint, cuts.reduceRight(And.apply))), p)
           // @note implyRi+implyR to move Q last in succedent
           val dw = diffWeakenG(Symbol("R"), odeAfterCut) & implyR(1) & andL(Symbol("Llast")) * cuts
             .size & notL(Symbol("Llast")) * succCuts.size &
             implyRiX(AntePos(0), SuccPos(0)) & implyR(1)
           if (cuts.isEmpty) dw
-          else diffCut(cuts.reduceRight(And))(Symbol("R"), box) < (
+          else diffCut(cuts.reduceRight(And.apply))(Symbol("R"), box) < (
             skip,
             V(Symbol("Rlast")) &
               (if (anteCuts.nonEmpty) (andR(Symbol("Rlast")) < (closeIdWith(Symbol("Rlast")) & done, skip)) * (anteCuts
@@ -1178,7 +1178,7 @@ private object DifferentialTactics extends TacticProvider with Logging {
                 // @todo constant conditions at the sub position
                 val topFml = invSeq.sub(invPos.top).get.asInstanceOf[Formula]
                 val consts = constConditions(invSeq.ante.flatMap(FormulaTools.conjuncts), StaticSemantics(topFml).bv)
-                  .reduceRightOption(And)
+                  .reduceRightOption(And.apply)
                 val strengthenedCandidate = consts match {
                   case Some(c) => And(c, invCandidate)
                   case None => invCandidate
@@ -1212,8 +1212,8 @@ private object DifferentialTactics extends TacticProvider with Logging {
       // Track constant assumptions separately
       val odeBV = StaticSemantics.boundVars(a)
       val (assmsConst, assmsRest) = assms.partition(StaticSemantics.freeVars(_).intersect(odeBV).isEmpty)
-      val conjConst = assmsConst.foldLeft(prgAssumptions)(And)
-      val conjRest = assmsRest.foldLeft[Formula](True)(And)
+      val conjConst = assmsConst.foldLeft(prgAssumptions)(And.apply)
+      val conjRest = assmsRest.foldLeft[Formula](True)(And.apply)
       proveBy(Imply(conjConst, Equiv(conjRest, p)), ?(timeoutCEXQE)).isProved
     }
 
@@ -2312,7 +2312,7 @@ private object DifferentialTactics extends TacticProvider with Logging {
                 )
               case Some(tool) =>
                 val (nec, _) = tool.genODECond(ode, s.ante, post)
-                val pr = proveBy(nec.tail.foldLeft(nec.head)(And), ?(timeoutQE))
+                val pr = proveBy(nec.tail.foldLeft(nec.head)(And.apply), ?(timeoutQE))
                 if (pr.isProved) throw new UnsupportedTacticFeature(
                   "The ODE postcondition " + post + " is invariant but odeInvC could not prove it." +
                     " This is a completeness bug in the implementation. Please submit a bug report."
@@ -2770,7 +2770,7 @@ private object DifferentialTactics extends TacticProvider with Logging {
             Box(ODESystem(ode2, And(r(vvars), nonneg(q(vvars)))), DifferentialFormula(P(vvars))),
           ),
           FormulaTools.quantifyForall(vvars, Equiv(P(vvars), nonneg(p(vvars)))),
-        ).reduceRight(And),
+        ).reduceRight(And.apply),
         Box(ODESystem(ode, r(vars)), P(vars)),
       ),
       implyR(1) & andL(-1) & andL(Symbol("Llast")) & andL(Symbol("Llast")) &

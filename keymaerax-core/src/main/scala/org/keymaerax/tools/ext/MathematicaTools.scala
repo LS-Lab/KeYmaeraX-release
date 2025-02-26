@@ -73,8 +73,8 @@ class UncheckedBaseM2KConverter extends MathematicaToKeYmaera {
   }
 
   private def convertRuleList(e: MExpr): Formula = {
-    val convertedRules = e.args().map(_.args().map(r => convertRule(r)).reduceLeft(And))
-    if (convertedRules.isEmpty) False else convertedRules.reduceLeft(Or)
+    val convertedRules = e.args().map(_.args().map(r => convertRule(r)).reduceLeft(And.apply))
+    if (convertedRules.isEmpty) False else convertedRules.reduceLeft(Or.apply)
   }
 
   @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
@@ -440,8 +440,10 @@ object PegasusM2KConverter extends UncheckedBaseM2KConverter with Logging {
         require(cuts.applies(e), "Expected a rule Cuts -> { {<formula>, Hint-><...>}, ... }, but got " + e)
         Equiv(
           pred("Cuts"),
-          if (e.args()(1).args.length > 0)
-            And(Equal(LIST_LENGTH, Number(e.args()(1).args.length)), e.args()(1).args.map(convertCut).reduceLeft(And))
+          if (e.args()(1).args.length > 0) And(
+            Equal(LIST_LENGTH, Number(e.args()(1).args.length)),
+            e.args()(1).args.map(convertCut).reduceLeft(And.apply),
+          )
           else Equal(LIST_LENGTH, Number(e.args()(1).args.length)),
         )
       }
@@ -628,12 +630,12 @@ object PegasusM2KConverter extends UncheckedBaseM2KConverter with Logging {
       val elements = e.args().map(convert)
       if (elements.nonEmpty && elements.forall(_.isInstanceOf[Formula])) {
         // @HACK first conjunct length(list)=... indicates length of list
-        elements.map(_.asInstanceOf[Formula]).reduceOption(And) match {
+        elements.map(_.asInstanceOf[Formula]).reduceOption(And.apply) match {
           case Some(fmls) => And(Equal(LIST_LENGTH, Number(e.args.length)), fmls)
           case None => Equal(LIST_LENGTH, Number(e.args.length))
         }
       } else if (elements.forall(_.isInstanceOf[Term])) {
-        (elements :+ Nothing).map(_.asInstanceOf[Term]).reduceRight(Pair)
+        (elements :+ Nothing).map(_.asInstanceOf[Term]).reduceRight(Pair.apply)
       } else throw ConversionException("Pegasus converter expected either list of formulas or list of terms")
     } else throw ConversionException("Expected a list, but got " + e)
   }
@@ -1154,7 +1156,7 @@ object SimulationK2MConverter extends K2MConverter[Simulation] {
   override def convert(e: Simulation): MExpr = {
     MathematicaOpSpec.list(
       e.map(r =>
-        MathematicaOpSpec.list(r.map(s => k2m(s.map { case (n: Term, v) => Equal(n, v) }.reduceLeft(And))): _*)
+        MathematicaOpSpec.list(r.map(s => k2m(s.map { case (n: Term, v) => Equal(n, v) }.reduceLeft(And.apply))): _*)
       ): _*
     )
   }

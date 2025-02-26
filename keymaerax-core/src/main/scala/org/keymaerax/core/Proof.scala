@@ -738,7 +738,7 @@ object Provable {
     val post = UnitPredicational("p", Except(ghosts))
 
     // The squared norm of the vector ||y__1, y__2, ..., y__dim||^2
-    val sqnorm = ghosts.map(e => Times(e, e)).reduceLeft(Plus)
+    val sqnorm = ghosts.map(e => Times(e, e)).reduceLeft(Plus.apply)
     // The bounding term f(|y__1,y__2,...,y__dim|)
     val cofF = UnitFunctional("f_", Except(ghosts), Real)
     // The norm bound required of the ghost ODEs (||y_||^2) <= f(|y_|)
@@ -782,13 +782,13 @@ object Provable {
     // The list of LHS variables y__1, y__2, ..., y__dim
     val yLHS = indices.map(i => BaseVariable("y_", Some(i)))
     // The sort of RHS functions and predicates is (real,(real,...)) n times
-    val sort = indices.map(_ => Real).reduceRight(Tuple)
+    val sort = indices.map(_ => Real).reduceRight(Tuple.apply)
     val RHSfunc = indices.map(i => Function("f_", Some(i), sort, Real))
     // The application f_(x_) where x_ is written as a tuple of the right sort  (x_1,(x_2,(...))
-    val RHSxarg = xLHS.reduceRight(Pair)
+    val RHSxarg = xLHS.reduceRight(Pair.apply)
     val xRHS = RHSfunc.map { f => FuncOf(f, RHSxarg) }
     // The application f_(y_) where y_ is written as a tuple of the right sort (y_1,(y_2,(...))
-    val RHSyarg = yLHS.reduceRight(Pair)
+    val RHSyarg = yLHS.reduceRight(Pair.apply)
     val yRHS = RHSfunc.map { f => FuncOf(f, RHSyarg) }
 
     // ODEs for x_, y_
@@ -802,7 +802,7 @@ object Provable {
     val xDom = PredOf(Function("q_", None, sort, Bool), RHSxarg)
     val yDom = PredOf(Function("q_", None, sort, Bool), RHSyarg)
     // Postcondition x_ = y_
-    val eq = (xLHS zip yLHS).map(xy => Equal(xy._1, xy._2)).reduceRight(And)
+    val eq = (xLHS zip yLHS).map(xy => Equal(xy._1, xy._2)).reduceRight(And.apply)
 
     // <x_'=f_(x_)&q_(x_)>x_=y_ <-> <y_'=-f_(y_)&q_(y_)>x_=y_
     val diffAdj = Equiv(Diamond(ODESystem(xODE, xDom), eq), Diamond(ODESystem(yODE, yDom), eq))
@@ -940,7 +940,7 @@ object Provable {
 
     val x = BaseVariable("x_")
     // The dot term argument for f's sort (guaranteed to be right-associated)
-    val dotArg = if (dim == 0) Nothing else (1 to dim).map(i => DotTerm(Real, Some(i))).reduceRight(Pair)
+    val dotArg = if (dim == 0) Nothing else (1 to dim).map(i => DotTerm(Real, Some(i))).reduceRight(Pair.apply)
 
     // The result dot ._0, note f.sort == Real by data structure invariant
     val xdot = DotTerm(f.sort, Some(0))

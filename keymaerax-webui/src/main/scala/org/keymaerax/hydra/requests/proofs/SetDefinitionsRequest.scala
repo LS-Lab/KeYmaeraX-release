@@ -99,8 +99,8 @@ class SetDefinitionsRequest(db: DBAbstraction, userId: String, proofId: String, 
       }
     }
     e match {
-      case FuncOf(fn: Function, c) => elaborateTo(fn, c, PredOf)
-      case PredOf(fn: Function, c) => elaborateTo(fn, c, FuncOf)
+      case FuncOf(fn: Function, c) => elaborateTo(fn, c, PredOf.apply)
+      case PredOf(fn: Function, c) => elaborateTo(fn, c, FuncOf.apply)
       case _ => e
     }
   }

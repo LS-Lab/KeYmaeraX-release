@@ -68,7 +68,7 @@ class SetupSimulationRequest(db: DBAbstraction, userId: String, proofId: String,
               .foldLeft[Formula](b)((b, v) => b.replaceAll(v, Variable("pre" + v.name, v.index, v.sort)))
             val stateRelEqs = vars
               .map(v => Equal(v.asInstanceOf[Term], Variable("pre" + v.name, v.index, v.sort)))
-              .reduceRightOption(And)
+              .reduceRightOption(And.apply)
               .getOrElse(True)
             val simSpec = Diamond(solveODEs(prgPre), stateRelEqs)
             new SetupSimulationResponse(addNonDetInitials(initial, vars), transform(simSpec))
@@ -136,11 +136,11 @@ class SetupSimulationRequest(db: DBAbstraction, userId: String, proofId: String,
         .sortWith((f, g) => StaticSemantics.symbols(f).size < StaticSemantics.symbols(g).size)
       Compose(
         // @store initial values
-        iv.map({ case (v, i) => Assign(i, v) }).reduceRightOption(Compose).getOrElse(Test(True)),
+        iv.map({ case (v, i) => Assign(i, v) }).reduceRightOption(Compose.apply).getOrElse(Test(True)),
         Compose(
           flatSolution
             .map({ case Equal(v: Variable, r) => Assign(v, r) })
-            .reduceRightOption(Compose)
+            .reduceRightOption(Compose.apply)
             .getOrElse(Test(True)),
           Test(sys.constraint),
         ),

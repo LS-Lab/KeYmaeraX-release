@@ -101,7 +101,7 @@ private[tools] object MathematicaNameConversion {
   /** Converts a nested list of arguments into nested tuples of reals */
   protected def convertFunctionDomain(args: Array[MExpr]): Sort = {
     assert(args.length <= 2, "Functions have at most 2 arguments (second can be a nested list) " + args.mkString(","))
-    args.map(convertFunctionDomain).reduceRightOption(Tuple).getOrElse(Unit)
+    args.map(convertFunctionDomain).reduceRightOption(Tuple.apply).getOrElse(Unit)
   }
 
   /**

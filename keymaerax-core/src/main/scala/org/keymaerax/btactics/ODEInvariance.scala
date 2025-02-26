@@ -204,7 +204,7 @@ object ODEInvariance extends TacticProvider {
         // Special case where the ideal is empty (which seems to occur fairly often)
         if (gs == List(Number(1))) (f, GeqFml(r, List(), List()))
         else {
-          val gf = gs.map(t => Equal(t, Number(0))).reduce(And)
+          val gf = gs.map(t => Equal(t, Number(0))).reduce(And.apply)
           (Or(f, gf), GeqFml(r, gs, cofs))
         }
       }
@@ -213,7 +213,7 @@ object ODEInvariance extends TacticProvider {
         // Special case where the ideal is empty (which seems to occur fairly often)
         if (gs == List(Number(1))) (False, EqFml(r, List(), List()))
         else {
-          val gf = gs.map(t => Equal(t, Number(0))).reduce(And)
+          val gf = gs.map(t => Equal(t, Number(0))).reduce(And.apply)
           (gf, EqFml(r, gs, cofs))
         }
       }
@@ -787,7 +787,7 @@ object ODEInvariance extends TacticProvider {
           // Construct the bounding polynomials sum_i (x_i-old(x_i))^2 <= (sum_i 2x_ix'_i)*t
           val left = freeAtoms
             .map(f => Power(Minus(f.xp.x, FuncOf(Function("old", None, Real, Real, None), f.xp.x)), Number(2)): Term)
-            .reduce(Plus)
+            .reduce(Plus.apply)
           val right = Times(
             freeAtoms
               .map(f =>
@@ -796,12 +796,12 @@ object ODEInvariance extends TacticProvider {
                   Times(Minus(f.xp.x, FuncOf(Function("old", None, Real, Real, None), f.xp.x)), f.e),
                 ): Term
               )
-              .reduce(Plus),
+              .reduce(Plus.apply),
             Minus(t, d),
           )
 
           // todo: not quite right: need to mimic what "old" does more carefully
-          val equals = freeAtoms.map(f => Equal(f.xp.x, Variable(f.xp.x.name, Some(0)))).reduceRight(And)
+          val equals = freeAtoms.map(f => Equal(f.xp.x, Variable(f.xp.x.name, Some(0)))).reduceRight(And.apply)
 
           // dC with old(.) moves the formula to the last position
           dC(LessEqual(left, right))(pos) < (
@@ -1077,10 +1077,11 @@ object ODEInvariance extends TacticProvider {
         }
 
         // Turns the vector into sum_i p_i^2
-        val sump = ps.map(p => Times(p, p)).reduce(Plus)
+        val sump = ps.map(p => Times(p, p)).reduce(Plus.apply)
 
         // Convert between the conjunction /\_i p_i=0 and sum_i p_i^2 <=0
-        val cutp = if (negate) ps.map(p => NotEqual(p, zero)).reduce(Or) else ps.map(p => Equal(p, zero)).reduce(And)
+        val cutp =
+          if (negate) ps.map(p => NotEqual(p, zero)).reduce(Or.apply) else ps.map(p => Equal(p, zero)).reduce(And.apply)
 
         // this can also be manually proved rather than using QE
         val pr =
@@ -1097,7 +1098,8 @@ object ODEInvariance extends TacticProvider {
           )
 
         // Construct the term ||G||^2 + 1
-        val cofactorPre = Plus(Gco.map(ts => ts.map(t => Times(t, t): Term).reduceLeft(Plus)).reduceLeft(Plus), one)
+        val cofactorPre =
+          Plus(Gco.map(ts => ts.map(t => Times(t, t): Term).reduceLeft(Plus.apply)).reduceLeft(Plus.apply), one)
         val qco = if (negate) Neg(cofactorPre) else cofactorPre
 
         // Construct the diff ghost y' = -qy
@@ -2030,7 +2032,7 @@ object ODEInvariance extends TacticProvider {
         val (lm, lt, lb) = coefficientOf(k, l)
         val (rm, rt, rb) = coefficientOf(k, r)
         (
-          (lm.toList ++ rm.toList).groupBy(_._1).map(ff => ff._1 -> ff._2.map(_._2).reduceLeft(Plus)),
+          (lm.toList ++ rm.toList).groupBy(_._1).map(ff => ff._1 -> ff._2.map(_._2).reduceLeft(Plus.apply)),
           Plus(lt, rt),
           lb ++ rb,
         )
@@ -2040,7 +2042,7 @@ object ODEInvariance extends TacticProvider {
         val rmneg = rm.view.mapValues(v => Neg(v)).toMap
         // This is fine since lm,rm keys at most intersect once
         (
-          (lm.toList ++ rmneg.toList).groupBy(_._1).map(ff => ff._1 -> ff._2.map(_._2).reduceLeft(Plus)),
+          (lm.toList ++ rmneg.toList).groupBy(_._1).map(ff => ff._1 -> ff._2.map(_._2).reduceLeft(Plus.apply)),
           Minus(lt, rt),
           lb ++ rb,
         )
@@ -2173,7 +2175,7 @@ object ODEInvariance extends TacticProvider {
     // The actual solution
     val sol = timeSeries(t, s).map(t => simpWithTool(ToolProvider.simplifierTool(), t))
 
-    val cut = And(GreaterEqual(t, Number(0)), x.zip(sol).map(f => Equal(f._1, f._2)).reduceRight(And))
+    val cut = And(GreaterEqual(t, Number(0)), x.zip(sol).map(f => Equal(f._1, f._2)).reduceRight(And.apply))
 
     val cutPrep = Range(0, s.length)
       .map(i => timeSeries(t, s.drop(i)).map(t => simpWithTool(ToolProvider.simplifierTool(), t)))
@@ -2182,7 +2184,7 @@ object ODEInvariance extends TacticProvider {
       .zip(cutPrep)
       .tail
       .map(ff =>
-        ff._1.zip(ff._2).collect({ case f if f._1 != f._2 => Equal(f._1, f._2) }).reduce(And)
+        ff._1.zip(ff._2).collect({ case f if f._1 != f._2 => Equal(f._1, f._2) }).reduce(And.apply)
       ) // .map( f => replaceODEfree(f,DifferentialProduct(AtomicODE(DifferentialSymbol(t),Number(1)),ode)))
 
     val start = if (solveEnd) diffUnpackEvolutionDomainInitially(pos) else skip
@@ -2328,7 +2330,7 @@ object ODEInvariance extends TacticProvider {
     val ipost = Not(Imply(And(sys.constraint, Or(post, Equal(tvar, svar))), Imply(Equal(tvar, svar), post)))
     val renfvipost = nameszip.foldLeft(ipost: Formula)((tt, c) => tt.replaceFree(c._1, c._2))
 
-    val eqs = nameszip.map(c => Equal(c._1, c._2)).reduceRight(And)
+    val eqs = nameszip.map(c => Equal(c._1, c._2)).reduceRight(And.apply)
 //    val dfml = Diamond(
 //      ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(tvar),Number(1)),sys.ode),
 //        And(sys.constraint,Or(post,Equal(tvar,svar)))
@@ -2637,8 +2639,8 @@ object ODEInvariance extends TacticProvider {
     val odeLHS = ode1ls.map(_._1.x)
     val xLHS = (1 to odeLHS.length).map(i => BaseVariable("x_", Some(i)))
 
-    val RHSxarg = odeLHS.reduceRight(Pair)
-    val sort = odeLHS.map(_ => Real).reduceRight(Tuple)
+    val RHSxarg = odeLHS.reduceRight(Pair.apply)
+    val sort = odeLHS.map(_ => Real).reduceRight(Tuple.apply)
     val px = PredOf(Function("p_", None, sort, Bool), RHSxarg)
 
     val fml = Imply(Box(sys, px), Box(ODESystem(ode2, sys.constraint), px))
@@ -2647,9 +2649,9 @@ object ODEInvariance extends TacticProvider {
     val sttac = (odeLHS zip xLHS)
       .foldLeft(skip: BelleExpr)((t, v) => DLBySubst.stutter(v._1)(1) & boundRename(v._1, v._2)(1) & assignb(1) & t)
 
-    val normbound = xLHS.map(e => Times(e, e)).reduceLeft(Plus)
+    val normbound = xLHS.map(e => Times(e, e)).reduceLeft(Plus.apply)
     val renode = (odeLHS zip xLHS).foldLeft(ode2)((ode, v) => ode.replaceAll(v._1, v._2))
-    val eq = (odeLHS zip xLHS).map(v => Equal(v._1, v._2)).reduceLeft(And)
+    val eq = (odeLHS zip xLHS).map(v => Equal(v._1, v._2)).reduceLeft(And.apply)
     val rendom = (odeLHS zip xLHS).foldLeft(sys.constraint)((dom, v) => dom.replaceAll(v._1, v._2))
 
     val boxeq = Box(ODESystem(DifferentialProduct(sys.ode, renode), rendom), eq)

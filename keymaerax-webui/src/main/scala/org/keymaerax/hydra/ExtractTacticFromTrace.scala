@@ -110,7 +110,7 @@ abstract class TraceToTacticConverterBase(defs: Declaration) extends TraceToTact
     )
     val projectedLabels = l.map(_.components.takeRight(depth).map(_.label))
     if (projectedLabels.size == projectedLabels.toSet.size) projectedLabels
-      .map(l => l.tail.foldLeft[BelleLabel](BelleTopLevelLabel(l.head))(BelleSubLabel))
+      .map(l => l.tail.foldLeft[BelleLabel](BelleTopLevelLabel(l.head))(BelleSubLabel.apply))
     else minimize(l, depth + 1)
   }
 

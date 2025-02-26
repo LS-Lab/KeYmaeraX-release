@@ -322,7 +322,7 @@ object ArithmeticSimplification extends TacticProvider {
   private def retainStrongest(fmls: Seq[(Formula, Int)], cex: CounterExampleTool): Seq[(Formula, Int)] = {
     val (simpleFmls, complexFmls) = fmls.partition({ case (p, _) => StaticSemantics.symbols(p).size <= 1 })
     val strongestSimpleFmls = retainStrongest(simpleFmls, True, cex)
-    val assumptions = strongestSimpleFmls.map(_._1).reduceRightOption(And).getOrElse(True)
+    val assumptions = strongestSimpleFmls.map(_._1).reduceRightOption(And.apply).getOrElse(True)
     strongestSimpleFmls ++ retainStrongest(complexFmls, assumptions, cex)
   }
 

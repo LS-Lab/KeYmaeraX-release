@@ -392,7 +392,7 @@ object Idioms {
       exhaustive: BelleExpr = TactixLibrary.master()
   )(c1: (Case, BelleExpr), cs: (Case, BelleExpr)*): BelleExpr = {
     val cases = c1 +: cs
-    val caseFml = cases.map({ case (Case(fml, _), _) => fml }).reduceRight(Or)
+    val caseFml = cases.map({ case (Case(fml, _), _) => fml }).reduceRight(Or.apply)
 
     // @todo simplify with only the case formula as simplification 'context' (adapt simplifier)
     val simplify = (_: Formula) => SimplifierV2.simpTac // (Some(scala.collection.immutable.IndexedSeq(fml)))

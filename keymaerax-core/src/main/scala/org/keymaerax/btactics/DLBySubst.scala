@@ -482,7 +482,7 @@ private object DLBySubst extends TacticProvider {
             (constConjuncts, isGame) match {
               case (Nil, _) | (_, true) => (oldifiedC, skip, implyR(1))
               case (consts, false) => (
-                  And(consts.reduceRight(And), oldifiedC),
+                  And(consts.reduceRight(And.apply), oldifiedC),
                   boxAnd(afterGhostsPos) & abstractionb(afterGhostsPos ++ PosInExpr(0 :: Nil)) &
                     (if (afterGhostsPos.isTopLevel) andR(afterGhostsPos) & Idioms.<(prop & done, skip) else skip),
                   implyR(1) & andL(-1),
@@ -597,11 +597,11 @@ private object DLBySubst extends TacticProvider {
                   val verbatimabv = StaticSemantics(a).bv
                   if (verbatimabv.isInfinite) StaticSemantics(defs.exhaustiveSubst(a)).bv else verbatimabv
                 }
-                val constSuccs = (constConditions(sequent.succ, abv, defs) :+ False).map(Not)
+                val constSuccs = (constConditions(sequent.succ, abv, defs) :+ False).map(Not.apply)
                 val constAntes = constConditions(sequent.ante, abv, defs)
                 val consts = constAntes ++ constSuccs
                 val q =
-                  if (consts.size > 1) And(oldified, consts.reduceRight(And))
+                  if (consts.size > 1) And(oldified, consts.reduceRight(And.apply))
                   else if (consts.size == 1) And(oldified, consts.head)
                   else And(oldified, True)
 
@@ -681,9 +681,9 @@ private object DLBySubst extends TacticProvider {
             val sexp = defs.exhaustiveSubst(seq)
             sexp.sub(pos) match {
               case Some(Box(ode: ODESystem, post)) =>
-                val preImpPostCEX =
-                  Try(TactixLibrary.findCounterExample(Imply(sexp.ante.reduceRightOption(And).getOrElse(True), post)))
-                    .getOrElse(None)
+                val preImpPostCEX = Try(
+                  TactixLibrary.findCounterExample(Imply(sexp.ante.reduceRightOption(And.apply).getOrElse(True), post))
+                ).getOrElse(None)
                 if (preImpPostCEX.isDefined) throw BelleCEX("ODE Counterexample", preImpPostCEX.get, sexp)
                 else Try(t.refuteODE(ode, sexp.ante, post)) match {
                   case Success(None) => skip
@@ -827,7 +827,7 @@ private object DLBySubst extends TacticProvider {
                     val abv = StaticSemantics(a).bv
                     val consts = constConditions(seq.ante, abv)
                     val q =
-                      if (consts.size > 1) And(ur(variant), consts.reduceRight(And))
+                      if (consts.size > 1) And(ur(variant), consts.reduceRight(And.apply))
                       else if (consts.size == 1) And(ur(variant), consts.head)
                       else And(ur(variant), True)
 

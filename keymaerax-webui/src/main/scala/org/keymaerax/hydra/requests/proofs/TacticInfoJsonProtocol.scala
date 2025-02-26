@@ -10,6 +10,6 @@ import spray.json.{DefaultJsonProtocol, RootJsonFormat}
 
 object TacticInfoJsonProtocol extends DefaultJsonProtocol {
   implicit val regionFormat: RootJsonFormat[Region] = jsonFormat4(Region.apply)
-  implicit val proofStateInfoFormat: RootJsonFormat[ProofStateInfo] = jsonFormat2(ProofStateInfo)
-  implicit val tacticInfoFormat: RootJsonFormat[TacticInfo] = jsonFormat2(TacticInfo)
+  implicit val proofStateInfoFormat: RootJsonFormat[ProofStateInfo] = jsonFormat2(ProofStateInfo.apply)
+  implicit val tacticInfoFormat: RootJsonFormat[TacticInfo] = jsonFormat2(TacticInfo.apply)
 }

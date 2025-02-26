@@ -265,7 +265,7 @@ object RequestHelper {
     val nodeFml = node
       .children
       .flatMap(_.localProvable.subgoals.map(_.toFormula))
-      .reduceRightOption(And)
+      .reduceRightOption(And.apply)
       .getOrElse(True)
     val collectedArgs = ArchiveParser.declarationsOf(nodeFml, Some(undefinedSymbols))
 

@@ -135,7 +135,7 @@ class ModelPlexRequest(
                 val ctrlVars = StaticSemantics.boundVars(fallback).toSet
                 val ctrl = ctrlVars
                   .map(v => AssignAny(fresh(v, "post")))
-                  .reduceRightOption(Compose)
+                  .reduceRightOption(Compose.apply)
                   .getOrElse(Test(True))
                 val sandbox = Compose(ctrl, Choice(Test(monitorCond), Compose(Test(Not(monitorCond)), fallback)))
                 new ModelPlexSandboxResponse(model, monitorConjecture, sandbox)

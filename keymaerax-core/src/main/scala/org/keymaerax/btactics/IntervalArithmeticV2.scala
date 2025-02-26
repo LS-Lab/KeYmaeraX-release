@@ -1052,28 +1052,28 @@ object IntervalArithmeticV2 extends TacticProvider {
       fml match {
         case _: LessEqual => proveCompBoth(
             qeTool,
-            leBothSeq.apply(USubst(List(t_f, t_F, t_gg, t_g).lazyZip(List(f, F, gg, g)) map SubstitutionPair)),
+            leBothSeq.apply(USubst(List(t_f, t_F, t_gg, t_g).lazyZip(List(f, F, gg, g)) map SubstitutionPair.apply)),
             provable,
             F_prv,
             gg_prv,
           )
         case _: Less => proveCompBoth(
             qeTool,
-            ltBothSeq.apply(USubst(List(t_f, t_F, t_gg, t_g).lazyZip(List(f, F, gg, g)) map SubstitutionPair)),
+            ltBothSeq.apply(USubst(List(t_f, t_F, t_gg, t_g).lazyZip(List(f, F, gg, g)) map SubstitutionPair.apply)),
             provable,
             F_prv,
             gg_prv,
           )
         case _: GreaterEqual => proveCompBoth(
             qeTool,
-            geBothSeq.apply(USubst(List(t_f, t_ff, t_G, t_g).lazyZip(List(f, ff, G, g)) map SubstitutionPair)),
+            geBothSeq.apply(USubst(List(t_f, t_ff, t_G, t_g).lazyZip(List(f, ff, G, g)) map SubstitutionPair.apply)),
             provable,
             G_prv,
             ff_prv,
           )
         case _: Greater => proveCompBoth(
             qeTool,
-            gtBothSeq.apply(USubst(List(t_f, t_ff, t_G, t_g).lazyZip(List(f, ff, G, g)) map SubstitutionPair)),
+            gtBothSeq.apply(USubst(List(t_f, t_ff, t_G, t_g).lazyZip(List(f, ff, G, g)) map SubstitutionPair.apply)),
             provable,
             G_prv,
             ff_prv,
@@ -1318,7 +1318,8 @@ object IntervalArithmeticV2 extends TacticProvider {
     val uPrv = uppers(t)
     val l = lPrv.conclusion.succ(0).asInstanceOf[ComparisonFormula].left
     val u = uPrv.conclusion.succ(0).asInstanceOf[ComparisonFormula].right
-    val fml = Forall(Seq(i1), Forall(Seq(i2), Imply(assms.reduceRight(And), And(LessEqual(l, t), LessEqual(t, u)))))
+    val fml =
+      Forall(Seq(i1), Forall(Seq(i2), Imply(assms.reduceRight(And.apply), And(LessEqual(l, t), LessEqual(t, u)))))
     val offset = context.length
     (
       ProvableSig
@@ -1358,7 +1359,7 @@ object IntervalArithmeticV2 extends TacticProvider {
     val uPrv = uppers(t)
     val l = lPrv.conclusion.succ(0).asInstanceOf[ComparisonFormula].left
     val u = uPrv.conclusion.succ(0).asInstanceOf[ComparisonFormula].right
-    val fml = Forall(Seq(i1), Imply(assms.reduceRight(And), And(LessEqual(l, t), LessEqual(t, u))))
+    val fml = Forall(Seq(i1), Imply(assms.reduceRight(And.apply), And(LessEqual(l, t), LessEqual(t, u))))
     val offset = context.length
     (
       ProvableSig

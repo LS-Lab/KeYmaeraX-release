@@ -205,7 +205,7 @@ object TaylorModelTactics extends Logging {
 
   private def templateTmCompose(names: TMNames, dim: Int): Seq[Term] = {
     (0 until dim).map(i =>
-      Plus((0 until dim).map(j => Times(names.precond(i, j), names.right(j))).reduceLeft(Plus), names.precondC(i))
+      Plus((0 until dim).map(j => Times(names.precond(i, j), names.right(j))).reduceLeft(Plus.apply), names.precondC(i))
     )
   }
 
@@ -385,7 +385,7 @@ object TaylorModelTactics extends Logging {
 
     val initial_condition = And(
       Equal(time, time0),
-      state.lazyZip(templateTmCompose(names, dim)).map { case (v, tm) => Equal(v, tm) }.reduceRight(And),
+      state.lazyZip(templateTmCompose(names, dim)).map { case (v, tm) => Equal(v, tm) }.reduceRight(And.apply),
     )
 
     private def lower_rembounds(t: Term)(td: Int => Term)(c: Int => Term): Seq[Formula] = (0 until dim)
@@ -399,7 +399,7 @@ object TaylorModelTactics extends Logging {
     private val right_tm_domain = (0 until dim)
       .map(i => (names.rightL(i), names.right(i), names.rightU(i)))
       .map(in_domain)
-      .reduceRight(And)
+      .reduceRight(And.apply)
 
     tic()
     private val odeTac = DifferentialTactics.ODESpecific(ode)
@@ -423,13 +423,13 @@ object TaylorModelTactics extends Logging {
         .lazyZip(exponents)
         .filter { case (_, e) => e > 0 }
         .map { case (v, e) => if (e == 1) v else Power(v, Number(e)) }
-      if (monomial.isEmpty) coeff else Times(coeff, monomial.reduceLeft(Times))
+      if (monomial.isEmpty) coeff else Times(coeff, monomial.reduceLeft(Times.apply))
     }
 
     private val picard_iteration_approx = exactCoefficients
       .zipWithIndex
       .map { case (c, i) =>
-        c.keys.toList.sortBy(_.sum).map(k => tmMonomial(names.postCoeff(i, k), k)).reduceLeft(Plus)
+        c.keys.toList.sortBy(_.sum).map(k => tmMonomial(names.postCoeff(i, k), k)).reduceLeft(Plus.apply)
       }
     private val picard_iteration_approxR = picard_iteration_approx.map(ringsLib.toRing(_))
 
@@ -453,14 +453,14 @@ object TaylorModelTactics extends Logging {
         val constantCoeffs = exactCoefficients(i).view.filterKeys(e => e(0) == 0)
         val diff = ringsLib.toHorner(
           ringsLib.toRing(Minus(
-            constantCoeffs.map { case (e, c) => tmMonomial(c, e) }.reduceLeft(Plus),
-            constantCoeffs.keys.map { e => tmMonomial(names.postCoeff(i, e), e) }.reduceLeft(Plus),
+            constantCoeffs.map { case (e, c) => tmMonomial(c, e) }.reduceLeft(Plus.apply),
+            constantCoeffs.keys.map { e => tmMonomial(names.postCoeff(i, e), e) }.reduceLeft(Plus.apply),
           )),
           horner_orderR,
         )
         And(LessEqual(cL(i), diff), LessEqual(diff, cU(i)))
       }
-      .reduceRight(And)
+      .reduceRight(And.apply)
 
     // f (p + r)
     private val fpr = ringsODE
@@ -475,7 +475,7 @@ object TaylorModelTactics extends Logging {
     private[btactics] val innerNumbericCondition = hornerFprPp
       .zipWithIndex
       .map { case (diff, i) => And(Less(tdL(i), diff), Less(diff, tdU(i))) }
-      .reduceRight(And)
+      .reduceRight(And.apply)
     val numbericCondition = And(
       initialNumbericCondition,
       FormulaTools.quantifyForall(
@@ -483,7 +483,10 @@ object TaylorModelTactics extends Logging {
         Imply(
           And(
             And(LessEqual(Number(0), localTime), LessEqual(localTime, timestep)),
-            lower_rembounds(timestep)(tdL)(cL).lazyZip(upper_rembounds(timestep)(tdU)(cU)).map(And).reduceRight(And),
+            lower_rembounds(timestep)(tdL)(cL)
+              .lazyZip(upper_rembounds(timestep)(tdU)(cU))
+              .map(And.apply)
+              .reduceRight(And.apply),
           ),
           innerNumbericCondition,
         ),
@@ -522,7 +525,7 @@ object TaylorModelTactics extends Logging {
             val r = Minus(x, p)
             And(LessEqual(postIvlL(i), r), LessEqual(r, postIvlU(i)))
           }
-          .toList).reduceRight(And)
+          .toList).reduceRight(And.apply)
     )(localTime, Minus(time, time0))
     toc("postUnfolded")
 
@@ -532,7 +535,7 @@ object TaylorModelTactics extends Logging {
     val boxTMEnclosure = boxODETimeStep((Exists(
       Seq(localTime),
       (And(Equal(time, Plus(time0, localTime)), And(LessEqual(Number(0), localTime), LessEqual(localTime, timestep))) ::
-        post).reduceRight(And),
+        post).reduceRight(And.apply),
     )))
 
     lazy val postEq = proveBy(
@@ -631,7 +634,10 @@ object TaylorModelTactics extends Logging {
               FormulaTools.quantifyForall(
                 localTime :: state,
                 Imply(
-                  And(And(LessEqual(Number(0), localTime), LessEqual(localTime, timestep)), post.reduceRight(And)),
+                  And(
+                    And(LessEqual(Number(0), localTime), LessEqual(localTime, timestep)),
+                    post.reduceRight(And.apply),
+                  ),
                   SubstitutionHelper.replaceFree(odeTac.P_pat)(time, Plus(time, localTime)),
                 ),
               ),
@@ -642,7 +648,7 @@ object TaylorModelTactics extends Logging {
               Imply(
                 And(
                   Equal(time, Plus(time0, timestep)),
-                  SubstitutionHelper.replaceFree(post.reduceRight(And))(localTime, timestep),
+                  SubstitutionHelper.replaceFree(post.reduceRight(And.apply))(localTime, timestep),
                 ),
                 Box(ODESystem(ode, True), odeTac.P(vars)),
               ),

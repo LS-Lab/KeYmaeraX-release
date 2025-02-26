@@ -85,7 +85,7 @@ object SwitchedSystems extends TacticProvider {
       }
 
       // arbitrary switching choice is modeled by dL's ++
-      val body = todes.reduceRight(Choice)
+      val body = todes.reduceRight(Choice.apply)
 
       // repeated switching is modeled by dL's *
       Loop(body)
@@ -210,7 +210,7 @@ object SwitchedSystems extends TacticProvider {
 
       // base initializer
       // {u:=1 ; u :=2 ; ... } ; user-given-initializer (if any)
-      val initPre = names.map(n => Assign(u, mkMode(n))).reduceRight(Choice)
+      val initPre = names.map(n => Assign(u, mkMode(n))).reduceRight(Choice.apply)
       val init = initopt match {
         case None => initPre
         case Some(i) => Compose(initPre, i)
@@ -218,13 +218,13 @@ object SwitchedSystems extends TacticProvider {
 
       // control
       val trans = transitions.map(mt =>
-        mt.map(f => Compose(f._2, Assign(u, mkMode(f._1)))).foldRight(Assign(u, u): Program)(Choice) // self loops
+        mt.map(f => Compose(f._2, Assign(u, mkMode(f._1)))).foldRight(Assign(u, u): Program)(Choice.apply) // self loops
       )
 
-      val ctrl = (names zip trans).map(np => Compose(Test(Equal(u, mkMode(np._1))), np._2)).reduceRight(Choice)
+      val ctrl = (names zip trans).map(np => Compose(Test(Equal(u, mkMode(np._1))), np._2)).reduceRight(Choice.apply)
 
       // plant
-      val plant = (names zip todes).map(np => Compose(Test(Equal(u, mkMode(np._1))), np._2)).reduceRight(Choice)
+      val plant = (names zip todes).map(np => Compose(Test(Equal(u, mkMode(np._1))), np._2)).reduceRight(Choice.apply)
 
       // repeated switching is modeled by dL's *
       Compose(init, Loop(Compose(ctrl, plant)))
@@ -477,7 +477,7 @@ object SwitchedSystems extends TacticProvider {
       "Switched system must not mention variables " + freshVars + " for stability specification"
     )
 
-    val normsq = ss.cvars.map(e => Power(e, Number(2))).reduceLeft(Plus) // ||x||^2
+    val normsq = ss.cvars.map(e => Power(e, Number(2))).reduceLeft(Plus.apply) // ||x||^2
 
     val init = Less(normsq, Power(del, Number(2)))
 
@@ -514,7 +514,7 @@ object SwitchedSystems extends TacticProvider {
       "Switched system must not mention variables " + freshVars + " for attractivity specification"
     )
 
-    val normsq = ss.cvars.map(e => Power(e, Number(2))).reduceLeft(Plus) // ||x||^2
+    val normsq = ss.cvars.map(e => Power(e, Number(2))).reduceLeft(Plus.apply) // ||x||^2
 
     val init = Less(normsq, Power(del, Number(2)))
 
@@ -616,7 +616,7 @@ object SwitchedSystems extends TacticProvider {
     val w = Variable("w_")
 
     val cvars: List[Variable] = ss.cvars.toList.sorted
-    val normsq = cvars.map(e => Power(e, Number(2))).reduceLeft(Plus) // ||x||^2
+    val normsq = cvars.map(e => Power(e, Number(2))).reduceLeft(Plus.apply) // ||x||^2
 
     val init = Less(normsq, Power(del, Number(2)))
 
@@ -778,7 +778,7 @@ object SwitchedSystems extends TacticProvider {
     val k = Variable(kName)
 
     val cvars: List[Variable] = ss.cvars.toList.sorted
-    val normsq = cvars.map(e => Power(e, Number(2))).reduceLeft(Plus) // ||x||^2
+    val normsq = cvars.map(e => Power(e, Number(2))).reduceLeft(Plus.apply) // ||x||^2
 
     val init = Less(normsq, Power(del, Number(2)))
 
@@ -836,7 +836,7 @@ object SwitchedSystems extends TacticProvider {
     val derFml = derivatives.reduceRight(And(_, _))
 
     // k is an upper bound on all kis
-    val kMin = Exists(k :: Nil, And(Less(k, Number(0)), kis.map(ki => LessEqual(ki, k)).reduceRight(And)))
+    val kMin = Exists(k :: Nil, And(Less(k, Number(0)), kis.map(ki => LessEqual(ki, k)).reduceRight(And.apply)))
 
     val Tchoice = And(GreaterEqual(TVar, Number(0)), LessEqual(Plus(w, Times(k, TVar)), u))
 
@@ -1058,7 +1058,7 @@ object SwitchedSystems extends TacticProvider {
     val delis = (0 to lyaps.length - 1).map(i => Variable(delName, Some(i))).toList
 
     val cvars: List[Variable] = ss.cvars.toList.sorted
-    val normsq = cvars.map(e => Power(e, Number(2))).reduceLeft(Plus) // ||x||^2
+    val normsq = cvars.map(e => Power(e, Number(2))).reduceLeft(Plus.apply) // ||x||^2
 
     val init = Less(normsq, Power(del, Number(2)))
 
@@ -1080,10 +1080,10 @@ object SwitchedSystems extends TacticProvider {
 
     val wbodFml = wbod.reduceRight(And(_, _))
 
-    val lyapw = lyaps.map(lyap => Less(lyap, w)).reduceRight(And)
+    val lyapw = lyaps.map(lyap => Less(lyap, w)).reduceRight(And.apply)
 
     // w is a lower bound on all wis
-    val wMin = Exists(w :: Nil, And(Greater(w, Number(0)), wis.map(wi => LessEqual(w, wi)).reduceRight(And)))
+    val wMin = Exists(w :: Nil, And(Greater(w, Number(0)), wis.map(wi => LessEqual(w, wi)).reduceRight(And.apply)))
 
     // w serves as an upper bound on each V for ||x||<del
     val delw: List[Formula] = lyaps
@@ -1104,7 +1104,7 @@ object SwitchedSystems extends TacticProvider {
     val delwFml = delw.reduceRight(And(_, _))
 
     val delMin =
-      And(And(Greater(del, Number(0)), Less(del, eps)), delis.map(deli => LessEqual(del, deli)).reduceRight(And))
+      And(And(Greater(del, Number(0)), Less(del, eps)), delis.map(deli => LessEqual(del, deli)).reduceRight(And.apply))
 
     // The relevant tactic for a single ODE
     // Assumes antecedent has the form:
@@ -1131,7 +1131,7 @@ object SwitchedSystems extends TacticProvider {
         // TODO: currently assumes that domains cover entire state space
         // However, can tweak proof to bypass this requirement
         val invPre = (ss.odes zip lyaps).map(odel => And(odel._1.constraint, Less(odel._2, w)))
-        val inv = And(invPre.reduceRight(Or), Less(normsq, epssq))
+        val inv = And(invPre.reduceRight(Or.apply), Less(normsq, epssq))
         loop(inv)(pos) < (
           andR(pos) < (
             ArithmeticSimplification.hideFactsAbout(eps :: wis) & SimplifierV3.simplify(pos) &
@@ -1147,13 +1147,13 @@ object SwitchedSystems extends TacticProvider {
       }
       case Guarded(modes, u) => {
         val invPre = (modes zip lyaps).map(namel => And(Equal(u, mkMode(namel._1._1)), Less(namel._2, w)))
-        val invMode = modes.map(name => Equal(u, mkMode(name._1))).reduceRight(Or)
-        val invOr = invPre.reduceRight(Or)
+        val invMode = modes.map(name => Equal(u, mkMode(name._1))).reduceRight(Or.apply)
+        val invOr = invPre.reduceRight(Or.apply)
         val inv = And(invOr, Less(normsq, epssq))
 
         val gen = (modes zip lyaps)
           .map(namel => Imply(Equal(u, mkMode(namel._1._1)), Less(namel._2, w)))
-          .reduceRight(And)
+          .reduceRight(And.apply)
 
         composeb(pos) & generalize(invMode)(pos) < (
           // note: generalize throws away context, so pos is now 1
@@ -1329,7 +1329,7 @@ object SwitchedSystems extends TacticProvider {
     val delis = (0 to lyaps.length - 1).map(i => Variable(delName, Some(i))).toList
 
     val cvars: List[Variable] = ss.cvars.toList.sorted
-    val normsq = cvars.map(e => Power(e, Number(2))).reduceLeft(Plus) // ||x||^2
+    val normsq = cvars.map(e => Power(e, Number(2))).reduceLeft(Plus.apply) // ||x||^2
 
     val init = Less(normsq, Power(del, Number(2)))
 
@@ -1351,7 +1351,7 @@ object SwitchedSystems extends TacticProvider {
 
     val wbodFml = wbod.reduceRight(And(_, _))
     // w is a lower bound on all wis
-    val wMin = Exists(w :: Nil, And(Greater(w, Number(0)), wis.map(wi => LessEqual(w, wi)).reduceRight(And)))
+    val wMin = Exists(w :: Nil, And(Greater(w, Number(0)), wis.map(wi => LessEqual(w, wi)).reduceRight(And.apply)))
 
     // The loop invariant uses the following bounds based on lambda:
     // V_p * e^(lambda_p t) < W for those with lambda_p > 0
@@ -1402,12 +1402,12 @@ object SwitchedSystems extends TacticProvider {
         )
       })
 
-    val lyapw = lyapsE.map(lyapE => Less(lyapE, w)).reduceRight(And)
+    val lyapw = lyapsE.map(lyapE => Less(lyapE, w)).reduceRight(And.apply)
 
     val delwFml = delw.reduceRight(And(_, _))
 
     val delMin =
-      And(And(Greater(del, Number(0)), Less(del, eps)), delis.map(deli => LessEqual(del, deli)).reduceRight(And))
+      And(And(Greater(del, Number(0)), Less(del, eps)), delis.map(deli => LessEqual(del, deli)).reduceRight(And.apply))
 
     // The relevant tactic for a single ODE
     // Assumes antecedent has the form:
@@ -1457,15 +1457,15 @@ object SwitchedSystems extends TacticProvider {
         )
 
       val invPre = ss.modes.lazyZip(invBody).map((mode, body) => And(Equal(ss.u, mkMode(mode._1)), body))
-      val invMode = ss.modes.map(name => Equal(ss.u, mkMode(name._1))).reduceRight(Or)
-      val invOr = invPre.reduceRight(Or)
+      val invMode = ss.modes.map(name => Equal(ss.u, mkMode(name._1))).reduceRight(Or.apply)
+      val invOr = invPre.reduceRight(Or.apply)
       val inv = And(invOr, And(GreaterEqual(ss.timer, Number(0)), Less(normsq, epssq)))
 
       val gen = ss
         .modes
         .lazyZip(invBody)
         .map((mode, body) => Imply(Equal(ss.u, mkMode(mode._1)), And(body, GreaterEqual(ss.timer, Number(0)))))
-        .reduceRight(And)
+        .reduceRight(And.apply)
 
       composeb(pos) & composeb(pos) & generalize(invMode)(pos) < (
         // note: generalize throws away context, so pos is now 1
@@ -1677,7 +1677,7 @@ object SwitchedSystems extends TacticProvider {
     val wis = (0 to lyaps.length - 1).map(i => Variable(wName, Some(i))).toList
 
     val cvars: List[Variable] = ss.cvars.toList.sorted
-    val normsq = cvars.map(e => Power(e, Number(2))).reduceLeft(Plus) // ||x||^2
+    val normsq = cvars.map(e => Power(e, Number(2))).reduceLeft(Plus.apply) // ||x||^2
 
     // Each V_i < W_i < W
     val wbod: List[Formula] = lyaps
@@ -1717,13 +1717,13 @@ object SwitchedSystems extends TacticProvider {
 
     val ubodFml = ubod.reduceRight(And(_, _))
 
-    val lyapw = lyaps.map(lyap => Less(lyap, w)).reduceRight(And)
+    val lyapw = lyaps.map(lyap => Less(lyap, w)).reduceRight(And.apply)
 
     // w is an upper bound on all wis
-    val wMax = Exists(w :: Nil, And(Greater(w, Number(0)), wis.map(wi => LessEqual(wi, w)).reduceRight(And)))
+    val wMax = Exists(w :: Nil, And(Greater(w, Number(0)), wis.map(wi => LessEqual(wi, w)).reduceRight(And.apply)))
 
     // u is a lower bound on all uis
-    val uMin = Exists(u :: Nil, And(Greater(u, Number(0)), uis.map(ui => LessEqual(u, ui)).reduceRight(And)))
+    val uMin = Exists(u :: Nil, And(Greater(u, Number(0)), uis.map(ui => LessEqual(u, ui)).reduceRight(And.apply)))
 
     val kis = (0 to ss.odes.length - 1).map(i => Variable(kName, Some(i))).toList
 
@@ -1757,7 +1757,7 @@ object SwitchedSystems extends TacticProvider {
     val derFml = derivatives.reduceRight(And(_, _))
 
     // k is an upper bound on all kis
-    val kMin = Exists(k :: Nil, And(Less(k, Number(0)), kis.map(ki => LessEqual(ki, k)).reduceRight(And)))
+    val kMin = Exists(k :: Nil, And(Less(k, Number(0)), kis.map(ki => LessEqual(ki, k)).reduceRight(And.apply)))
 
     val Tchoice = And(GreaterEqual(TVar, Number(0)), LessEqual(Plus(w, Times(k, TVar)), u))
 
@@ -1806,7 +1806,7 @@ object SwitchedSystems extends TacticProvider {
         )
         // TODO: currently assumes that domains cover entire state space
         // However, can tweak proof to bypass this requirement
-        val inv = invPre.reduceRight(Or)
+        val inv = invPre.reduceRight(Or.apply)
 
         loop(inv)(pos) < (
           cutR(Equal(tVar, Number(0)))(pos) < (
@@ -1868,8 +1868,8 @@ object SwitchedSystems extends TacticProvider {
             And(Less(namel._2, w), Imply(GreaterEqual(namel._2, u), Less(namel._2, Plus(w, Times(k, tVar))))),
           )
         )
-        val inv = invPre.reduceRight(Or)
-        val invMode = modes.map(name => Equal(mode, mkMode(name._1))).reduceRight(Or)
+        val inv = invPre.reduceRight(Or.apply)
+        val invMode = modes.map(name => Equal(mode, mkMode(name._1))).reduceRight(Or.apply)
 
         val gen = (modes zip lyaps)
           .map(namel =>
@@ -1878,7 +1878,7 @@ object SwitchedSystems extends TacticProvider {
               And(Less(namel._2, w), Imply(GreaterEqual(namel._2, u), Less(namel._2, Plus(w, Times(k, tVar))))),
             )
           )
-          .reduceRight(And)
+          .reduceRight(And.apply)
 
         composeb(pos) & generalize(invMode)(pos) < (
           unfoldProgramNormalize & OnAll(SimplifierV3.fullSimplify & closeT),
@@ -2091,7 +2091,7 @@ object SwitchedSystems extends TacticProvider {
     val wis = (0 to lyaps.length - 1).map(i => Variable(wName, Some(i))).toList
 
     val cvars: List[Variable] = ss.cvars.toList.sorted
-    val normsq = cvars.map(e => Power(e, Number(2))).reduceLeft(Plus) // ||x||^2
+    val normsq = cvars.map(e => Power(e, Number(2))).reduceLeft(Plus.apply) // ||x||^2
 
     // The loop invariant uses the following bounds based on lambda:
     // V_p * e^(rate t) * e^(lambda_p s) < W for those with lambda_p > 0
@@ -2165,10 +2165,10 @@ object SwitchedSystems extends TacticProvider {
     val ubodFml = ubod.reduceRight(And(_, _))
 
     // w is an upper bound on all wis
-    val wMax = Exists(w :: Nil, And(Greater(w, Number(0)), wis.map(wi => LessEqual(wi, w)).reduceRight(And)))
+    val wMax = Exists(w :: Nil, And(Greater(w, Number(0)), wis.map(wi => LessEqual(wi, w)).reduceRight(And.apply)))
 
     // u is a lower bound on all uis
-    val uMin = Exists(u :: Nil, And(Greater(u, Number(0)), uis.map(ui => LessEqual(u, ui)).reduceRight(And)))
+    val uMin = Exists(u :: Nil, And(Greater(u, Number(0)), uis.map(ui => LessEqual(u, ui)).reduceRight(And.apply)))
 
     val Tchoice = And(GreaterEqual(TVar, Number(0)), LessEqual(w, Times(u, expExpand(Times(TVar, rate), expDepth))))
 
@@ -2221,9 +2221,10 @@ object SwitchedSystems extends TacticProvider {
         )
 
       val invPre = ss.modes.lazyZip(invBody).map((mode, body) => And(Equal(ss.u, mkMode(mode._1)), body))
-      val invMode = And(ss.modes.map(name => Equal(ss.u, mkMode(name._1))).reduceRight(Or), Equal(tVar, Number(0)))
+      val invMode =
+        And(ss.modes.map(name => Equal(ss.u, mkMode(name._1))).reduceRight(Or.apply), Equal(tVar, Number(0)))
 
-      val invOr = invPre.reduceRight(Or)
+      val invOr = invPre.reduceRight(Or.apply)
       val inv = And(invOr, And(GreaterEqual(ss.timer, Number(0)), GreaterEqual(tVar, ss.timer)))
 
       val gen = ss
@@ -2235,7 +2236,7 @@ object SwitchedSystems extends TacticProvider {
             And(body, And(GreaterEqual(ss.timer, Number(0)), GreaterEqual(tVar, ss.timer))),
           )
         )
-        .reduceRight(And)
+        .reduceRight(And.apply)
 
       composeb(pos) & composeb(pos) & generalize(invMode)(pos) < (
         // note: generalize throws away context, so pos is now 1
@@ -2443,7 +2444,7 @@ object SwitchedSystems extends TacticProvider {
           }
         ODEInvariance.fStar(ODESystem(sys.ode, True), normalized)._1
       })
-      .reduceRight(Or)
+      .reduceRight(Or.apply)
 
     val check = Imply(dom, lp)
     val pr = findCounterExample(check)
@@ -2501,7 +2502,10 @@ object SwitchedSystems extends TacticProvider {
 
     // Setting up a choice for each ODE
     // \bigcup_i { ?u=i; ODE_i }
-    val plant = todes.zipWithIndex.map(todei => Compose(Test(Equal(u, Number(todei._2))), todei._1)).reduceLeft(Choice)
+    val plant = todes
+      .zipWithIndex
+      .map(todei => Compose(Test(Equal(u, Number(todei._2))), todei._1))
+      .reduceLeft(Choice.apply)
 
     val ctrl = transitions
       .zipWithIndex
@@ -2516,17 +2520,20 @@ object SwitchedSystems extends TacticProvider {
         Compose(
           Test(Equal(u, Number(ind))),
           Choice(
-            Compose(transprog.reduceLeft(Choice), resetclk), // Either follow one of the transitions and reset the clock
+            Compose(
+              transprog.reduceLeft(Choice.apply),
+              resetclk,
+            ), // Either follow one of the transitions and reset the clock
             Assign(u, Number(ind)), // Or continue running current ODE without switching
           ),
         )
       })
-      .reduceLeft(Choice)
+      .reduceLeft(Choice.apply)
 
     val body = Compose(ctrl, plant)
 
     // Initialize the system in any ODE
-    val init = Compose(resetclk, (0 to transitions.length - 1).map(i => Assign(u, Number(i))).reduceLeft(Choice))
+    val init = Compose(resetclk, (0 to transitions.length - 1).map(i => Assign(u, Number(i))).reduceLeft(Choice.apply))
 
     //    println(ctrl)
     //    println(plant)
@@ -2608,8 +2615,8 @@ object SwitchedSystems extends TacticProvider {
     }
 
     val normsq = varsopt match {
-      case None => vars.map(e => Power(e, Number(2))).reduceLeft(Plus) // ||x||^2
-      case Some(vts) => vts.map(ee => Power(Minus(ee._1, ee._2), Number(2))).reduceLeft(Plus)
+      case None => vars.map(e => Power(e, Number(2))).reduceLeft(Plus.apply) // ||x||^2
+      case Some(vts) => vts.map(ee => Power(Minus(ee._1, ee._2), Number(2))).reduceLeft(Plus.apply)
     }
 
     val init = restr match {
@@ -2688,7 +2695,7 @@ object SwitchedSystems extends TacticProvider {
     val w = Variable("w_")
 
     val vars: List[Variable] = varsopt.getOrElse(bv.toList) // TODO
-    val normsq = vars.map(e => Power(e, Number(2))).reduceLeft(Plus) // ||x||^2
+    val normsq = vars.map(e => Power(e, Number(2))).reduceLeft(Plus.apply) // ||x||^2
 
     val init = restr match {
       case None => Less(normsq, Power(del, Number(2)))

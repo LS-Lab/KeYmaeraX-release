@@ -266,7 +266,7 @@ object QuizExtractor {
             .split(",")
             .filter(_.trim.nonEmpty)
             .map(s => Equal(x, s.asTerm))
-            .reduceRightOption(Or)
+            .reduceRightOption(Or.apply)
             .getOrElse(False)
         )
       } else if (s == "\\infty") { TexExpressionArtifact(Number(Long.MaxValue)) }
@@ -291,7 +291,7 @@ object QuizExtractor {
               },
             )
           })
-        if (ivfml.hasNext) TexExpressionArtifact(ivfml.reduceRightOption(Or).getOrElse(False))
+        if (ivfml.hasNext) TexExpressionArtifact(ivfml.reduceRightOption(Or.apply).getOrElse(False))
         else Try(artifactsFromKyxString(s)).getOrElse(
           throw new IllegalArgumentException(
             "String " + s +

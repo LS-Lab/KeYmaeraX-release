@@ -275,12 +275,12 @@ class Compbased extends TacticTestBase {
 
     val (equalities, inequalities) =
       FormulaTools.conjuncts(monitor.subgoals.loneElement.succ.loneElement).partition(_.isInstanceOf[Equal])
-    val orderedMonitorFml = inequalities.reduceRightOption(And) match {
+    val orderedMonitorFml = inequalities.reduceRightOption(And.apply) match {
       case Some(ineqs) => equalities.lastOption match {
-          case Some(lastEq) => equalities.updated(equalities.size - 1, And(lastEq, ineqs)).reduceRight(And)
+          case Some(lastEq) => equalities.updated(equalities.size - 1, And(lastEq, ineqs)).reduceRight(And.apply)
           case None => ineqs
         }
-      case None => equalities.reduceRightOption(And).getOrElse(True)
+      case None => equalities.reduceRightOption(And.apply).getOrElse(True)
     }
     orderedMonitorFml shouldBe
       "t=t0post&sopost=sopost&po+sopost*tpost=popost+sopost*t&po=po0post&0<=sopost&sopost<=S()&true&t0post<=tpost"

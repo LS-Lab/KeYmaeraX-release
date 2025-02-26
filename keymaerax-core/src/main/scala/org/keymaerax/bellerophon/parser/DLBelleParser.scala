@@ -278,8 +278,8 @@ class DLBelleParser(
     })
   }) ~ ")")("tactic(...)", implicitly).map({ case (t, args) => tacticProvider(t, args, defs) })
 
-  def builtinTactic[$: P]: P[BelleExpr] = ("doall" ~ "(" ~/ tactic ~ ")")
-    .map(OnAll) | ("partial" ~ "(" ~/ tactic ~ ")").map(PartialTactic(_, None)) |
+  def builtinTactic[$: P]: P[BelleExpr] = ("doall" ~ "(" ~/ tactic ~ ")").map(OnAll.apply) |
+    ("partial" ~ "(" ~/ tactic ~ ")").map(PartialTactic(_, None)) |
     ("let" ~ "(" ~ "\"" ~/ GlobalState.parser.comparison ~ "\"" ~ ")" ~ "in" ~ "(" ~/ tactic ~ ")").flatMap({
       case (Equal(l, r), t) => Pass(Let(l, r, t))
       case (c, _) => Fail("Abbreviation of the shape f()=e (but got " + c.prettyString + ")")
@@ -296,8 +296,9 @@ class DLBelleParser(
   def branchTac[$: P]: P[BelleExpr] = P(
     "<" ~/ "(" ~
       (eitherTac.rep(min = 2, sep = ","./).map(BranchTactic(_)) |
-        (string.map(BelleLabel.fromString).map(_.head) ~ ":" ~ eitherTac).rep(min = 2, sep = ","./).map(CaseTactic)) ~
-      ")"
+        (string.map(BelleLabel.fromString).map(_.head) ~ ":" ~ eitherTac)
+          .rep(min = 2, sep = ","./)
+          .map(CaseTactic.apply)) ~ ")"
   )("<(tactic,tactic,...)", implicitly)
 
   def parenTac[$: P]: P[BelleExpr] = P("(" ~/ tactic ~ ")")("(tactic)", implicitly)

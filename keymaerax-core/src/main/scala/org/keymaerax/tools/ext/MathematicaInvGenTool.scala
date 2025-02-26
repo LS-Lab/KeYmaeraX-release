@@ -82,7 +82,9 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
     val vars = list(primedVars.map(k2m): _*)
     val vectorField = list(atomicODEs.map(o => k2m(o.e)): _*)
     val problem = list(
-      k2m(assumptions.flatMap(FormulaTools.conjuncts).filter(_.isPredicateFreeFOL).reduceOption(And).getOrElse(True)),
+      k2m(
+        assumptions.flatMap(FormulaTools.conjuncts).filter(_.isPredicateFreeFOL).reduceOption(And.apply).getOrElse(True)
+      ),
       list(vectorField, vars, k2m(ode.constraint)),
       k2m(postCond),
     )
@@ -244,7 +246,7 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
       setPathsCmd,
       needs(string(REFUTE_NAMESPACE), string("Refute.m")),
       applyFunc(symbol(REFUTE_NAMESPACE + "RefuteS"))(
-        k2m(assumptions.reduceOption(And).getOrElse(True)),
+        k2m(assumptions.reduceOption(And.apply).getOrElse(True)),
         k2m(postCond),
         vectorField,
         odeVars,
@@ -309,7 +311,7 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
       setPathsCmd,
       needs(string(REFUTE_NAMESPACE), string("Refute.m")),
       applyFunc(symbol(REFUTE_NAMESPACE + "SeqFml"))(
-        k2m(assumptions.reduceOption(And).getOrElse(True)),
+        k2m(assumptions.reduceOption(And.apply).getOrElse(True)),
         k2m(postCond),
         vectorField,
         odeVars,
@@ -357,7 +359,7 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
     val vars = list(DifferentialHelper.getPrimedVariables(ode).map(k2m): _*)
     val vectorField = list(DifferentialHelper.atomicOdes(ode).map(_.e).map(k2m): _*)
     val problem = list(
-      k2m(assumptions.reduceOption(And).getOrElse(True)),
+      k2m(assumptions.reduceOption(And.apply).getOrElse(True)),
       list(vectorField, vars, k2m(ode.constraint)),
       k2m(postCond),
     )

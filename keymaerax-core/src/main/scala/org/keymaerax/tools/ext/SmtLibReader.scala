@@ -104,8 +104,8 @@ object SmtLibReader {
       val converted = terms.map(convertFormula)
       converted
         .reduceRightOption(op match {
-          case "and" => And
-          case "or" => Or
+          case "and" => And.apply
+          case "or" => Or.apply
         })
         .getOrElse(converted.head)
     case Terms.Exists(sv, svs, t) =>
@@ -153,10 +153,10 @@ object SmtLibReader {
     // nary operators
     case FunctionApplication(QualifiedIdentifier(Identifier(SSymbol("*"), Nil), None), t :: Nil) => convertTerm(t)
     case FunctionApplication(QualifiedIdentifier(Identifier(SSymbol("*"), Nil), None), terms) =>
-      terms.map(convertTerm).reduce(Times)
+      terms.map(convertTerm).reduce(Times.apply)
     case FunctionApplication(QualifiedIdentifier(Identifier(SSymbol("+"), Nil), None), t :: Nil) => convertTerm(t)
     case FunctionApplication(QualifiedIdentifier(Identifier(SSymbol("+"), Nil), None), terms) =>
-      terms.map(convertTerm).reduce(Plus)
+      terms.map(convertTerm).reduce(Plus.apply)
     case QualifiedIdentifier(Identifier(SSymbol(name), Nil), _) => defs(name).asInstanceOf[Term]
   }
 

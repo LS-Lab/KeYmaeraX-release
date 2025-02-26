@@ -493,16 +493,16 @@ object AssessmentProver {
             case None => (have, expected) match {
                 case (h: ExpressionArtifact, e: ExpressionArtifact) => (h.expr, e.expr) match {
                     case (hf: Formula, ef: Formula) => args.get("op") match {
-                        case None | Some("<->") => run(() => qe(hf, ef, Equiv))
-                        case Some("->") => run(() => qe(hf, ef, Imply))
-                        case Some("<-") => run(() => qe(ef, hf, Imply))
+                        case None | Some("<->") => run(() => qe(hf, ef, Equiv.apply))
+                        case Some("->") => run(() => qe(hf, ef, Imply.apply))
+                        case Some("<-") => run(() => qe(ef, hf, Imply.apply))
                       }
                     case _ => Right("Answer must be a KeYmaera X expression, but got " + have.longHintString)
                   }
                 case (TexExpressionArtifact(h: Formula), TexExpressionArtifact(e: Formula)) => args.get("op") match {
-                    case None | Some("<->") => run(() => qe(h, e, Equiv))
-                    case Some("->") => run(() => qe(h, e, Imply))
-                    case Some("<-") => run(() => qe(e, h, Imply))
+                    case None | Some("<->") => run(() => qe(h, e, Equiv.apply))
+                    case Some("->") => run(() => qe(h, e, Imply.apply))
+                    case Some("<-") => run(() => qe(e, h, Imply.apply))
                   }
                 case (ListExpressionArtifact(h), ListExpressionArtifact(e)) =>
                   val checked = h
@@ -801,7 +801,7 @@ object AssessmentProver {
                       )
                   }
                 case (SequentArtifact(h), SequentArtifact(e)) =>
-                  val combined = sequentsToFormula(e, h, Equiv)
+                  val combined = sequentsToFormula(e, h, Equiv.apply)
                   val lemmaResults = h
                     .zip(e)
                     .map({ case (hs, es) =>
@@ -1022,7 +1022,7 @@ object AssessmentProver {
       a.nonEmpty && a.length == b.length,
       "Same-length non-empty lists expected, but got " + a.mkString(",") + " vs. " + b.mkString(","),
     )
-    bigdecimalQE(a.zip(b).map({ case (a, b) => Equal(a, b) }).reduceRight(And))
+    bigdecimalQE(a.zip(b).map({ case (a, b) => Equal(a, b) }).reduceRight(And.apply))
   }
 
   /** Invokes the BigDecimalQETool but returns an open proof if statement `fml` is false. */
@@ -1232,7 +1232,7 @@ object AssessmentProver {
     )
 
     if (realTerms.nonEmpty) {
-      val combined = realTerms.map(_._2).reduceRight(And)
+      val combined = realTerms.map(_._2).reduceRight(And.apply)
       val lemmas = realTerms.map({ case (_, e) => polynomialEquality(e.left, e.right) }).map(byUS).toList
       prove(
         Sequent(IndexedSeq(), IndexedSeq(combined)),
@@ -1273,7 +1273,7 @@ object AssessmentProver {
         val edistinct = Sequent(bs.ante.distinct, bs.succ.distinct)
         (sequentToFormula(as, edistinct), edistinct.toFormula)
       })
-    syntacticEquality(fmls.map(_._1).reduceRight(And), fmls.map(_._2).reduceRight(And))
+    syntacticEquality(fmls.map(_._1).reduceRight(And.apply), fmls.map(_._2).reduceRight(And.apply))
   }
 
   @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
@@ -2030,7 +2030,7 @@ object AssessmentProver {
   private def sequentsToFormula(
       expected: List[Sequent],
       actual: List[Sequent],
-      fml: (Formula, Formula) => Formula = Equiv,
+      fml: (Formula, Formula) => Formula = Equiv.apply,
   ) = {
     require(
       expected.nonEmpty && actual.size == expected.size,
@@ -2038,7 +2038,7 @@ object AssessmentProver {
     )
     val afs = actual.map(_.toFormula)
     val efs = expected.map(_.toFormula)
-    afs.zip(efs).map({ case (af, ef) => fml(af, ef) }).reduceRight(And)
+    afs.zip(efs).map({ case (af, ef) => fml(af, ef) }).reduceRight(And.apply)
   }
 
   /**
@@ -2050,12 +2050,12 @@ object AssessmentProver {
       s.ante
         .distinct
         .sortWith((a, b) => ref.ante.indexOf(a) < ref.ante.indexOf(b))
-        .reduceRightOption(And)
+        .reduceRightOption(And.apply)
         .getOrElse(True),
       s.succ
         .distinct
         .sortWith((a, b) => ref.succ.indexOf(a) < ref.succ.indexOf(b))
-        .reduceRightOption(Or)
+        .reduceRightOption(Or.apply)
         .getOrElse(False),
     )
   }

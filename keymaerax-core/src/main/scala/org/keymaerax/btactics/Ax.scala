@@ -9600,7 +9600,7 @@ object Ax extends Logging {
     DerivedAxiomInfo.create(name = "constLemma", canonicalName = "constLemma"),
     Equal(
       "n_()".asTerm,
-      Seq(Number(0), Times(Divide("n_()".asTerm, Number(1)), Number(1)), Number(0)).reduceLeft(Plus),
+      Seq(Number(0), Times(Divide("n_()".asTerm, Number(1)), Number(1)), Number(0)).reduceLeft(Plus.apply),
     ),
     QE & done,
   )
@@ -9608,7 +9608,7 @@ object Ax extends Logging {
   @Derivation
   lazy val rationalLemma: DerivedAxiomInfo = derivedFormula(
     DerivedAxiomInfo.create(name = "rationalLemma", canonicalName = "rationalLemma"),
-    Equal("n_() / d_()".asTerm, Seq(Number(0), Times("n_()/d_()".asTerm, Number(1)), Number(0)).reduceLeft(Plus)),
+    Equal("n_() / d_()".asTerm, Seq(Number(0), Times("n_()/d_()".asTerm, Number(1)), Number(0)).reduceLeft(Plus.apply)),
     QE & done,
   )
 

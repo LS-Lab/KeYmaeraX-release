@@ -115,7 +115,7 @@ object SOSSolve {
       witnessTimer.time {
         val sosPos = proveBy(Greater(sos, Number(0)), sosPosTac & done)
         TaylorModelTactics.Timing.toc("sosPos")
-        val combination = cofactors.lazyZip(polys).map(Times).reduceLeft(Plus)
+        val combination = cofactors.lazyZip(polys).map(Times.apply).reduceLeft(Plus.apply)
         TaylorModelTactics.Timing.tic()
         val witnessPrv = proveBy(Equal(sos, combination), PolynomialArithV2.equate(1))
         TaylorModelTactics.Timing.toc("PolynomialArithV2.equate")

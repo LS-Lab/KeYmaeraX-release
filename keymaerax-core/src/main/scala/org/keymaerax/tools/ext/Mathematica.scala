@@ -195,8 +195,10 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
             case g => throw ToolExecutionException("Unable to split goal " + g + " into separate QE calls")
           })
       }
-      val combined = ProvableSig
-        .startProof(lemmas.map(_.fact.conclusion.succ.head).reduceRight(And), lemmas.map(_.fact.defs).reduce(_ ++ _))
+      val combined = ProvableSig.startProof(
+        lemmas.map(_.fact.conclusion.succ.head).reduceRight(And.apply),
+        lemmas.map(_.fact.defs).reduce(_ ++ _),
+      )
       val result = lemmas
         .init
         .foldLeft(combined)({ case (c, l) => c(AndRight(SuccPos(0)), 0)(l.fact, 0) })(lemmas.last.fact, 0)

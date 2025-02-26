@@ -357,7 +357,7 @@ object InvariantGenerator extends Logging {
       val loopBV = StaticSemantics.boundVars(loop)
       val combined = anteConjuncts
         .filter(fml => !postConjuncts.contains(fml) && !StaticSemantics.freeVars(fml).intersect(loopBV).isEmpty)
-      val anteInvCandidate = combined.reduceRightOption(And).getOrElse(True)
+      val anteInvCandidate = combined.reduceRightOption(And.apply).getOrElse(True)
       // @todo pre -> post counterexample is not strong enough to indicate what to filter (need to consult loop body).
       if (ToolProvider.cexTool().isDefined) {
         // @note used to be Imply, now filter only duplicate information
@@ -377,7 +377,10 @@ object InvariantGenerator extends Logging {
           .distinct
       case Some(Box(l: Loop, post)) =>
         val combined = combinedAssumptions(l, post).distinct
-        (combined :+ combined.reduceRightOption(And).getOrElse(True) :+ post).map(Invariant(_)).to(LazyList).distinct
+        (combined :+ combined.reduceRightOption(And.apply).getOrElse(True) :+ post)
+          .map(Invariant(_))
+          .to(LazyList)
+          .distinct
       case Some(_) => throw new IllegalArgumentException(
           "ill-positioned " + pos + " does not give a differential equation or loop in " + sequent
         )
@@ -396,7 +399,8 @@ object InvariantGenerator extends Logging {
             def proofHint(s: String): Option[String] = if (s != "Unknown") Some(s) else None
             lazy val pegasusInvs: Seq[Either[Seq[(Formula, String)], Seq[(Formula, String)]]] = {
               val succFmls = sequent.succ.patch(pos.index0, Nil, 1).filter(_.isFOL)
-              val assumptions = if (succFmls.isEmpty) sequent.ante else sequent.ante :+ Not(succFmls.reduceRight(Or))
+              val assumptions =
+                if (succFmls.isEmpty) sequent.ante else sequent.ante :+ Not(succFmls.reduceRight(Or.apply))
               tool.invgen(ode, assumptions, post)
             }
             lazy val invs: Seq[Invariant] =

@@ -87,7 +87,7 @@ object Transitivity extends TacticProvider {
         val (f, i) = fi
         getConstructor(f)(s"TRANS$i".asTerm, s"TRANS${i + 1}".asTerm)
       })
-      .reduce(And)
+      .reduce(And.apply)
 
     val formula = Imply(inequalities, s"TRANS0 >= TRANS${formulas.length}".asFormula)
 

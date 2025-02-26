@@ -449,7 +449,7 @@ class DLParser extends Parser {
 
   def multiplicand[$: P](doAmbigCuts: Boolean): P[Term] =
     (baseTerm(doAmbigCuts) ~ ("^"./ ~ signed(multiplicand(doAmbigCuts))).rep).map { case (left, pows) =>
-      (left +: pows.map(getEither)).reduceRight(Power)
+      (left +: pows.map(getEither)).reduceRight(Power.apply)
     }
 
   def baseTerm[$: P](doAmbigCuts: Boolean): P[Term] = number(doAmbigCuts) | dot./ | function(doAmbigCuts)
@@ -503,7 +503,7 @@ class DLParser extends Parser {
       // Note that a single-element termList can be ambiguous with formulas,
       // but a multi-element termList must be a term
       (if (doAmbigCuts) term(true) else NoCut(term(true))).rep(sep = ","./) ~ ")"
-  ).map(ts => ts.reduceRightOption(Pair).getOrElse(Nothing))
+  ).map(ts => ts.reduceRightOption(Pair.apply).getOrElse(Nothing))
 
   /** (|x1,x2,x3|) parses a space declaration */
   def space[$: P]: P[Space] = P("(|" ~ variable.rep(sep = ",") ~ "|)").map(ts => if (ts.isEmpty) AnyArg else Except(ts))
@@ -527,17 +527,17 @@ class DLParser extends Parser {
 
   /* -> (right-assoc) */
   def implication[$: P]: P[Formula] = (disjunct ~ (("->" | "→") ~/ disjunct).rep).map { case (left, concls) =>
-    (left +: concls).reduceRight(Imply)
+    (left +: concls).reduceRight(Imply.apply)
   }
 
   /* | (right-assoc) */
   def disjunct[$: P]: P[Formula] = (conjunct ~ (("|" | "∨") ~/ conjunct).rep).map { case (left, conjs) =>
-    (left +: conjs).reduceRight(Or)
+    (left +: conjs).reduceRight(Or.apply)
   }
 
   /* & (right-assoc) */
   def conjunct[$: P]: P[Formula] = (baseF ~ (("&" | "∧") ~/ baseF).rep).map { case (left, forms) =>
-    (left +: forms).reduceRight(And)
+    (left +: forms).reduceRight(And.apply)
   }
 
   /** Base formulas */
@@ -599,7 +599,7 @@ class DLParser extends Parser {
       } | ((("[".! ~/ program ~ "]".!) | ("<".! ~/ program ~ ">".!)) ~/ baseF).map {
         case ("[", p, "]", f) => Box(p, f)
         case ("<", p, ">", f) => Diamond(p, f)
-      } | ("!" ~/ baseF).map(Not) | predicational | "⎵".!.map(_ => DotFormula) |
+      } | ("!" ~/ baseF).map(Not.apply) | predicational | "⎵".!.map(_ => DotFormula) |
       /* Exercise */
       "__________".!.map(_ => UnitPredicational("exerciseP_", AnyArg))
 
@@ -700,7 +700,7 @@ class DLParser extends Parser {
   def annotation[$: P]: P[Seq[Formula]] =
     ("@invariant" | "@variant") ~/ "(" ~/ formula.rep(min = 1, sep = ","./).map(_.toList) ~ ")"
 
-  def sequence[$: P]: P[Program] = ((dual ~/ ";".?).rep(1)).map(ps => ps.reduceRight(Compose))
+  def sequence[$: P]: P[Program] = ((dual ~/ ";".?).rep(1)).map(ps => ps.reduceRight(Compose.apply))
 
   @nowarn("msg=match may not be exhaustive")
   def choice[$: P]: P[Program] = (sequence ~/ (("++"./ | "∪"./ | "--" | "∩"./).! ~ sequence).rep).map({ case (p, ps) =>

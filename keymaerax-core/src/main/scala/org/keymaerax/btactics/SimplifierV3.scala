@@ -278,7 +278,7 @@ object SimplifierV3 extends TacticProvider {
             case (None, _) => True
             case (Some(pr), _) => pr._1
           })
-          .reduceRight(And)
+          .reduceRight(And.apply)
         val cuts = proofs
           .zipWithIndex
           .map({
@@ -897,7 +897,7 @@ object SimplifierV3 extends TacticProvider {
             case (None, _) => True
             case (Some(pr), _) => pr._1
           })
-          .reduceRight(And)
+          .reduceRight(And.apply)
         val cuts = proofs
           .zipWithIndex
           .map({

@@ -65,7 +65,7 @@ class SimulationRequest(
         )
         val unmodified = (vars -- modifiedVars)
           .map(v => Equal(v, Variable("pre" + v.name, v.index)))
-          .reduceOption(And)
+          .reduceOption(And.apply)
           .getOrElse(True)
 
         val simulation = s.simulate(varsInitial, And(unmodified, timedStateRelation), steps, n)

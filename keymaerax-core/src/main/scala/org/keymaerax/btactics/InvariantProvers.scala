@@ -99,7 +99,7 @@ object InvariantProvers {
       Augmentors.SequentAugmentor(seq)(pos) match {
         case loopfml @ Box(prog, post) =>
           // extra information occasionally thrown in to help direct invariant generation
-          val initialCond = seq.ante.reduceRightOption(And).getOrElse(True)
+          val initialCond = seq.ante.reduceRightOption(And.apply).getOrElse(True)
           // @note all variables since substitution disallows introducing free variables unless proved
           val allVars: List[Variable] =
             // DependencyAnalysis is incorrect when primed symbols occur, so default to all variables in that case

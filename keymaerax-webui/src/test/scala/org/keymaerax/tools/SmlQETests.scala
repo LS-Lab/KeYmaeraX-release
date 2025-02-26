@@ -167,7 +167,7 @@ class SmlQETests extends TacticTestBase {
       new ExpressionTraversalFunction() {
         override def preF(p: PosInExpr, e: Formula): Either[Option[ExpressionTraversal.StopTraversal], Formula] =
           e match {
-            case c: ComparisonFormula => denominatorsOf(c).reduceOption(Times) match {
+            case c: ComparisonFormula => denominatorsOf(c).reduceOption(Times.apply) match {
                 case Some(d) =>
                   val nodiv = c.reapply(tool.simplify(Times(c.left, d), Nil), tool.simplify(Times(c.right, d), Nil))
                   Right(noExp(nodiv))
@@ -186,7 +186,7 @@ class SmlQETests extends TacticTestBase {
         new ExpressionTraversalFunction() {
           override def preT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = e match {
             case Power(x, Number(n)) if n.isValidInt && n >= 0 =>
-              Right(List.fill(n.toIntExact)(x).reduceLeftOption(Times).getOrElse(Number(1)))
+              Right(List.fill(n.toIntExact)(x).reduceLeftOption(Times.apply).getOrElse(Number(1)))
             case Power(x, Number(n)) if n.isValidInt && n < 0 => Right(Divide(Number(1), noExp(Power(x, Number(-n)))))
             case _ => Left(None)
           }

@@ -1457,12 +1457,12 @@ class ModelplexTacticTests extends TacticTestBase {
   "Reassociating formulas" should "be fast" taggedAs IgnoreInBuildTest in withTactics {
     // run with -da -Xss20M
     val predicates = (0 to 1000).map(i => PredOf(Function("p", Some(i), Unit, Bool), Nothing))
-    val p = predicates.reduceLeft(Or)
+    val p = predicates.reduceLeft(Or.apply)
     val tic = System.currentTimeMillis()
     val (q, proof) = PropositionalTactics.rightAssociate(p)
     val toc = System.currentTimeMillis()
     proof shouldBe Symbol("proved")
-    q shouldBe predicates.reduceRight(Or)
+    q shouldBe predicates.reduceRight(Or.apply)
     (toc - tic) should be <= 60000L
   }
 

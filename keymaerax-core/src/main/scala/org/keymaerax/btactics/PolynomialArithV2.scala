@@ -361,7 +361,7 @@ object PolynomialArithV2Helpers {
   def impliesElim(PsQ: ProvableSig, Ps: Seq[ProvableSig]): ProvableSig =
     if (Ps.length == 0) PsQ
     else {
-      val conj = Ps.map(P => P.conclusion.succ(0)).reduceRight(And)
+      val conj = Ps.map(P => P.conclusion.succ(0)).reduceRight(And.apply)
       val conjPrv = Ps
         .dropRight(1)
         .foldLeft(
@@ -481,7 +481,7 @@ case class TwoThreeTreePolynomialRing(
           Equal(Times(denomN, that.denomN), Number(denomRes)),
           NotEqual(denomN, Number(0)),
           NotEqual(that.denomN, Number(0)),
-        ).reduceRight(And),
+        ).reduceRight(And.apply),
       )
       val prvRes = useDirectly(coefficientPlusPrv, inst, Seq(prv, that.prv, numericPrv))
       Coefficient(numRes, denomRes, Some(prvRes))
@@ -507,7 +507,7 @@ case class TwoThreeTreePolynomialRing(
           Equal(Times(denomN, that.denomN), Number(denomRes)),
           NotEqual(denomN, Number(0)),
           NotEqual(that.denomN, Number(0)),
-        ).reduceRight(And),
+        ).reduceRight(And.apply),
       )
       val prvRes = useDirectly(coefficientTimesPrv, inst, Seq(prv, that.prv, numericPrv))
       Coefficient(numRes, denomRes, Some(prvRes))
@@ -619,7 +619,7 @@ case class TwoThreeTreePolynomialRing(
   @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   case class Monomial(coeff: Coefficient, powerProduct: SparsePowerProduct, prvO: Option[ProvableSig] = None) {
     val powers = powerProduct.sparse.toIndexedSeq
-    lazy val powersTerm: Term = powers.map { case (v, i) => Power(v, Number(i)) }.foldLeft(Number(1): Term)(Times)
+    lazy val powersTerm: Term = powers.map { case (v, i) => Power(v, Number(i)) }.foldLeft(Number(1): Term)(Times.apply)
 
     def monomialTerm(coeff: Term): Term = Times(coeff, powersTerm)
 
@@ -666,7 +666,7 @@ case class TwoThreeTreePolynomialRing(
                   GreaterEqual(Number(i), Number(0)),
                   GreaterEqual(Number(j), Number(0)),
                   Equal(Plus(Number(i), Number(j)), Number(k)),
-                ).reduceRight(And),
+                ).reduceRight(And.apply),
               )
               val newPrv = useDirectly(
                 timesPowersBoth,
@@ -705,12 +705,12 @@ case class TwoThreeTreePolynomialRing(
           }
         } else if (l >= 0) {
           val basePowers = powers.take(l + 1)
-          val xs = basePowers.map { case (v, p) => Power(v, Number(p)) }.foldLeft[Term](Number(1))(Times)
+          val xs = basePowers.map { case (v, p) => Power(v, Number(p)) }.foldLeft[Term](Number(1))(Times.apply)
           val newPrv = useDirectly(timesPowers1Right, Seq(("xs_", xs)), Seq())
           (basePowers, newPrv)
         } else {
           val basePowers = otherPowers.take(r + 1)
-          val ys = basePowers.map { case (v, p) => Power(v, Number(p)) }.foldLeft[Term](Number(1))(Times)
+          val ys = basePowers.map { case (v, p) => Power(v, Number(p)) }.foldLeft[Term](Number(1))(Times.apply)
           val newPrv = useDirectly(timesPowers1Left, Seq(("ys_", ys)), Seq())
           (basePowers, newPrv)
         }
@@ -1078,7 +1078,7 @@ case class TwoThreeTreePolynomialRing(
                 val l1 = lx.left.rhs
                 val lv = lx.value.rhs
                 val l2 = lx.right.rhs
-                val newRhs = Seq(l1, lv, l2, v.rhs, right.rhs).reduceLeft(Plus)
+                val newRhs = Seq(l1, lv, l2, v.rhs, right.rhs).reduceLeft(Plus.apply)
                 val newPrv = useDirectly(
                   branch2GrowLeft,
                   treeInst ++ Seq(("l1_", l1), ("lv_", lv), ("l2_", l2)),
@@ -1097,7 +1097,7 @@ case class TwoThreeTreePolynomialRing(
                 val r1 = rx.left.rhs
                 val rv = rx.value.rhs
                 val r2 = rx.right.rhs
-                val newRhs = Seq(left.rhs, v.rhs, r1, rv, r2).reduceLeft(Plus)
+                val newRhs = Seq(left.rhs, v.rhs, r1, rv, r2).reduceLeft(Plus.apply)
                 val newPrv = useDirectly(
                   branch2GrowRight,
                   treeInst ++ Seq(("r1_", r1), ("rv_", rv), ("r2_", r2)),
@@ -1125,22 +1125,24 @@ case class TwoThreeTreePolynomialRing(
         monomialOrdering.compare(x.powers, v.powers) match {
           case 0 =>
             val vx = (v.forgetPrv + x).get
-            val newRhs = Seq(left.rhs, vx.rhs, mid.rhs, w.rhs, right.rhs).reduceLeft(Plus)
+            val newRhs = Seq(left.rhs, vx.rhs, mid.rhs, w.rhs, right.rhs).reduceLeft(Plus.apply)
             val newPrv = useDirectly(branch3Value1, treeInst ++ Seq(("vx_", vx.rhs)), Seq(tree.prv, vx.prv))
             Stay(Branch3(left, vx, mid, w, right, Some(newPrv)))
           case c if c < 0 =>
             left.forgetPrv.insert(x) match {
               case Stay(lx) =>
-                val newRhs = Seq(lx.rhs, v.rhs, mid.rhs, w.rhs, right.rhs).reduceLeft(Plus)
+                val newRhs = Seq(lx.rhs, v.rhs, mid.rhs, w.rhs, right.rhs).reduceLeft(Plus.apply)
                 val newPrv = useDirectly(branch3Left, treeInst ++ Seq(("lx_", lx.rhs)), Seq(tree.prv, lx.prv))
                 Stay(Branch3(lx, v, mid, w, right, Some(newPrv)))
               case Sprout(lx) =>
                 val l1 = lx.left.rhs
                 val lv = lx.value.rhs
                 val l2 = lx.right.rhs
-                val newRhs =
-                  Seq(Seq(l1, lv, l2).reduceLeft(Plus), v.rhs, Seq(mid.rhs, w.rhs, right.rhs).reduceLeft(Plus))
-                    .reduceLeft(Plus)
+                val newRhs = Seq(
+                  Seq(l1, lv, l2).reduceLeft(Plus.apply),
+                  v.rhs,
+                  Seq(mid.rhs, w.rhs, right.rhs).reduceLeft(Plus.apply),
+                ).reduceLeft(Plus.apply)
                 val newPrv = useDirectly(
                   branch3GrowLeft,
                   treeInst ++ Seq(("l1_", l1), ("lv_", lv), ("l2_", l2)),
@@ -1152,22 +1154,24 @@ case class TwoThreeTreePolynomialRing(
             monomialOrdering.compare(x.powers, w.powers) match {
               case 0 =>
                 val wx = (w.forgetPrv + x).get
-                val newRhs = Seq(left.rhs, v.rhs, mid.rhs, wx.rhs, right.rhs).reduceLeft(Plus)
+                val newRhs = Seq(left.rhs, v.rhs, mid.rhs, wx.rhs, right.rhs).reduceLeft(Plus.apply)
                 val newPrv = useDirectly(branch3Value2, treeInst ++ Seq(("wx_", wx.rhs)), Seq(tree.prv, wx.prv))
                 Stay(Branch3(left, v, mid, wx, right, Some(newPrv)))
               case c if c < 0 =>
                 mid.forgetPrv.insert(x) match {
                   case Stay(mx) =>
-                    val newRhs = Seq(left.rhs, v.rhs, mx.rhs, w.rhs, right.rhs).reduceLeft(Plus)
+                    val newRhs = Seq(left.rhs, v.rhs, mx.rhs, w.rhs, right.rhs).reduceLeft(Plus.apply)
                     val newPrv = useDirectly(branch3Mid, treeInst ++ Seq(("mx_", mx.rhs)), Seq(tree.prv, mx.prv))
                     Stay(Branch3(left, v, mx, w, right, Some(newPrv)))
                   case Sprout(mx) =>
                     val m1 = mx.left.rhs
                     val mv = mx.value.rhs
                     val m2 = mx.right.rhs
-                    val newRhs =
-                      Seq(Seq(left.rhs, v.rhs, m1).reduceLeft(Plus), mv, Seq(m2, w.rhs, right.rhs).reduceLeft(Plus))
-                        .reduceLeft(Plus)
+                    val newRhs = Seq(
+                      Seq(left.rhs, v.rhs, m1).reduceLeft(Plus.apply),
+                      mv,
+                      Seq(m2, w.rhs, right.rhs).reduceLeft(Plus.apply),
+                    ).reduceLeft(Plus.apply)
                     val newPrv = useDirectly(
                       branch3GrowMid,
                       treeInst ++ Seq(("m1_", m1), ("mv_", mv), ("m2_", m2)),
@@ -1183,16 +1187,18 @@ case class TwoThreeTreePolynomialRing(
               case c if c > 0 =>
                 right.forgetPrv.insert(x) match {
                   case Stay(rx) =>
-                    val newRhs = Seq(left.rhs, v.rhs, mid.rhs, w.rhs, rx.rhs).reduceLeft(Plus)
+                    val newRhs = Seq(left.rhs, v.rhs, mid.rhs, w.rhs, rx.rhs).reduceLeft(Plus.apply)
                     val newPrv = useDirectly(branch3Right, treeInst ++ Seq(("rx_", rx.rhs)), Seq(tree.prv, rx.prv))
                     Stay(Branch3(left, v, mid, w, rx, Some(newPrv)))
                   case Sprout(rx) =>
                     val r1 = rx.left.rhs
                     val rv = rx.value.rhs
                     val r2 = rx.right.rhs
-                    val newRhs =
-                      Seq(Seq(left.rhs, v.rhs, mid.rhs).reduceLeft(Plus), w.rhs, Seq(r1, rv, r2).reduceLeft(Plus))
-                        .reduceLeft(Plus)
+                    val newRhs = Seq(
+                      Seq(left.rhs, v.rhs, mid.rhs).reduceLeft(Plus.apply),
+                      w.rhs,
+                      Seq(r1, rv, r2).reduceLeft(Plus.apply),
+                    ).reduceLeft(Plus.apply)
                     val newPrv = useDirectly(
                       branch3GrowRight,
                       treeInst ++ Seq(("r1_", r1), ("rv_", rv), ("r2_", r2)),
@@ -1802,7 +1808,7 @@ case class TwoThreeTreePolynomialRing(
   }
   case class Branch2(left: TreePolynomial, value: Monomial, right: TreePolynomial, prvO: Option[ProvableSig])
       extends TreePolynomial {
-    lazy val defaultPrv = equalReflex(Seq(left.rhs, value.rhs, right.rhs).reduceLeft(Plus))
+    lazy val defaultPrv = equalReflex(Seq(left.rhs, value.rhs, right.rhs).reduceLeft(Plus.apply))
     // @note detour for "dependent" default argument
     val prv = prvO.getOrElse(defaultPrv)
 
@@ -1823,7 +1829,7 @@ case class TwoThreeTreePolynomialRing(
       right: TreePolynomial,
       prvO: Option[ProvableSig],
   ) extends TreePolynomial {
-    lazy val defaultPrv = equalReflex(Seq(left.rhs, value1.rhs, mid.rhs, value2.rhs, right.rhs).reduceLeft(Plus))
+    lazy val defaultPrv = equalReflex(Seq(left.rhs, value1.rhs, mid.rhs, value2.rhs, right.rhs).reduceLeft(Plus.apply))
     // @note detour for "dependent" default argument
     val prv = prvO.getOrElse(defaultPrv)
 

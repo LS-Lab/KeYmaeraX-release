@@ -92,8 +92,9 @@ object TaylorModelArith {
       checkCompatibleContext(other)
       val newPoly = poly.resetTerm + other.poly.resetTerm
 
-      val (newIvlPrv, l, u) = IntervalArithmeticV2
-        .proveBinop(new BigDecimalTool)(options.precision)(IndexedSeq())(Plus)(lower, upper)(other.lower, other.upper)
+      val (newIvlPrv, l, u) = IntervalArithmeticV2.proveBinop(new BigDecimalTool)(options.precision)(IndexedSeq())(
+        Plus.apply
+      )(lower, upper)(other.lower, other.upper)
       val newPrv = useDirectlyConst(
         weakenWith(context, taylorModelPlusPrv),
         Seq(
@@ -122,8 +123,9 @@ object TaylorModelArith {
       checkCompatibleContext(other)
       val newPoly = poly.resetTerm - other.poly.resetTerm
 
-      val (newIvlPrv, l, u) = IntervalArithmeticV2
-        .proveBinop(new BigDecimalTool)(options.precision)(IndexedSeq())(Minus)(lower, upper)(other.lower, other.upper)
+      val (newIvlPrv, l, u) = IntervalArithmeticV2.proveBinop(new BigDecimalTool)(options.precision)(IndexedSeq())(
+        Minus.apply
+      )(lower, upper)(other.lower, other.upper)
       val newPrv = useDirectlyConst(
         weakenWith(context, taylorModelMinusPrv),
         Seq(
@@ -276,7 +278,7 @@ object TaylorModelArith {
       val poly1 = rhsOf(poly.representation)
       val poly2 = rhsOf(other.poly.representation)
       def intervalBounds(i1: Term, i2: Term): Term = Seq(rem, Times(i1, poly2), Times(i2, poly1), Times(i1, i2))
-        .reduceLeft(Plus)
+        .reduceLeft(Plus.apply)
       val (newIvlPrv, l, u) = IntervalArithmeticV2.proveBinop(new BigDecimalTool)(options.precision)(context)(
         intervalBounds
       )(lower, upper)(other.lower, other.upper)
@@ -348,7 +350,7 @@ object TaylorModelArith {
       val newPoly = -(poly.resetTerm)
 
       val (newIvlPrv, l, u) = IntervalArithmeticV2
-        .proveUnop(new BigDecimalTool)(options.precision)(IndexedSeq())(Neg)(lower, upper)
+        .proveUnop(new BigDecimalTool)(options.precision)(IndexedSeq())(Neg.apply)(lower, upper)
       val newPrv = useDirectlyConst(
         weakenWith(context, taylorModelNegPrv),
         Seq(
@@ -374,7 +376,7 @@ object TaylorModelArith {
       val rem = rhsOf(hornerPrv)
       val poly1 = rhsOf(poly.representation)
       def intervalBounds(i1: Term): Term = Seq(rem, Times(Times(Number(2), i1), poly1), Power(i1, Number(2)))
-        .reduceLeft(Plus)
+        .reduceLeft(Plus.apply)
       val (newIvlPrv, l, u) = IntervalArithmeticV2
         .proveUnop(new BigDecimalTool)(options.precision)(context)(intervalBounds)(lower, upper)
       val newPrv = useDirectlyConst(
@@ -523,10 +525,9 @@ object TaylorModelArith {
       val horner = hornerForm(poly.resetTerm)
 
       val evalPoly: TM = evalTerm(rhsOf(horner), context, argumentMap)
-      val (ivlPrv, l, u) = IntervalArithmeticV2.proveBinop(new BigDecimalTool)(options.precision)(IndexedSeq())(Plus)(
-        lower,
-        upper,
-      )(evalPoly.lower, evalPoly.upper)
+      val (ivlPrv, l, u) = IntervalArithmeticV2.proveBinop(new BigDecimalTool)(options.precision)(IndexedSeq())(
+        Plus.apply
+      )(lower, upper)(evalPoly.lower, evalPoly.upper)
       val newPrv = useDirectlyConst(
         weakenWith(context, taylorModelEvalPrv),
         Seq(
@@ -742,7 +743,7 @@ object TaylorModelArith {
 
     // @todo: performance critical?
     val implyPrv = proveBy(
-      if (case2) Imply(assms.reduce(And), imply) else imply,
+      if (case2) Imply(assms.reduce(And.apply), imply) else imply,
       (if (case2) (implyR(1) & andL(-1)) else skip) & useAt(refineTmExists, PosInExpr(1 :: Nil))(1) & allR(1) &
         useAt(refineConjunction, PosInExpr(1 :: Nil))(1) & andR(1) & Idioms.<(
           useAt(polyPrettyPrv, PosInExpr(0 :: Nil))(1, 0 :: 1 :: 0 :: Nil) & implyR(1) & id,
@@ -914,7 +915,7 @@ object TaylorModelArith {
           .reverse
           .reduceLeftOption[BelleExpr](_ & _)
           .getOrElse(skip)
-        val saveRightTaylorModels = cut(r0.map(_.prv.conclusion.succ(0)).reduceRight(And)) &
+        val saveRightTaylorModels = cut(r0.map(_.prv.conclusion.succ(0)).reduceRight(And.apply)) &
           Idioms.<(skip, hideR(1) & by(r0.map(_.prv).reduceRight(mkAndPrv)))
         val prv = proveBy(
           Sequent(context, IndexedSeq(Box(ODESystem(ode, True), P))),
@@ -927,7 +928,7 @@ object TaylorModelArith {
                 saveRightTaylorModels &
                 // new initial state
                 hideOldInitialState & allR(1) * vars.length & implyR(1) & andL(Symbol("Llast")) &
-                cutL(taylorModelsIvl.map(_._1).reduceRight(And))(Symbol("Llast")) & Idioms.<(
+                cutL(taylorModelsIvl.map(_._1).reduceRight(And.apply))(Symbol("Llast")) & Idioms.<(
                   SaturateTactic(andL(Symbol("L"))) & skip,
                   cohideOnlyR(2) &
                     taylorModelsIvl
@@ -941,7 +942,7 @@ object TaylorModelArith {
             saveRightTaylorModels &
               // property throughout the time interval
               hideOldInitialState & allR(1) * vars.length & implyR(1) &
-              cutL((t1Eq +: taylorModelsEq.map(_._1)).reduceRight(And))(Symbol("Llast")) & Idioms.<(
+              cutL((t1Eq +: taylorModelsEq.map(_._1)).reduceRight(And.apply))(Symbol("Llast")) & Idioms.<(
                 SaturateTactic(andL(Symbol("L"))) & skip,
                 cohideR(2) & useAt(refineConjunction, PosInExpr(1 :: Nil))(1) & andR(1) & Idioms.<(
                   implyR(1) & useAt(t1Prv, PosInExpr(1 :: Nil))(1, 1 :: Nil) & id,
@@ -1075,7 +1076,7 @@ object TaylorModelArith {
   def cutSeq(prvs: Seq[ProvableSig], prv: ProvableSig): ProvableSig = {
     val cutEvals = prvs
       .init
-      .foldLeft(prv(Cut(prvs.map(_.conclusion.succ(0)).reduceRight(And)), 0)(HideRight(SuccPos(0)), 1)) {
+      .foldLeft(prv(Cut(prvs.map(_.conclusion.succ(0)).reduceRight(And.apply)), 0)(HideRight(SuccPos(0)), 1)) {
         case (prv, x) => prv(AndRight(SuccPos(0)), 1)(x, 1)
       }(prvs.last, 1)
     val L = cutEvals.subgoals(0).ante.length
