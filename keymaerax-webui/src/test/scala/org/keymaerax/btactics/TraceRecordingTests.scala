@@ -39,7 +39,7 @@ class TraceRecordingTests extends TacticTestBase {
     "TODO",
     constructGlobalProvable = true,
   )
-  override val theInterpreter = ExhaustiveSequentialInterpreter(Seq(listener))
+  override val theInterpreter: ExhaustiveSequentialInterpreter = ExhaustiveSequentialInterpreter(Seq(listener))
   object TestLib extends UnifyUSCalculus
 
   override def beforeEach() = { PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp) }

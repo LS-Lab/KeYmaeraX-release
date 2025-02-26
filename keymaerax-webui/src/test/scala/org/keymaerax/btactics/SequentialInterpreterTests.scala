@@ -620,7 +620,7 @@ class SequentialInterpreterTests extends TacticTestBase {
   /*"A failing tactic"*/
   it should "print nice errors and provide a stack trace" ignore withMathematica { _ =>
     val itFails: BelleExpr = new BuiltInTactic("fails") {
-      override def result(provable: ProvableSig) = throw new ProverException("Fails...")
+      override def result(provable: ProvableSig): ProvableSig = throw new ProverException("Fails...")
     }
 
     val conj = Idioms.nil & (itFails | itFails)

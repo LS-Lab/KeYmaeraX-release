@@ -612,27 +612,27 @@ private[core] sealed trait RBinaryCompositeTerm extends BinaryCompositeTerm with
 
 /** `-` unary negation of reals: minus. */
 final case class Neg(child: Term) extends RUnaryCompositeTerm {
-  def reapply = copy
+  override def reapply: Term => Neg = copy
 }
 
 /** `+` binary addition of reals. */
 final case class Plus(left: Term, right: Term) extends RBinaryCompositeTerm {
-  def reapply = copy
+  override def reapply: (Term, Term) => Plus = copy
 }
 
 /** `-` binary subtraction of reals. */
 final case class Minus(left: Term, right: Term) extends RBinaryCompositeTerm {
-  def reapply = copy
+  override def reapply: (Term, Term) => Minus = copy
 }
 
 /** `*` binary multiplication of reals. */
 final case class Times(left: Term, right: Term) extends RBinaryCompositeTerm {
-  def reapply = copy
+  override def reapply: (Term, Term) => Times = copy
 }
 
 /** `/` real division of reals where `right` nonzero. */
 final case class Divide(left: Term, right: Term) extends RBinaryCompositeTerm {
-  def reapply = copy
+  override def reapply: (Term, Term) => Divide = copy
 }
 
 /**
@@ -642,7 +642,7 @@ final case class Divide(left: Term, right: Term) extends RBinaryCompositeTerm {
  */
 //@note axiom("^' derive power") needs right to be a Term not just a Number.
 final case class Power(left: Term, right: Term) extends RBinaryCompositeTerm {
-  def reapply = copy
+  override def reapply: (Term, Term) => Power = copy
 }
 
 /**
@@ -653,7 +653,7 @@ final case class Power(left: Term, right: Term) extends RBinaryCompositeTerm {
  *   Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
  */
 final case class Differential(child: Term) extends RUnaryCompositeTerm {
-  def reapply = copy
+  override def reapply: Term => Differential = copy
 }
 
 /**
@@ -663,7 +663,7 @@ final case class Differential(child: Term) extends RUnaryCompositeTerm {
  *   represented as (t1,(t2,(t3,...tn))). This is not a strict requirement, but the default parse and suggested use.
  */
 final case class Pair(left: Term, right: Term) extends BinaryCompositeTerm {
-  def reapply = copy
+  override def reapply: (Term, Term) => Pair = copy
   val sort: Sort = Tuple(left.sort, right.sort)
 }
 
@@ -749,32 +749,32 @@ case object False extends AtomicFormula
 
 /** `=`: equality `left = right`. */
 final case class Equal(left: Term, right: Term) extends ComparisonFormula {
-  def reapply = copy
+  override def reapply: (Term, Term) => Equal = copy
 }
 
 /** `!=`: disequality `left != right`. */
 final case class NotEqual(left: Term, right: Term) extends ComparisonFormula {
-  def reapply = copy
+  override def reapply: (Term, Term) => NotEqual = copy
 }
 
 /** `>=`: greater or equal comparison `left >= right` of reals. */
 final case class GreaterEqual(left: Term, right: Term) extends RComparisonFormula {
-  def reapply = copy
+  override def reapply: (Term, Term) => GreaterEqual = copy
 }
 
 /** `>`: greater than comparison `left > right` of reals. */
 final case class Greater(left: Term, right: Term) extends RComparisonFormula {
-  def reapply = copy
+  override def reapply: (Term, Term) => Greater = copy
 }
 
 /** `<`: less or equal comparison `left <= right` of reals. */
 final case class LessEqual(left: Term, right: Term) extends RComparisonFormula {
-  def reapply = copy
+  override def reapply: (Term, Term) => LessEqual = copy
 }
 
 /** `<=`: less than comparison `left < right` of reals. */
 final case class Less(left: Term, right: Term) extends RComparisonFormula {
-  def reapply = copy
+  override def reapply: (Term, Term) => Less = copy
 }
 
 /**
@@ -855,27 +855,27 @@ sealed trait BinaryCompositeFormula extends BinaryComposite with CompositeFormul
 
 /** ! logical negation: not. */
 final case class Not(child: Formula) extends UnaryCompositeFormula {
-  def reapply = copy
+  override def reapply: Formula => Not = copy
 }
 
 /** & logical conjunction: and. */
 final case class And(left: Formula, right: Formula) extends BinaryCompositeFormula {
-  def reapply = copy
+  override def reapply: (Formula, Formula) => And = copy
 }
 
 /** | logical disjunction: or. */
 final case class Or(left: Formula, right: Formula) extends BinaryCompositeFormula {
-  def reapply = copy
+  override def reapply: (Formula, Formula) => Or = copy
 }
 
 /** -> logical implication: implies. */
 final case class Imply(left: Formula, right: Formula) extends BinaryCompositeFormula {
-  def reapply = copy
+  override def reapply: (Formula, Formula) => Imply = copy
 }
 
 /** <-> logical biimplication: equivalent. */
 final case class Equiv(left: Formula, right: Formula) extends BinaryCompositeFormula {
-  def reapply = copy
+  override def reapply: (Formula, Formula) => Equiv = copy
 }
 
 /** Quantified formulas. */
@@ -900,12 +900,12 @@ sealed trait Quantified extends CompositeFormula {
 
 /** \forall vars universally quantified formula for all real values of vars. */
 final case class Forall(vars: immutable.Seq[Variable], child: Formula) extends Quantified {
-  def reapply = copy
+  override def reapply: (Seq[Variable], Formula) => Forall = copy
 }
 
 /** \exists vars existentially quantified formula for some real value of vars. */
 final case class Exists(vars: immutable.Seq[Variable], child: Formula) extends Quantified {
-  def reapply = copy
+  override def reapply: (Seq[Variable], Formula) => Exists = copy
 }
 
 /** Modal formulas. */
@@ -927,12 +927,12 @@ sealed trait Modal extends CompositeFormula {
 
 /** box modality all runs of program satisfy child: [program]child. */
 final case class Box(program: Program, child: Formula) extends Modal {
-  def reapply = copy
+  override def reapply: (Program, Formula) => Box = copy
 }
 
 /** diamond modality some run of program satisfies child: ⟨program⟩child. */
 final case class Diamond(program: Program, child: Formula) extends Modal {
-  def reapply = copy
+  override def reapply: (Program, Formula) => Diamond = copy
 }
 
 /**
@@ -940,7 +940,7 @@ final case class Diamond(program: Program, child: Formula) extends Modal {
  * used in the form (e>=k)' which is (e)'>=(k)'. In practice, derived forms are useful.
  */
 final case class DifferentialFormula(child: Formula) extends UnaryCompositeFormula {
-  def reapply = copy
+  override def reapply: Formula => DifferentialFormula = copy
 }
 
 /*
@@ -1063,22 +1063,22 @@ sealed trait BinaryCompositeProgram extends BinaryComposite with CompositeProgra
 
 /** left++right nondeterministic choice running either left or right. */
 final case class Choice(left: Program, right: Program) extends BinaryCompositeProgram {
-  def reapply = copy
+  override def reapply: (Program, Program) => Choice = copy
 }
 
 /** left;right sequential composition running right after left. */
 final case class Compose(left: Program, right: Program) extends BinaryCompositeProgram {
-  def reapply = copy
+  override def reapply: (Program, Program) => Compose = copy
 }
 
 /** child* nondeterministic repetition running child arbitrarily often. */
 final case class Loop(child: Program) extends UnaryCompositeProgram {
-  def reapply = copy
+  override def reapply: Program => Loop = copy
 }
 
 /** `child^d` dual program continuing game child after passing control to the opponent. */
 final case class Dual(child: Program) extends UnaryCompositeProgram {
-  def reapply = copy
+  override def reapply: Program => Dual = copy
 }
 
 /** Differential equation system `ode` with given evolution domain constraint. */

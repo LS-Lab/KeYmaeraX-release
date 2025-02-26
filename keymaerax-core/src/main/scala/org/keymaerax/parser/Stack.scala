@@ -78,18 +78,18 @@ sealed trait Stack[+A] {
 
 /** A stack tail :+ top with top on the top of tail */
 case class :+[A](tail: Stack[A], top: A) extends Stack[A] {
-  def isEmpty = false
-  def drop(n: Int) = { require(n >= 0); if (n == 0) this else tail.drop(n - 1) }
-  def take(n: Int) = { require(n >= 0); if (n == 0) Bottom else tail.take(n - 1) :+ top }
+  override def isEmpty = false
+  override def drop(n: Int): Stack[A] = { require(n >= 0); if (n == 0) this else tail.drop(n - 1) }
+  override def take(n: Int): Stack[A] = { require(n >= 0); if (n == 0) Bottom else tail.take(n - 1) :+ top }
   // def find(p: (A) => Boolean): Option[A] = if (p(top)) Some(top) else tail.find(p)
 }
 
 /** The empty stack bottom */
 object Bottom extends Stack[Nothing] {
-  def top = throw new UnsupportedOperationException("Empty stack has no top")
-  def tail = throw new UnsupportedOperationException("Empty stack has no tail")
-  def isEmpty = true
-  def drop(n: Int) = { require(n >= 0); this }
-  def take(n: Int) = { require(n >= 0); this }
+  override def top: Nothing = throw new UnsupportedOperationException("Empty stack has no top")
+  override def tail: Stack[Nothing] = throw new UnsupportedOperationException("Empty stack has no tail")
+  override def isEmpty = true
+  override def drop(n: Int): Stack[Nothing] = { require(n >= 0); this }
+  override def take(n: Int): Stack[Nothing] = { require(n >= 0); this }
   // def find[A>:Nothing](p: (A) => Boolean): Option[A] = None
 }

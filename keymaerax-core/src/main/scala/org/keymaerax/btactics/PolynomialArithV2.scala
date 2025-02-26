@@ -1798,7 +1798,7 @@ case class TwoThreeTreePolynomialRing(
   case class Empty(prvO: Option[ProvableSig]) extends TreePolynomial {
     val defaultPrv = zez
     val prv = prvO.getOrElse(defaultPrv)
-    override def forgetPrv = Empty(None)
+    override def forgetPrv: Empty = Empty(None)
     override def treeSketch: String = "."
     override def degree(include: Term => Boolean) = 0
     override def resetRepresentation(newRepresentation: ProvableSig): Polynomial = {

@@ -266,7 +266,7 @@ final class FastUSubstAboveURen(private[infrastruct] val subsDefsInput: immutabl
   override def hashCode: Int = 199 * subsDefsInput.hashCode()
 
   // @todo .distinct?
-  override def reapply(subs: immutable.Seq[(Expression, Expression)]) = new FastUSubstAboveURen(subs)
+  override def reapply(subs: immutable.Seq[(Expression, Expression)]): RenUSubst = new FastUSubstAboveURen(subs)
 
   /** Renaming part, with identity renaming no-ops filtered out. */
   private val rens: immutable.Seq[(Variable, Variable)] = RenUSubst.renamingPartOnly(subsDefsInput)
@@ -496,7 +496,7 @@ final class USubstAboveURen(private[infrastruct] override val subsDefsInput: imm
 
   override def hashCode: Int = 47 * rens.hashCode() + subsDefs.hashCode()
 
-  def reapply(subs: immutable.Seq[(Expression, Expression)]) = new USubstAboveURen(subs)
+  override def reapply(subs: immutable.Seq[(Expression, Expression)]): RenUSubst = new USubstAboveURen(subs)
 
   // backwards style: compose US after renaming to get the same Hilbert proof order as in toForward: US above UR
   // rens.foldLeft(replaced)((pr,sp)=>UniformRenaming.UniformRenamingForward(pr, sp._1,sp._2))
@@ -511,7 +511,8 @@ final class USubstAboveURen(private[infrastruct] override val subsDefsInput: imm
     rens.foldLeft(replaced)((pr, sp) => RenUSubst.UniformRenamingForward(pr, sp._1, sp._2))
   }
 
-  val toCore = (e: Expression) => throw new UnsupportedOperationException("not yet implemented. @todo")
+  override val toCore: Expression => Expression =
+    (e: Expression) => throw new UnsupportedOperationException("not yet implemented. @todo")
 
   private[infrastruct] def firstFlush: RenUSubst = renaming
 
@@ -576,7 +577,7 @@ final class DirectUSubstAboveURen(
 
   override def hashCode: Int = 67 * rens.hashCode() + subsDefs.hashCode()
 
-  def reapply(subs: immutable.Seq[(Expression, Expression)]) = new DirectUSubstAboveURen(subs)
+  override def reapply(subs: immutable.Seq[(Expression, Expression)]): RenUSubst = new DirectUSubstAboveURen(subs)
 
   /** All renamings at once */
   private val renall = MultiRename(rens)
@@ -700,7 +701,7 @@ private final class URenAboveUSubst(
 
   override def hashCode: Int = 61 * rens.hashCode() + subsDefs.hashCode()
 
-  def reapply(subs: immutable.Seq[(Expression, Expression)]) = new URenAboveUSubst(subs)
+  override def reapply(subs: immutable.Seq[(Expression, Expression)]): RenUSubst = new URenAboveUSubst(subs)
 
   // backwards style: compose US after renaming to get the same Hilbert proof order as in toForward: US above UR
   // rens.foldLeft(replaced)((pr,sp)=>UniformRenaming.UniformRenamingForward(pr, sp._1,sp._2))
@@ -715,7 +716,8 @@ private final class URenAboveUSubst(
     (rens.foldLeft(fact)((pr, sp) => RenUSubst.UniformRenamingForward(pr, sp._1, sp._2)))(usubst)
   }
 
-  val toCore = (e: Expression) => throw new UnsupportedOperationException("not yet implemented. @todo")
+  override val toCore: Expression => Expression =
+    (e: Expression) => throw new UnsupportedOperationException("not yet implemented. @todo")
 
   private[infrastruct] def firstFlush: RenUSubst = substitution
 
@@ -778,7 +780,7 @@ final class FastURenAboveUSubst(private[infrastruct] val subsDefsInput: immutabl
 
   override def hashCode: Int = 271 * subsDefsInput.hashCode()
 
-  override def reapply(subs: immutable.Seq[(Expression, Expression)]) = new FastURenAboveUSubst(subs)
+  override def reapply(subs: immutable.Seq[(Expression, Expression)]): RenUSubst = new FastURenAboveUSubst(subs)
 
   /** The effective USubstRen for subsDefsInput. */
   private val effective: USubstRen = USubstRen(subsDefsInput)
