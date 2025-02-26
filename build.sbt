@@ -16,7 +16,6 @@ ThisBuild / scalacOptions ++= Seq(
   "-Xsource:3",
   "-Xsource-features:case-apply-copy-access",
   // TODO Fix all of these warnings instead of silencing them
-  "-Wconf:msg=Double definition will be detected:s",
   "-Wconf:msg=any2stringadd:s",
   "-Wconf:msg=case-companion-function:s",
   "-Wconf:msg=infer-override:s",

@@ -44,7 +44,7 @@ import scala.tools.nsc.io.File
  * @see
  *   [[https://github.com/LS-Lab/KeYmaeraX-release/wiki/KeYmaera-X-Syntax-and-Informal-Semantics Wiki]]
  */
-class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
+class DLArchiveParser(val tacticParser: DLTacticParser) extends ArchiveParser {
 
   /** Which formula/term/program parser this archive parser uses. */
   private val expParser = GlobalState.parser
@@ -57,9 +57,6 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
 
   /** @inheritdoc */
   override def exprParser: Parser = expParser
-
-  /** @inheritdoc */
-  override def tacticParser: TacticParser = tacticParser
 
   val archiveParser: String => List[ParsedArchiveEntry] = input =>
     fastparse.parse(ParserHelper.checkUnicode(ParserHelper.removeBOM(input)), archiveEntries(_)) match {
