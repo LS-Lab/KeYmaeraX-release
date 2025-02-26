@@ -62,7 +62,7 @@ class TacticTestBase(registerAxTactics: Option[String] = None)
   Configuration.setConfiguration(FileConfiguration)
 
   /** Default signaler for failAfter in tests without tools. */
-  protected implicit val signaler: Signaler = { t: Thread => theInterpreter.kill(); t.interrupt() }
+  protected implicit val signaler: Signaler = { (t: Thread) => theInterpreter.kill(); t.interrupt() }
 
   @nowarn("msg=match may not be exhaustive")
   override def timeLimit: Span = {
@@ -238,7 +238,7 @@ class TacticTestBase(registerAxTactics: Option[String] = None)
         .init(interpreter = KeYmaeraXTool.InterpreterChoice.LazySequential, initDerivationInfoRegistry = initLibrary)
       withTemporaryConfig(uninterp) {
         val to = if (timeout == -1) timeLimit else Span(timeout, Seconds)
-        implicit val signaler: Signaler = { t: Thread =>
+        implicit val signaler: Signaler = { (t: Thread) =>
           theInterpreter.kill()
           tool.cancel()
           t.interrupt()

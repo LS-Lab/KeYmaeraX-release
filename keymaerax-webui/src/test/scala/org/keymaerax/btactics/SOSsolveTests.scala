@@ -172,7 +172,7 @@ class SOSsolveQELoggerTests extends TacticTestBase with PrivateMethodTester {
       case k => throw new IllegalArgumentException("Unknown key for variable ordering: " + k)
     }
     var lineCount = 0
-    QELogger.processLog(_ => Some(()), { _: Unit => lineCount = lineCount + 1 }, logfilename)
+    QELogger.processLog(_ => Some(()), { (_: Unit) => lineCount = lineCount + 1 }, logfilename)
 
     val dateStr = new SimpleDateFormat("yyyy-MM-dd-HH-mm").format(Calendar.getInstance.getTime)
 

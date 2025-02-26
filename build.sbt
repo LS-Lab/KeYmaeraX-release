@@ -16,7 +16,6 @@ ThisBuild / scalacOptions ++= Seq(
   "-Xsource:3",
   "-Xsource-features:case-apply-copy-access",
   // TODO Fix all of these warnings instead of silencing them
-  "-Wconf:msg=lambda-parens:s",
   "-Wconf:msg=package-prefix-implicits:s",
   "-Wconf:msg=scala.annotation.elidable is ignored:s",
 

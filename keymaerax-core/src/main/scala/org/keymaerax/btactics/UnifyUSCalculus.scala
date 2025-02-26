@@ -628,7 +628,7 @@ trait UnifyUSCalculus {
    * @see
    *   [[byUS()]]
    */
-  def US(fact: ProvableSig): BuiltInTactic = anon { pr: ProvableSig =>
+  def US(fact: ProvableSig): BuiltInTactic = anon { (pr: ProvableSig) =>
     {
       val sequent = pr.subgoals.head
       if (logger.isDebugEnabled) logger.debug(

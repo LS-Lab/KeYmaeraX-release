@@ -740,7 +740,7 @@ trait SequentCalculus {
     displayPremises = "Γ |- p(θ), Δ",
     displayConclusion = "Γ |- ∃x p(x), Δ",
   )
-  def existsR(e: Option[Term]): DependentPositionWithAppliedInputTactic = inputanon { pos: Position =>
+  def existsR(e: Option[Term]): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position) =>
     FOQuantifierTactics.existsInstantiate(None, e)(pos)
   }
   def existsR(e: Term): BuiltInPositionTactic = FOQuantifierTactics.existsInstantiate(None, Some(e))
@@ -856,7 +856,7 @@ trait SequentCalculus {
   /**
    * Find a succedent True or an antecedent False or the same formula left and right and give back its closing tactic.
    */
-  private def findClose: BuiltInTactic = anon { provable: ProvableSig =>
+  private def findClose: BuiltInTactic = anon { (provable: ProvableSig) =>
     @inline
     def findCloseImp(pr: ProvableSig): ProvableSig = {
       // The control structure is complicated but ensures False/True are only searched for exactly once en passent.
@@ -953,7 +953,7 @@ trait SequentCalculus {
   // if we use  anons {...}, even though the implementation is literally new DependentTactic(...). Mysterious.
   // Maybe the interpreter is checking type equality of anonymous classes somewhere...
   @Tactic(name = "id", displayPremises = "*", displayConclusion = "Γ, P |- P, Δ")
-  val id: BuiltInTactic = anon { provable: ProvableSig =>
+  val id: BuiltInTactic = anon { (provable: ProvableSig) =>
     require(provable.subgoals.size == 1, "Expects exactly 1 subgoal, but got " + provable.subgoals.size + " subgoals")
     val s = provable.subgoals.head
     s.ante.intersect(s.succ).headOption match {

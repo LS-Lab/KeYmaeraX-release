@@ -165,7 +165,7 @@ private[keymaerax] object PropositionalTactics extends TacticProvider with Loggi
    * @return
    *   The tactic.
    */
-  def propCMon(at: PosInExpr): BuiltInTactic = anon { provable: ProvableSig =>
+  def propCMon(at: PosInExpr): BuiltInTactic = anon { (provable: ProvableSig) =>
     ProofRuleTactics.requireOneSubgoal(provable, "propCMon")
     val sequent = provable.subgoals.head
     require(
@@ -255,7 +255,7 @@ private[keymaerax] object PropositionalTactics extends TacticProvider with Loggi
 
   /** @see [[SequentCalculus.modusPonens()]] */
   private[btactics] def modusPonens(assumption: AntePos, implication: AntePos): BuiltInTactic =
-    anon { pr: ProvableSig =>
+    anon { (pr: ProvableSig) =>
       ProofRuleTactics.requireOneSubgoal(pr, "modusPonens")
       val seq = pr.subgoals.head
       val p = AntePos(assumption.getIndex - (if (assumption.getIndex > implication.getIndex) 1 else 0))
@@ -321,7 +321,7 @@ private[keymaerax] object PropositionalTactics extends TacticProvider with Loggi
    * }}}
    */
   @Tactic(name = "toSingleFormula")
-  val toSingleFormula: BuiltInTactic = anon { pr: ProvableSig =>
+  val toSingleFormula: BuiltInTactic = anon { (pr: ProvableSig) =>
     ProofRuleTactics.requireOneSubgoal(pr, "toSingleFormula")
     val sequent = pr.subgoals.head
     if (sequent.ante.isEmpty && sequent.succ.isEmpty) {
@@ -401,7 +401,7 @@ private[keymaerax] object PropositionalTactics extends TacticProvider with Loggi
   def prop(
       alphaRules: (Formula, SeqPos) => List[PositionRule],
       betaRules: (Formula, SeqPos) => List[PositionRule],
-  )(alpha: List[PositionRule], beta: List[PositionRule]): BuiltInTactic = anon { provable: ProvableSig =>
+  )(alpha: List[PositionRule], beta: List[PositionRule]): BuiltInTactic = anon { (provable: ProvableSig) =>
     ProofRuleTactics.requireOneSubgoal(provable, "PropositionalTactics.prop")
 
     /** Repositions the beta rules in `r` a position up (to index-1) if they are after position `p`. */

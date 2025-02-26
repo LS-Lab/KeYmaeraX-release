@@ -1426,7 +1426,7 @@ object IntervalArithmeticV2 extends TacticProvider {
     }
 
     // Note: Tactic previously slowIntervalArithmetic
-    val intervalArithmetic = anon { seq: Sequent =>
+    val intervalArithmetic = anon { (seq: Sequent) =>
       requireOneSucc(seq, "slowIntervalArithmetic")
       val prec = 5
       val bounds = collect_bounds(prec, DecimalBounds(), seq.ante)
@@ -1434,7 +1434,7 @@ object IntervalArithmeticV2 extends TacticProvider {
       // TODO: should be cacheing bounds for subterms, but it seems we can easily afford excessive BigDecimal computations
       // recurse to find a lower bound for the expression on the rhs
       // Note: previously named "slowIntervalArithmetic.recurseLower"
-      def recurseLower: BelleExpr = anon { seq: Sequent =>
+      def recurseLower: BelleExpr = anon { (seq: Sequent) =>
         seq.succ(0) match {
           case LessEqual(_, Plus(a, b)) =>
             val aa = eval_ivl_term_in_env(prec)(bounds)(a)._1
@@ -1463,7 +1463,7 @@ object IntervalArithmeticV2 extends TacticProvider {
       }
       // recurse to find an upper bound for the expression on the lhs
       // Note: Previously named "slowIntervalArithmetic.recurseUpper"
-      def recurseUpper: BelleExpr = anon { seq: Sequent =>
+      def recurseUpper: BelleExpr = anon { (seq: Sequent) =>
         seq.succ(0) match {
           case LessEqual(Plus(a, b), _) =>
             val aA = eval_ivl_term_in_env(prec)(bounds)(a)._2

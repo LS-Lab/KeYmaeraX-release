@@ -823,7 +823,7 @@ object TactixLibrary
 
   @Tactic(name = "ODEinv", displayNameLong = Some("ODE Invariant"))
   def ODEinv(tryHard: Option[Formula], useDw: Option[Formula]): DependentPositionWithAppliedInputTactic = inputanon({
-    pos: Position =>
+    (pos: Position) =>
       DifferentialTactics.odeInvariant(tryHard.getOrElse(True) == True, useDw.getOrElse(True) == True)(pos)
   })
 
@@ -919,7 +919,7 @@ object TactixLibrary
     displayConclusion = "Γ |- [x'=f(x) & Q]p≳0, Δ",
     inputs = "g:option[term]",
   )
-  def dbx(g: Option[Term]): DependentPositionWithAppliedInputTactic = inputanon({ pos: Position =>
+  def dbx(g: Option[Term]): DependentPositionWithAppliedInputTactic = inputanon({ (pos: Position) =>
     g match {
       case None => dgDbxAuto(pos)
       case Some(cof) => dgDbx(cof)(pos)
@@ -1297,7 +1297,7 @@ object TactixLibrary
 
   /** Alpha rules are propositional rules that do not split */
   @Tactic(name = "alphaRule")
-  lazy val alphaRule: BuiltInTactic = anon { provable: ProvableSig =>
+  lazy val alphaRule: BuiltInTactic = anon { (provable: ProvableSig) =>
     ProofRuleTactics.requireOneSubgoal(provable, "alphaRule")
     val sequent = provable.subgoals.head
     sequent
@@ -1328,7 +1328,7 @@ object TactixLibrary
 
   /** Beta rules are propositional rules that split */
   @Tactic(name = "betaRule")
-  lazy val betaRule: BuiltInTactic = anon { provable: ProvableSig =>
+  lazy val betaRule: BuiltInTactic = anon { (provable: ProvableSig) =>
     ProofRuleTactics.requireOneSubgoal(provable, "betaRule")
     val sequent = provable.subgoals.head
     sequent

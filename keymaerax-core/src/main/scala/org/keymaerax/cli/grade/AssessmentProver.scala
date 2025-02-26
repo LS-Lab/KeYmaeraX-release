@@ -1361,7 +1361,7 @@ object AssessmentProver {
 
   /** Checks that formula `h` is equivalent differential invariant to formula `e`, i.e. (e<->h) & (e' -> h') */
   def dIReductionCheck(h: Formula, e: Formula): ProvableSig = {
-    val abbreviatePrimes = TacticFactory.anon { s: Sequent =>
+    val abbreviatePrimes = TacticFactory.anon { (s: Sequent) =>
       StaticSemantics
         .freeVars(s)
         .toSet
@@ -1461,7 +1461,7 @@ object AssessmentProver {
 
   @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def contractEquivalence(have: Formula, expected: Formula): ProvableSig = {
-    val rephrasePost = TacticFactory.anon { s: Sequent =>
+    val rephrasePost = TacticFactory.anon { (s: Sequent) =>
       val anteBoxes = s.ante.filter(_.isInstanceOf[Box])
       val succBoxes = s.succ.zipWithIndex.filter(_._1.isInstanceOf[Box])
       val boxes = (anteBoxes ++ succBoxes.map(_._1)).groupBy({ case Box(prg, _) => prg })

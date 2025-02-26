@@ -172,7 +172,7 @@ private object DLBySubst extends TacticProvider {
     displayPremises = "Γ |- [x:=x]P, Δ",
     displayConclusion = "Γ |- P, Δ",
   )
-  def stutter(x: Variable): DependentPositionWithAppliedInputTactic = inputanon { pos: Position => stutterFw(x)(pos) }
+  def stutter(x: Variable): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position) => stutterFw(x)(pos) }
   private[btactics] def stutterFw(x: Variable): BuiltInPositionTactic = anon { (pr: ProvableSig, pos: Position) =>
     ProofRuleTactics.requireOneSubgoal(pr, "stutter")
     val sequent = pr.subgoals.head

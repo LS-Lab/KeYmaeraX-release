@@ -85,7 +85,7 @@ object ODELiveness extends TacticProvider {
     }
 
     // Extracts the "affine part" by replacing all the LHS with 0 and then simplifying
-    val rep0 = { e: Term => if (lhsvar.contains(e)) Some(Number(0): Term) else None }
+    val rep0 = { (e: Term) => if (lhsvar.contains(e)) Some(Number(0): Term) else None }
     val rhssub = rhs.map(SubstitutionHelper.replacesFree(_)(rep0).asInstanceOf[Term])
 
     val bvec = rhssub.map(simpWithTool(tool, _))

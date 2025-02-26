@@ -48,7 +48,7 @@ private object ToolTactics extends TacticProvider {
   @Tactic(name = "useSolver")
   // NB: anon (Sequent) is necessary even though argument "seq" is not referenced:
   // this ensures that TacticInfo initialization routine can initialize byUSX without executing the body
-  def switchSolver(toolStr: String): InputTactic = inputanon { _: Sequent =>
+  def switchSolver(toolStr: String): InputTactic = inputanon { (_: Sequent) =>
     {
       val tool = ToolName.parse(toolStr)
 
@@ -267,7 +267,7 @@ private object ToolTactics extends TacticProvider {
           case tom: ToolOperationManagement =>
             val oldTimeout = tom.getOperationTimeout
             tom.setOperationTimeout(t)
-            if (oldTimeout != t) { e: BelleExpr =>
+            if (oldTimeout != t) { (e: BelleExpr) =>
               TryCatch(
                 e,
                 classOf[Throwable],
@@ -660,14 +660,14 @@ private object ToolTactics extends TacticProvider {
             case _ => Nil
           }
 
-          val optCloseT: BuiltInTactic = anon { provable: ProvableSig =>
+          val optCloseT: BuiltInTactic = anon { (provable: ProvableSig) =>
             provable.subgoals.head.succ.indexOf(True) match {
               case -1 => provable
               case i => provable(CloseTrue(SuccPos(i)), 0)
             }
           }
 
-          def satAndL: BuiltInTactic = anon { provable: ProvableSig =>
+          def satAndL: BuiltInTactic = anon { (provable: ProvableSig) =>
             val andL = provable
               .subgoals
               .head
@@ -701,7 +701,7 @@ private object ToolTactics extends TacticProvider {
               .foldLeft(provable)({ case (pr, (r, i)) => pr(r, i) })
           }
 
-          def applySingleFact(result: Formula, fact: ProvableSig): BuiltInTactic = anon { provable: ProvableSig =>
+          def applySingleFact(result: Formula, fact: ProvableSig): BuiltInTactic = anon { (provable: ProvableSig) =>
             (provable(cutLRFw(result)(SuccPos(0)), 0)
             /* show */
             (EquivifyRight(SuccPos(0)), 1)(CommuteEquivRight(SuccPos(0)), 1)(fact, 1)

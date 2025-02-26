@@ -314,7 +314,7 @@ private object EqualityTactics extends TacticProvider {
    * @return
    *   The tactic.
    */
-  def abbrv(t: Term, abbrvV: Option[Variable]): BuiltInTactic = anon { provable: ProvableSig =>
+  def abbrv(t: Term, abbrvV: Option[Variable]): BuiltInTactic = anon { (provable: ProvableSig) =>
     ProofRuleTactics.requireOneSubgoal(provable, "abbrv")
     val sequent = provable.subgoals.head
     // @Tactic in [[TactixLibrary.abbrvAll]]

@@ -426,7 +426,7 @@ class QETests extends TacticTestBase {
     }
   }
 
-  it should "use the right tool" in withQE { tool: Tool =>
+  it should "use the right tool" in withQE { (tool: Tool) =>
     withTactics {
       withDatabase { db =>
         val modelContent = """ArchiveEntry "Test" ProgramVariables Real x; End. Problem x>1 -> x>0 End. End."""

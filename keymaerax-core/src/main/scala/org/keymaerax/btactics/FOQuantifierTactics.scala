@@ -721,7 +721,7 @@ protected object FOQuantifierTactics extends TacticProvider {
 
   /** Repeated application of [[TactixLibrary.allL]] */
   // @todo won't compile @Tactic(displayLevel = "internal")
-  def allLs(vs: List[Term]): DependentPositionTactic = anon { pos: Position =>
+  def allLs(vs: List[Term]): DependentPositionTactic = anon { (pos: Position) =>
     vs.map(allL(_)(pos): BelleExpr).reduceLeft(_ & _)
   }
 }
