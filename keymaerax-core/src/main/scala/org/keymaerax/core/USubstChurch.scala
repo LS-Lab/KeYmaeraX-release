@@ -198,7 +198,7 @@ final case class USubstChurch(subsDefsInput: immutable.Seq[SubstitutionPair]) ex
     case f: Function => throw new SubstitutionClashException(
         toString,
         "",
-        e + "",
+        e.toString,
         "",
         "",
         "substitutions are not defined on an isolated Function that is not applied to arguments.",
