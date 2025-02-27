@@ -901,8 +901,7 @@ object ODEInvariance extends Logging {
     // commute it to the front to better match with realind/cont
     timetac &
       cutR(Box(ODESystem(DifferentialProduct(timer, ode), stuckDom), post))(pos) < (
-        timeBound(pos) & done // closes assuming P(init)
-        ,
+        timeBound(pos) & done, // closes assuming P(init)
         useAt(stuckRefine, PosInExpr(1 :: Nil))(pos) &
           // Clean up the goal a little bit
           chase(pos.checkTop.getPos, PosInExpr(1 :: Nil)) & useAt(propt.get)(
@@ -1120,10 +1119,11 @@ object ODEInvariance extends Logging {
           // Cuts
           dC(cutp)(pos) < (
             skip,
-            useAt(pr)(pos.checkTop.getPos, 1 :: Nil) &
-              DifferentialTactics.dG(dey, None)(pos) & // Introduce the dbx ghost
-              existsR(one)(pos) & // Anything works here, as long as it is > 0, 1 is convenient
-              useAt(ghostLem, PosInExpr(1 :: Nil))(pos.checkTop.getPos, 1 :: Nil) &
+            SeqTactic(
+              useAt(pr)(pos.checkTop.getPos, 1 :: Nil),
+              DifferentialTactics.dG(dey, None)(pos), // Introduce the dbx ghost
+              existsR(one)(pos), // Anything works here, as long as it is > 0, 1 is convenient
+              useAt(ghostLem, PosInExpr(1 :: Nil))(pos.checkTop.getPos, 1 :: Nil),
               dC(gtz)(pos) < (
                 // Do the vdbx case manually
                 boxAnd(pos) & andR(pos) < (
@@ -1133,46 +1133,66 @@ object ODEInvariance extends Logging {
                     diffInd(Symbol("diffInd"))(pos) < (
                       // Cleanup the goal
                       // Extra domain constraint from diffInd step
-                      hideL(Symbol("Llast")) &
+                      SeqTactic(
+                        hideL(Symbol("Llast")),
                         // Get rid of dbxy_=1 assumption
-                        exhaustiveEqL2R(hide = true)(Symbol("Llast")) &
+                        exhaustiveEqL2R(hide = true)(Symbol("Llast")),
                         // TODO: The next 3 steps do not work with Dconstify
                         // useAt(leftMultId)(pos++PosInExpr(0::Nil)) &
                         // useAt(pr,PosInExpr(1::Nil))(pos) &
                         // DebuggingTactics.debug("First Vdbx QE",true) &
                         // p=0 must be true initially
-                        QE & DebuggingTactics.done("Vdbx condition must hold in the beginning"),
-                      cohideOnlyR(Symbol("Rlast")) & SaturateTactic(Dassignb(1)) &
+                        QE,
+                        DebuggingTactics.done("Vdbx condition must hold in the beginning"),
+                      ),
+                      SeqTactic(
+                        cohideOnlyR(Symbol("Rlast")),
+                        SaturateTactic(Dassignb(1)),
                         // At this point, we should get to (gy+0)p + y(p') <= 0
                         // or the negated version ((-g)y+0)p + y(p') >= 0
                         // Remove the y, turning the result into p' <= gp or gp <= p'
-                        (if (negate) useAt(ghostLem2, PosInExpr(1 :: Nil))(1)
-                         else useAt(ghostLem1, PosInExpr(1 :: Nil))(1)) &
+                        if (negate) useAt(ghostLem2, PosInExpr(1 :: Nil))(1)
+                        else useAt(ghostLem1, PosInExpr(1 :: Nil))(1),
                         andR(1) < (
                           andL(Symbol("Llast")) & close,
                           // Now we need a real rearrangement using Q |- p' = Gp
                           cut(Equal(lie, Times(two, dp))) < (
-                            exhaustiveEqL2R(Symbol("Llast")) & hideL(Symbol("Llast")) &
+                            SeqTactic(
+                              exhaustiveEqL2R(Symbol("Llast")),
+                              hideL(Symbol("Llast")),
                               // Finally apply the Frobenius bound
-                              cohideR(1) & byUS(frobenius),
+                              cohideR(1),
+                              byUS(frobenius),
+                            ),
                             // This is the only "real" use of QE.
-                            DebuggingTactics.debug("Second Vdbx QE", debugTactic) &
-                              hideR(1) & QE & DebuggingTactics.done("Vdbx condition must be preserved")
+                            SeqTactic(
+                              DebuggingTactics.debug("Second Vdbx QE", debugTactic),
+                              hideR(1),
+                              QE,
+                              DebuggingTactics.done("Vdbx condition must be preserved"),
+                            )
                           )
-                        )
+                        ),
+                      )
                     )
                   )(pos)
                 ),
-                DifferentialTactics.dG(dez, Some(pcz))(pos) & // Introduce the dbx ghost
-                  existsR(one)(pos) & // The sqrt inverse of y, 1 is convenient
-                  diffInd(Symbol("diffInd"))(pos) // Closes z > 0 invariant with another diff ghost
-                  < (
-                    hideL(Symbol("Llast")) & exhaustiveEqL2R(hide = true)(Symbol("Llast")) * 2 & useAt(dbxEqOne)(
-                      pos
-                    ) & closeT,
+                SeqTactic(
+                  DifferentialTactics.dG(dez, Some(pcz))(pos), // Introduce the dbx ghost
+                  existsR(one)(pos), // The sqrt inverse of y, 1 is convenient
+                  // Closes z > 0 invariant with another diff ghost
+                  diffInd(Symbol("diffInd"))(pos) < (
+                    SeqTactic(
+                      hideL(Symbol("Llast")),
+                      exhaustiveEqL2R(hide = true)(Symbol("Llast")) * 2,
+                      useAt(dbxEqOne)(pos),
+                      closeT,
+                    ),
                     cohideR(Symbol("Rlast")) & SaturateTactic(Dassignb(1)) & byUS(dbxCond)
-                  )
-              )
+                  ),
+                )
+              ),
+            )
           )
       }
     }
@@ -1950,13 +1970,21 @@ object ODEInvariance extends Logging {
           .doIfElse(_.subgoals.forall(s => !StaticSemantics.symbols(s(pos.top)).contains("t_".asVariable)))(
             useAt(Ax.RIclosedgeq)(pos) & andR(pos) < (
               implyR(pos) & r1 & ?(id) & timeoutQE & done, // common case?
-              cohideR(pos) & composeb(1) & dW(1) & assignb(1) &
-                implyR(1) & cutR(pf)(1) < (
-                  hideL(-3) & hideL(-2) & r2 & DebuggingTactics
-                    .debug("QE step", doPrint = debugTactic) & qetac & done, skip
-                ) // Don't bother running the rest if QE fails
-                & cohide2(-3, 1) & DebuggingTactics
-                  .debug("Finish step", doPrint = debugTactic) & implyR(1) & lpclosedPlus(inst)
+              SeqTactic(
+                cohideR(pos),
+                composeb(1),
+                dW(1),
+                assignb(1),
+                implyR(1),
+                cutR(pf)(1) < (
+                  hideL(-3) & hideL(-2) & r2 & DebuggingTactics.debug("QE step", doPrint = debugTactic) & qetac & done,
+                  skip
+                ), // Don't bother running the rest if QE fails
+                cohide2(-3, 1),
+                DebuggingTactics.debug("Finish step", doPrint = debugTactic),
+                implyR(1),
+                lpclosedPlus(inst),
+              )
             ),
             DebuggingTactics.error("Inapplicable: t_ occurs"),
           )
@@ -2460,117 +2488,228 @@ object ODEInvariance extends Logging {
     // Can skip the O -> o step for forward branch if there are no equalities in domain
     val skipLock = domainEqualities(sys.constraint).isEmpty
 
-    useAt(Ax.RI)(pos) & allR(pos) &
-      useAt(and_imp, PosInExpr(0 :: Nil))(pos ++ PosInExpr(1 :: 1 :: Nil)) &
-      useAt(imp_and, PosInExpr(0 :: Nil))(pos ++ PosInExpr(1 :: Nil)) & boxAnd(pos) & andR(pos) < (
+    SeqTactic(
+      useAt(Ax.RI)(pos),
+      allR(pos),
+      useAt(and_imp, PosInExpr(0 :: Nil))(pos ++ PosInExpr(1 :: 1 :: Nil)),
+      useAt(imp_and, PosInExpr(0 :: Nil))(pos ++ PosInExpr(1 :: Nil)),
+      boxAnd(pos),
+      andR(pos) < (
         cutR(Or(Equal(tvar, svar), NotEqual(svar, tvar)))(pos) < (
           cohideR(pos) & QE,
           // implyR moves succedent to 'Rlast
-          implyR(pos) & orL(Symbol("Llast")) < (
-            // initial branch
-            useAt(Ax.DCC, PosInExpr(1 :: Nil))(Symbol("Rlast")) & andR(Symbol("Rlast")) < (
-              timeBound(Symbol("Rlast")),
-              cohideOnlyR(Symbol("Rlast")) & cohideOnlyL(Symbol("Llast")) &
-                dC(GreaterEqual(tvar, svar))(1) < (
-                  DW(1) & G(1) & implyR(1) & implyR(1) &
-                    andL(-1) & hideL(-2) &
-                    dC(Greater(tvar, svar))(1) < (
-                      DW(1) & G(1) & implyR(1) & andL(-1) & hideL(-1) & QE,
-                      DifferentialTactics.dI(1)
-                    ),
-                  DifferentialTactics.dI(1)
-                )
-            ),
-            // backwards branch
-            DW(Symbol("Rlast")) & useAt(Ax.box, PosInExpr(1 :: Nil))(Symbol("Rlast")) & notR(Symbol("Rlast")) &
-              cutL(cutfml)(Symbol("Llast")) < (
-                (existsL(Symbol("Llast")) * newnames.length) &
-                  useAt(Ax.pVd)(Symbol("Llast")) & andL(Symbol("Llast")) &
-                  notL(Symbol("Llast")) & useAt(dadj)(Symbol("Llast")) &
-                  cutL(revMon)(Symbol("Llast")) < (
-                    implyR(Symbol("Rlast")) & andL(Symbol("Llast")) & hideL(Symbol("Llast")) &
-                      cut(Or(nprstarpf, rennqrstarpf)) < (
-                        // Cleanup the sequent
-                        (hideL(-1) * seq
-                          .ante
-                          .length) & // hide original antecedents //@todo may cause singularities in dG!
-                          hideL(-1) & // hide s_!=t_
-                          cohideOnlyR(Symbol("Rlast")) & // hide all succedents
-                          hideL(-2) & // hide domain
-                          useAt(Ax.UniqIff, PosInExpr(1 :: Nil))(-1) & andL(-1) &
-                          implyR(1) & exchangeL(-1, -4) & exchangeL(-3, -4) & orL(-3) < (
-                            // (!P)-* branch
-                            cutR(nprlp)(1) < (
-                              hideL(-4) & lpgen(nprstarinst),
-                              hideL(-1) & hideL(-1) & hideL(-1) & implyR(1) & nptac &
-                                andLi & useAt(Ax.UniqIff, PosInExpr(0 :: Nil))(-1) &
-                                diamondd(-1) & hideR(1) & notL(-1) & DW(1) & G(1) & useAt(Ax.notNotEqual)(1, 1 :: Nil) &
-                                implyR(1) & andL(-1) & orL(-1) < (orL(-2) < (notL(-2) & id, id), id)
-                            ),
-                            // (!Q)-* branch
-                            cutR(rennqrlp)(1) < (
-                              hideL(-4) & lpgen(rennqrstarinst),
-                              hideL(-1) & hideL(Symbol("Llast")) & hideL(Symbol("Llast")) & implyR(1) & rennqtac &
-                                andLi & useAt(Ax.UniqIff, PosInExpr(0 :: Nil))(-1) &
-                                diamondd(-1) & hideR(1) & notL(-1) & DW(1) & G(1) & useAt(Ax.notNotEqual)(1, 1 :: Nil) &
-                                implyR(1) & andL(-1) & orL(-2) < (notL(-2) & id, id)
-                            )
-                          ),
-                        ToolTactics.hideNonFOL & ?(QE & done)
+          SeqTactic(
+            implyR(pos),
+            orL(Symbol("Llast")) < (
+              // initial branch
+              useAt(Ax.DCC, PosInExpr(1 :: Nil))(Symbol("Rlast")) & andR(Symbol("Rlast")) < (
+                timeBound(Symbol("Rlast")),
+                SeqTactic(
+                  cohideOnlyR(Symbol("Rlast")),
+                  cohideOnlyL(Symbol("Llast")),
+                  dC(GreaterEqual(tvar, svar))(1) < (
+                    SeqTactic(
+                      DW(1),
+                      G(1),
+                      implyR(1),
+                      implyR(1),
+                      andL(-1),
+                      hideL(-2),
+                      dC(Greater(tvar, svar))(1) < (
+                        DW(1) & G(1) & implyR(1) & andL(-1) & hideL(-1) & QE, DifferentialTactics.dI(1)
                       ),
-                    // useAt(Ax.UniqIff,PosInExpr(1::Nil))('Llast),
-                    cohideOnlyL(Symbol("Llast")) & cohideOnlyR(Symbol("Rlast")) & useAt(Ax.Kd, PosInExpr(1 :: Nil))(1) &
-                      dW(1) & QE // todo: can do manually
+                    ),
+                    DifferentialTactics.dI(1)
                   ),
-                cohideR(Symbol("Rlast")) & implyR(1) & barcantac &
-                  mond & existstac & andR(1) < (cohideR(1) & QE, id) // todo: maybe prove manually
+                )
+              ),
+              // backwards branch
+              SeqTactic(
+                DW(Symbol("Rlast")),
+                useAt(Ax.box, PosInExpr(1 :: Nil))(Symbol("Rlast")),
+                notR(Symbol("Rlast")),
+                cutL(cutfml)(Symbol("Llast")) < (
+                  SeqTactic(
+                    existsL(Symbol("Llast")) * newnames.length,
+                    useAt(Ax.pVd)(Symbol("Llast")),
+                    andL(Symbol("Llast")),
+                    notL(Symbol("Llast")),
+                    useAt(dadj)(Symbol("Llast")),
+                    cutL(revMon)(Symbol("Llast")) < (
+                      SeqTactic(
+                        implyR(Symbol("Rlast")),
+                        andL(Symbol("Llast")),
+                        hideL(Symbol("Llast")),
+                        cut(Or(nprstarpf, rennqrstarpf)) < (
+                          // Cleanup the sequent
+                          SeqTactic(
+                            // hide original antecedents
+                            // @todo may cause singularities in dG!
+                            hideL(-1) * seq.ante.length,
+                            hideL(-1), // hide s_!=t_
+                            cohideOnlyR(Symbol("Rlast")), // hide all succedents
+                            hideL(-2), // hide domain
+                            useAt(Ax.UniqIff, PosInExpr(1 :: Nil))(-1),
+                            andL(-1),
+                            implyR(1),
+                            exchangeL(-1, -4),
+                            exchangeL(-3, -4),
+                            orL(-3) < (
+                              // (!P)-* branch
+                              cutR(nprlp)(1) < (
+                                hideL(-4) & lpgen(nprstarinst),
+                                SeqTactic(
+                                  hideL(-1),
+                                  hideL(-1),
+                                  hideL(-1),
+                                  implyR(1),
+                                  nptac,
+                                  andLi,
+                                  useAt(Ax.UniqIff, PosInExpr(0 :: Nil))(-1),
+                                  diamondd(-1),
+                                  hideR(1),
+                                  notL(-1),
+                                  DW(1),
+                                  G(1),
+                                  useAt(Ax.notNotEqual)(1, 1 :: Nil),
+                                  implyR(1),
+                                  andL(-1),
+                                  orL(-1) < (orL(-2) < (notL(-2) & id, id), id),
+                                )
+                              ),
+                              // (!Q)-* branch
+                              cutR(rennqrlp)(1) < (
+                                hideL(-4) & lpgen(rennqrstarinst),
+                                SeqTactic(
+                                  hideL(-1),
+                                  hideL(Symbol("Llast")),
+                                  hideL(Symbol("Llast")),
+                                  implyR(1),
+                                  rennqtac,
+                                  andLi,
+                                  useAt(Ax.UniqIff, PosInExpr(0 :: Nil))(-1),
+                                  diamondd(-1),
+                                  hideR(1),
+                                  notL(-1),
+                                  DW(1),
+                                  G(1),
+                                  useAt(Ax.notNotEqual)(1, 1 :: Nil),
+                                  implyR(1),
+                                  andL(-1),
+                                  orL(-2) < (notL(-2) & id, id),
+                                )
+                              )
+                            ),
+                          ),
+                          ToolTactics.hideNonFOL & ?(QE & done)
+                        ),
+                      ),
+                      // useAt(Ax.UniqIff,PosInExpr(1::Nil))('Llast),
+                      SeqTactic(
+                        cohideOnlyL(Symbol("Llast")),
+                        cohideOnlyR(Symbol("Rlast")),
+                        useAt(Ax.Kd, PosInExpr(1 :: Nil))(1),
+                        dW(1),
+                        QE, // todo: can do manually
+                      )
+                    ),
+                  ),
+                  SeqTactic(
+                    cohideR(Symbol("Rlast")),
+                    implyR(1),
+                    barcantac,
+                    mond,
+                    existstac,
+                    andR(1) < (cohideR(1) & QE, id), // todo: maybe prove manually
+                  )
+                ),
               )
+            ),
           )
         ),
-        dW(pos) & andL(-1) & hideL(-2) & implyR(1) & implyR(1) & implyR(1) &
-          ptac & cutR(Or(pstarpf, nqstarpf))(1) < (
+        SeqTactic(
+          dW(pos),
+          andL(-1),
+          hideL(-2),
+          implyR(1),
+          implyR(1),
+          implyR(1),
+          ptac,
+          cutR(Or(pstarpf, nqstarpf))(1) < (
             ToolTactics.hideNonFOL & ?(QE & done), // prove P* | (!Q)* from assumptions
-            (if (skipLock) skip
-             else {
-               cutL(qlpi)(Symbol("Llast")) < (
-                 skip,
-                 cohideOnlyR(Symbol("Rlast")) & useAt(Ax.DRd, PosInExpr(1 :: Nil))(1) &
-                   dC(Imply(Equal(tvar, svar), sys.constraint))(1) < (
-                     DW(1) & G(1) &
-                       implyR(1) & andL(-1) &
-                       orL(-1) < (id, implyL(-2) < (id, id)),
-                     useAt(Ax.DCC, PosInExpr(1 :: Nil))(1) & andR(1) < (
-                       cohideOnlyL(-1) & timeBound(1),
-                       dC(GreaterEqual(tvar, svar))(1) < (
-                         DW(1) & G(1) & implyR(1) & implyR(1) &
-                           andL(-1) & hideL(-2) &
-                           dC(Greater(tvar, svar))(1) < (
-                             DW(1) & G(1) & implyR(1) & andL(-1) & hideL(-1) & QE,
-                             DifferentialTactics.dI(1)
-                           ),
-                         cohideOnlyL(-2) & DifferentialTactics.dI(1)
-                       )
-                     )
-                   )
-               )
-             }) &
-              implyR(1) & orL(Symbol("Llast")) < (
-                // P* branch
-                hideL(-3) & hideL(-1) & // set up into shape expected by lpgen
-                  lpgen(pstarinst),
-                hideL(-3) & hideL(-1) & cutR(nqlp)(1) < (
-                  lpgen(nqstarinst),
-                  hideL(-1) & hideL(Symbol("Llast")) & implyR(1) & nqtac & andLi & useAt(
-                    Ax.UniqIff,
-                    PosInExpr(0 :: Nil),
-                  )(-1) &
-                    diamondd(-1) & hideR(1) & notL(-1) & DW(1) & G(1) & useAt(Ax.notNotEqual)(1, 1 :: Nil) &
-                    implyR(1) & andL(-1) &
-                    (if (skipLock) orL(-1) < (orL(-2) < (notL(-2) & id, id), id) else orL(-2) < (notL(-2) & id, id))
+            SeqTactic(
+              if (skipLock) skip
+              else {
+                cutL(qlpi)(Symbol("Llast")) < (
+                  skip,
+                  SeqTactic(
+                    cohideOnlyR(Symbol("Rlast")),
+                    useAt(Ax.DRd, PosInExpr(1 :: Nil))(1),
+                    dC(Imply(Equal(tvar, svar), sys.constraint))(1) < (
+                      SeqTactic(DW(1), G(1), implyR(1), andL(-1), orL(-1) < (id, implyL(-2) < (id, id))),
+                      SeqTactic(
+                        useAt(Ax.DCC, PosInExpr(1 :: Nil))(1),
+                        andR(1) < (
+                          cohideOnlyL(-1) & timeBound(1),
+                          dC(GreaterEqual(tvar, svar))(1) < (
+                            SeqTactic(
+                              DW(1),
+                              G(1),
+                              implyR(1),
+                              implyR(1),
+                              andL(-1),
+                              hideL(-2),
+                              dC(Greater(tvar, svar))(1) < (
+                                DW(1) & G(1) & implyR(1) & andL(-1) & hideL(-1) & QE,
+                                DifferentialTactics.dI(1)
+                              ),
+                            ),
+                            cohideOnlyL(-2) & DifferentialTactics.dI(1)
+                          )
+                        ),
+                      )
+                    ),
+                  )
                 )
-              )
-          )
-      )
+              },
+              implyR(1),
+              orL(Symbol("Llast")) < (
+                // P* branch
+                SeqTactic(
+                  hideL(-3),
+                  hideL(-1), // set up into shape expected by lpgen
+                  lpgen(pstarinst),
+                ),
+                SeqTactic(
+                  hideL(-3),
+                  hideL(-1),
+                  cutR(nqlp)(1) < (
+                    lpgen(nqstarinst),
+                    SeqTactic(
+                      hideL(-1),
+                      hideL(Symbol("Llast")),
+                      implyR(1),
+                      nqtac,
+                      andLi,
+                      useAt(Ax.UniqIff, PosInExpr(0 :: Nil))(-1),
+                      diamondd(-1),
+                      hideR(1),
+                      notL(-1),
+                      DW(1),
+                      G(1),
+                      useAt(Ax.notNotEqual)(1, 1 :: Nil),
+                      implyR(1),
+                      andL(-1),
+                      (if (skipLock) orL(-1) < (orL(-2) < (notL(-2) & id, id), id) else orL(-2) < (notL(-2) & id, id)),
+                    )
+                  ),
+                )
+              ),
+            )
+          ),
+        )
+      ),
+    )
   })
 
   private lazy val and_imp = remember("p() & q() <-> p() & (p() -> q())".asFormula, prop)
@@ -2643,33 +2782,61 @@ object ODEInvariance extends Logging {
 
     val pr = proveBy(
       fml,
-      implyR(1) & sttac &
+      SeqTactic(
+        implyR(1),
+        sttac,
         cutR(boxeq)(1) < (
           hideL(-1) & ODEInvariance.dRI(1),
-          cohideOnlyL(-1) & implyR(1) & ODELiveness.bDG(sys.ode, normbound)(1) < (
-            dC(eq)(1) < (
-              DifferentialTactics.diffWeakenG(1) & implyR(1) & andL(-1) & hideL(-1) &
-                SaturateTactic(andL(Symbol("L"))) & SaturateTactic(exhaustiveEqL2R(hide = true)(Symbol("L"))) & QE,
-              id
-            ),
-            dC(eq)(1) < (
-              hideL(-2) & dC(px)(1) < (
-                DifferentialTactics.diffWeakenG(1) & implyR(1) & andL(-1) & implyRi()(AntePos(1), SuccPos(0)) &
-                  andL(-1) & hideL(-1) & SaturateTactic(andL(Symbol("L"))) & SaturateTactic(
-                    exhaustiveEqL2R(hide = true)(Symbol("L"))
-                  ) & implyR(1) & id,
-                dR(sys.constraint)(1) < (
-                  ODELiveness.odeUnify(1) & DifferentialTactics.diffWeakenG(1) & implyR(1) & andL(-1) & id,
-                  DifferentialTactics.diffWeakenG(1) & implyR(1) & andL(-1) & implyRi()(AntePos(0), SuccPos(0)) &
-                    SaturateTactic(andL(Symbol("L"))) & SaturateTactic(
-                      exhaustiveEqL2R(hide = true)(Symbol("L"))
-                    ) & implyR(1) & id
-                )
+          SeqTactic(
+            cohideOnlyL(-1),
+            implyR(1),
+            ODELiveness.bDG(sys.ode, normbound)(1) < (
+              dC(eq)(1) < (
+                SeqTactic(
+                  DifferentialTactics.diffWeakenG(1),
+                  implyR(1),
+                  andL(-1),
+                  hideL(-1),
+                  SaturateTactic(andL(Symbol("L"))),
+                  SaturateTactic(exhaustiveEqL2R(hide = true)(Symbol("L"))),
+                  QE,
+                ),
+                id
               ),
-              id
-            )
+              dC(eq)(1) < (
+                hideL(-2) & dC(px)(1) < (
+                  SeqTactic(
+                    DifferentialTactics.diffWeakenG(1),
+                    implyR(1),
+                    andL(-1),
+                    implyRi()(AntePos(1), SuccPos(0)),
+                    andL(-1),
+                    hideL(-1),
+                    SaturateTactic(andL(Symbol("L"))),
+                    SaturateTactic(exhaustiveEqL2R(hide = true)(Symbol("L"))),
+                    implyR(1),
+                    id,
+                  ),
+                  dR(sys.constraint)(1) < (
+                    ODELiveness.odeUnify(1) & DifferentialTactics.diffWeakenG(1) & implyR(1) & andL(-1) & id,
+                    SeqTactic(
+                      DifferentialTactics.diffWeakenG(1),
+                      implyR(1),
+                      andL(-1),
+                      implyRi()(AntePos(0), SuccPos(0)),
+                      SaturateTactic(andL(Symbol("L"))),
+                      SaturateTactic(exhaustiveEqL2R(hide = true)(Symbol("L"))),
+                      implyR(1),
+                      id,
+                    )
+                  )
+                ),
+                id
+              )
+            ),
           )
         ),
+      ),
     )
     pr
   }
