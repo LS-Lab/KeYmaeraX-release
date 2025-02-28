@@ -99,7 +99,18 @@ object DerivationInfoRegistry extends Logging {
     // We pass null since the field is static.
     val instance = moduleField.get(null)
 
-    clazz
+    val methodErrors = clazz
+      .getDeclaredMethods
+      .toSeq
+      .filter(_.isAnnotationPresent(classOf[Derivation]))
+      .map { method =>
+        val className = method.getDeclaringClass.getName
+        val methodName = method.getName
+        val annotationName = classOf[Derivation].getSimpleName
+        s"Method (in $className) $methodName is annotated @$annotationName, but only fields are supported"
+      }
+
+    val fieldErrors = clazz
       .getDeclaredFields
       .toSeq
       .filter(_.isAnnotationPresent(classOf[Derivation]))
@@ -122,6 +133,8 @@ object DerivationInfoRegistry extends Logging {
             Some(s"Error while registering (in $className) $fieldName")
         }
       )
+
+    methodErrors ++ fieldErrors
   }
 
   /**
@@ -136,13 +149,11 @@ object DerivationInfoRegistry extends Logging {
    */
   private def registerDerivationsGlobally(): Seq[String] = {
     import scala.jdk.CollectionConverters.*
-    new ClassGraph()
-      .enableAllInfo()
-      .scan()
-      .getClassesWithFieldAnnotation(classOf[Derivation])
-      .asScala
-      .toSeq
-      .flatMap(info => registerDerivationsFromObject(info.loadClass()))
+    val scan = new ClassGraph().enableAllInfo().scan()
+    val withFieldAnnotation = scan.getClassesWithFieldAnnotation(classOf[Derivation]).asScala.toSet
+    val withMethodAnnotation = scan.getClassesWithMethodAnnotation(classOf[Derivation]).asScala.toSet
+    val withAnnotation = withFieldAnnotation | withMethodAnnotation
+    withAnnotation.toSeq.sorted.flatMap(info => registerDerivationsFromObject(info.loadClass()))
   }
 
   /** Has the global DerivationInfo list been initialized? */
