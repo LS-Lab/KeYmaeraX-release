@@ -6,11 +6,11 @@
 package org.keymaerax.btactics
 
 import io.github.classgraph.ClassGraph
-import org.keymaerax.Logging
-import org.keymaerax.bellerophon._
-import org.keymaerax.btactics.macros._
-import org.keymaerax.core._
+import org.keymaerax.bellerophon.*
+import org.keymaerax.btactics.macros.*
+import org.keymaerax.core.*
 import org.keymaerax.core.btactics.annotations.Derivation
+import org.keymaerax.{Configuration, Logging}
 
 import java.lang.reflect.{Field, InvocationTargetException}
 import scala.annotation.{nowarn, tailrec}
@@ -85,10 +85,19 @@ object DerivationInfoRegistry extends Logging {
    * @return
    *   A list of fields that failed to initialize and register, along with the cause.
    */
-  private def registerDerivationsFromObject(clazz: Class[_]): Seq[(Field, Throwable)] = {
+  private def registerDerivationsFromObject(clazz: Class[?]): Seq[String] = {
     // An object's instance can be located through its public static final MODULE$ field.
-    // TODO Fail gracefully if this is not a Scala object
-    val instance = clazz.getField("MODULE$").get(null)
+    val moduleField =
+      try clazz.getField("MODULE$")
+      catch {
+        case _: NoSuchFieldException =>
+          val className = clazz.getName
+          val annotationName = classOf[Derivation].getSimpleName
+          return Seq(s"$className is not a Scala object, but it contains @$annotationName annotations")
+      }
+
+    // We pass null since the field is static.
+    val instance = moduleField.get(null)
 
     clazz
       .getDeclaredFields
@@ -98,7 +107,20 @@ object DerivationInfoRegistry extends Logging {
         try {
           registerDerivationFromField(clazz, instance, field)
           None
-        } catch { case t: Throwable => Some(field -> t) }
+        } catch {
+          case t: Throwable =>
+            val className = field.getDeclaringClass.getName
+            val fieldName = field.getName
+
+            if (Configuration.getBoolean(Configuration.Keys.DEBUG).getOrElse(false)) {
+              // For debugging, the stack trace might be useful.
+              println()
+              println(s"Error while registering (in $className) $fieldName: $t")
+              t.printStackTrace(System.out)
+            }
+
+            Some(s"Error while registering (in $className) $fieldName")
+        }
       )
   }
 
@@ -112,8 +134,8 @@ object DerivationInfoRegistry extends Logging {
    * @return
    *   A list of fields that failed to initialize and register, along with the cause.
    */
-  private def registerDerivationsGlobally(): Seq[(Field, Throwable)] = {
-    import scala.jdk.CollectionConverters._
+  private def registerDerivationsGlobally(): Seq[String] = {
+    import scala.jdk.CollectionConverters.*
     new ClassGraph()
       .enableAllInfo()
       .scan()
@@ -135,26 +157,18 @@ object DerivationInfoRegistry extends Logging {
    * require loading a number of classes, which triggers their static initializers and thus requires some attention to
    * initialization order.
    *
-   * Sanity checks ensure a runtime error is raised if @Tactic is used outside the allowed classes.
+   * @return
+   *   a list of errors encountered during initialization
    */
-  def init(initLibrary: Boolean = true): Unit = {
-    /* Initialization is relatively slow, so only initialize once*/
-    if (isInit) return
+  def init(initLibrary: Boolean = true): Seq[String] = {
+    // Initialization is relatively slow, so only initialize once
+    if (isInit) return Nil
+
     // Remember that initialization is in progress,
     DerivationInfo._initStatus = DerivationInfo.InitInProgress
-    if (!initLibrary) return // Advanced use - user takes over in-progress initialization
+    if (!initLibrary) return Nil // Advanced use - user takes over in-progress initialization
 
-    val derivationErrors = registerDerivationsGlobally()
-    if (derivationErrors.nonEmpty) {
-      println()
-      println("Failed to initialize derivations:")
-      derivationErrors.foreach { case (field, _) =>
-        println(s"- (in ${field.getDeclaringClass.getName}) ${field.getName}")
-      }
-      println()
-    }
-
-    DerivationInfo._initStatus = DerivationInfo.InitComplete
-    if (derivationErrors.nonEmpty) { throw derivationErrors.head._2 }
+    try registerDerivationsGlobally()
+    finally DerivationInfo._initStatus = DerivationInfo.InitComplete
   }
 }

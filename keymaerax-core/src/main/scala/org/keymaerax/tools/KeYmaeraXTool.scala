@@ -6,13 +6,12 @@
 /** @note Code Review: 2016-08-02 */
 package org.keymaerax.tools
 
+import org.keymaerax.bellerophon.*
 import org.keymaerax.bellerophon.IOListeners.{QEFileLogListener, QELogListener, StopwatchListener}
-import org.keymaerax.bellerophon._
-import org.keymaerax.btactics._
+import org.keymaerax.btactics.*
 import org.keymaerax.core.{Formula, PrettyPrinter, Program, Sequent}
 import org.keymaerax.infrastruct.Augmentors.SequentAugmentor
 import org.keymaerax.{Configuration, GlobalState}
-import org.slf4j.LoggerFactory
 
 import scala.annotation.tailrec
 
@@ -131,42 +130,23 @@ object KeYmaeraXTool extends Tool {
         case _ => None
       }
 
-      try { DerivationInfoRegistry.init(initDerivationInfoRegistry) }
-      catch {
-        case t: Throwable =>
-          /* During initialization, lemma derivation happens via reflective method access
-           * (See Ax.scala #prepopulateDerivedLemmaDatabase).
-           * Exceptions are thereby hidden behind an InvokationTargetException.
-           * Since Java 1.4, the target of this exception is also returned by #getCause(),
-           * so we can just walk up the cause chain and find the actual Exception. */
-          val details = rootCause(t) match {
-            case ex: MathematicaComputationTimedOutException =>
-              s"""Timed out while trying to derive lemmas. Continuing with restricted functionality!
-                 |HINT: Try to increase the timeout using the following key in your config file:
-                 |
-                 |   AXIOM_DERIVE_TIMEOUT = 120
-                 |                      ^^^^^
-                 |
-                 |DETAILS: ${ex.getMessage}""".stripMargin
-            case ex => s"""Timed out while trying to derive lemmas. Continuing with restricted functionality!
-                          |DETAILS: ${ex.getMessage}""".stripMargin
-          }
+      val errors = DerivationInfoRegistry.init(initDerivationInfoRegistry)
+      if (errors.nonEmpty) {
+        println()
+        println("Errors occurred during derived axiom initialization.")
+        println("Continuing with restricted functionality!")
+        println("For more details, set the --debug flag.")
+        for (error <- errors) println(s" - $error")
+        println()
+        println("Try increasing the derivation timeout by setting AXIOM_DERIVE_TIMEOUT")
+        println("to a higher value (specified in seconds) in your config file.")
+        println()
+      }
 
-          // TODO: until logging is sorted out
-          println(t.getMessage)
-          println()
-          println(details)
-
-          LoggerFactory.getLogger(getClass).warn(details, t)
-
-          if (Configuration.getBoolean(Configuration.Keys.DEBUG).contains(true)) { t.printStackTrace() }
-          else { println("Run with -debug for more details.") }
-      } finally {
-        // Restore old timeout
-        (oldTimeout, ToolProvider.qeTool()) match {
-          case (Some(to), Some(t: ToolOperationManagement)) => t.setOperationTimeout(to)
-          case _ => // nothing to do
-        }
+      // Restore old timeout
+      (oldTimeout, ToolProvider.qeTool()) match {
+        case (Some(to), Some(t: ToolOperationManagement)) => t.setOperationTimeout(to)
+        case _ => // nothing to do
       }
     }
 
