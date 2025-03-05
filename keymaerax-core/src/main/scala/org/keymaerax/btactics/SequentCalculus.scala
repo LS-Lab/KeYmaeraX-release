@@ -171,7 +171,7 @@ object SequentCalculus {
     displayConclusion = "¬P, Γ |- Δ",
   )
   val notL: CoreLeftTactic = coreanon { (pr: ProvableSig, pos: AntePosition) => pr(NotLeft(pos.checkTop), 0) }
-  private[btactics] lazy val notLInfo: TacticInfo = TacticInfo("notL")
+  private[btactics] lazy val notLInfo: TacticInfo = notLInfoFromTacticMacro
 
   /** !R Not right: move an negation in the succedent to the antecedent ([[org.keymaerax.core.NotRight NotRight]]) */
   @Tactic(
@@ -182,7 +182,7 @@ object SequentCalculus {
     displayConclusion = "Γ |- ¬P, Δ",
   )
   val notR: CoreRightTactic = coreanon { (pr: ProvableSig, pos: SuccPosition) => pr(NotRight(pos.checkTop), 0) }
-  private[btactics] lazy val notRInfo: TacticInfo = TacticInfo("notR")
+  private[btactics] lazy val notRInfo: TacticInfo = notRInfoFromTacticMacro
 
   /**
    * &L And left: split a conjunction in the antecedent into separate assumptions ([[org.keymaerax.core.AndLeft
@@ -196,7 +196,7 @@ object SequentCalculus {
     displayConclusion = "P∧Q, Γ |- Δ",
   )
   val andL: CoreLeftTactic = coreanon { (pr: ProvableSig, pos: AntePosition) => pr(AndLeft(pos.checkTop), 0) }
-  private[btactics] lazy val andLInfo: TacticInfo = TacticInfo("andL")
+  private[btactics] lazy val andLInfo: TacticInfo = andLInfoFromTacticMacro
 
   /**
    * Inverse of [[andL]].
@@ -223,7 +223,7 @@ object SequentCalculus {
   val andR: DependentPositionTactic = anon { (pos: Position, seq: Sequent) =>
     corelabelledby("andR", Right(andRRule), And.unapply, pos, seq)
   }
-  private[btactics] lazy val andRInfo: TacticInfo = TacticInfo("andR")
+  private[btactics] lazy val andRInfo: TacticInfo = andRInfoFromTacticMacro
   @Tactic(
     name = "andRRule",
     displayName = Some("∧R"),
@@ -247,7 +247,7 @@ object SequentCalculus {
   val orL: DependentPositionTactic = anon { (pos: Position, seq: Sequent) =>
     corelabelledby("orL", Left(orLRule), Or.unapply, pos, seq)
   }
-  private[btactics] lazy val orLInfo: TacticInfo = TacticInfo("orL")
+  private[btactics] lazy val orLInfo: TacticInfo = orLInfoFromTacticMacro
   @Tactic(
     name = "orLRule",
     displayName = Some("∨L"),
@@ -280,7 +280,7 @@ object SequentCalculus {
     displayConclusion = "Γ |- P∨Q, Δ",
   )
   val orR: CoreRightTactic = coreanon { (pr: ProvableSig, pos: SuccPosition) => pr(OrRight(pos.checkTop), 0) }
-  private[btactics] lazy val orRInfo: TacticInfo = TacticInfo("orR")
+  private[btactics] lazy val orRInfo: TacticInfo = orRInfoFromTacticMacro
 
   /**
    * ->L Imply left: use an implication in the antecedent by proving its left-hand side on one branch and using its
@@ -296,7 +296,7 @@ object SequentCalculus {
   val implyL: DependentPositionTactic = anon { (pos: Position, seq: Sequent) =>
     corelabelledby("implyL", Left(implyLRule), Imply.unapply, pos, seq)
   }
-  private[btactics] lazy val implyLInfo: TacticInfo = TacticInfo("implyL")
+  private[btactics] lazy val implyLInfo: TacticInfo = implyLInfoFromTacticMacro
   @Tactic(
     name = "implyLRule",
     displayName = Some("→L"),
@@ -318,7 +318,7 @@ object SequentCalculus {
     displayConclusion = "Γ |- P→Q, Δ",
   )
   val implyR: CoreRightTactic = coreanon { (pr: ProvableSig, pos: SuccPosition) => pr(ImplyRight(pos.checkTop), 0) }
-  private[btactics] lazy val implyRInfo: TacticInfo = TacticInfo("implyR")
+  private[btactics] lazy val implyRInfo: TacticInfo = implyRInfoFromTacticMacro
 
   /**
    * Inverse of [[implyR]].
@@ -356,7 +356,7 @@ object SequentCalculus {
       (l: Formula, r: Formula) => (And(l, r).prettyString, And(Not(l), Not(r)).prettyString),
     )
   }
-  private[btactics] lazy val equivLInfo: TacticInfo = TacticInfo("equivL")
+  private[btactics] lazy val equivLInfo: TacticInfo = equivLInfoFromTacticMacro
   @Tactic(
     name = "equivLRule",
     displayName = Some("↔L"),
@@ -386,7 +386,7 @@ object SequentCalculus {
       (l: Formula, r: Formula) => (And(l, r).prettyString, And(Not(l), Not(r)).prettyString),
     )
   }
-  private[btactics] lazy val equivRInfo: TacticInfo = TacticInfo("equivR")
+  private[btactics] lazy val equivRInfo: TacticInfo = equivRInfoFromTacticMacro
   @Tactic(
     name = "equivRRule",
     displayName = Some("↔R"),
@@ -553,7 +553,7 @@ object SequentCalculus {
     displayConclusion = "Γ |- ∀x p(x), Δ",
   )
   val allR: BuiltInPositionTactic = FOQuantifierTactics.allSkolemize
-  private[btactics] lazy val allRInfo: TacticInfo = TacticInfo("allR")
+  private[btactics] lazy val allRInfo: TacticInfo = allRInfoFromTacticMacro
   @Tactic(
     name = "allRi",
     displayName = Some("∀Ri"),
@@ -591,7 +591,7 @@ object SequentCalculus {
 
   /** all left: instantiate a universal quantifier in the antecedent by itself. */
   val allL: DependentPositionTactic = allL(None)
-  private[btactics] lazy val allLInfo: TacticInfo = TacticInfo("allL")
+  private[btactics] lazy val allLInfo: TacticInfo = allLInfoFromTacticMacro
 
   /** all left: instantiate a universal quantifier in the antecedent by the term obtained from position `instPos`. */
   // @todo turn this into a more general function that obtains data from the sequent.
@@ -690,7 +690,7 @@ object SequentCalculus {
   val existsL: BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
     FOQuantifierTactics.existsSkolemize(pos).computeResult(provable)
   }
-  private[btactics] lazy val existsLInfo: TacticInfo = TacticInfo("existsL")
+  private[btactics] lazy val existsLInfo: TacticInfo = existsLInfoFromTacticMacro
   @Tactic(
     name = "existsLi",
     displayName = Some("∃Li"),
@@ -731,7 +731,7 @@ object SequentCalculus {
 
   /** exists right: instantiate an existential quantifier for x in the succedent by itself as a witness */
   val existsR: DependentPositionTactic = existsR(None)
-  private[btactics] lazy val existsRInfo: TacticInfo = TacticInfo("existsR")
+  private[btactics] lazy val existsRInfo: TacticInfo = existsRInfoFromTacticMacro
 
   /**
    * exists right: instantiate an existential quantifier in the succedent by a concrete term obtained from position

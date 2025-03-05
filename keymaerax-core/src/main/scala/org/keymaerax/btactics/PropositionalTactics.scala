@@ -302,7 +302,7 @@ private[keymaerax] object PropositionalTactics extends Logging {
       case _ => throw new TacticInapplicableFailure("Applicable only to implications at top-level in the antecedent")
     }
   }
-  private[btactics] lazy val autoMPInfo: TacticInfo = TacticInfo("autoMP")
+  private[btactics] lazy val autoMPInfo: TacticInfo = autoMPInfoFromTacticMacro
 
   /**
    * Converts a sequent into a single formula.
