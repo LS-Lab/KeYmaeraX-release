@@ -171,7 +171,7 @@ sealed trait ProvableSig {
    * @author
    *   Andre Platzer
    * @see
-   *   Theorem 26+27." in [[org.keymaerax.Bibliography.JarPlatzer17]]
+   *   Theorem 26+27 in [[org.keymaerax.Bibliography.JarPlatzer17]]
    */
   def apply(subst: USubst): ProvableSig
 

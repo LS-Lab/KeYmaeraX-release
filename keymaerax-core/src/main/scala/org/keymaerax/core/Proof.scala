@@ -371,7 +371,7 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
    * @author
    *   Andre Platzer
    * @see
-   *   Theorem 26+27." in [[org.keymaerax.Bibliography.JarPlatzer17]]
+   *   Theorem 26+27 in [[org.keymaerax.Bibliography.JarPlatzer17]]
    * @note
    *   soundness-critical. And soundness-critical that only locally sound Provables can be constructed (otherwise
    *   implementation would be more complicated).
@@ -415,7 +415,7 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
    * @author
    *   Andre Platzer
    * @see
-   *   Theorem 26+27." in [[org.keymaerax.Bibliography.JarPlatzer17]]
+   *   Theorem 26+27 in [[org.keymaerax.Bibliography.JarPlatzer17]]
    * @see
    *   [[org.keymaerax.Bibliography.CadePlatzer19]]
    * @since 4.7.5
