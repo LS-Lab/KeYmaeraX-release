@@ -140,6 +140,9 @@ object Bibliography {
    * André Platzer.
    * [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]].
    * Journal of Automated Reasoning 59(2), pp. 219-265, 2017.
+   *
+   * See also [[https://arxiv.org/abs/1601.06183 arXiv:1601.06183]] for a long article extending the conference version
+   * that appeared at CADE 2015.
    */
   object JarPlatzer17
 
