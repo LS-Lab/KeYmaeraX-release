@@ -13,8 +13,7 @@ import org.keymaerax.core.*
 import org.keymaerax.infrastruct.{PosInExpr, Position}
 import org.keymaerax.parser.{Declaration, ParseException, UnknownLocation}
 
-import scala.annotation.{nowarn, tailrec}
-import scala.reflect.runtime.universe.{typeTag, Type}
+import scala.annotation.nowarn
 
 /**
  * Constructs a [[org.keymaerax.bellerophon.BelleExpr]] from a tactic name
@@ -24,25 +23,9 @@ import scala.reflect.runtime.universe.{typeTag, Type}
  *   Brandon Bohrer
  */
 object ReflectiveExpressionBuilder extends Logging {
-
-  /** A sort of inverse of the `typeName` function in the [[Tactic]] macro. */
-  private def argTypeToArgInfo(t: Type): ArgInfo = {
-    if (t <:< typeTag[org.keymaerax.btactics.InvariantGenerator].tpe) GeneratorArg("_")
-    else if (t <:< typeTag[org.keymaerax.core.Formula].tpe) FormulaArg("_")
-    else if (t <:< typeTag[String].tpe) StringArg("_")
-    else if (t <:< typeTag[org.keymaerax.core.Number].tpe) NumberArg("_")
-    else if (t <:< typeTag[org.keymaerax.core.Variable].tpe) VariableArg("_")
-    else if (t <:< typeTag[org.keymaerax.core.Term].tpe) TermArg("_")
-    else if (t <:< typeTag[org.keymaerax.core.SubstitutionPair].tpe) SubstitutionArg("_")
-    else if (t <:< typeTag[org.keymaerax.core.Expression].tpe) ExpressionArg("_")
-    else if (t <:< typeTag[org.keymaerax.infrastruct.PosInExpr].tpe) PosInExprArg("_")
-    else if (t <:< typeTag[Option[?]].tpe) {
-      val Seq(arg) = t.dealias.typeArgs
-      OptionArg(argTypeToArgInfo(arg))
-    } else if (t <:< typeTag[List[?]].tpe) {
-      val Seq(arg) = t.dealias.typeArgs
-      ListArg(argTypeToArgInfo(arg))
-    } else throw ParseException(s"Unexpected argument type $t", UnknownLocation)
+  private def generatorArg(generator: Option[InvariantGenerator]): InvariantGenerator = generator.getOrElse {
+    logger.debug(s"Need a generator but none was provided; switching to default.")
+    TactixLibrary.invGenerator
   }
 
   private def castArg(info: ArgInfo, arg: Seq[Any]): Any = {
@@ -92,45 +75,19 @@ object ReflectiveExpressionBuilder extends Logging {
     }
   }
 
-  private def applyGenerator(expr: Any, generator: Option[InvariantGenerator]): Any = {
-    val theGenerator = generator.getOrElse {
-      logger.debug(s"Need a generator but none was provided; switching to default.")
-      TactixLibrary.invGenerator
-    }
-    expr.asInstanceOf[InvariantGenerator => Any](theGenerator)
+  private def prepareArgs(
+      inputs: List[ArgInfo],
+      args: List[Seq[Any]],
+      generator: Option[InvariantGenerator],
+  ): List[Any] = (inputs, args) match {
+    case ((_: GeneratorArg) :: inputs, args) => generatorArg(generator) :: prepareArgs(inputs, args, generator)
+    case (input :: inputs, arg :: args) => castArg(input, arg) :: prepareArgs(inputs, args, generator)
+    case (input :: inputs, Nil) => placeholderArg(input) :: prepareArgs(inputs, args, generator)
+    case (Nil, Nil) => Nil
+    case (Nil, _) => throw ParseException("Too many arguments supplied", UnknownLocation)
   }
 
-  @tailrec
-  private def applyArgs(expr: Any, args: List[Seq[Any]]): Any = {
-    val (arg, rest) = args match {
-      case Nil => return expr
-      case arg :: rest => (arg, rest)
-    }
-
-    val exprTyped = expr match {
-      case e: TypedFunc[_, _] => e
-      case _ => throw ParseException("Expected a TypedFunc", UnknownLocation)
-    }
-
-    val preparedArg = castArg(argTypeToArgInfo(exprTyped.argType.tpe), arg)
-    val appliedExpr = exprTyped.asInstanceOf[TypedFunc[Any, ?]](preparedArg)
-    applyArgs(appliedExpr, rest)
-  }
-
-  @tailrec
-  private def fillArgs(expr: Any): Any = {
-    val exprTyped = expr match {
-      case e: TypedFunc[_, _] => e
-      case _ => return expr
-    }
-
-    val info = argTypeToArgInfo(exprTyped.argType.tpe)
-    if (!info.isInstanceOf[OptionArg] && !info.isInstanceOf[ListArg]) return expr
-
-    val preparedArg = placeholderArg(info)
-    val appliedExpr = exprTyped.asInstanceOf[TypedFunc[Any, ?]](preparedArg)
-    fillArgs(appliedExpr)
-  }
+  private def applyArgs(expr: Any, args: Seq[Any]): Any = args.foldLeft(expr)(_.asInstanceOf[Any => ?](_))
 
   @nowarn("cat=deprecation&origin=org.keymaerax.bellerophon.DependentTwoPositionTactic")
   @nowarn("cat=deprecation&origin=org.keymaerax.bellerophon.AppliedDependentTwoPositionTactic")
@@ -143,10 +100,7 @@ object ReflectiveExpressionBuilder extends Logging {
     val posArgs = args.flatMap(_.toOption)
     val expressionArgs = args.flatMap(_.left.toOption)
 
-    var expr = info.belleExpr
-    if (info.needsGenerator) expr = applyGenerator(expr, generator)
-    expr = applyArgs(expr, expressionArgs)
-    expr = fillArgs(expr)
+    val expr = applyArgs(info.belleExpr, prepareArgs(info.inputs, expressionArgs, generator))
 
     (expr, posArgs, info.numPositionArgs) match {
       // If the tactic accepts arguments but wasn't given any, return the unapplied tactic under the assumption that
