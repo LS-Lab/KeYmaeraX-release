@@ -6,15 +6,15 @@
 package org.keymaerax.btactics
 
 import org.keymaerax.bellerophon.{BelleExpr, NamedBelleExpr}
-import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
-import org.keymaerax.btactics.macros._
-import org.keymaerax.core._
+import org.keymaerax.btactics.macros.*
+import org.keymaerax.btactics.macros.DerivationInfoAugmentors.*
+import org.keymaerax.core.*
+import org.keymaerax.infrastruct.PosInExpr
 import org.keymaerax.lemma.Lemma
 import org.keymaerax.tags.IgnoreInBuildTest
 import org.scalatest.matchers.should.Matchers
 
-import scala.reflect.runtime.universe.typeTag
-import scala.reflect.runtime.{universe => ru}
+import scala.reflect.runtime.universe as ru
 
 /**
  * Tests code names of tactics and AxiomInfo for compatibility for TacticExtraction.
@@ -84,26 +84,22 @@ class CodeNameChecker extends TacticTestBase with Matchers {
     try {
       val e = info
         .inputs
-        .foldLeft(info.belleExpr)((t, _) =>
-          t match {
-            case expr: TypedFunc[_, _] if expr.argType.tpe <:< typeTag[Formula].tpe =>
-              expr.asInstanceOf[TypedFunc[Formula, _]](True)
-            case expr: TypedFunc[_, _] if expr.argType.tpe <:< typeTag[Variable].tpe =>
-              expr.asInstanceOf[TypedFunc[Variable, _]](Variable("dummy"))
-            case expr: TypedFunc[_, _] if expr.argType.tpe <:< typeTag[Term].tpe =>
-              expr.asInstanceOf[TypedFunc[Term, _]](Number(42))
-            case expr: TypedFunc[_, _] if expr.argType.tpe <:< typeTag[Expression].tpe =>
-              expr.asInstanceOf[TypedFunc[Expression, _]](Variable("dummy"))
-            case expr: TypedFunc[_, _] if expr.argType.tpe <:< typeTag[Option[Formula]].tpe =>
-              expr.asInstanceOf[TypedFunc[Option[Formula], _]](Some(True))
-            case expr: TypedFunc[_, _] if expr.argType.tpe <:< typeTag[Option[Variable]].tpe =>
-              expr.asInstanceOf[TypedFunc[Option[Variable], _]](Some(Variable("dummy")))
-            case expr: TypedFunc[_, _] if expr.argType.tpe <:< typeTag[Option[Term]].tpe =>
-              expr.asInstanceOf[TypedFunc[Option[Term], _]](Some(Number(42)))
-            case expr: TypedFunc[_, _] if expr.argType.tpe <:< typeTag[Option[Expression]].tpe =>
-              expr.asInstanceOf[TypedFunc[Option[Expression], _]](Some(Variable("dummy")))
+        .foldLeft(info.belleExpr) { (e, i) =>
+          val arg: Any = i match {
+            case _: GeneratorArg => TactixLibrary.invGenerator
+            case _: FormulaArg => True
+            case _: StringArg => "hi"
+            case _: NumberArg => Number(42)
+            case _: VariableArg => Variable("dummy")
+            case _: TermArg => Number(42)
+            case _: SubstitutionArg => SubstitutionPair(Variable("dummy"), Variable("dummy"))
+            case _: ExpressionArg => Variable("dummy")
+            case _: PosInExprArg => PosInExpr(List(1, 1))
+            case _: OptionArg => None
+            case _: ListArg => Nil
           }
-        )
+          e.asInstanceOf[Any => ?](arg)
+        }
       e match {
         case t: BelleExpr => Some(t)
         case _ =>
