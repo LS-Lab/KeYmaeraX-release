@@ -531,7 +531,7 @@ object TacticMacro {
 
     val (curriedTerm, _) = definitionArgs.foldRight[(Tree, Tree)]((baseCall, baseType))({ case (arg, (acc, accTy)) =>
       val argTy = typeName(arg)
-      val funTy = tq"""org.keymaerax.btactics.macros.TypedFunc[$argTy, $accTy]"""
+      val funTy = tq"""$argTy => $accTy"""
       val argDef = argInfoToValDef(arg)
       val term = q"""(($argDef) => $acc): $funTy"""
       (term, funTy)

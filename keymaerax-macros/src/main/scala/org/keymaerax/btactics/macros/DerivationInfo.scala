@@ -10,7 +10,6 @@ import org.keymaerax.btactics.macros.AnnotationCommon.{parsePos, parsePoses, Exp
 import java.util.Locale
 import scala.collection.immutable.{List, Nil}
 import scala.language.implicitConversions
-import scala.reflect.runtime.universe.TypeTag
 
 ////////////////////////////////////////////////////////////
 // Type structure for central registry of derivation steps
@@ -195,22 +194,6 @@ object DerivationInfo {
   def apply(axiomName: String): DerivationInfo = byCanonicalName
     .getOrElse(axiomName, ofBuiltinName(axiomName).getOrElse(throw AxiomNotFoundException(axiomName)))
 
-}
-
-/** Typed functions to circumvent type erasure of arguments and return types. */
-abstract class TypedFunc[-A: TypeTag, +R: TypeTag] extends (A => R) {
-  val retType: TypeTag[_] = scala.reflect.runtime.universe.typeTag[R]
-  val argType: TypeTag[_] = scala.reflect.runtime.universe.typeTag[A]
-}
-
-/** Creates TypedFunc implicitly, e.g., by ((x: String) => x.length): TypedFunc[String, Int] */
-object TypedFunc {
-  implicit def apply[A: TypeTag, R: TypeTag](f: A => R): TypedFunc[A, R] = f match {
-    case tf: TypedFunc[A, R] => tf
-    case _ => new TypedFunc[A, R] {
-        final def apply(arg: A): R = f(arg)
-      }
-  }
 }
 
 sealed trait DerivationInfo {
@@ -591,7 +574,7 @@ case class InputTacticInfo(
     override val inputs: List[ArgInfo],
     override val needsGenerator: Boolean,
     override val revealInternalSteps: Boolean,
-)(override val theExpr: Unit => TypedFunc[_, _])
+)(override val theExpr: Unit => Any)
     extends TacticInfo
 
 case class InputPositionTacticInfo(
@@ -600,7 +583,7 @@ case class InputPositionTacticInfo(
     override val inputs: List[ArgInfo],
     override val needsGenerator: Boolean,
     override val revealInternalSteps: Boolean,
-)(override val theExpr: Unit => TypedFunc[_, _])
+)(override val theExpr: Unit => Any)
     extends TacticInfo {
   override val numPositionArgs = 1
 }
@@ -610,7 +593,7 @@ case class InputTwoPositionTacticInfo(
     override val display: DisplayInfo,
     override val inputs: List[ArgInfo],
     override val needsGenerator: Boolean,
-)(override val theExpr: Unit => TypedFunc[_, _])
+)(override val theExpr: Unit => Any)
     extends TacticInfo {
   override val numPositionArgs = 2
 }
