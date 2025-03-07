@@ -5,7 +5,7 @@
 
 package org.keymaerax.bellerophon.parser
 
-import org.keymaerax.bellerophon._
+import org.keymaerax.bellerophon.*
 import org.keymaerax.bellerophon.parser.BelleOpSpec.op
 import org.keymaerax.bellerophon.parser.BelleParser.{
   DOUBLE_COLON,
@@ -19,7 +19,7 @@ import org.keymaerax.bellerophon.parser.BelleParser.{
   TAB,
   TODO_TACTIC,
 }
-import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
+import org.keymaerax.btactics.macros.DerivationInfoAugmentors.*
 import org.keymaerax.btactics.macros.TacticInfo
 import org.keymaerax.core.{Equal, Expression, Formula, Term}
 import org.keymaerax.infrastruct.PosInExpr
@@ -63,9 +63,10 @@ object BellePrettyPrinter extends (BelleExpr => String) {
     // Prefer the code name if one exists for this tactic, but looking up code name may throw exception.
     //      println("Looking for a code name for " + e)
     Try(TacticInfo.apply(e.prettyString)).toOption match {
-      // anything that needs a generator (e.g. master) will never be a BelleExpr so might as well take the codeName
-      // directly for those.
-      case Some(info) if info.numPositionArgs == 0 && (info.belleExpr == e || info.needsGenerator) => info.codeName
+      // Anything that needs a generator (e.g. master) will never be a BelleExpr so might as well take the codeName
+      // directly for those. To detect this, we compare the inputs and persistentInputs.
+      case Some(info) if info.numPositionArgs == 0 && (info.belleExpr == e || info.inputs != info.persistentInputs) =>
+        info.codeName
       case _ => e match {
           case DefTactic(name, t) => op(e).terminal.img + SPACE + name + SPACE + AS.img + SPACE + OPEN_PAREN.img +
               newline(indent + 1) + pp(t, indent + 1) + newline(indent) + CLOSE_PAREN.img

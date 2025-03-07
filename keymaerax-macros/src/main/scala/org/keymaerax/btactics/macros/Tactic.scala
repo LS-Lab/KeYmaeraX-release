@@ -181,7 +181,7 @@ object TacticMacro {
     List("InputTactic", "StringInputTactic", "DependentPositionWithAppliedInputTactic").sorted
 
   def impl(c: whitebox.Context)(annottees: c.Expr[Any]*): c.Expr[Any] = {
-    import c.universe._
+    import c.universe.*
 
     /*
      * Obtain annotation arguments
@@ -544,7 +544,6 @@ object TacticMacro {
     }
 
     val displayInputs: List[ArgInfo] = if (inputs.nonEmpty) inputs else definitionArgs
-    val needsGenerator = generatorDefArg.isDefined
 
     // Error check:
     // The web UI uses the axiom/rule display to let the user input arguments of a tactic.
@@ -575,7 +574,6 @@ object TacticMacro {
             new org.keymaerax.btactics.macros.PlainTacticInfo(
               codeName = ${args.name},
               display = ${astForDisplayInfo(display)(c)},
-              needsGenerator = $needsGenerator,
               revealInternalSteps = ${args.revealInternalSteps},
             )(theExpr = $expr)
           """,
@@ -588,7 +586,6 @@ object TacticMacro {
               codeName = ${args.name},
               display = ${astForDisplayInfo(display)(c)},
               inputs = ${displayInputs.map(ai => astForArgInfo(ai)(c))},
-              needsGenerator = $needsGenerator,
               revealInternalSteps = ${args.revealInternalSteps},
             )(theExpr = $expr)
           """,
@@ -601,7 +598,6 @@ object TacticMacro {
             new org.keymaerax.btactics.macros.PositionTacticInfo(
               codeName = ${args.name},
               display = ${astForDisplayInfo(display)(c)},
-              needsGenerator = $needsGenerator,
               revealInternalSteps = ${args.revealInternalSteps},
             )(theExpr = $expr)
           """,
@@ -614,7 +610,6 @@ object TacticMacro {
               codeName = ${args.name},
               display = ${astForDisplayInfo(display)(c)},
               inputs = ${displayInputs.map(ai => astForArgInfo(ai)(c))},
-              needsGenerator = $needsGenerator,
               revealInternalSteps = ${args.revealInternalSteps},
             )(theExpr = $expr)
           """,
@@ -626,7 +621,6 @@ object TacticMacro {
             new org.keymaerax.btactics.macros.TwoPositionTacticInfo(
               codeName = ${args.name},
               display = ${astForDisplayInfo(display)(c)},
-              needsGenerator = $needsGenerator,
             )(theExpr = $expr)
           """,
         )
@@ -637,7 +631,6 @@ object TacticMacro {
             new org.keymaerax.btactics.macros.InputTwoPositionTacticInfo(
               codeName = ${args.name},
               display = ${astForDisplayInfo(display)(c)},
-              needsGenerator = $needsGenerator,
             )(theExpr = $expr)
           """,
         )
