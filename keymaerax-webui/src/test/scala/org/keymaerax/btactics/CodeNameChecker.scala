@@ -82,28 +82,26 @@ class CodeNameChecker extends TacticTestBase with Matchers {
   /** get some silly BelleExpr from info by feeding it its input in a type-compliant way. */
   private def instantiateSomeBelle(info: DerivationInfo): Option[BelleExpr] =
     try {
-      val e = info
-        .inputs
-        .foldLeft(info.belleExpr) { (e, i) =>
-          val arg: Any = i match {
-            case _: GeneratorArg => TactixLibrary.invGenerator
-            case _: FormulaArg => True
-            case _: StringArg => "hi"
-            case _: NumberArg => Number(42)
-            case _: VariableArg => Variable("dummy")
-            case _: TermArg => Number(42)
-            case _: SubstitutionArg => SubstitutionPair(Variable("dummy"), Variable("dummy"))
-            case _: ExpressionArg => Variable("dummy")
-            case _: PosInExprArg => PosInExpr(List(1, 1))
-            case _: OptionArg => None
-            case _: ListArg => Nil
-          }
-          e.asInstanceOf[Any => ?](arg)
-        }
-      e match {
-        case t: BelleExpr => Some(t)
-        case _ =>
-          println("WARNING: input() and belleExpr() function seem incompatible for DerivationInfo: " + info); None
+      info match {
+        case info: TacticInfo =>
+          val args = info
+            .constructor
+            .args
+            .map {
+              case _: GeneratorArg => TactixLibrary.invGenerator
+              case _: FormulaArg => True
+              case _: StringArg => "hi"
+              case _: NumberArg => Number(42)
+              case _: VariableArg => Variable("dummy")
+              case _: TermArg => Number(42)
+              case _: SubstitutionArg => SubstitutionPair(Variable("dummy"), Variable("dummy"))
+              case _: ExpressionArg => Variable("dummy")
+              case _: PosInExprArg => PosInExpr(List(1, 1))
+              case _: OptionArg => None
+              case _: ListArg => Nil
+            }
+          Some(info.constructor.construct(args).asInstanceOf[BelleExpr])
+        case info => info.belleExpr
       }
     } catch { case _: NotImplementedError => None }
 }

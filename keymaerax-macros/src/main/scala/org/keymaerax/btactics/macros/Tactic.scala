@@ -431,7 +431,6 @@ object TacticMacro {
     if (definitionArgs.drop(1).exists(_.isInstanceOf[GeneratorArg])) {
       c.abort(c.enclosingPosition, "Generator argument to tactic must be the first argument")
     }
-    val generatorDefArg = definitionArgs.headOption.filter(_.isInstanceOf[GeneratorArg])
 
     /*
      * The rest
@@ -519,31 +518,34 @@ object TacticMacro {
       }
     }
 
-    val baseType = definition.returnType
+    val definitionArgsDefs: Seq[ValDef] = definitionArgs
+      .map(ai => ValDef(Modifiers(), TermName(ai.name), typeName(ai), EmptyTree))
+    val definitionArgsIdents: Seq[Ident] = definitionArgs.map(ai => Ident(TermName(ai.name)))
+
+    val displayInputs: List[ArgInfo] = if (inputs.nonEmpty) inputs else definitionArgs
+    val displayInputsExprs: Seq[Tree] = displayInputs.map(ai => astForArgInfo(ai)(c))
+
     val baseTerm = getBaseTerm
     val baseCall = definition match {
-      case d: Definition.DefParams => q"${d.declName}(..${definitionArgs.map(ai => Ident(TermName(ai.name)))})"
+      case d: Definition.DefParams => q"${d.declName}(..$definitionArgsIdents)"
       case d: Definition.Def => q"${d.declName}"
       case d: Definition.Val => q"${d.declName}"
     }
 
-    def argInfoToValDef(info: ArgInfo): ValDef = ValDef(Modifiers(), TermName(info.name), typeName(info), EmptyTree)
-
-    val (curriedTerm, _) = definitionArgs.foldRight[(Tree, Tree)]((baseCall, baseType))({ case (arg, (acc, accTy)) =>
-      val argTy = typeName(arg)
-      val funTy = tq"""$argTy => $accTy"""
-      val argDef = argInfoToValDef(arg)
-      val term = q"""(($argDef) => $acc): $funTy"""
-      (term, funTy)
-    })
-
-    val definitionArgsExprs: Seq[ValDef] = definitionArgs.map(argInfoToValDef)
+    val constructorObject = definitionArgs.length match {
+      case 0 => q"org.keymaerax.btactics.macros.TacticConstructor0"
+      case 1 => q"org.keymaerax.btactics.macros.TacticConstructor1"
+      case 2 => q"org.keymaerax.btactics.macros.TacticConstructor2"
+      case 3 => q"org.keymaerax.btactics.macros.TacticConstructor3"
+      case 4 => q"org.keymaerax.btactics.macros.TacticConstructor4"
+      case 10 => q"org.keymaerax.btactics.macros.TacticConstructor10"
+      case n => c.abort(c.enclosingPosition, s"Unsupported number of arguments: $n")
+    }
+    val constructor = q"$constructorObject.create(..$displayInputsExprs)((..$definitionArgsDefs) => $baseCall)"
 
     def sdContains(sd: DisplaySequent, s: String): Boolean = {
       sd.ante.exists(n => n.contains(s)) || sd.succ.exists(n => n.contains(s))
     }
-
-    val displayInputs: List[ArgInfo] = if (inputs.nonEmpty) inputs else definitionArgs
 
     // Error check:
     // The web UI uses the axiom/rule display to let the user input arguments of a tactic.
@@ -565,8 +567,6 @@ object TacticMacro {
       }
     }
 
-    val expr = q"((_: Unit) => ($curriedTerm))"
-
     val (infoType, info) = returnType match {
       case "DependentTactic" | "BuiltInTactic" | "BelleExpr" => (
           tq"org.keymaerax.btactics.macros.PlainTacticInfo",
@@ -575,7 +575,8 @@ object TacticMacro {
               codeName = ${args.name},
               display = ${astForDisplayInfo(display)(c)},
               revealInternalSteps = ${args.revealInternalSteps},
-            )(theExpr = $expr)
+              constructor = $constructor,
+            )
           """,
         )
 
@@ -585,9 +586,9 @@ object TacticMacro {
             new org.keymaerax.btactics.macros.InputTacticInfo(
               codeName = ${args.name},
               display = ${astForDisplayInfo(display)(c)},
-              inputs = ${displayInputs.map(ai => astForArgInfo(ai)(c))},
               revealInternalSteps = ${args.revealInternalSteps},
-            )(theExpr = $expr)
+              constructor = $constructor,
+            )
           """,
         )
 
@@ -599,7 +600,8 @@ object TacticMacro {
               codeName = ${args.name},
               display = ${astForDisplayInfo(display)(c)},
               revealInternalSteps = ${args.revealInternalSteps},
-            )(theExpr = $expr)
+              constructor = $constructor,
+            )
           """,
         )
 
@@ -609,9 +611,9 @@ object TacticMacro {
             new org.keymaerax.btactics.macros.InputPositionTacticInfo(
               codeName = ${args.name},
               display = ${astForDisplayInfo(display)(c)},
-              inputs = ${displayInputs.map(ai => astForArgInfo(ai)(c))},
               revealInternalSteps = ${args.revealInternalSteps},
-            )(theExpr = $expr)
+              constructor = $constructor,
+            )
           """,
         )
 
@@ -621,7 +623,8 @@ object TacticMacro {
             new org.keymaerax.btactics.macros.TwoPositionTacticInfo(
               codeName = ${args.name},
               display = ${astForDisplayInfo(display)(c)},
-            )(theExpr = $expr)
+              constructor = $constructor,
+            )
           """,
         )
 
@@ -631,7 +634,8 @@ object TacticMacro {
             new org.keymaerax.btactics.macros.InputTwoPositionTacticInfo(
               codeName = ${args.name},
               display = ${astForDisplayInfo(display)(c)},
-            )(theExpr = $expr)
+              constructor = $constructor,
+            )
           """,
         )
 
@@ -647,7 +651,7 @@ object TacticMacro {
     // registering the tactic info to the global tactic info table.
     val result = definition match {
       case d: Definition.DefParams => q"""
-        ${d.mods} def ${d.declName}(..$definitionArgsExprs): ${d.returnType} = $baseTerm
+        ${d.mods} def ${d.declName}(..$definitionArgsDefs): ${d.returnType} = $baseTerm
 
         @org.keymaerax.core.btactics.annotations.Derivation
         val $declInfoName: $infoType = $info

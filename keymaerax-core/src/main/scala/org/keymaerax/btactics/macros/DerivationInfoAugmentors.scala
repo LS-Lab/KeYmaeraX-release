@@ -5,11 +5,12 @@
 
 package org.keymaerax.btactics.macros
 
-import org.keymaerax.btactics._
-import org.keymaerax.core._
-import org.keymaerax.infrastruct._
-import org.keymaerax.lemma._
-import org.keymaerax.pt._
+import org.keymaerax.bellerophon.BelleExpr
+import org.keymaerax.btactics.*
+import org.keymaerax.core.*
+import org.keymaerax.infrastruct.*
+import org.keymaerax.lemma.*
+import org.keymaerax.pt.*
 
 import scala.annotation.nowarn
 import scala.language.implicitConversions
@@ -17,10 +18,13 @@ import scala.language.implicitConversions
 object DerivationInfoAugmentors {
   implicit class DerivationInfoAugmentor(val di: DerivationInfo) {
     @nowarn("msg=match may not be exhaustive")
-    def belleExpr: Any = di match {
+    def belleExpr: Option[BelleExpr] = di match {
       // useAt will just ask a ProvableInfo for its provable
-      case pi: ProvableInfo => UnifyUSCalculus.useAt(pi)
-      case ti: TacticInfo => ti.theExpr(())
+      case pi: ProvableInfo => Some(UnifyUSCalculus.useAt(pi))
+      case ti: TacticInfo => ti.constructor match {
+          case c: TacticConstructor0 => Some(c.construct(Seq()).asInstanceOf[BelleExpr])
+          case _ => None
+        }
     }
   }
 

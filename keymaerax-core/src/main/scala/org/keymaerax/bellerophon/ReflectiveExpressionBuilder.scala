@@ -8,7 +8,6 @@ package org.keymaerax.bellerophon
 import org.keymaerax.Logging
 import org.keymaerax.btactics.*
 import org.keymaerax.btactics.macros.*
-import org.keymaerax.btactics.macros.DerivationInfoAugmentors.*
 import org.keymaerax.core.*
 import org.keymaerax.infrastruct.{PosInExpr, Position}
 import org.keymaerax.parser.{Declaration, ParseException, UnknownLocation}
@@ -87,22 +86,13 @@ object ReflectiveExpressionBuilder extends Logging {
     case (Nil, _) => throw ParseException("Too many arguments supplied", UnknownLocation)
   }
 
-  private def applyArgs(expr: Any, args: Seq[Any]): Any = args.foldLeft(expr)(_.asInstanceOf[Any => ?](_))
+  def applyNonpositionalArgs(info: TacticInfo, args: List[Seq[Any]], generator: Option[InvariantGenerator]): BelleExpr =
+    info.constructor.construct(prepareArgs(info.inputs, args, generator)).asInstanceOf[BelleExpr]
 
   @nowarn("cat=deprecation&origin=org.keymaerax.bellerophon.DependentTwoPositionTactic")
   @nowarn("cat=deprecation&origin=org.keymaerax.bellerophon.AppliedDependentTwoPositionTactic")
-  def build(
-      info: DerivationInfo,
-      args: List[Either[Seq[Any], PositionLocator]],
-      generator: Option[InvariantGenerator],
-      defs: Declaration,
-  ): BelleExpr = {
-    val posArgs = args.flatMap(_.toOption)
-    val expressionArgs = args.flatMap(_.left.toOption)
-
-    val expr = applyArgs(info.belleExpr, prepareArgs(info.inputs, expressionArgs, generator))
-
-    (expr, posArgs, info.numPositionArgs) match {
+  def applyPositionalArgs(info: DerivationInfo, expr: BelleExpr, args: List[PositionLocator]): BelleExpr = {
+    (expr, args, info.numPositionArgs) match {
       // If the tactic accepts arguments but wasn't given any, return the unapplied tactic under the assumption that
       // someone is going to plug in the arguments later
       case (expr: BelleExpr, Nil, _) => expr
@@ -126,8 +116,7 @@ object ReflectiveExpressionBuilder extends Logging {
           )
         } else {
           throw ParseException(
-            "Tactic " + info.codeName + " called with\n  " + expressionArgs.mkString(";") +
-              "\n  arguments\ndoes not match type " + expr.getClass.getSimpleName,
+            "Tactic " + info.codeName + "\n  arguments\ndoes not match type " + expr.getClass.getSimpleName,
             UnknownLocation,
           )
         }
@@ -152,11 +141,19 @@ object ReflectiveExpressionBuilder extends Logging {
       generator: Option[InvariantGenerator],
       defs: Declaration,
   ): BelleExpr = {
-    if (!DerivationInfo.hasCodeName(name)) {
-      throw ParseException(s"Identifier '$name' is not recognized as a tactic identifier.", UnknownLocation)
-    } else {
-      try { build(DerivationInfo.ofCodeName(name), arguments, generator, defs) }
-      catch { case e: java.util.NoSuchElementException => throw ParseException(s"Error when building tactic $name", e) }
+    val info = DerivationInfo
+      .byCodeName
+      .getOrElse(name, throw ParseException(s"Identifier '$name' does not exist.", UnknownLocation))
+
+    val positional = arguments.flatMap(_.toOption)
+    val nonpositional = arguments.flatMap(_.left.toOption)
+
+    val expr = info match {
+      case info: TacticInfo => applyNonpositionalArgs(info, nonpositional, generator)
+      case info: ProvableInfo => UnifyUSCalculus.useAt(info)
+      case _ => throw ParseException(s"Identifier '$name' is neither a tactic nor a provable.", UnknownLocation)
     }
+
+    applyPositionalArgs(info, expr, positional)
   }
 }

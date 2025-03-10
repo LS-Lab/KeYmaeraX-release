@@ -173,11 +173,11 @@ object UnifyUSCalculus {
           case Some(axiom) =>
             logger.debug("stepAt {}", axiom)
             axiom.belleExpr match {
-              case ap: AtPosition[_] => ap(pos)
-              case expr: BelleExpr => expr
-              case expr => throw new TacticInapplicableFailure(
+              case Some(ap: AtPosition[_]) => ap(pos)
+              case Some(expr) => expr
+              case None => throw new TacticInapplicableFailure(
                   "No axioms or rules applicable for " + sub
-                    .get + " which is at position " + pos + " in " + sequent + "\nin " + "stepAt(" + pos + ")\n(" + sequent + ")" + "\ngot " + expr
+                    .get + " which is at position " + pos + " in " + sequent + "\nin " + "stepAt(" + pos + ")\n(" + sequent + ")" + "\ngot nothing"
                 )
             }
           case None => throw new TacticInapplicableFailure(

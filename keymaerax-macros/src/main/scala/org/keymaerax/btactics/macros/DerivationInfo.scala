@@ -217,10 +217,10 @@ sealed trait DerivationInfo {
    * Specification of inputs (other than positions) to the derivation, along with names to use when displaying in the
    * UI.
    */
-  val inputs: List[ArgInfo] = Nil
+  def inputs: List[ArgInfo] = Nil
 
   /** Inputs which should be serialized in tactic strings. For example, Generator args are left out. */
-  val persistentInputs: List[ArgInfo] = inputs.filter {
+  def persistentInputs: List[ArgInfo] = inputs.filter {
     case _: GeneratorArg => false
     case _ => true
   }
@@ -531,7 +531,8 @@ class BuiltinInfo(
 
 /** Meta-information on a tactic performing a proof step (or more) */
 sealed trait TacticInfo extends DerivationInfo {
-  val theExpr: Unit => Any
+  val constructor: TacticConstructor
+  override final def inputs: List[ArgInfo] = constructor.args.toList
 
   DerivationInfo.assertValidIdentifier(codeName)
   override val canonicalName: String = codeName
@@ -541,20 +542,22 @@ case class PlainTacticInfo(
     override val codeName: String,
     override val display: DisplayInfo,
     override val revealInternalSteps: Boolean,
-)(override val theExpr: Unit => Any)
-    extends TacticInfo
+    override val constructor: TacticConstructor,
+) extends TacticInfo
 
 case class PositionTacticInfo(
     override val codeName: String,
     override val display: DisplayInfo,
     override val revealInternalSteps: Boolean,
-)(override val theExpr: Unit => Any)
-    extends TacticInfo {
+    override val constructor: TacticConstructor,
+) extends TacticInfo {
   override val numPositionArgs = 1
 }
 
-case class TwoPositionTacticInfo(override val codeName: String, override val display: DisplayInfo)(
-    override val theExpr: Unit => Any
+case class TwoPositionTacticInfo(
+    override val codeName: String,
+    override val display: DisplayInfo,
+    override val constructor: TacticConstructor,
 ) extends TacticInfo {
   override val numPositionArgs = 2
 }
@@ -562,27 +565,24 @@ case class TwoPositionTacticInfo(override val codeName: String, override val dis
 case class InputTacticInfo(
     override val codeName: String,
     override val display: DisplayInfo,
-    override val inputs: List[ArgInfo],
     override val revealInternalSteps: Boolean,
-)(override val theExpr: Unit => Any)
-    extends TacticInfo
+    override val constructor: TacticConstructor,
+) extends TacticInfo
 
 case class InputPositionTacticInfo(
     override val codeName: String,
     override val display: DisplayInfo,
-    override val inputs: List[ArgInfo],
     override val revealInternalSteps: Boolean,
-)(override val theExpr: Unit => Any)
-    extends TacticInfo {
+    override val constructor: TacticConstructor,
+) extends TacticInfo {
   override val numPositionArgs = 1
 }
 
 case class InputTwoPositionTacticInfo(
     override val codeName: String,
     override val display: DisplayInfo,
-    override val inputs: List[ArgInfo],
-)(override val theExpr: Unit => Any)
-    extends TacticInfo {
+    override val constructor: TacticConstructor,
+) extends TacticInfo {
   override val numPositionArgs = 2
 }
 
