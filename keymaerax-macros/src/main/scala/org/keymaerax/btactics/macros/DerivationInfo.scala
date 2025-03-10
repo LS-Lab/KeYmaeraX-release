@@ -545,6 +545,39 @@ case class PlainTacticInfo(
     override val constructor: TacticConstructor,
 ) extends TacticInfo
 
+object PlainTacticInfo {
+  def create(
+      name: String,
+      displayName: Option[String] = None,
+      displayNameAscii: Option[String] = None,
+      displayNameLong: Option[String] = None,
+      displayLevel: DisplayLevel = DisplayLevel.Internal,
+      displayPremises: String = "",
+      displayConclusion: String = "",
+      displayContextPremises: String = "",
+      displayContextConclusion: String = "",
+      revealInternalSteps: Boolean = false,
+      inputGenerator: Option[String] = None,
+      constructor: TacticConstructor,
+  ): PlainTacticInfo = PlainTacticInfo(
+    codeName = name,
+    display = AnnotationCommon.tacticDisplayInfo(
+      inputs = constructor.args.toList,
+      inputGenerator = inputGenerator,
+      name = displayName.getOrElse(name),
+      nameAscii = displayNameAscii,
+      nameLong = displayNameLong,
+      level = displayLevel,
+      premises = displayPremises,
+      conclusion = displayConclusion,
+      contextPremises = displayContextPremises,
+      contextConclusion = displayContextConclusion,
+    ),
+    revealInternalSteps = revealInternalSteps,
+    constructor = constructor,
+  )
+}
+
 case class PositionTacticInfo(
     override val codeName: String,
     override val display: DisplayInfo,
@@ -552,6 +585,39 @@ case class PositionTacticInfo(
     override val constructor: TacticConstructor,
 ) extends TacticInfo {
   override val numPositionArgs = 1
+}
+
+object PositionTacticInfo {
+  def create(
+      name: String,
+      displayName: Option[String] = None,
+      displayNameAscii: Option[String] = None,
+      displayNameLong: Option[String] = None,
+      displayLevel: DisplayLevel = DisplayLevel.Internal,
+      displayPremises: String = "",
+      displayConclusion: String = "",
+      displayContextPremises: String = "",
+      displayContextConclusion: String = "",
+      revealInternalSteps: Boolean = false,
+      inputGenerator: Option[String] = None,
+      constructor: TacticConstructor,
+  ): PositionTacticInfo = PositionTacticInfo(
+    codeName = name,
+    display = AnnotationCommon.tacticDisplayInfo(
+      inputs = constructor.args.toList,
+      inputGenerator = inputGenerator,
+      name = displayName.getOrElse(name),
+      nameAscii = displayNameAscii,
+      nameLong = displayNameLong,
+      level = displayLevel,
+      premises = displayPremises,
+      conclusion = displayConclusion,
+      contextPremises = displayContextPremises,
+      contextConclusion = displayContextConclusion,
+    ),
+    revealInternalSteps = revealInternalSteps,
+    constructor = constructor,
+  )
 }
 
 case class TwoPositionTacticInfo(
@@ -562,12 +628,76 @@ case class TwoPositionTacticInfo(
   override val numPositionArgs = 2
 }
 
+object TwoPositionTacticInfo {
+  def create(
+      name: String,
+      displayName: Option[String] = None,
+      displayNameAscii: Option[String] = None,
+      displayNameLong: Option[String] = None,
+      displayLevel: DisplayLevel = DisplayLevel.Internal,
+      displayPremises: String = "",
+      displayConclusion: String = "",
+      displayContextPremises: String = "",
+      displayContextConclusion: String = "",
+      inputGenerator: Option[String] = None,
+      constructor: TacticConstructor,
+  ): TwoPositionTacticInfo = TwoPositionTacticInfo(
+    codeName = name,
+    display = AnnotationCommon.tacticDisplayInfo(
+      inputs = constructor.args.toList,
+      inputGenerator = inputGenerator,
+      name = displayName.getOrElse(name),
+      nameAscii = displayNameAscii,
+      nameLong = displayNameLong,
+      level = displayLevel,
+      premises = displayPremises,
+      conclusion = displayConclusion,
+      contextPremises = displayContextPremises,
+      contextConclusion = displayContextConclusion,
+    ),
+    constructor = constructor,
+  )
+}
+
 case class InputTacticInfo(
     override val codeName: String,
     override val display: DisplayInfo,
     override val revealInternalSteps: Boolean,
     override val constructor: TacticConstructor,
 ) extends TacticInfo
+
+object InputTacticInfo {
+  def create(
+      name: String,
+      displayName: Option[String] = None,
+      displayNameAscii: Option[String] = None,
+      displayNameLong: Option[String] = None,
+      displayLevel: DisplayLevel = DisplayLevel.Internal,
+      displayPremises: String = "",
+      displayConclusion: String = "",
+      displayContextPremises: String = "",
+      displayContextConclusion: String = "",
+      revealInternalSteps: Boolean = false,
+      inputGenerator: Option[String] = None,
+      constructor: TacticConstructor,
+  ): InputTacticInfo = InputTacticInfo(
+    codeName = name,
+    display = AnnotationCommon.tacticDisplayInfo(
+      inputs = constructor.args.toList,
+      inputGenerator = inputGenerator,
+      name = displayName.getOrElse(name),
+      nameAscii = displayNameAscii,
+      nameLong = displayNameLong,
+      level = displayLevel,
+      premises = displayPremises,
+      conclusion = displayConclusion,
+      contextPremises = displayContextPremises,
+      contextConclusion = displayContextConclusion,
+    ),
+    revealInternalSteps = revealInternalSteps,
+    constructor = constructor,
+  )
+}
 
 case class InputPositionTacticInfo(
     override val codeName: String,
@@ -578,12 +708,76 @@ case class InputPositionTacticInfo(
   override val numPositionArgs = 1
 }
 
+object InputPositionTacticInfo {
+  def create(
+      name: String,
+      displayName: Option[String] = None,
+      displayNameAscii: Option[String] = None,
+      displayNameLong: Option[String] = None,
+      displayLevel: DisplayLevel = DisplayLevel.Internal,
+      displayPremises: String = "",
+      displayConclusion: String = "",
+      displayContextPremises: String = "",
+      displayContextConclusion: String = "",
+      revealInternalSteps: Boolean = false,
+      inputGenerator: Option[String] = None,
+      constructor: TacticConstructor,
+  ): InputPositionTacticInfo = InputPositionTacticInfo(
+    codeName = name,
+    display = AnnotationCommon.tacticDisplayInfo(
+      inputs = constructor.args.toList,
+      inputGenerator = inputGenerator,
+      name = displayName.getOrElse(name),
+      nameAscii = displayNameAscii,
+      nameLong = displayNameLong,
+      level = displayLevel,
+      premises = displayPremises,
+      conclusion = displayConclusion,
+      contextPremises = displayContextPremises,
+      contextConclusion = displayContextConclusion,
+    ),
+    revealInternalSteps = revealInternalSteps,
+    constructor = constructor,
+  )
+}
+
 case class InputTwoPositionTacticInfo(
     override val codeName: String,
     override val display: DisplayInfo,
     override val constructor: TacticConstructor,
 ) extends TacticInfo {
   override val numPositionArgs = 2
+}
+
+object InputTwoPositionTacticInfo {
+  def create(
+      name: String,
+      displayName: Option[String] = None,
+      displayNameAscii: Option[String] = None,
+      displayNameLong: Option[String] = None,
+      displayLevel: DisplayLevel = DisplayLevel.Internal,
+      displayPremises: String = "",
+      displayConclusion: String = "",
+      displayContextPremises: String = "",
+      displayContextConclusion: String = "",
+      inputGenerator: Option[String] = None,
+      constructor: TacticConstructor,
+  ): InputTwoPositionTacticInfo = InputTwoPositionTacticInfo(
+    codeName = name,
+    display = AnnotationCommon.tacticDisplayInfo(
+      inputs = constructor.args.toList,
+      inputGenerator = inputGenerator,
+      name = displayName.getOrElse(name),
+      nameAscii = displayNameAscii,
+      nameLong = displayNameLong,
+      level = displayLevel,
+      premises = displayPremises,
+      conclusion = displayConclusion,
+      contextPremises = displayContextPremises,
+      contextConclusion = displayContextConclusion,
+    ),
+    constructor = constructor,
+  )
 }
 
 object TacticInfo {

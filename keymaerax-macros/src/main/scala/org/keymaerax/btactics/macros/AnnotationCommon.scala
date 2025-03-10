@@ -101,6 +101,58 @@ object AnnotationCommon {
     }
   }
 
+  def tacticDisplayInfo(
+      inputs: List[ArgInfo],
+      inputGenerator: Option[String],
+      name: String,
+      nameAscii: Option[String],
+      nameLong: Option[String],
+      level: DisplayLevel,
+      premises: String,
+      conclusion: String,
+      contextPremises: String,
+      contextConclusion: String,
+  ): DisplayInfo = {
+    val pPremises = DisplaySequent.parseMany(premises)
+    val pConclusionOpt = Some(conclusion).filter(_.nonEmpty).map(DisplaySequent.parse)
+    val pContextPremises = DisplaySequent.parseMany(contextPremises)
+    val pContextConclusionOpt = Some(contextConclusion).filter(_.nonEmpty).map(DisplaySequent.parse)
+
+    val names = DisplayNames.createWithChecks(name = name, nameAscii = nameAscii, nameLong = nameLong)
+
+    (inputs, pPremises, pConclusionOpt, pContextPremises, pContextConclusionOpt) match {
+      case (_, Nil, None, _, _) => SimpleDisplayInfo(names = names, level = level)
+
+      case (Nil, Nil, Some(_), _, _) =>
+        AxiomDisplayInfo(names = names, level = level, formula = renderDisplayFormula(conclusion))
+
+      case (ins, Nil, Some(_), _, _) if ins.nonEmpty =>
+        InputAxiomDisplayInfo(names = names, level = level, formula = conclusion, input = inputs)
+
+      case (_, prems, Some(concl), Nil, None) if prems.nonEmpty =>
+        RuleDisplayInfo(
+          names = names,
+          level = level,
+          conclusion = concl,
+          premises = prems,
+          inputGenerator = inputGenerator,
+        )
+
+      case (_, prem, Some(concl), ctxPrem, Some(ctxConcl)) if prem.nonEmpty && ctxPrem.nonEmpty =>
+        TacticDisplayInfo(
+          names = names,
+          level = level,
+          conclusion = concl,
+          premises = prem,
+          ctxConclusion = ctxConcl,
+          ctxPremises = ctxPrem,
+          inputGenerator = inputGenerator,
+        )
+
+      case _ => throw new Exception("tactic with premises or inputs must have a conclusion")
+    }
+  }
+
   def astForArgInfo(ai: ArgInfo)(implicit c: blackbox.Context): c.universe.Tree = {
     import c.universe._
     ai match {
