@@ -5,16 +5,17 @@
 
 package org.keymaerax.btactics.arithmetic.speculative
 
-import org.keymaerax.bellerophon._
-import org.keymaerax.btactics.ArithmeticSimplification._
-import org.keymaerax.btactics.SequentCalculus._
-import org.keymaerax.btactics.TacticFactory._
-import org.keymaerax.btactics.TactixLibrary._
-import org.keymaerax.btactics.UnifyUSCalculus._
+import org.keymaerax.bellerophon.*
+import org.keymaerax.btactics.ArithmeticSimplification.*
+import org.keymaerax.btactics.SequentCalculus.*
+import org.keymaerax.btactics.TacticFactory.*
+import org.keymaerax.btactics.TactixLibrary.*
+import org.keymaerax.btactics.UnifyUSCalculus.*
 import org.keymaerax.btactics.arithmetic.signanalysis.{Sign, SignAnalysis}
-import org.keymaerax.btactics.macros.{DisplayLevel, Tactic}
+import org.keymaerax.btactics.macros.{DisplayLevel, PlainTacticInfo, TacticConstructor0}
 import org.keymaerax.btactics.{DebuggingTactics, Idioms, SimplifierV3, ToolTactics}
-import org.keymaerax.core._
+import org.keymaerax.core.*
+import org.keymaerax.core.btactics.annotations.Derivation
 import org.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import org.keymaerax.infrastruct.{AntePosition, ExpressionTraversal, PosInExpr, SuccPosition}
 import org.keymaerax.parser.InterpretedSymbols
@@ -33,17 +34,20 @@ object ArithmeticSpeculativeSimplification {
    * Tries decreasingly aggressive strategies of hiding formulas before QE, until finally falling back to full QE if
    * none of the simplifications work out.
    */
-  @Tactic(
+  lazy val speculativeQE: BelleExpr = "smartQE".by { (_: Sequent) =>
+    (DebuggingTactics.debug("Trying abs...", DEBUG) & SaturateTactic(alphaRule) & proveOrRefuteAbs &
+      DebuggingTactics.debug("...abs done", DEBUG)) | speculativeQENoAbs
+  }
+
+  @Derivation
+  val speculativeQEInfo: PlainTacticInfo = PlainTacticInfo.create(
     name = "smartQE",
     displayName = Some("Speculative QE"),
     displayLevel = DisplayLevel.Browse,
     displayPremises = "*",
     displayConclusion = "Γ<sub>FOLR</sub> |- Δ<sub>FOLR</sub>",
+    constructor = TacticConstructor0.create()(() => speculativeQE),
   )
-  lazy val speculativeQE: BelleExpr = anon((_: Sequent) => {
-    (DebuggingTactics.debug("Trying abs...", DEBUG) & SaturateTactic(alphaRule) & proveOrRefuteAbs &
-      DebuggingTactics.debug("...abs done", DEBUG)) | speculativeQENoAbs
-  })
 
   /** QE with smart hiding. */
   private lazy val smartHideQE: BelleExpr =
