@@ -5,13 +5,28 @@
 
 package org.keymaerax.btactics
 
-import org.keymaerax.bellerophon._
-import org.keymaerax.btactics.TacticFactory._
-import org.keymaerax.btactics.macros.{DisplayLevel, Tactic}
-import org.keymaerax.core._
+import org.keymaerax.bellerophon.*
+import org.keymaerax.btactics.TacticFactory.*
+import org.keymaerax.btactics.macros.{
+  DisplayLevel,
+  ExpressionArg,
+  FormulaArg,
+  InputPositionTacticInfo,
+  ListArg,
+  OptionArg,
+  PositionTacticInfo,
+  TacticConstructor0,
+  TacticConstructor1,
+  TacticConstructor2,
+  TacticConstructor4,
+  TermArg,
+  VariableArg,
+}
+import org.keymaerax.core.*
+import org.keymaerax.core.btactics.annotations.Derivation
 import org.keymaerax.infrastruct.Position
 
-import scala.collection.immutable._
+import scala.collection.immutable.*
 
 /**
  * Differential Equation Calculus for differential dynamic logic. Basic axioms for differential equations are in
@@ -57,7 +72,12 @@ object DifferentialEquationCalculus {
    * diffSolve: solve a differential equation `[x'=f]p(x)` to `\forall t>=0 [x:=solution(t)]p(x)`. Similarly,
    * `[x'=f(x)&q(x)]p(x)` turns to `\forall t>=0 (\forall 0<=s<=t q(solution(s)) -> [x:=solution(t)]p(x))`.
    */
-  @Tactic(
+  lazy val solve: DependentPositionTactic = "solve".by { (pos: Position) =>
+    AxiomaticODESolver.axiomaticSolve(instEnd = false)(pos)
+  }
+
+  @Derivation
+  val solveInfo: PositionTacticInfo = PositionTacticInfo.create(
     name = "solve",
     displayName = Some("[']"),
     displayNameLong = Some("Solution"),
@@ -67,26 +87,27 @@ object DifferentialEquationCalculus {
     displayContextPremises = "Γ |- C( ∀t≥0 (∀0≤s≤t q(x(s))→[x:=x(t)]p(x)) ), Δ",
     displayContextConclusion = "Γ |- C( [x'=f(x)&q(x)]p(x) ), Δ",
     revealInternalSteps = true,
+    constructor = TacticConstructor0.create()(() => solve),
   )
-  lazy val solve: DependentPositionTactic = anon { (pos: Position) =>
-    AxiomaticODESolver.axiomaticSolve(instEnd = false)(pos)
-  }
 
   /**
    * diffSolve with evolution domain check at duration end: solve `[x'=f]p(x)` to `\forall t>=0 [x:=solution(t)]p(x)`.
    * Similarly, `[x'=f(x)&q(x)]p(x)` turns to `\forall t>=0 (q(solution(t)) -> [x:=solution(t)]p(x))`.
    */
-  @Tactic(
+  lazy val solveEnd: DependentPositionTactic = "solveEnd".by { (pos: Position) =>
+    AxiomaticODESolver.axiomaticSolve(instEnd = true)(pos)
+  }
+
+  @Derivation
+  val solveEndInfo: PositionTacticInfo = PositionTacticInfo.create(
     name = "solveEnd",
     displayNameLong = Some("Solution with q(x) true at end"),
     displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ |- ∀t≥0 (q(x(t))→[x:=x(t)]p(x)), Δ",
     displayConclusion = "Γ |- [x'=f(x)&q(x)]p(x), Δ",
     revealInternalSteps = true,
+    constructor = TacticConstructor0.create()(() => solveEnd),
   )
-  lazy val solveEnd: DependentPositionTactic = anon { (pos: Position) =>
-    AxiomaticODESolver.axiomaticSolve(instEnd = true)(pos)
-  }
 
   /**
    * DW: Differential Weakening uses evolution domain constraint so `[{x'=f(x)&q(x)}]p(x)` reduces to `\forall x
@@ -153,19 +174,22 @@ object DifferentialEquationCalculus {
    *   [[HilbertCalculus.DC]]
    */
   def dC(R: Formula): DependentPositionWithAppliedInputTactic = dC(List(R))
-  @Tactic(
+
+  def dC(R: List[Formula]): DependentPositionWithAppliedInputTactic = "dC"
+    .byWithInputs(List(R), (pos: Position) => DifferentialTactics.diffCut(R)(pos))
+
+  @Derivation
+  val dCInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
     name = "dC",
     displayNameLong = Some("Differential Cut"),
     displayPremises = "Γ |- [x'=f(x) & Q∧R]P, Δ ;; Γ |- [x'=f(x) & Q]R, Δ",
     displayConclusion = "Γ |- [x'=f(x) & Q]P, Δ",
     displayContextPremises = "Γ |- C( [x'=f(x) & Q∧R]P ), Δ ;; Γ |- C( [x'=f(x) & Q]R ), Δ",
     displayContextConclusion = "Γ |- C( [x'=f(x) & Q]P ), Δ",
-    inputGenerator = Some("pegasusCandidates"),
     revealInternalSteps = true,
+    inputGenerator = Some("pegasusCandidates"),
+    constructor = TacticConstructor1.create(ListArg(FormulaArg("R")))((R: List[Formula]) => dC(R)),
   )
-  def dC(R: List[Formula]): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position) =>
-    DifferentialTactics.diffCut(R)(pos)
-  }
 
   /**
    * dIRule: Differential Invariant proves a formula to be an invariant of a differential equation. (uses DI, DW, DE).
@@ -185,7 +209,10 @@ object DifferentialEquationCalculus {
    * @see
    *   [[HilbertCalculus.DI]]
    */
-  @Tactic(
+  def dIRule: DependentPositionTactic = "dIRule".forward(DifferentialTactics.diffInd(Symbol("diffInd")))
+
+  @Derivation
+  val dIRuleInfo: PositionTacticInfo = PositionTacticInfo.create(
     name = "dIRule",
     displayNameLong = Some("Differential Invariant"),
     displayLevel = DisplayLevel.All,
@@ -194,8 +221,8 @@ object DifferentialEquationCalculus {
     displayContextPremises = "Γ |- C( Q→P∧[x':=f(x)](P)' ), Δ",
     displayContextConclusion = "Γ |- C( [x'=f(x) & Q]P ), Δ",
     revealInternalSteps = true,
+    constructor = TacticConstructor0.create()(() => dIRule),
   )
-  def dIRule: DependentPositionTactic = DifferentialTactics.diffInd(Symbol("diffInd"))
 
   /**
    * dIClose: Differential Invariant proves a formula to be an invariant of a differential equation closing with the
@@ -222,7 +249,10 @@ object DifferentialEquationCalculus {
    * @see
    *   [[HilbertCalculus.DI]]
    */
-  @Tactic(
+  def dIClose: DependentPositionTactic = "dIClose".forward(DifferentialTactics.diffInd(Symbol("cex")))
+
+  @Derivation
+  val dICloseInfo: PositionTacticInfo = PositionTacticInfo.create(
     name = "dIClose",
     displayNameLong = Some("Differential Invariant Auto-Close"),
     displayLevel = DisplayLevel.All,
@@ -231,8 +261,8 @@ object DifferentialEquationCalculus {
     displayContextPremises = "Γ |- C( Q→P∧∀x(P')<sub>x'↦f(x)</sub> ), Δ",
     displayContextConclusion = "Γ |- C( [x'=f(x) & Q]P ), Δ",
     revealInternalSteps = true,
+    constructor = TacticConstructor0.create()(() => dIClose),
   )
-  def dIClose: DependentPositionTactic = DifferentialTactics.diffInd(Symbol("cex"))
 
   /**
    * dI: Differential Invariant proves a formula to be an invariant of a differential equation (with the usual steps to
@@ -294,17 +324,20 @@ object DifferentialEquationCalculus {
    */
   def dI(auto: Symbol = Symbol("full")): DependentPositionTactic = DifferentialTactics.diffInd(auto)
 
-  @Tactic(
+  def dIX: DependentPositionTactic = "dI".forward(DifferentialTactics.diffInd(Symbol("cex")))
+
+  @Derivation
+  val dIXInfo: PositionTacticInfo = PositionTacticInfo.create(
     name = "dI",
     displayNameLong = Some("Differential Invariant"),
     displayLevel = DisplayLevel.All,
-    displayPremises = "Γ, Q |- P, Δ ;; Q |- [x':=f(x)](P)'", // todo: how to indicate closed premise?
+    displayPremises = "Γ, Q |- P, Δ ;; Q |- [x':=f(x)](P)'",
     displayConclusion = "Γ |- [x'=f(x) & Q]P, Δ",
     displayContextPremises = "Γ |- C( Q→P∧∀x(P')<sub>x'↦f(x)</sub> ), Δ",
     displayContextConclusion = "Γ |- C( [x'=f(x) & Q]P ), Δ",
     revealInternalSteps = true,
+    constructor = TacticConstructor0.create()(() => dIX),
   )
-  def dIX: DependentPositionTactic = DifferentialTactics.diffInd(Symbol("cex"))
 
   /**
    * dG(ghost,r): Differential Ghost add auxiliary differential equations with extra variables ghost of the form
@@ -337,7 +370,20 @@ object DifferentialEquationCalculus {
    *     )
    *   }}}
    */
-  @Tactic(
+  def dG(E: Expression, G: Option[Formula]): DependentPositionWithAppliedInputTactic = "dG".byWithInputs(
+    List(E, G),
+    (pos: Position) =>
+      E match {
+        case Equal(l: DifferentialSymbol, r) => DifferentialTactics.dG(AtomicODE(l, r), G)(pos)
+        case dp: DifferentialProgram => DifferentialTactics.dG(dp, G)(pos)
+        case ODESystem(dp, _) => DifferentialTactics.dG(dp, G)(pos)
+        case _ =>
+          throw new IllegalArgumentException("Expected a differential program y′=f(y), but got " + E.prettyString)
+      },
+  )
+
+  @Derivation
+  val dGInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
     name = "dG",
     displayNameLong = Some("Differential Ghost"),
     displayPremises = "Γ |- ∃y [x'=f(x),E & Q]G, Δ ;; G |- P",
@@ -345,27 +391,25 @@ object DifferentialEquationCalculus {
     displayContextPremises = "Γ |- C( ∃y [x'=f(x),E & Q]G ), Δ",
     displayContextConclusion = "Γ |- C( [x'=f(x) & Q]P ), Δ",
     revealInternalSteps = true,
-    inputs = "E[y,x,y']:expression;; G[y]:option[formula]",
+    constructor = TacticConstructor2
+      .create(ExpressionArg("E", List("y", "x", "y'")), OptionArg(FormulaArg("G", List("y"))))(dG),
   )
-  def dG(E: Expression, G: Option[Formula]): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position) =>
-    E match {
-      case Equal(l: DifferentialSymbol, r) => DifferentialTactics.dG(AtomicODE(l, r), G)(pos)
-      case dp: DifferentialProgram => DifferentialTactics.dG(dp, G)(pos)
-      case ODESystem(dp, _) => DifferentialTactics.dG(dp, G)(pos)
-      case _ => throw new IllegalArgumentException("Expected a differential program y′=f(y), but got " + E.prettyString)
-    }
-  }
 
-  @Tactic(
+  def dGold(y: Variable, t1: Term, t2: Term, p: Option[Formula]): DependentPositionWithAppliedInputTactic = "dGold"
+    .forward(dG(AtomicODE(DifferentialSymbol(y), Plus(Times(t1, y), t2)), p))
+
+  @Derivation
+  val dGoldInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
     name = "dGold",
     displayName = Some("dG"),
     displayNameLong = Some("Differential Ghost"),
     displayPremises = "Γ |- ∃y [{x'=f(x),y′=a(x)*y+b(x) & Q}]P, Δ",
     displayConclusion = "Γ |- [{x'=f(x) & Q}]P, Δ",
-    inputs = "y[y]:variable;;a(x):term;;b(x):term;;P[y]:option[formula]",
+    constructor = TacticConstructor4
+      .create(VariableArg("y", List("y")), TermArg("a(x)"), TermArg("b(x)"), OptionArg(FormulaArg("P", List("y"))))(
+        dGold
+      ),
   )
-  def dGold(y: Variable, t1: Term, t2: Term, p: Option[Formula]): DependentPositionWithAppliedInputTactic =
-    dG(AtomicODE(DifferentialSymbol(y), Plus(Times(t1, y), t2)), p)
 
   // more DI/DC/DG variants
 
@@ -401,17 +445,19 @@ object DifferentialEquationCalculus {
    *   [[dI]]
    */
   // NB: Annotate diffInvariant(Formula) rather than DifferentialTactics.diffInvariant(List[Formula]) for compatibility
-  @Tactic(
+  def diffInvariant(invariant: Formula): DependentPositionWithAppliedInputTactic = "diffInvariant"
+    .byWithInputs(List(invariant), (pos: Position) => DifferentialTactics.diffInvariant(List(invariant))(pos))
+
+  @Derivation
+  val diffInvariantInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
     name = "diffInvariant",
     displayNameLong = Some("Differential Cut + Auto Differential Invariant"),
     displayPremises = "Γ |- [x'=f(x) & Q∧R]P, Δ",
     displayConclusion = "Γ |- [x'=f(x) & Q]P, Δ",
-    inputs = "R:formula",
     revealInternalSteps = true,
+    constructor = TacticConstructor1.create(FormulaArg("R"))((invariant: Formula) => diffInvariant(invariant)),
   )
-  def diffInvariant(invariant: Formula): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position) =>
-    DifferentialTactics.diffInvariant(List(invariant))(pos)
-  }
+
   def diffInvariant(invariants: List[Formula]): DependentPositionWithAppliedInputTactic = DifferentialTactics
     .diffInvariant(invariants)
 
