@@ -6,15 +6,23 @@
 package org.keymaerax.btactics
 
 import org.keymaerax.Logging
-import org.keymaerax.bellerophon._
-import org.keymaerax.btactics.TacticFactory._
-import org.keymaerax.btactics.TactixLibrary._
+import org.keymaerax.bellerophon.*
+import org.keymaerax.btactics.TacticFactory.*
+import org.keymaerax.btactics.TactixLibrary.*
 import org.keymaerax.btactics.helpers.DifferentialHelper
-import org.keymaerax.btactics.macros.Tactic
-import org.keymaerax.core._
-import org.keymaerax.infrastruct.Augmentors._
+import org.keymaerax.btactics.macros.{
+  InputPositionTacticInfo,
+  NumberArg,
+  TacticConstructor1,
+  TacticConstructor2,
+  TacticConstructor3,
+  VariableArg,
+}
+import org.keymaerax.core.*
+import org.keymaerax.core.btactics.annotations.Derivation
+import org.keymaerax.infrastruct.Augmentors.*
 import org.keymaerax.infrastruct.{Context, FormulaTools, PosInExpr, Position}
-import org.keymaerax.parser.StringConverter._
+import org.keymaerax.parser.StringConverter.*
 import org.keymaerax.pt.ProvableSig
 
 import scala.annotation.nowarn
@@ -47,14 +55,9 @@ object Approximator extends Logging {
    * @return
    *   The relevant tactic.
    */
-  @Tactic(
-    name = "autoApproximate",
-    displayName = Some("Approximate"),
-    displayPremises = "Γ |- [{X'=F & Α(n)}], Δ",
-    displayConclusion = "Γ |- [{X'=F}], Δ",
-  )
-  def autoApproximate(n: Number): DependentPositionWithAppliedInputTactic =
-    inputanon { (pos: Position, sequent: Sequent) =>
+  def autoApproximate(n: Number): DependentPositionWithAppliedInputTactic = "autoApproximate".byWithInputs(
+    List(n),
+    (pos: Position, sequent: Sequent) =>
       sequent.sub(pos) match {
         case Some(m: Modal) if (m.program.isInstanceOf[ODESystem]) => {
           val system = m.program.asInstanceOf[ODESystem]
@@ -74,21 +77,25 @@ object Approximator extends Logging {
         case None => throw new IllFormedTacticApplicationException(
             "Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString
           )
-      }
-    }
+      },
+  )
+
+  @Derivation
+  val autoApproximateInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
+    name = "autoApproximate",
+    displayName = Some("Approximate"),
+    displayPremises = "Γ |- [{X\'=F & Α(n)}], Δ",
+    displayConclusion = "Γ |- [{X\'=F}], Δ",
+    constructor = TacticConstructor1.create(NumberArg("n"))(autoApproximate),
+  )
 
   // endregion
 
   // region Approximation for {{{e'=e}}}
-  @Tactic(
-    name = "expApproximate",
-    displayName = Some("e'=e Approximation"),
-    displayPremises = "Γ |- [{c1,exp'=exp,c2 & approximate(n)}], Δ",
-    displayConclusion = "Γ |- [{c1,exp'=exp,c2}], Δ",
-    inputs = "exp:variable;;n:number",
-  )
-  def expApproximate(e: Variable, n: Number): DependentPositionWithAppliedInputTactic =
-    inputanon { (pos: Position, sequent: Sequent) =>
+
+  def expApproximate(e: Variable, n: Number): DependentPositionWithAppliedInputTactic = "expApproximate".byWithInputs(
+    List(e, n),
+    { (pos: Position, sequent: Sequent) =>
       val t = timeVarInModality(sequent.sub(pos))
 
       val N = n.value.toInt
@@ -122,74 +129,90 @@ object Approximator extends Logging {
 
       DebuggingTactics.debug(s"Beginning expApproximation on ${e.prettyString}, ${n.prettyString}", DEBUG) &
         cutTactics.reduce(_ & _)
-    }
+    },
+  )
+
+  @Derivation
+  val expApproximateInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
+    name = "expApproximate",
+    displayName = Some("e\'=e Approximation"),
+    displayPremises = "Γ |- [{c1,exp\'=exp,c2 & approximate(n)}], Δ",
+    displayConclusion = "Γ |- [{c1,exp\'=exp,c2}], Δ",
+    constructor = TacticConstructor2.create(VariableArg("exp"), NumberArg("n"))(expApproximate),
+  )
 
   /**
    * Cuts in Taylor approximations for circular dynamics {{{x'=y,y'=-x}}}.
    * @todo
    *   Good error messages for when the first cut or two fail ==> "missing assumptions."
    */
-  @Tactic(
-    name = "circularApproximate",
-    displayName = Some("Circular Dynamics Approximation"),
-    displayPremises = "Γ |- [{c1,sin'=cos,cos'=-sin,c2 & approximate(num)}], Δ",
-    displayConclusion = "Γ |- [{c1,sin'=cos,cos'=-sin,c2}], Δ",
-    inputs = "sin[sin]:variable;;cos[cos]:variable;;num:number",
-  )
   def circularApproximate(s: Variable, c: Variable, n: Number): DependentPositionWithAppliedInputTactic =
-    inputanon { (pos: Position, sequent: Sequent) =>
-      val t = timeVarInModality(sequent.sub(pos))
+    new org.keymaerax.btactics.TacticFactory.TacticForNameFactory("circularApproximate").byWithInputs(
+      List(s, c, n),
+      { (pos: Position, sequent: Sequent) =>
+        val t = timeVarInModality(sequent.sub(pos))
 
-      // Get the number of terms we should expand.
-      val N = n.value.toInt
-      assert(
-        N >= 0,
-        s"circularApproximate expects a non-negative number as its 3rd argument (# of terms to expand the Taylor series.)",
-      )
-
-      // Compute the series of cuts.
-      val sinCuts = Range(0, N)
-        .map(i => if (i % 2 == 0) LessEqual(s, taylorSin(t, i)) else GreaterEqual(s, taylorSin(t, i)))
-      val cosCuts = Range(0, N)
-        .map(i => if (i % 2 == 0) LessEqual(c, taylorCos(t, i)) else GreaterEqual(c, taylorCos(t, i)))
-
-      val radius = Plus(Power(s, Number(2)), Power(c, Number(2)))
-      val radiusIsConst = Equal(radius, FuncOf(Function("old", None, Real, Real), radius))
-
-      // Prove that (c,s) is a circle.
-      val isOnCircle = DifferentialEquationCalculus.dC(radiusIsConst)(pos) <
-        (
-          UnifyUSCalculus.nil,
-          DifferentialEquationCalculus.dI()(pos) & DebuggingTactics.done("Expected dI to succeed"),
-        ) & DebuggingTactics.assertProvableSize(1) & DebuggingTactics.debug(s"Successfully cut isOnCircle", DEBUG)
-
-      val cuts = interleave(cosCuts, sinCuts)
-      logger.debug(s"Taylor Approximator performing these cuts: ${cuts.mkString("\n")}")
-
-      val qAtoms = sequent.sub(pos ++ PosInExpr(0 :: Nil)) match {
-        case Some(ODESystem(_, q)) => FormulaTools.conjuncts(q).toSet
-        case _ => Set[Formula]()
-      }
-
-      // Construct a tactic that interleaves these cuts.
-      val cutTactics: Seq[BelleExpr] = cuts
-        .filter(!FormulaTools.conjuncts(_).toSet.subsetOf(qAtoms))
-        .map(cut =>
-          DebuggingTactics.debug("Cutting " + cut.prettyString) &
-            DifferentialEquationCalculus.dC(cut)(pos) <
-            (
-              UnifyUSCalculus.nil,
-              // dW&QE handles the base case, dI handles all others.
-              DebuggingTactics.debug("Trying to prove next bound: ", DEBUG) &
-                (DifferentialEquationCalculus.dI()(pos) | (DifferentialEquationCalculus.dW(pos) & QE)) &
-                DebuggingTactics.done("Expected dI to succeed"),
-            ) & DebuggingTactics.assertProvableSize(1) & DebuggingTactics.debug(s"Successfully cut $cut", DEBUG)
+        // Get the number of terms we should expand.
+        val N = n.value.toInt
+        assert(
+          N >= 0,
+          s"circularApproximate expects a non-negative number as its 3rd argument (# of terms to expand the Taylor series.)",
         )
 
-      DebuggingTactics
-        .debug(s"Beginning expApproximation on ${s.prettyString}, ${c.prettyString}, ${n.prettyString}", DEBUG) &
-        isOnCircle & cutTactics.reduce(_ & _)
-    }
+        // Compute the series of cuts.
+        val sinCuts =
+          Range(0, N).map(i => if (i % 2 == 0) LessEqual(s, taylorSin(t, i)) else GreaterEqual(s, taylorSin(t, i)))
+        val cosCuts =
+          Range(0, N).map(i => if (i % 2 == 0) LessEqual(c, taylorCos(t, i)) else GreaterEqual(c, taylorCos(t, i)))
+
+        val radius = Plus(Power(s, Number(2)), Power(c, Number(2)))
+        val radiusIsConst = Equal(radius, FuncOf(Function("old", None, Real, Real), radius))
+
+        // Prove that (c,s) is a circle.
+        val isOnCircle = DifferentialEquationCalculus.dC(radiusIsConst)(pos) <
+          (
+            UnifyUSCalculus.nil,
+            DifferentialEquationCalculus.dI()(pos) & DebuggingTactics.done("Expected dI to succeed"),
+          ) & DebuggingTactics.assertProvableSize(1) & DebuggingTactics.debug(s"Successfully cut isOnCircle", DEBUG)
+
+        val cuts = interleave(cosCuts, sinCuts)
+        logger.debug(s"Taylor Approximator performing these cuts: ${cuts.mkString("\n")}")
+
+        val qAtoms = sequent.sub(pos ++ PosInExpr(0 :: Nil)) match {
+          case Some(ODESystem(_, q)) => FormulaTools.conjuncts(q).toSet
+          case _ => Set[Formula]()
+        }
+
+        // Construct a tactic that interleaves these cuts.
+        val cutTactics: Seq[BelleExpr] = cuts
+          .filter(!FormulaTools.conjuncts(_).toSet.subsetOf(qAtoms))
+          .map(cut =>
+            DebuggingTactics.debug("Cutting " + cut.prettyString) &
+              DifferentialEquationCalculus.dC(cut)(pos) <
+              (
+                UnifyUSCalculus.nil,
+                // dW&QE handles the base case, dI handles all others.
+                DebuggingTactics.debug("Trying to prove next bound: ", DEBUG) &
+                  (DifferentialEquationCalculus.dI()(pos) | (DifferentialEquationCalculus.dW(pos) & QE)) &
+                  DebuggingTactics.done("Expected dI to succeed"),
+              ) & DebuggingTactics.assertProvableSize(1) & DebuggingTactics.debug(s"Successfully cut $cut", DEBUG)
+          )
+
+        DebuggingTactics
+          .debug(s"Beginning expApproximation on ${s.prettyString}, ${c.prettyString}, ${n.prettyString}", DEBUG) &
+          isOnCircle & cutTactics.reduce(_ & _)
+      },
+    )
+
+  @Derivation
+  val circularApproximateInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
+    name = "circularApproximate",
+    displayName = Some("Circular Dynamics Approximation"),
+    displayPremises = "Γ |- [{c1,sin\'=cos,cos\'=-sin,c2 & approximate(num)}], Δ",
+    displayConclusion = "Γ |- [{c1,sin\'=cos,cos\'=-sin,c2}], Δ",
+    constructor = TacticConstructor3
+      .create(VariableArg("sin", List("sin")), VariableArg("cos", List("cos")), NumberArg("num"))(circularApproximate),
+  )
 
   // region Definitions of series.
 
