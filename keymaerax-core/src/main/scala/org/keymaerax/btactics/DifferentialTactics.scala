@@ -5,30 +5,39 @@
 
 package org.keymaerax.btactics
 
-import org.keymaerax.bellerophon._
-import org.keymaerax.btactics.AnonymousLemmas._
+import org.keymaerax.bellerophon.*
+import org.keymaerax.btactics.AnonymousLemmas.*
 import org.keymaerax.btactics.ArithmeticSimplification.smartHide
 import org.keymaerax.btactics.BelleLabels.{replaceTxWith, startTx}
-import org.keymaerax.btactics.DifferentialEquationCalculus._
-import org.keymaerax.btactics.HilbertCalculus._
-import org.keymaerax.btactics.Idioms._
-import org.keymaerax.btactics.SequentCalculus._
-import org.keymaerax.btactics.SimplifierV3._
-import org.keymaerax.btactics.TacticFactory._
-import org.keymaerax.btactics.TactixLibrary._
-import org.keymaerax.btactics.UnifyUSCalculus._
+import org.keymaerax.btactics.DifferentialEquationCalculus.*
+import org.keymaerax.btactics.HilbertCalculus.*
+import org.keymaerax.btactics.Idioms.*
+import org.keymaerax.btactics.SequentCalculus.*
+import org.keymaerax.btactics.SimplifierV3.*
+import org.keymaerax.btactics.TacticFactory.*
+import org.keymaerax.btactics.TactixLibrary.*
+import org.keymaerax.btactics.UnifyUSCalculus.*
 import org.keymaerax.btactics.helpers.DifferentialHelper
-import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
-import org.keymaerax.btactics.macros.{AxiomInfo, DisplayLevel, Tactic}
-import org.keymaerax.core.{NamedSymbol, _}
-import org.keymaerax.infrastruct.Augmentors._
+import org.keymaerax.btactics.macros.DerivationInfoAugmentors.*
+import org.keymaerax.btactics.macros.{
+  AxiomInfo,
+  DisplayLevel,
+  FormulaArg,
+  InputPositionTacticInfo,
+  PositionTacticInfo,
+  TacticConstructor0,
+  TacticConstructor1,
+}
+import org.keymaerax.core.btactics.annotations.Derivation
+import org.keymaerax.core.{NamedSymbol, *}
+import org.keymaerax.infrastruct.*
+import org.keymaerax.infrastruct.Augmentors.*
 import org.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
-import org.keymaerax.infrastruct._
-import org.keymaerax.parser.InterpretedSymbols._
-import org.keymaerax.parser.StringConverter._
+import org.keymaerax.parser.InterpretedSymbols.*
+import org.keymaerax.parser.StringConverter.*
 import org.keymaerax.parser.{Declaration, InterpretedSymbols, Name, TacticReservedSymbols}
 import org.keymaerax.pt.ProvableSig
-import org.keymaerax.tools._
+import org.keymaerax.tools.*
 import org.keymaerax.tools.qe.BigDecimalQETool
 import org.keymaerax.{Configuration, Logging}
 
@@ -464,15 +473,18 @@ private object DifferentialTactics extends Logging {
     anon((pos: Position, sequent: Sequent) => { diffRefineInternal(f, hide)(pos, sequent) })
 
   // todo: rename the tactic directly
-  @Tactic(
+  def diffRefine(R: Formula): DependentPositionWithAppliedInputTactic = "dR"
+    .byWithInputs(List(R), (pos: Position, sequent: Sequent) => diffRefineInternal(R, hide = true)(pos, sequent))
+
+  @Derivation
+  val diffRefineInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
     name = "dR",
     displayNameLong = Some("Differential Refine"),
     displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ |- [x'=f(x)&Q]R ;; Γ |- [x'=f(x)&R]P, Δ",
     displayConclusion = "Γ |- [x'=f(x)&Q]P, Δ",
+    constructor = TacticConstructor1.create(FormulaArg("R"))(diffRefine),
   )
-  def diffRefine(R: Formula): DependentPositionWithAppliedInputTactic =
-    inputanon((pos: Position, sequent: Sequent) => diffRefineInternal(R, hide = true)(pos, sequent))
 
   /** @see [[TactixLibrary.diffInvariant]] */
   private[btactics] def diffInvariant(R: List[Formula]): DependentPositionWithAppliedInputTactic = inputanon {
@@ -499,14 +511,7 @@ private object DifferentialTactics extends Logging {
    *   AxiomaticODESolver.inverseDiffCut
    */
   // todo: rename the tactic directly
-  @Tactic(
-    name = "dCi",
-    displayNameLong = Some("Inverse Differential Cut"),
-    displayLevel = DisplayLevel.Browse,
-    displayPremises = "Γ |- [x'=f(x) & Q]P ;; Γ |- R, Δ",
-    displayConclusion = "Γ |- [x'=f(x) & Q∧R]P, Δ",
-  )
-  val inverseDiffCut: DependentPositionTactic = anon((pos: Position, s: Sequent) => {
+  val inverseDiffCut: DependentPositionTactic = "dCi".by { (pos: Position, s: Sequent) =>
     val polarity = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(s(pos.top), pos.inExpr)
     val fact = s.at(pos) match {
       case (ctx, fml: Modal) =>
@@ -531,7 +536,17 @@ private object DifferentialTactics extends Logging {
         )
     }
     useAt(fact, PosInExpr(1 :: (if (polarity > 0) 1 else 0) :: Nil))(pos)
-  })
+  }
+
+  @Derivation
+  val inverseDiffCutInfo: PositionTacticInfo = PositionTacticInfo.create(
+    name = "dCi",
+    displayNameLong = Some("Inverse Differential Cut"),
+    displayLevel = DisplayLevel.Browse,
+    displayPremises = "Γ |- [x'=f(x) & Q]P ;; Γ |- R, Δ",
+    displayConclusion = "Γ |- [x'=f(x) & Q∧R]P, Δ",
+    constructor = TacticConstructor0.create()(() => inverseDiffCut),
+  )
 
   /**
    * Turns things that are constant in ODEs into function symbols.
@@ -847,14 +862,7 @@ private object DifferentialTactics extends Logging {
    * [x'=v,v'=a,t'=1 & q]p
    * }}}
    */
-  @Tactic(
-    name = "dGi", // todo: rename the tactic directly
-    displayName = Some("Inverse Differential Ghost"),
-    displayLevel = DisplayLevel.Browse,
-    displayPremises = "Γ |- [x'=f(x) & Q]P, Δ",
-    displayConclusion = "Γ |- ∃y [x'=f(x),E & Q]P, Δ",
-  )
-  val inverseDiffGhost: DependentPositionTactic = anon((pos: Position, s: Sequent) => {
+  val inverseDiffGhost: DependentPositionTactic = "dGi".by { (pos: Position, s: Sequent) =>
     val polarity = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(s(pos.top), pos.inExpr)
     s.sub(pos) match {
       case Some(f @ Box(ODESystem(DifferentialProduct(y_DE: AtomicODE, _), _), _)) if polarity > 0 =>
@@ -893,19 +901,23 @@ private object DifferentialTactics extends Logging {
           "Position " + pos + " does not point to a valid position in sequent " + s.prettyString
         )
     }
-  })
+  }
+
+  @Derivation
+  val inverseDiffGhostInfo: PositionTacticInfo = PositionTacticInfo.create(
+    name = "dGi",
+    displayName = Some("Inverse Differential Ghost"),
+    displayLevel = DisplayLevel.Browse,
+    displayPremises = "Γ |- [x'=f(x) & Q]P, Δ",
+    displayConclusion = "Γ |- ∃y [x'=f(x),E & Q]P, Δ",
+    constructor = TacticConstructor0.create()(() => inverseDiffGhost),
+  )
 
   /** @see [[HilbertCalculus.Derive.Dvar]] */
   // @todo could probably simplify implementation by picking atomic formula, using "x' derive var" and then embedding this equivalence into context by CE.
   // @todo Or, rather, by using CE directly on a "x' derive var" provable fact (z)'=1 <-> z'=1.
   // @Tactic in HilbertCalculus.Derive.Dvar same
-  @Tactic(
-    name = "Dvariable",
-    displayName = Some("x'"),
-    displayLevel = DisplayLevel.Internal,
-    displayConclusion = "__(x)'__ = x",
-  )
-  private[btactics] lazy val Dvariable: BuiltInPositionTactic = anon { (pr: ProvableSig, pos: Position) =>
+  lazy private[btactics] val Dvariable: BuiltInPositionTactic = "Dvariable".by { (pr: ProvableSig, pos: Position) =>
     ProofRuleTactics.requireOneSubgoal(pr, "Dvariable")
     val OPTIMIZED = true
     val axiom: AxiomInfo = Ax.DvariableCommutedAxiom
@@ -953,6 +965,14 @@ private object DifferentialTactics extends Logging {
     }
   }
 
+  @Derivation
+  private[btactics] val DvariableInfo: PositionTacticInfo = PositionTacticInfo.create(
+    name = "Dvariable",
+    displayName = Some("x'"),
+    displayConclusion = "__(x)'__ = x",
+    constructor = TacticConstructor0.create()(() => Dvariable),
+  )
+
   /**
    * Unpacks the evolution domain of an ODE at time zero. Useful for proofs that rely on contradictions with other
    * conditions at time zero preventing continuous evolution in the ODE.
@@ -962,44 +982,38 @@ private object DifferentialTactics extends Logging {
    *       x<0 |- [x'=3,y'=2 & x>=0]y>0
    * }}}
    */
-  @Tactic(
-    name = "diffUnpackEvolDomain", // todo: rename the tactic directly
+  lazy val diffUnpackEvolutionDomainInitially: DependentPositionTactic = "diffUnpackEvolDomain"
+    .by { (pos: Position, sequent: Sequent) =>
+      sequent.sub(pos) match {
+        case Some(Box(ODESystem(_, q), _)) =>
+          require(pos.isSucc && pos.isTopLevel, "diffUnpackEvolDomain only at top-level in succedent")
+          // @note cut to keep positioning stable (implyR modifies positions)
+          cut(q) < (
+            skip,
+            useAt(Ax.DWQinitial, PosInExpr(1 :: Nil))(pos) & implyR(pos) & close
+          )
+        case Some(e) => throw new TacticInapplicableFailure(
+            "diffUnpackEvolDomain only applicable to box ODEs, but got " + e.prettyString
+          )
+        case None => throw new IllFormedTacticApplicationException(
+            "Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString
+          )
+      }
+    }
+
+  @Derivation
+  val diffUnpackEvolutionDomainInitiallyInfo: PositionTacticInfo = PositionTacticInfo.create(
+    name = "diffUnpackEvolDomain",
     displayName = Some("Unpack evolution domain"),
     displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ, Q |- [x'=f(x) & Q]P, Δ",
     displayConclusion = "Γ |- [x'=f(x) & Q]P, Δ",
-  )
-  lazy val diffUnpackEvolutionDomainInitially: DependentPositionTactic = anon((pos: Position, sequent: Sequent) =>
-    sequent.sub(pos) match {
-      case Some(Box(ODESystem(_, q), _)) =>
-        require(pos.isSucc && pos.isTopLevel, "diffUnpackEvolDomain only at top-level in succedent")
-        // @note cut to keep positioning stable (implyR modifies positions)
-        cut(q) < (
-          skip,
-          useAt(Ax.DWQinitial, PosInExpr(1 :: Nil))(pos) & implyR(pos) & close
-        )
-      case Some(e) => throw new TacticInapplicableFailure(
-          "diffUnpackEvolDomain only applicable to box ODEs, but got " + e.prettyString
-        )
-      case None => throw new IllFormedTacticApplicationException(
-          "Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString
-        )
-    }
+    constructor = TacticConstructor0.create()(() => diffUnpackEvolutionDomainInitially),
   )
 
   /** [[DifferentialEquationCalculus.dW]]. diffWeaken by diffCut(consts) <(diffWeakenG, V&close) */
   // todo: rename the tactic directly
-  @Tactic(
-    name = "dW",
-    displayNameLong = Some("Differential Weaken"),
-    displayLevel = DisplayLevel.All,
-    displayPremises = "Γ<sub>const</sub>, Q |- P, Δ<sub>const</sub>",
-    displayConclusion = "Γ |- [x'=f(x) & Q]P, Δ",
-    displayContextPremises = "Γ |- C( ∀x (Q→P) ), Δ",
-    displayContextConclusion = "Γ |- C( [x'=f(x) & Q]P ), Δ",
-    revealInternalSteps = true,
-  )
-  private[btactics] lazy val diffWeaken: DependentPositionTactic = anon((pos: Position, sequent: Sequent) =>
+  lazy private[btactics] val diffWeaken: DependentPositionTactic = "dW".by { (pos: Position, sequent: Sequent) =>
     if (pos.isAnte) { throw new TacticInapplicableFailure("dW only in succedent") }
     else if (!pos.isTopLevel) { DW(pos) & abstractionb(pos) }
     else sequent.sub(pos) match {
@@ -1032,6 +1046,19 @@ private object DifferentialTactics extends Logging {
           "Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString
         )
     }
+  }
+
+  @Derivation
+  private[btactics] val diffWeakenInfo: PositionTacticInfo = PositionTacticInfo.create(
+    name = "dW",
+    displayNameLong = Some("Differential Weaken"),
+    displayLevel = DisplayLevel.All,
+    displayPremises = "Γ<sub>const</sub>, Q |- P, Δ<sub>const</sub>",
+    displayConclusion = "Γ |- [x'=f(x) & Q]P, Δ",
+    displayContextPremises = "Γ |- C( ∀x (Q→P) ), Δ",
+    displayContextConclusion = "Γ |- C( [x'=f(x) & Q]P ), Δ",
+    revealInternalSteps = true,
+    constructor = TacticConstructor0.create()(() => diffWeaken),
   )
 
   /**
@@ -1039,10 +1066,101 @@ private object DifferentialTactics extends Logging {
    * shape.
    */
   // todo: rename the tactic directly
-  @Tactic(
+  lazy private[btactics] val diffWeakenPlus: DependentPositionTactic = "dWplus"
+    .by { (pos: Position, sequent: Sequent) =>
+      if (pos.isAnte) { throw new TacticInapplicableFailure("dW+ only in succedent") }
+      else if (!pos.isTopLevel) { DW(pos) & abstractionb(pos) }
+      else sequent.sub(pos) match {
+        case Some(box @ Box(a: ODESystem, p)) =>
+          require(pos.isTopLevel && pos.isSucc, "dW+ only at top level in succedent")
+
+          val primedVars = DifferentialHelper.getPrimedVariables(a)
+
+          val rewriteExistingGhosts = sequent
+            .ante
+            .zipWithIndex
+            .filter({
+              case (Equal(l: Variable, r: Variable), _) => primedVars.contains(r) && !primedVars.contains(l)
+              case _ => false
+            })
+            .reverse
+            .map({ case (_, i) => exhaustiveEqR2L(AntePosition.base0(i)) & hideL(AntePosition.base0(i)) })
+            .reduceOption[BelleExpr](_ & _)
+            .getOrElse(skip)
+
+          val storeInitialVals = anon((seq: Sequent) => {
+            val symbols = seq.ante.flatMap(StaticSemantics.symbols) ++ seq
+              .succ
+              .patch(pos.index0, Nil, 1)
+              .flatMap(StaticSemantics.symbols)
+            val storePrimedVars = primedVars.filter(symbols.contains)
+            storePrimedVars
+              .map(HybridProgramCalculus.discreteGhost(_)(pos))
+              .reduceOption[BelleExpr](_ & _)
+              .getOrElse(skip) &
+              (exhaustiveEqR2L(Symbol("Llast")) & hideL(Symbol("Llast"))) * storePrimedVars.size
+          })
+
+          def cutFmls(seq: Sequent): (List[Formula], List[Formula]) = {
+            val bv = StaticSemantics.boundVars(a)
+            (
+              seq
+                .ante
+                .flatMap({ fml =>
+                  if (fml != box && StaticSemantics.freeVars(fml).intersect(bv).isEmpty) Some(fml) else None
+                })
+                .toList,
+              seq
+                .succ
+                .flatMap({ fml =>
+                  if (fml != box && StaticSemantics.freeVars(fml).intersect(bv).isEmpty) Some(Not(fml)) else None
+                })
+                .toList,
+            )
+          }
+
+          val cutAndDW = anon((seq: Sequent) => {
+            // @note filter to include only formulas that are rewritten to initial values
+            val (anteCuts, succCuts) = cutFmls(seq)
+            val cuts = anteCuts ++ succCuts
+            val odeAfterCut =
+              if (cuts.isEmpty) box else Box(ODESystem(a.ode, And(a.constraint, cuts.reduceRight(And.apply))), p)
+            // @note implyRi+implyR to move Q last in succedent
+            val dw = diffWeakenG(Symbol("R"), odeAfterCut) & implyR(1) & andL(Symbol("Llast")) * cuts
+              .size & notL(Symbol("Llast")) * succCuts.size &
+              implyRiX(AntePos(0), SuccPos(0)) & implyR(1)
+            if (cuts.isEmpty) dw
+            else diffCut(cuts.reduceRight(And.apply))(Symbol("R"), box) < (
+              skip,
+              V(Symbol("Rlast")) &
+                (if (anteCuts.nonEmpty)
+                   (andR(Symbol("Rlast")) < (closeIdWith(Symbol("Rlast")) & done, skip)) * (anteCuts.size - 1) &
+                     (if (succCuts.nonEmpty) andR(Symbol("Rlast")) < (closeIdWith(Symbol("Rlast")) & done, skip)
+                      else closeIdWith(Symbol("Rlast")))
+                 else skip) &
+                (if (succCuts.nonEmpty)
+                   (
+                     andR(Symbol("Rlast")) < (notR(Symbol("Rlast")) & closeIdWith(Symbol("Llast")) & done, skip)
+                   ) * (succCuts.size - 1) &
+                     notR(Symbol("Rlast")) & closeIdWith(Symbol("Llast"))
+                 else skip) & done
+            ) & dw
+          })
+
+          rewriteExistingGhosts & storeInitialVals & cutAndDW
+        case Some(e) =>
+          throw new TacticInapplicableFailure("dWplus only applicable to box ODEs, but got " + e.prettyString)
+        case None => throw new IllFormedTacticApplicationException(
+            "Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString
+          )
+      }
+    }
+
+  @Derivation
+  private[btactics] val diffWeakenPlusInfo: PositionTacticInfo = PositionTacticInfo.create(
     name = "dWplus",
     displayName = Some("dW+"),
-    displayNameAscii = Some("dWplus"), // Initial State-Preserving Differential Weaken
+    displayNameAscii = Some("dWplus"),
     displayNameLong = Some("Differential Weaken"),
     displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ<sub>0</sub>, Q |- P, Δ<sub>0</sub>",
@@ -1050,94 +1168,7 @@ private object DifferentialTactics extends Logging {
     displayContextPremises = "Γ |- C( ∀x (Q→P) ), Δ",
     displayContextConclusion = "Γ |- C( [x'=f(x) & Q]P ), Δ",
     revealInternalSteps = true,
-  )
-  private[btactics] lazy val diffWeakenPlus: DependentPositionTactic = anon((pos: Position, sequent: Sequent) =>
-    if (pos.isAnte) { throw new TacticInapplicableFailure("dW+ only in succedent") }
-    else if (!pos.isTopLevel) { DW(pos) & abstractionb(pos) }
-    else sequent.sub(pos) match {
-      case Some(box @ Box(a: ODESystem, p)) =>
-        require(pos.isTopLevel && pos.isSucc, "dW+ only at top level in succedent")
-
-        val primedVars = DifferentialHelper.getPrimedVariables(a)
-
-        val rewriteExistingGhosts = sequent
-          .ante
-          .zipWithIndex
-          .filter({
-            case (Equal(l: Variable, r: Variable), _) => primedVars.contains(r) && !primedVars.contains(l)
-            case _ => false
-          })
-          .reverse
-          .map({ case (_, i) => exhaustiveEqR2L(AntePosition.base0(i)) & hideL(AntePosition.base0(i)) })
-          .reduceOption[BelleExpr](_ & _)
-          .getOrElse(skip)
-
-        val storeInitialVals = anon((seq: Sequent) => {
-          val symbols = seq.ante.flatMap(StaticSemantics.symbols) ++ seq
-            .succ
-            .patch(pos.index0, Nil, 1)
-            .flatMap(StaticSemantics.symbols)
-          val storePrimedVars = primedVars.filter(symbols.contains)
-          storePrimedVars
-            .map(HybridProgramCalculus.discreteGhost(_)(pos))
-            .reduceOption[BelleExpr](_ & _)
-            .getOrElse(skip) &
-            (exhaustiveEqR2L(Symbol("Llast")) & hideL(Symbol("Llast"))) * storePrimedVars.size
-        })
-
-        def cutFmls(seq: Sequent): (List[Formula], List[Formula]) = {
-          val bv = StaticSemantics.boundVars(a)
-          (
-            seq
-              .ante
-              .flatMap({ fml =>
-                if (fml != box && StaticSemantics.freeVars(fml).intersect(bv).isEmpty) Some(fml) else None
-              })
-              .toList,
-            seq
-              .succ
-              .flatMap({ fml =>
-                if (fml != box && StaticSemantics.freeVars(fml).intersect(bv).isEmpty) Some(Not(fml)) else None
-              })
-              .toList,
-          )
-        }
-
-        val cutAndDW = anon((seq: Sequent) => {
-          // @note filter to include only formulas that are rewritten to initial values
-          val (anteCuts, succCuts) = cutFmls(seq)
-          val cuts = anteCuts ++ succCuts
-          val odeAfterCut =
-            if (cuts.isEmpty) box else Box(ODESystem(a.ode, And(a.constraint, cuts.reduceRight(And.apply))), p)
-          // @note implyRi+implyR to move Q last in succedent
-          val dw = diffWeakenG(Symbol("R"), odeAfterCut) & implyR(1) & andL(Symbol("Llast")) * cuts
-            .size & notL(Symbol("Llast")) * succCuts.size &
-            implyRiX(AntePos(0), SuccPos(0)) & implyR(1)
-          if (cuts.isEmpty) dw
-          else diffCut(cuts.reduceRight(And.apply))(Symbol("R"), box) < (
-            skip,
-            V(Symbol("Rlast")) &
-              (if (anteCuts.nonEmpty) (andR(Symbol("Rlast")) < (closeIdWith(Symbol("Rlast")) & done, skip)) * (anteCuts
-                 .size - 1) &
-                 (if (succCuts.nonEmpty) andR(Symbol("Rlast")) < (closeIdWith(Symbol("Rlast")) & done, skip)
-                  else closeIdWith(Symbol("Rlast")))
-               else skip) &
-              (if (succCuts.nonEmpty)
-                 (
-                   andR(Symbol("Rlast")) < (notR(Symbol("Rlast")) & closeIdWith(Symbol("Llast")) & done, skip)
-                 ) * (succCuts.size - 1) &
-                   notR(Symbol("Rlast")) & closeIdWith(Symbol("Llast"))
-               else skip) & done
-          ) & dw
-        })
-
-        rewriteExistingGhosts & storeInitialVals & cutAndDW
-      case Some(e) =>
-        throw new TacticInapplicableFailure("dWplus only applicable to box ODEs, but got " + e.prettyString)
-      case None => throw new IllFormedTacticApplicationException(
-          "Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString
-        )
-    }
+    constructor = TacticConstructor0.create()(() => diffWeakenPlus),
   )
 
   /**
@@ -1240,8 +1271,7 @@ private object DifferentialTactics extends Logging {
    *   Leaves False as the only subgoal if it finds a counterexample to the ODE question at the position it is called
    *   Succeeds in all other cases (including when the sequent or position are not of the expected shape)
    */
-  @Tactic(name = "cexODE")
-  val cexODE: DependentPositionTactic = anon((pos: Position, seq: Sequent) => {
+  val cexODE: DependentPositionTactic = "cexODE".by { (pos: Position, seq: Sequent) =>
     if (!(pos.isSucc && pos.isTopLevel && pos.checkSucc.index0 == 0 && seq.succ.length == 1)) {
       // todo: currently only works if there is exactly one succedent
       logger.warn("ODE counterexample not called at top-level succedent")
@@ -1270,7 +1300,14 @@ private object DifferentialTactics extends Logging {
         }
       }
     }
-  })
+  }
+
+  @Derivation
+  val cexODEInfo: PositionTacticInfo = PositionTacticInfo.create(
+    name = "cexODE",
+    displayLevel = DisplayLevel.Internal,
+    constructor = TacticConstructor0.create()(() => cexODE),
+  )
 
   /** Tries to instantiate the evolution domain fact with the ODE duration (assumes monotonicity). */
   lazy val endODEHeuristic: BelleExpr = anon((seq: Sequent) => {
@@ -1638,14 +1675,7 @@ private object DifferentialTactics extends Logging {
    * @author
    *   Nathan Fulton
    */
-  @Tactic(
-    name = "splitWeakInequality",
-    displayName = Some("Split weak inequality"),
-    displayLevel = DisplayLevel.Browse,
-    displayPremises = "Γ |- [{x'=f(x) & Q}] p>q, Δ ;; Γ |- [{x'=f(x) & Q}] p=q, Δ",
-    displayConclusion = "Γ |- [{x'=f(x) & Q}] p≳q, Δ",
-  )
-  val splitWeakInequality: DependentPositionTactic = anon((pos: Position, seq: Sequent) => {
+  val splitWeakInequality: DependentPositionTactic = "splitWeakInequality".by { (pos: Position, seq: Sequent) =>
     val postcondition = seq.at(pos)._2 match {
       case Box(ODESystem(_, _), p) => p
       case _ => throw new TacticInapplicableFailure(
@@ -1670,7 +1700,17 @@ private object DifferentialTactics extends Logging {
       (hide(pos.topLevel) & QE & done) | // @todo write a hideNonArithmetic tactic.
         DebuggingTactics.error(s"splitWeakInequality failed because $caseDistinction does not hold initially.")
     )
-  })
+  }
+
+  @Derivation
+  val splitWeakInequalityInfo: PositionTacticInfo = PositionTacticInfo.create(
+    name = "splitWeakInequality",
+    displayName = Some("Split weak inequality"),
+    displayLevel = DisplayLevel.Browse,
+    displayPremises = "Γ |- [{x'=f(x) & Q}] p>q, Δ ;; Γ |- [{x'=f(x) & Q}] p=q, Δ",
+    displayConclusion = "Γ |- [{x'=f(x) & Q}] p≳q, Δ",
+    constructor = TacticConstructor0.create()(() => splitWeakInequality),
+  )
 
   /**
    * Proves Darboux properties `p = 0 -> [ {ODE & Q} ] p = 0` where `Q -> p' = q p` (similarly for `>= 0`, `> 0`, `!=
@@ -1916,15 +1956,20 @@ private object DifferentialTactics extends Logging {
       )
   })
 
-  @Tactic(
+  val dgBarrier: DependentPositionTactic = "barrier".by { (pos: Position, _: Sequent) =>
+    Dconstify(dgBarrierAux(pos))(pos)
+  }
+
+  @Derivation
+  val dgBarrierInfo: PositionTacticInfo = PositionTacticInfo.create(
     name = "barrier", // todo: rename the tactic directly
     displayName = Some("Barr"),
     displayNameLong = Some("Strict Barrier Certificate"),
     displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ |- p≳0 ;; Q ∧ p=0 |- p'>0",
     displayConclusion = "Γ |- [x'=f(x) & Q] p≳0, Δ",
+    constructor = TacticConstructor0.create()(() => dgBarrier),
   )
-  val dgBarrier: DependentPositionTactic = anon((pos: Position, _: Sequent) => { Dconstify(dgBarrierAux(pos))(pos) })
 
   /**
    * Find `Q|- p' = q p + r` and proves `|- Q -> r~0` with appropriate sign condition on r as specified by "property".
@@ -2627,41 +2672,39 @@ private object DifferentialTactics extends Logging {
       )
   })
 
-  @Tactic(
+  val dCClosure: DependentPositionTactic = "dCClosure".by { (pos: Position) => dCClosure(true)(pos) }
+
+  @Derivation
+  val dCClosureInfo: PositionTacticInfo = PositionTacticInfo.create(
     name = "dCClosure",
     displayName = Some("dC Closure"),
     displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ |- [x'=f(x)&Q∧closure(P)]interior(P), Δ ;; Γ |- interior(P)",
     displayConclusion = "Γ |- [x'=f(x)&Q]P, Δ",
     revealInternalSteps = true,
+    constructor = TacticConstructor0.create()(() => dCClosure),
   )
-  val dCClosure: DependentPositionTactic = anon((pos: Position) => dCClosure(true)(pos))
 
-  @Tactic(
+  val dIClosed: DependentPositionTactic = "dIClosed".by { (pos: Position, seq: Sequent) =>
+    seq.sub(pos) match {
+      case Some(Box((sys @ (_: ODESystem)), _)) => ODESpecific(sys.ode).dIClosed(pos)
+      case _ => throw new TacticRequirementError("Did not match form for dI closed.")
+    }
+  }
+
+  @Derivation
+  val dIClosedInfo: PositionTacticInfo = PositionTacticInfo.create(
     name = "dIClosed",
     displayName = Some("dI Closed"),
     displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ |- [x'=f(x)&Q∧P]q'(x)>0, Δ ;; Γ |- q(x)>=0",
     displayConclusion = "Γ |- [x'=f(x)&Q]q(x)>=0, Δ",
     revealInternalSteps = true,
+    constructor = TacticConstructor0.create()(() => dIClosed),
   )
-  val dIClosed: DependentPositionTactic = anon((pos: Position, seq: Sequent) => {
-    seq.sub(pos) match {
-      case Some(Box(sys: ODESystem, _)) => ODESpecific(sys.ode).dIClosed(pos)
-      case _ => throw new TacticRequirementError("Did not match form for dI closed.")
-    }
-  })
 
   // TODO how to write description in a general way for nth order polynomial.
-  @Tactic(
-    name = "taylorB",
-    displayName = Some("Taylor Polynomial is Bound"),
-    displayLevel = DisplayLevel.Browse,
-    displayPremises = "Q |- q''(x)>=0",
-    displayConclusion = "Γ |- x=x_0 -> [x'=f(x), t'=1 & Q]q(x)>=q(x_0)+q'(x_0).t",
-    revealInternalSteps = true,
-  )
-  val taylorB: DependentPositionTactic = anon { (pos: Position, seq: Sequent) =>
+  val taylorB: DependentPositionTactic = "taylorB".by { (pos: Position, seq: Sequent) =>
     pos.checkTop
     seq.sub(pos) match {
       case Some(Box(ODESystem(ode, _), post)) => {
@@ -2683,16 +2726,19 @@ private object DifferentialTactics extends Logging {
     }
   }
 
-  // TODO how to write description in a general way for nth order polynomial.
-  @Tactic(
-    name = "taylorStep",
-    displayName = Some("Taylor Polynomial is Bound: step"),
+  @Derivation
+  val taylorBInfo: PositionTacticInfo = PositionTacticInfo.create(
+    name = "taylorB",
+    displayName = Some("Taylor Polynomial is Bound"),
     displayLevel = DisplayLevel.Browse,
-    displayPremises = "Q |- q'(x)>=q'(x_0)",
+    displayPremises = "Q |- q''(x)>=0",
     displayConclusion = "Γ |- x=x_0 -> [x'=f(x), t'=1 & Q]q(x)>=q(x_0)+q'(x_0).t",
     revealInternalSteps = true,
+    constructor = TacticConstructor0.create()(() => taylorB),
   )
-  val taylorStep: DependentPositionTactic = anon { (pos: Position, seq: Sequent) =>
+
+  // TODO how to write description in a general way for nth order polynomial.
+  val taylorStep: DependentPositionTactic = "taylorStep".by { (pos: Position, seq: Sequent) =>
     pos.checkTop
     seq.sub(pos) match {
       case Some(Box(ODESystem(ode, _), post)) => {
@@ -2721,6 +2767,17 @@ private object DifferentialTactics extends Logging {
         )
     }
   }
+
+  @Derivation
+  val taylorStepInfo: PositionTacticInfo = PositionTacticInfo.create(
+    name = "taylorStep",
+    displayName = Some("Taylor Polynomial is Bound: step"),
+    displayLevel = DisplayLevel.Browse,
+    displayPremises = "Q |- q'(x)>=q'(x_0)",
+    displayConclusion = "Γ |- x=x_0 -> [x'=f(x), t'=1 & Q]q(x)>=q(x_0)+q'(x_0).t",
+    revealInternalSteps = true,
+    constructor = TacticConstructor0.create()(() => taylorStep),
+  )
 
   /** Lemmas that can be proved only for specific instances of ODEs. */
   case class ODESpecific(ode: DifferentialProgram, variant: String => String = _ + "_") {
@@ -2843,7 +2900,7 @@ private object DifferentialTactics extends Logging {
       pos.checkTop
       seq.sub(pos) match {
         case Some(Box(ODESystem(ode, _), post)) =>
-          import TaylorModelTactics.Timing._
+          import TaylorModelTactics.Timing.*
           toc("== dIClosed")
           val postD = DifferentialHelper.lieDerivative(ode, post)
           toc("== lieDerivative")
