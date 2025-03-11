@@ -5,21 +5,22 @@
 
 package org.keymaerax.btactics.components
 
-import org.keymaerax.bellerophon._
-import org.keymaerax.btactics.DifferentialEquationCalculus._
-import org.keymaerax.btactics.HilbertCalculus._
-import org.keymaerax.btactics.SequentCalculus._
-import org.keymaerax.btactics.TacticFactory._
-import org.keymaerax.btactics.TactixLibrary._
-import org.keymaerax.btactics.UnifyUSCalculus._
-import org.keymaerax.btactics._
+import org.keymaerax.bellerophon.*
+import org.keymaerax.btactics.*
+import org.keymaerax.btactics.DifferentialEquationCalculus.*
+import org.keymaerax.btactics.HilbertCalculus.*
+import org.keymaerax.btactics.SequentCalculus.*
+import org.keymaerax.btactics.TacticFactory.*
+import org.keymaerax.btactics.TactixLibrary.*
+import org.keymaerax.btactics.UnifyUSCalculus.*
 import org.keymaerax.btactics.helpers.DifferentialHelper
-import org.keymaerax.btactics.macros.Tactic
-import org.keymaerax.core.{And, Compose, _}
-import org.keymaerax.infrastruct.Augmentors._
-import org.keymaerax.infrastruct._
+import org.keymaerax.btactics.macros.{InputPositionTacticInfo, StringArg, TacticConstructor10}
+import org.keymaerax.core.btactics.annotations.Derivation
+import org.keymaerax.core.{And, Compose, *}
+import org.keymaerax.infrastruct.*
+import org.keymaerax.infrastruct.Augmentors.*
 import org.keymaerax.lemma.{Lemma, LemmaDBFactory}
-import org.keymaerax.parser.StringConverter._
+import org.keymaerax.parser.StringConverter.*
 
 import scala.annotation.nowarn
 
@@ -1008,29 +1009,6 @@ object ComponentSystem {
                             |""".stripMargin
 
   /** Proves system safety from isolated component and compatibility proofs. */
-  @Tactic(
-    name = "proveComponentSystem",
-    inputs = """System Name:string;;
-      C1 Base: Om & A1 -> I1:string;;
-      C1 Use:  Om & I1 -> G1 & P1:string;;
-      C1 Step: Om & I1 -> [mem1; ctrl1; t0=t; {t'=1,plant1}; in1; cp1;]I1:string;;
-      C2 Base: Om & A2 -> I2:string;;
-      C2 Use:  Om & I2 -> G2 & P2:string;;
-      C2 Step: Om & I2 -> [mem2; ctrl2; t0=t; {t'=1,plant2}; in2; cp2;]I2:string;;
-      Compatibility: Om & Z -> [xin:=xo;](Pout(xo) -> Pin(xin)):string;;
-      Com Safety:   [xin:=xo;]Z:string;;Com Liveness: <xin:=xo;>true:string""",
-    displayPremises = """|- C1 Base: Om & A1 -> I1;;
-         |- Om & I1 -> G1 & P1;;
-         |- C1 Step: Om & I1 -> [mem1; ctrl1; t0=t; {t'=1,plant1}; in1; cp1;]I1;;
-         |- C2 Base: Om & A2 -> I2;;
-         |- C2 Use:  Om & I2 -> G2 & P2;;
-         |- C2 Step: Om & I2 -> [mem2; ctrl2; t0=t; {t'=1,plant2}; in2; cp2;]I2;;
-         |- Compatibility: Om & Z -> [xin:=xo;](Pout(xo) -> Pin(xin));;
-         |- Com Safety:   [xin:=xo;]Z;;
-         |- Com Liveness: <xin:=xo;>true""",
-    displayConclusion =
-      "Γ|- t=t0 & Om & A1 & A2 -> [{ {mem1;mem2};{ctrl1;ctrl2};to:=t;{t'=1,plant1,plant2};{in1open;in2open};{cp1;cp2;con};}*]((G1&P1) & (G2&P2)), Δ",
-  )
   def proveSystem(
       systemName: String,
       c1baseLemma: String,
@@ -1042,73 +1020,143 @@ object ComponentSystem {
       compatibilityLemma: String,
       comGuaranteeSafetyLemma: String,
       comGuaranteeLivenessLemma: String,
-  ): DependentPositionWithAppliedInputTactic = inputanon((pos: Position, seq: Sequent) =>
-    seq.sub(pos) match {
-      case Some(Imply(asys, Box(Loop(prgsys), gsys))) =>
-        val And(tbootstrap, And(omega, And(a1, a2))) = asys
-        val And(And(g1, p1), And(g2, p2)) = gsys
-        val Compose(memsys, Compose(ctrlsys, Compose(tmem, Compose(plantsys, Compose(insys, cpsys))))) = prgsys
+  ): DependentPositionWithAppliedInputTactic = "proveComponentSystem".byWithInputs(
+    List(
+      systemName,
+      c1baseLemma,
+      c1useLemma,
+      c1stepLemma,
+      c2baseLemma,
+      c2useLemma,
+      c2stepLemma,
+      compatibilityLemma,
+      comGuaranteeSafetyLemma,
+      comGuaranteeLivenessLemma,
+    ),
+    (pos: Position, seq: Sequent) =>
+      seq.sub(pos) match {
+        case Some(Imply(asys, Box(Loop(prgsys), gsys))) =>
+          val And(tbootstrap, And(omega, And(a1, a2))) = asys
+          val And(And(g1, p1), And(g2, p2)) = gsys
+          val Compose(memsys, Compose(ctrlsys, Compose(tmem, Compose(plantsys, Compose(insys, cpsys))))) = prgsys
 
-        LemmaDBFactory.lemmaDB.get("user/" + c1baseLemma) match {
-          case Some(c1base) => LemmaDBFactory.lemmaDB.get("user/" + c1useLemma) match {
-              case Some(c1use) => LemmaDBFactory.lemmaDB.get("user/" + c1stepLemma) match {
-                  case Some(c1step) =>
-                    checkComponentLemmas(c1base, c1use, c1step)
-                    checkSysC1Programs(c1step, prgsys)
-                    LemmaDBFactory.lemmaDB.get("user/" + c2baseLemma) match {
-                      case Some(c2base) => LemmaDBFactory.lemmaDB.get("user/" + c2useLemma) match {
-                          case Some(c2use) => LemmaDBFactory.lemmaDB.get("user/" + c2stepLemma) match {
-                              case Some(c2step) =>
-                                checkComponentLemmas(c2base, c2use, c2step)
-                                checkSysC2Programs(c2step, prgsys)
-                                LemmaDBFactory.lemmaDB.get("user/" + compatibilityLemma) match {
-                                  case Some(compatibility) =>
-                                    LemmaDBFactory.lemmaDB.get("user/" + comGuaranteeSafetyLemma) match {
-                                      case Some(comSafety) =>
-                                        LemmaDBFactory.lemmaDB.get("user/" + comGuaranteeLivenessLemma) match {
-                                          case Some(comLiveness) => proveSystem(
-                                              systemName,
-                                              c1base,
-                                              c1use,
-                                              c1step,
-                                              c2base,
-                                              c2use,
-                                              c2step,
-                                              compatibility,
-                                              comSafety,
-                                              comLiveness,
-                                            )(pos)
-                                          case None => throw new InputFormatFailure(
-                                              "Unknown lemma " + comGuaranteeLivenessLemma + "; please prove first"
-                                            )
-                                        }
-                                      case None => throw new InputFormatFailure(
-                                          "Unknown lemma " + comGuaranteeSafetyLemma + "; please prove first"
-                                        )
-                                    }
-                                  case None => throw new InputFormatFailure(
-                                      "Unknown lemma " + compatibilityLemma + "; please prove first"
-                                    )
-                                }
-                              case None =>
-                                throw new InputFormatFailure("Unknown lemma " + c2stepLemma + "; please prove first")
-                            }
-                          case None =>
-                            throw new InputFormatFailure("Unknown lemma " + c2useLemma + "; please prove first")
-                        }
-                      case None => throw new InputFormatFailure("Unknown lemma " + c2baseLemma + "; please prove first")
-                    }
-                  case None => throw new InputFormatFailure("Unknown lemma " + c1stepLemma + "; please prove first")
-                }
-              case None => throw new InputFormatFailure("Unknown lemma " + c1useLemma + "; please prove first")
-            }
-          case None => throw new InputFormatFailure("Unknown lemma " + c1baseLemma + "; please prove first")
-        }
-      case Some(fml) =>
-        throw new TacticInapplicableFailure("Unexpected formula shape.\n" + shapeMsg + "\nBut got " + fml.prettyString)
-      case None => throw new IllFormedTacticApplicationException("Position points outside formula")
-    }
+          LemmaDBFactory.lemmaDB.get("user/" + c1baseLemma) match {
+            case Some(c1base) => LemmaDBFactory.lemmaDB.get("user/" + c1useLemma) match {
+                case Some(c1use) => LemmaDBFactory.lemmaDB.get("user/" + c1stepLemma) match {
+                    case Some(c1step) =>
+                      checkComponentLemmas(c1base, c1use, c1step)
+                      checkSysC1Programs(c1step, prgsys)
+                      LemmaDBFactory.lemmaDB.get("user/" + c2baseLemma) match {
+                        case Some(c2base) => LemmaDBFactory.lemmaDB.get("user/" + c2useLemma) match {
+                            case Some(c2use) => LemmaDBFactory.lemmaDB.get("user/" + c2stepLemma) match {
+                                case Some(c2step) =>
+                                  checkComponentLemmas(c2base, c2use, c2step)
+                                  checkSysC2Programs(c2step, prgsys)
+                                  LemmaDBFactory.lemmaDB.get("user/" + compatibilityLemma) match {
+                                    case Some(compatibility) =>
+                                      LemmaDBFactory.lemmaDB.get("user/" + comGuaranteeSafetyLemma) match {
+                                        case Some(comSafety) =>
+                                          LemmaDBFactory.lemmaDB.get("user/" + comGuaranteeLivenessLemma) match {
+                                            case Some(comLiveness) => proveSystem(
+                                                systemName,
+                                                c1base,
+                                                c1use,
+                                                c1step,
+                                                c2base,
+                                                c2use,
+                                                c2step,
+                                                compatibility,
+                                                comSafety,
+                                                comLiveness,
+                                              )(pos)
+                                            case None => throw new InputFormatFailure(
+                                                "Unknown lemma " + comGuaranteeLivenessLemma + "; please prove first"
+                                              )
+                                          }
+                                        case None => throw new InputFormatFailure(
+                                            "Unknown lemma " + comGuaranteeSafetyLemma + "; please prove first"
+                                          )
+                                      }
+                                    case None => throw new InputFormatFailure(
+                                        "Unknown lemma " + compatibilityLemma + "; please prove first"
+                                      )
+                                  }
+                                case None =>
+                                  throw new InputFormatFailure("Unknown lemma " + c2stepLemma + "; please prove first")
+                              }
+                            case None =>
+                              throw new InputFormatFailure("Unknown lemma " + c2useLemma + "; please prove first")
+                          }
+                        case None =>
+                          throw new InputFormatFailure("Unknown lemma " + c2baseLemma + "; please prove first")
+                      }
+                    case None => throw new InputFormatFailure("Unknown lemma " + c1stepLemma + "; please prove first")
+                  }
+                case None => throw new InputFormatFailure("Unknown lemma " + c1useLemma + "; please prove first")
+              }
+            case None => throw new InputFormatFailure("Unknown lemma " + c1baseLemma + "; please prove first")
+          }
+        case Some(fml) => throw new TacticInapplicableFailure(
+            "Unexpected formula shape.\n" + shapeMsg + "\nBut got " + fml.prettyString
+          )
+        case None => throw new IllFormedTacticApplicationException("Position points outside formula")
+      },
   )
+
+  @Derivation
+  val proveSystemInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
+    name = "proveComponentSystem",
+    displayPremises = """
+      |- C1 Base: Om & A1 -> I1;;
+      |- Om & I1 -> G1 & P1;;
+      |- C1 Step: Om & I1 -> [mem1; ctrl1; t0=t; {t\'=1,plant1}; in1; cp1;]I1;;
+      |- C2 Base: Om & A2 -> I2;;
+      |- C2 Use:  Om & I2 -> G2 & P2;;
+      |- C2 Step: Om & I2 -> [mem2; ctrl2; t0=t; {t\'=1,plant2}; in2; cp2;]I2;;
+      |- Compatibility: Om & Z -> [xin:=xo;](Pout(xo) -> Pin(xin));;
+      |- Com Safety:   [xin:=xo;]Z;;
+      |- Com Liveness: <xin:=xo;>true
+    """,
+    displayConclusion =
+      "Γ|- t=t0 & Om & A1 & A2 -> [{ {mem1;mem2};{ctrl1;ctrl2};to:=t;{t\'=1,plant1,plant2};{in1open;in2open};{cp1;cp2;con};}*]((G1&P1) & (G2&P2)), Δ",
+    constructor = TacticConstructor10.create(
+      StringArg("System Name"),
+      StringArg("C1 Base: Om & A1 -> I1"),
+      StringArg("C1 Use:  Om & I1 -> G1 & P1"),
+      StringArg("C1 Step: Om & I1 ->", List("mem1; ctrl1; t0=t; {t\'=1", "plant1}; in1; cp1;")),
+      StringArg("C2 Base: Om & A2 -> I2"),
+      StringArg("C2 Use:  Om & I2 -> G2 & P2"),
+      StringArg("C2 Step: Om & I2 ->", List("mem2; ctrl2; t0=t; {t\'=1", "plant2}; in2; cp2;")),
+      StringArg("Compatibility: Om & Z ->", List("xin:=xo;")),
+      StringArg("Com Safety:", List("xin:=xo;")),
+      StringArg("Com Liveness: <xin:=xo;>true"),
+    )(
+      (
+          systemName: String,
+          c1baseLemma: String,
+          c1useLemma: String,
+          c1stepLemma: String,
+          c2baseLemma: String,
+          c2useLemma: String,
+          c2stepLemma: String,
+          compatibilityLemma: String,
+          comGuaranteeSafetyLemma: String,
+          comGuaranteeLivenessLemma: String,
+      ) =>
+        proveSystem(
+          systemName,
+          c1baseLemma,
+          c1useLemma,
+          c1stepLemma,
+          c2baseLemma,
+          c2useLemma,
+          c2stepLemma,
+          compatibilityLemma,
+          comGuaranteeSafetyLemma,
+          comGuaranteeLivenessLemma,
+        )
+    ),
+  );
 
   private def checkComponentLemmas(cbase: Lemma, cuse: Lemma, cstep: Lemma): Unit = {
     val Imply(_, invbase) =
