@@ -5,7 +5,7 @@
 
 package org.keymaerax.btactics.macros
 
-import org.keymaerax.btactics.macros.AnnotationCommon.{astForArgInfo, astForDisplayInfo, parseAIs, renderDisplayFormula}
+import org.keymaerax.btactics.macros.AnnotationCommon.{astForArgInfo, astForDisplayLevel, parseAIs}
 
 import scala.annotation.{compileTimeOnly, StaticAnnotation}
 import scala.language.experimental.macros
@@ -269,56 +269,6 @@ object TacticMacro {
 
     val inputs: List[ArgInfo] = parseAIs(args.inputs)
 
-    val displayNames = DisplayNames.createWithChecks(
-      name = args.displayName.getOrElse(args.name),
-      nameAscii = args.displayNameAscii,
-      nameLong = args.displayNameLong,
-    )
-
-    val display = (
-      inputs,
-      args.displayPremises,
-      args.displayConclusion,
-      args.displayContextPremises,
-      args.displayContextConclusion,
-    ) match {
-      case (Nil, "", "", _, _) => SimpleDisplayInfo(names = displayNames, level = args.displayLevel)
-
-      case (Nil, "", concl, _, _) if concl != "" =>
-        AxiomDisplayInfo(names = displayNames, level = args.displayLevel, formula = renderDisplayFormula(concl))
-
-      case (ins, "", concl, _, _) if concl != "" && ins.nonEmpty =>
-        InputAxiomDisplayInfo(names = displayNames, level = args.displayLevel, formula = concl, input = inputs)
-
-      case (_, prem, concl, "", "") if concl != "" && prem != "" =>
-        val premises = DisplaySequent.parseMany(args.displayPremises)
-        val conclusion = DisplaySequent.parse(args.displayConclusion)
-        RuleDisplayInfo(
-          names = displayNames,
-          level = args.displayLevel,
-          conclusion = conclusion,
-          premises = premises,
-          inputGenerator = args.inputGenerator,
-        )
-
-      case (_, prem, concl, ctxPrem, ctxConcl) if concl != "" && prem != "" && ctxPrem != "" && ctxConcl != "" =>
-        val premises = DisplaySequent.parseMany(args.displayPremises)
-        val conclusion = DisplaySequent.parse(args.displayConclusion)
-        val ctxPremises = DisplaySequent.parseMany(args.displayContextPremises)
-        val ctxConclusion = DisplaySequent.parse(args.displayContextConclusion)
-        TacticDisplayInfo(
-          names = displayNames,
-          level = args.displayLevel,
-          conclusion = conclusion,
-          premises = premises,
-          ctxConclusion = ctxConclusion,
-          ctxPremises = ctxPremises,
-          inputGenerator = args.inputGenerator,
-        )
-
-      case _ => c.abort(c.enclosingPosition, "@Tactic with premises or inputs must have a conclusion")
-    }
-
     /*
      * Scrape position argument info from lambda declaration
      */
@@ -543,39 +493,23 @@ object TacticMacro {
     }
     val constructor = q"$constructorObject.create(..$displayInputsExprs)((..$definitionArgsDefs) => $baseCall)"
 
-    def sdContains(sd: DisplaySequent, s: String): Boolean = {
-      sd.ante.exists(n => n.contains(s)) || sd.succ.exists(n => n.contains(s))
-    }
-
-    // Error check:
-    // The web UI uses the axiom/rule display to let the user input arguments of a tactic.
-    // This requires every argument name to appear in the display info.
-    if (args.displayLevel != DisplayLevel.Internal) {
-      for (input <- displayInputs) {
-        val name = input.name
-
-        val shouldMentionInputButDoesnt = display match {
-          case _: AxiomDisplayInfo | _: SimpleDisplayInfo => true
-          case d: InputAxiomDisplayInfo => !d.formula.contains(name)
-          case d: RuleDisplayInfo => !(sdContains(d.conclusion, name) || d.premises.exists(sd => sdContains(sd, name)))
-          case _: TacticDisplayInfo => c.abort(c.enclosingPosition, s"Unexpected tactic type")
-        }
-
-        if (shouldMentionInputButDoesnt) {
-          c.abort(c.enclosingPosition, s"Tactic must mention every input in DisplayInfo, but $name is not mentioned")
-        }
-      }
-    }
-
     val (infoType, info) = returnType match {
       case "DependentTactic" | "BuiltInTactic" | "BelleExpr" => (
           tq"org.keymaerax.btactics.macros.PlainTacticInfo",
           q"""
-            new org.keymaerax.btactics.macros.PlainTacticInfo(
-              codeName = ${args.name},
-              display = ${astForDisplayInfo(display)(c)},
-              revealInternalSteps = ${args.revealInternalSteps},
-              constructor = $constructor,
+            org.keymaerax.btactics.macros.PlainTacticInfo.create(
+              name                     = ${args.name},
+              displayName              = ${args.displayName},
+              displayNameAscii         = ${args.displayNameAscii},
+              displayNameLong          = ${args.displayNameLong},
+              displayLevel             = ${astForDisplayLevel(args.displayLevel)(c)},
+              displayPremises          = ${args.displayPremises},
+              displayConclusion        = ${args.displayConclusion},
+              displayContextPremises   = ${args.displayContextPremises},
+              displayContextConclusion = ${args.displayContextConclusion},
+              revealInternalSteps      = ${args.revealInternalSteps},
+              inputGenerator           = ${args.inputGenerator},
+              constructor              = $constructor,
             )
           """,
         )
@@ -583,11 +517,19 @@ object TacticMacro {
       case "InputTactic" | "StringInputTactic" => (
           tq"org.keymaerax.btactics.macros.InputTacticInfo",
           q"""
-            new org.keymaerax.btactics.macros.InputTacticInfo(
-              codeName = ${args.name},
-              display = ${astForDisplayInfo(display)(c)},
-              revealInternalSteps = ${args.revealInternalSteps},
-              constructor = $constructor,
+            org.keymaerax.btactics.macros.InputTacticInfo.create(
+              name                     = ${args.name},
+              displayName              = ${args.displayName},
+              displayNameAscii         = ${args.displayNameAscii},
+              displayNameLong          = ${args.displayNameLong},
+              displayLevel             = ${astForDisplayLevel(args.displayLevel)(c)},
+              displayPremises          = ${args.displayPremises},
+              displayConclusion        = ${args.displayConclusion},
+              displayContextPremises   = ${args.displayContextPremises},
+              displayContextConclusion = ${args.displayContextConclusion},
+              revealInternalSteps      = ${args.revealInternalSteps},
+              inputGenerator           = ${args.inputGenerator},
+              constructor              = $constructor,
             )
           """,
         )
@@ -596,11 +538,19 @@ object TacticMacro {
           "CoreLeftTactic" | "CoreRightTactic" => (
           tq"org.keymaerax.btactics.macros.PositionTacticInfo",
           q"""
-            new org.keymaerax.btactics.macros.PositionTacticInfo(
-              codeName = ${args.name},
-              display = ${astForDisplayInfo(display)(c)},
-              revealInternalSteps = ${args.revealInternalSteps},
-              constructor = $constructor,
+            org.keymaerax.btactics.macros.PositionTacticInfo.create(
+              name                     = ${args.name},
+              displayName              = ${args.displayName},
+              displayNameAscii         = ${args.displayNameAscii},
+              displayNameLong          = ${args.displayNameLong},
+              displayLevel             = ${astForDisplayLevel(args.displayLevel)(c)},
+              displayPremises          = ${args.displayPremises},
+              displayConclusion        = ${args.displayConclusion},
+              displayContextPremises   = ${args.displayContextPremises},
+              displayContextConclusion = ${args.displayContextConclusion},
+              revealInternalSteps      = ${args.revealInternalSteps},
+              inputGenerator           = ${args.inputGenerator},
+              constructor              = $constructor,
             )
           """,
         )
@@ -608,11 +558,19 @@ object TacticMacro {
       case "InputPositionTactic" | "DependentPositionWithAppliedInputTactic" => (
           tq"org.keymaerax.btactics.macros.InputPositionTacticInfo",
           q"""
-            new org.keymaerax.btactics.macros.InputPositionTacticInfo(
-              codeName = ${args.name},
-              display = ${astForDisplayInfo(display)(c)},
-              revealInternalSteps = ${args.revealInternalSteps},
-              constructor = $constructor,
+            org.keymaerax.btactics.macros.InputPositionTacticInfo.create(
+              name                     = ${args.name},
+              displayName              = ${args.displayName},
+              displayNameAscii         = ${args.displayNameAscii},
+              displayNameLong          = ${args.displayNameLong},
+              displayLevel             = ${astForDisplayLevel(args.displayLevel)(c)},
+              displayPremises          = ${args.displayPremises},
+              displayConclusion        = ${args.displayConclusion},
+              displayContextPremises   = ${args.displayContextPremises},
+              displayContextConclusion = ${args.displayContextConclusion},
+              revealInternalSteps      = ${args.revealInternalSteps},
+              inputGenerator           = ${args.inputGenerator},
+              constructor              = $constructor,
             )
           """,
         )
@@ -620,10 +578,18 @@ object TacticMacro {
       case "DependentTwoPositionTactic" | "InputTwoPositionTactic" | "BuiltInTwoPositionTactic" => (
           tq"org.keymaerax.btactics.macros.TwoPositionTacticInfo",
           q"""
-            new org.keymaerax.btactics.macros.TwoPositionTacticInfo(
-              codeName = ${args.name},
-              display = ${astForDisplayInfo(display)(c)},
-              constructor = $constructor,
+            org.keymaerax.btactics.macros.TwoPositionTacticInfo.create(
+              name                     = ${args.name},
+              displayName              = ${args.displayName},
+              displayNameAscii         = ${args.displayNameAscii},
+              displayNameLong          = ${args.displayNameLong},
+              displayLevel             = ${astForDisplayLevel(args.displayLevel)(c)},
+              displayPremises          = ${args.displayPremises},
+              displayConclusion        = ${args.displayConclusion},
+              displayContextPremises   = ${args.displayContextPremises},
+              displayContextConclusion = ${args.displayContextConclusion},
+              inputGenerator           = ${args.inputGenerator},
+              constructor              = $constructor,
             )
           """,
         )
@@ -631,10 +597,18 @@ object TacticMacro {
       case "AppliedBuiltInTwoPositionTactic" => (
           tq"org.keymaerax.btactics.macros.InputTwoPositionTacticInfo",
           q"""
-            new org.keymaerax.btactics.macros.InputTwoPositionTacticInfo(
-              codeName = ${args.name},
-              display = ${astForDisplayInfo(display)(c)},
-              constructor = $constructor,
+            org.keymaerax.btactics.macros.InputTwoPositionTacticInfo.create(
+              name                     = ${args.name},
+              displayName              = ${args.displayName},
+              displayNameAscii         = ${args.displayNameAscii},
+              displayNameLong          = ${args.displayNameLong},
+              displayLevel             = ${astForDisplayLevel(args.displayLevel)(c)},
+              displayPremises          = ${args.displayPremises},
+              displayConclusion        = ${args.displayConclusion},
+              displayContextPremises   = ${args.displayContextPremises},
+              displayContextConclusion = ${args.displayContextConclusion},
+              inputGenerator           = ${args.inputGenerator},
+              constructor              = $constructor,
             )
           """,
         )

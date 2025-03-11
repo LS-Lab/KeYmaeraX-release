@@ -154,7 +154,7 @@ object AnnotationCommon {
   }
 
   def astForArgInfo(ai: ArgInfo)(implicit c: blackbox.Context): c.universe.Tree = {
-    import c.universe._
+    import c.universe.*
     ai match {
       case GeneratorArg(name) => q"""new org.keymaerax.btactics.macros.GeneratorArg($name)"""
       case VariableArg(name, allowsFresh) => q"""new org.keymaerax.btactics.macros.VariableArg($name, $allowsFresh)"""
@@ -171,8 +171,8 @@ object AnnotationCommon {
     }
   }
 
-  private def astForDisplayLevel(level: DisplayLevel)(implicit c: blackbox.Context): c.universe.Tree = {
-    import c.universe._
+  def astForDisplayLevel(level: DisplayLevel)(implicit c: blackbox.Context): c.universe.Tree = {
+    import c.universe.*
     level match {
       case DisplayLevel.Internal => q"org.keymaerax.btactics.macros.DisplayLevel.Internal"
       case DisplayLevel.Browse => q"org.keymaerax.btactics.macros.DisplayLevel.Browse"
@@ -181,74 +181,9 @@ object AnnotationCommon {
     }
   }
 
-  private def astForDisplaySequent(sequent: DisplaySequent)(implicit c: blackbox.Context): c.universe.Tree = {
-    import c.universe._
-
-    val DisplaySequent(ante, succ, isClosed) = sequent
-    q"""new org.keymaerax.btactics.macros.DisplaySequent(
-      ante = $ante,
-      succ = $succ,
-      isClosed = $isClosed,
-    )"""
-  }
-
-  def astForDisplayNames(displayNames: DisplayNames)(implicit c: blackbox.Context): c.universe.Tree = {
-    import c.universe._
-    q"""new org.keymaerax.btactics.macros.DisplayNames(
-      name = ${displayNames.name},
-      nameAscii = ${displayNames.nameAscii},
-      nameLong = ${displayNames.nameLong},
-    )"""
-  }
-
-  def astForDisplayInfo(displayInfo: DisplayInfo)(implicit c: blackbox.Context): c.universe.Tree = {
-    import c.universe._
-
-    displayInfo match {
-      case SimpleDisplayInfo(names, level) => q"""new org.keymaerax.btactics.macros.SimpleDisplayInfo(
-          names = ${astForDisplayNames(names)},
-          level = ${astForDisplayLevel(level)},
-        )"""
-
-      case RuleDisplayInfo(names, level, conclusion, premises, inputGenerator) =>
-        q"""new org.keymaerax.btactics.macros.RuleDisplayInfo(
-          names = ${astForDisplayNames(names)},
-          level = ${astForDisplayLevel(level)},
-          conclusion = ${astForDisplaySequent(conclusion)},
-          premises = ${premises.map(astForDisplaySequent)},
-          inputGenerator = $inputGenerator,
-        )"""
-
-      case TacticDisplayInfo(names, level, conclusion, premises, ctxConclusion, ctxPremises, inputGenerator) =>
-        q"""new org.keymaerax.btactics.macros.TacticDisplayInfo(
-          names = ${astForDisplayNames(names)},
-          level = ${astForDisplayLevel(level)},
-          conclusion = ${astForDisplaySequent(conclusion)},
-          premises = ${premises.map(astForDisplaySequent)},
-          ctxConclusion = ${astForDisplaySequent(ctxConclusion)},
-          ctxPremises = ${ctxPremises.map(astForDisplaySequent)},
-          inputGenerator = $inputGenerator,
-        )"""
-
-      case AxiomDisplayInfo(names, level, formula) => q"""new org.keymaerax.btactics.macros.AxiomDisplayInfo(
-          names = ${astForDisplayNames(names)},
-          level = ${astForDisplayLevel(level)},
-          formula = $formula,
-        )"""
-
-      case InputAxiomDisplayInfo(names, level, formula, input) =>
-        q"""new org.keymaerax.btactics.macros.InputAxiomDisplayInfo(
-          names = ${astForDisplayNames(names)},
-          level = ${astForDisplayLevel(level)},
-          formula = $formula,
-          input = ${input.map(astForArgInfo)},
-        )"""
-    }
-  }
-
   /** Elaborate the display formula from a raw unicode string that may contain HTML tags to HTML. */
   // TODO Figure out how to get rid of this
-  def renderDisplayFormula(displayFormula: String) = displayFormula
+  private def renderDisplayFormula(displayFormula: String) = displayFormula
     .replace("<", "&lt;")
     .replace(">", "&gt;")
     .replaceAll("&lt;(/?(\\w+))&gt;", "<$1>") // undo escaping HTML tags
