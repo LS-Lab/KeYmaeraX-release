@@ -5,16 +5,27 @@
 
 package org.keymaerax.btactics
 
-import org.keymaerax.bellerophon._
-import org.keymaerax.btactics.SequentCalculus._
-import org.keymaerax.btactics.TacticFactory._
-import org.keymaerax.btactics.TactixLibrary._
-import org.keymaerax.btactics.UnifyUSCalculus._
-import org.keymaerax.btactics.macros.{DisplayLevel, Tactic}
-import org.keymaerax.core._
-import org.keymaerax.infrastruct.Augmentors._
+import org.keymaerax.bellerophon.*
+import org.keymaerax.btactics.SequentCalculus.*
+import org.keymaerax.btactics.TacticFactory.*
+import org.keymaerax.btactics.TactixLibrary.*
+import org.keymaerax.btactics.UnifyUSCalculus.*
+import org.keymaerax.btactics.macros.{
+  DisplayLevel,
+  FormulaArg,
+  InputPositionTacticInfo,
+  InputTacticInfo,
+  ListArg,
+  PlainTacticInfo,
+  TacticConstructor0,
+  TacticConstructor1,
+  VariableArg,
+}
+import org.keymaerax.core.*
+import org.keymaerax.core.btactics.annotations.Derivation
+import org.keymaerax.infrastruct.Augmentors.*
 import org.keymaerax.infrastruct.{AntePosition, Position, SuccPosition}
-import org.keymaerax.parser.StringConverter._
+import org.keymaerax.parser.StringConverter.*
 import org.keymaerax.pt.ProvableSig
 import org.keymaerax.tools.ext.CounterExampleTool
 
@@ -41,14 +52,7 @@ object ArithmeticSimplification {
    * necessarily retain validity???
    */
 // todo: unsure
-  @Tactic(
-    name = "smartHide",
-    displayName = Some("Smart Hide"),
-    displayLevel = DisplayLevel.Browse,
-    displayPremises = "Γ<sub>hide</sub> |- Δ",
-    displayConclusion = "Γ |- Δ",
-  )
-  lazy val smartHide: BuiltInTactic = anon((p: ProvableSig) => {
+  lazy val smartHide: BuiltInTactic = "smartHide".by { (p: ProvableSig) =>
     assert(
       p.subgoals.length == 1,
       s"smartHide is only relevant to Provables with one subgoal; found ${p.subgoals.length} subgoals",
@@ -59,7 +63,17 @@ object ArithmeticSimplification {
 
     // Build up a tactic that hides all non-relevant antecedent positions.
     if (toHide.nonEmpty) proveBy(p, toHide.map(hideL(_)).reduce[BelleExpr](_ & _)) else p
-  })
+  }
+
+  @Derivation
+  val smartHideInfo: PlainTacticInfo = PlainTacticInfo.create(
+    name = "smartHide",
+    displayName = Some("Smart Hide"),
+    displayLevel = DisplayLevel.Browse,
+    displayPremises = "Γ<sub>hide</sub> |- Δ",
+    displayConclusion = "Γ |- Δ",
+    constructor = TacticConstructor0.create()(() => smartHide),
+  )
 
   /**
    * Simplifies arithmetic by removing formulas that are **probably** unprovable from the current facts. Does not
@@ -118,33 +132,39 @@ object ArithmeticSimplification {
    * @param xs
    *   the variable to hide
    */
-  @Tactic(
+  def hideFactsAbout(xs: List[Variable]): InputTactic = "hideFactsAbout".byWithInputs(
+    List(xs),
+    { (sequent: Sequent) =>
+      val irrelevantSet = xs.toSet
+      val hideAnte = sequent
+        .ante
+        .zipWithIndex
+        .filter(p => !StaticSemantics.freeVars(p._1).intersect(irrelevantSet).isEmpty)
+        .sortWith((l, r) => l._2 <= r._2)
+        .reverse
+        .map { case (fml, idx) => hideL(-(idx + 1), fml) }
+        .foldLeft[BelleExpr](skip)((composite, atom) => composite & atom)
+      val hideSucc = sequent
+        .succ
+        .zipWithIndex
+        .filter(p => !StaticSemantics.freeVars(p._1).intersect(irrelevantSet).isEmpty)
+        .sortWith((l, r) => l._2 <= r._2)
+        .reverse
+        .map { case (fml, idx) => hideR(idx + 1, fml) }
+        .foldLeft[BelleExpr](skip)((composite, atom) => composite & atom)
+      hideAnte & hideSucc
+    },
+  )
+
+  @Derivation
+  val hideFactsAboutInfo: InputTacticInfo = InputTacticInfo.create(
     name = "hideFactsAbout",
     displayName = Some("Hide Facts"),
     displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ |- Δ",
     displayConclusion = "Γ, P(xs) |- Q(xs), Δ",
+    constructor = TacticConstructor1.create(ListArg(VariableArg("xs")))((xs: List[Variable]) => hideFactsAbout(xs)),
   )
-  def hideFactsAbout(xs: List[Variable]): InputTactic = inputanon((sequent: Sequent) => {
-    val irrelevantSet = xs.toSet
-    val hideAnte = sequent
-      .ante
-      .zipWithIndex
-      .filter(p => !StaticSemantics.freeVars(p._1).intersect(irrelevantSet).isEmpty)
-      .sortWith((l, r) => l._2 <= r._2)
-      .reverse
-      .map { case (fml, idx) => hideL(-(idx + 1), fml) }
-      .foldLeft[BelleExpr](skip)((composite, atom) => composite & atom)
-    val hideSucc = sequent
-      .succ
-      .zipWithIndex
-      .filter(p => !StaticSemantics.freeVars(p._1).intersect(irrelevantSet).isEmpty)
-      .sortWith((l, r) => l._2 <= r._2)
-      .reverse
-      .map { case (fml, idx) => hideR(idx + 1, fml) }
-      .foldLeft[BelleExpr](skip)((composite, atom) => composite & atom)
-    hideAnte & hideSucc
-  })
 
   /**
    * Version of hideFactsAbout that hides all formulas mentioning free variable TODO: would be nice to allow multiple
@@ -152,33 +172,40 @@ object ArithmeticSimplification {
    * @param xs
    *   the variable to hide
    */
-  @Tactic(
+  def keepFactsAbout(xs: List[Variable]): InputTactic =
+    new org.keymaerax.btactics.TacticFactory.TacticForNameFactory("keepFactsAbout").byWithInputs(
+      List(xs),
+      { (sequent: Sequent) =>
+        val relevantSet = xs.toSet
+        val hideAnte = sequent
+          .ante
+          .zipWithIndex
+          .filter(p => StaticSemantics.freeVars(p._1).intersect(relevantSet).isEmpty)
+          .sortWith((l, r) => l._2 <= r._2)
+          .reverse
+          .map { case (fml, idx) => hideL(-(idx + 1), fml) }
+          .foldLeft[BelleExpr](skip)((composite, atom) => composite & atom)
+        val hideSucc = sequent
+          .succ
+          .zipWithIndex
+          .filter(p => StaticSemantics.freeVars(p._1).intersect(relevantSet).isEmpty)
+          .sortWith((l, r) => l._2 <= r._2)
+          .reverse
+          .map { case (fml, idx) => hideR(idx + 1, fml) }
+          .foldLeft[BelleExpr](skip)((composite, atom) => composite & atom)
+        hideAnte & hideSucc
+      },
+    )
+
+  @Derivation
+  val keepFactsAboutInfo: InputTacticInfo = InputTacticInfo.create(
     name = "keepFactsAbout",
     displayName = Some("Keep Facts"),
     displayLevel = DisplayLevel.Browse,
     displayPremises = "P(xs) |- Q(xs)",
     displayConclusion = "Γ(!xs), P(xs) |- Q(xs), Δ(!xs)",
+    constructor = TacticConstructor1.create(ListArg(VariableArg("xs")))((xs: List[Variable]) => keepFactsAbout(xs)),
   )
-  def keepFactsAbout(xs: List[Variable]): InputTactic = inputanon((sequent: Sequent) => {
-    val relevantSet = xs.toSet
-    val hideAnte = sequent
-      .ante
-      .zipWithIndex
-      .filter(p => StaticSemantics.freeVars(p._1).intersect(relevantSet).isEmpty)
-      .sortWith((l, r) => l._2 <= r._2)
-      .reverse
-      .map { case (fml, idx) => hideL(-(idx + 1), fml) }
-      .foldLeft[BelleExpr](skip)((composite, atom) => composite & atom)
-    val hideSucc = sequent
-      .succ
-      .zipWithIndex
-      .filter(p => StaticSemantics.freeVars(p._1).intersect(relevantSet).isEmpty)
-      .sortWith((l, r) => l._2 <= r._2)
-      .reverse
-      .map { case (fml, idx) => hideR(idx + 1, fml) }
-      .foldLeft[BelleExpr](skip)((composite, atom) => composite & atom)
-    hideAnte & hideSucc
-  })
 
   def replaceTransform(left: Term, right: Term): DependentPositionWithAppliedInputTactic =
     transformEquality(Equal(left, right))
@@ -188,15 +215,9 @@ object ArithmeticSimplification {
    * @author
    *   Stefan Mitsch
    */
-  @Tactic(
-    name = "transformEquality",
-    displayName = Some("Transform Equality"),
-    displayLevel = DisplayLevel.Browse,
-    displayPremises = "Γ |- equality ;; Γ |- P(equalityRHS) Δ",
-    displayConclusion = "Γ |- P(equalityLHS), Δ",
-  )
-  def transformEquality(equality: Formula): DependentPositionWithAppliedInputTactic =
-    inputanon((pos: Position, seq: Sequent) =>
+  def transformEquality(equality: Formula): DependentPositionWithAppliedInputTactic = "transformEquality".byWithInputs(
+    List(equality),
+    (pos: Position, seq: Sequent) =>
       equality match {
         case Equal(what, to) =>
           // @todo find assumptions needed to prove transformation (remember dependencies) for Using(assumptions, QE)
@@ -217,8 +238,18 @@ object ArithmeticSimplification {
                   .getOrElse(skip) & QE & done,
             )
         case _ => throw new IllFormedTacticApplicationException(s"Expected equality but found ${equality.prettyString}")
-      }
-    )
+      },
+  )
+
+  @Derivation
+  val transformEqualityInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
+    name = "transformEquality",
+    displayName = Some("Transform Equality"),
+    displayLevel = DisplayLevel.Browse,
+    displayPremises = "Γ |- equality ;; Γ |- P(equalityRHS) Δ",
+    displayConclusion = "Γ |- P(equalityLHS), Δ",
+    constructor = TacticConstructor1.create(FormulaArg("equality"))(transformEquality),
+  )
 
 //  def abbreviate(f:Formula) = new AppliedDependentTactic("abbreviate") {
 //
