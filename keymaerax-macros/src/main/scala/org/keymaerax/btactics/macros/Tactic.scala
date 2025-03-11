@@ -116,6 +116,7 @@ class Tactic(
     val revealInternalSteps: Boolean = false,
     val inputs: String = "",
     val inputGenerator: Option[String] = None,
+    val v: Boolean = false,
 ) extends StaticAnnotation {
   // Magic incantation, see https://docs.scala-lang.org/overviews/macros/annotations.html
   def macroTransform(annottees: Any*): Any = macro TacticMacro.impl
@@ -136,6 +137,7 @@ case class TacticArgs(
     revealInternalSteps: Boolean = false,
     inputs: String = "",
     inputGenerator: Option[String] = None,
+    v: Boolean = false,
 )
 
 object TacticMacro {
@@ -408,14 +410,16 @@ object TacticMacro {
       // if no "anon" function present, then tactic is a simple forwarding expression like val e: BelleExpr = <tac>
       val hasInputs = definitionArgs.nonEmpty || KNOWN_TACTIC_TYPES_WITH_INPUT.contains(returnType)
 
-      val definitionArgsExpr = definitionArgs
-        .map(ai => Ident(TermName(ai.name)))
-        .foldRight[Tree](q"Nil") { case (arg, acc) => q"$arg :: $acc" }
+      val definitionArgsExpr = definitionArgs.map(ai => Ident(TermName(ai.name)))
 
       val tFactory = q"new org.keymaerax.btactics.TacticFactory.TacticForNameFactory(${args.name})"
 
       /** The body, but if the function used is in [[ANON_SORTS]], the function is removed. */
       val tRhs = body match {
+        case body if args.v && funcSort.isDefined => q"RHSRHSRHS"
+        case Body.FuncLambda(func, params, rhs) if args.v => q"$func((..$params) => RHSRHSRHS)"
+        case Body.Func(func, rhs) if args.v => q"$func(RHSRHSRHS)"
+        case Body.Plain(rhs) if args.v => q"RHSRHSRHS"
         case body if funcSort.isDefined => body.rhs
         case Body.FuncLambda(func, params, rhs) => q"$func((..$params) => $rhs)"
         case Body.Func(func, rhs) => q"$func($rhs)"
@@ -642,6 +646,52 @@ object TacticMacro {
         @org.keymaerax.core.btactics.annotations.Derivation
         val $declInfoName: $infoType = $info
       """
+    }
+
+    if (args.v) {
+      println()
+      println(
+        result
+          .toString()
+          .replace("@new org.keymaerax.core.btactics.annotations.Derivation()", "\n@Derivation")
+          .replace("@new ", "@")
+          .replace("InfoFromTacticMacro", "Info")
+          .replaceAll("new org.keymaerax.btactics.TacticFactory.TacticForNameFactory\\((\"[^\"]+?\")\\)", "$1")
+          .replace("org.keymaerax.btactics.macros.", "")
+          .replace("org.keymaerax.btactics.", "")
+          .replace("org.keymaerax.core.", "")
+          .replace("org.keymaerax.infrastruct.", "")
+          .replace("scala.collection.immutable.", "")
+          .replace("scala.None", "None")
+          .replace("scala.Some", "Some")
+          .replace("scala.Option", "Option")
+          .replace("scala.List", "List")
+          .replace(");", ")")
+          .replace("displayName = None,", "")
+          .replace("displayNameAscii = None,", "")
+          .replace("displayNameLong = None,", "")
+          .replace("displayLevel = DisplayLevel.Internal,", "")
+          .replace("displayPremises = \"\",", "")
+          .replace("displayConclusion = \"\",", "")
+          .replace("displayContextPremises = \"\",", "")
+          .replace("displayContextConclusion = \"\",", "")
+          .replace("revealInternalSteps = false,", "")
+          .replace("inputGenerator = None,", "")
+          .replace("\\'", "'")
+          .replace("new ExpressionArg", "ExpressionArg")
+          .replace("new FormulaArg", "FormulaArg")
+          .replace("new GeneratorArg", "GeneratorArg")
+          .replace("new ListArg", "ListArg")
+          .replace("new NumberArg", "NumberArg")
+          .replace("new OptionArg", "OptionArg")
+          .replace("new PosInExprArg", "PosInExprArg")
+          .replace("new StringArg", "StringArg")
+          .replace("new SubstitutionArg", "SubstitutionArg")
+          .replace("new TermArg", "TermArg")
+          .replace("new VariableArg", "VariableArg")
+          .replace(", List())", ")")
+      )
+      println()
     }
 
     c.Expr[Nothing](result)
