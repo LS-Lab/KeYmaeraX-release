@@ -5,22 +5,34 @@
 
 package org.keymaerax.btactics
 
-import org.keymaerax.bellerophon._
+import org.keymaerax.bellerophon.*
 import org.keymaerax.btactics.Ax.boxTrueAxiom
-import org.keymaerax.btactics.BelleLabels._
-import org.keymaerax.btactics.HilbertCalculus._
-import org.keymaerax.btactics.Idioms._
-import org.keymaerax.btactics.SequentCalculus._
-import org.keymaerax.btactics.TacticFactory._
-import org.keymaerax.btactics.TactixLibrary._
-import org.keymaerax.btactics.UnifyUSCalculus._
-import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
-import org.keymaerax.btactics.macros.{DisplayLevel, Tactic}
-import org.keymaerax.core.{Sequent, _}
-import org.keymaerax.infrastruct.Augmentors._
+import org.keymaerax.btactics.BelleLabels.*
+import org.keymaerax.btactics.HilbertCalculus.*
+import org.keymaerax.btactics.Idioms.*
+import org.keymaerax.btactics.SequentCalculus.*
+import org.keymaerax.btactics.TacticFactory.*
+import org.keymaerax.btactics.TactixLibrary.*
+import org.keymaerax.btactics.UnifyUSCalculus.*
+import org.keymaerax.btactics.macros.DerivationInfoAugmentors.*
+import org.keymaerax.btactics.macros.{
+  DisplayLevel,
+  FormulaArg,
+  InputPositionTacticInfo,
+  OptionArg,
+  PositionTacticInfo,
+  TacticConstructor0,
+  TacticConstructor1,
+  TacticConstructor2,
+  TermArg,
+  VariableArg,
+}
+import org.keymaerax.core.btactics.annotations.Derivation
+import org.keymaerax.core.{Sequent, *}
+import org.keymaerax.infrastruct.*
+import org.keymaerax.infrastruct.Augmentors.*
 import org.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
-import org.keymaerax.infrastruct._
-import org.keymaerax.parser.StringConverter._
+import org.keymaerax.parser.StringConverter.*
 import org.keymaerax.parser.{Declaration, Signature, TacticReservedSymbols}
 import org.keymaerax.pt.ProvableSig
 
@@ -75,17 +87,7 @@ private object DLBySubst {
 
   /** @see [[TactixLibrary.abstractionb]] */
   // @todo code name on cheat sheet is abstract
-  @Tactic(
-    name = "GV",
-    displayNameLong = Some("Gödel Vacuous"),
-    displayLevel = DisplayLevel.All,
-    displayPremises = "Γ<sub>const</sub> |- P, Δ<sub>const</sub>",
-    displayConclusion = "Γ |- [a]P, Δ",
-    displayContextPremises = "Γ |- C( ∀x P ), Δ",
-    displayContextConclusion = "Γ |- C( [a]P ), Δ",
-    revealInternalSteps = true,
-  )
-  val abstractionb: DependentPositionTactic = anon((pos: Position, sequent: Sequent) => {
+  val abstractionb: DependentPositionTactic = "GV".by { (pos: Position, sequent: Sequent) =>
     require(!pos.isAnte, "Abstraction only in succedent")
     sequent.at(pos) match {
       case (ctx, b @ Box(prg, phi)) =>
@@ -117,13 +119,25 @@ private object DLBySubst {
       case (_, e) =>
         throw new TacticInapplicableFailure("GV only applicable to box properties, but got " + e.prettyString)
     }
-  })
+  }
+
+  @Derivation
+  val abstractionbInfo: PositionTacticInfo = PositionTacticInfo.create(
+    name = "GV",
+    displayNameLong = Some("Gödel Vacuous"),
+    displayLevel = DisplayLevel.All,
+    displayPremises = "Γ<sub>const</sub> |- P, Δ<sub>const</sub>",
+    displayConclusion = "Γ |- [a]P, Δ",
+    displayContextPremises = "Γ |- C( ∀x P ), Δ",
+    displayContextConclusion = "Γ |- C( [a]P ), Δ",
+    revealInternalSteps = true,
+    constructor = TacticConstructor0.create()(() => abstractionb),
+  )
 
   /**
    * Safe abstraction checks to not lose information from tests and evolution domain constraints before it abstracts.
    */
-  @Tactic(name = "safeabstractionb")
-  val safeabstractionb: DependentPositionTactic = anon((pos: Position, seq: Sequent) => {
+  val safeabstractionb: DependentPositionTactic = ("safeabstractionb").by { (pos: Position, seq: Sequent) =>
     // internal automation support
     seq.sub(pos) match {
       case Some(Box(prg, fml)) =>
@@ -155,22 +169,31 @@ private object DLBySubst {
           "Position " + pos + " does not point to a valid position in sequent " + seq.prettyString
         )
     }
-  })
+  }
+
+  @Derivation
+  val safeabstractionbInfo: PositionTacticInfo = PositionTacticInfo
+    .create(name = "safeabstractionb", constructor = TacticConstructor0.create()(() => safeabstractionb))
 
   /**
    * Introduces a self assignment `[x:=x;]p(||)` in front of `p(||)`.
    * @param x
    *   The self-assigned variable.
    */
-  @Tactic(
+  def stutter(x: Variable): DependentPositionWithAppliedInputTactic = "stutter"
+    .byWithInputs(List(x), (pos: Position) => stutterFw(x)(pos))
+
+  @Derivation
+  val stutterInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
     name = "stutter",
     displayName = Some("[:=]"),
     displayNameLong = Some("Introduce Self-Assign"),
     displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ |- [x:=x]P, Δ",
     displayConclusion = "Γ |- P, Δ",
+    constructor = TacticConstructor1.create(VariableArg("x"))((x: org.keymaerax.core.Variable) => stutter(x)),
   )
-  def stutter(x: Variable): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position) => stutterFw(x)(pos) }
+
   private[btactics] def stutterFw(x: Variable): BuiltInPositionTactic = anon { (pr: ProvableSig, pos: Position) =>
     ProofRuleTactics.requireOneSubgoal(pr, "stutter")
     val sequent = pr.subgoals.head
@@ -304,131 +327,139 @@ private object DLBySubst {
    *   Andre Platzer
    * @incontext
    */
-  @Tactic(
+  private[btactics] val assignEquality: BuiltInPositionTactic = "assignEquality"
+    .by { (provable: ProvableSig, pos: Position) =>
+      ProofRuleTactics.requireOneSubgoal(provable, "DLBySubst.assignEqualityFw")
+      val sequent = provable.subgoals.head
+      val (expand: (ProvableSig => ProvableSig), assign: (ProvableSig => ProvableSig)) = sequent.sub(pos) match {
+        // @note have already failed assigning directly so grab fresh name index otherwise
+        // [x:=f(x)]P(x)
+        case Some(Box(a @ Assign(x, e), p)) =>
+          val universal = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(sequent(pos.top), pos.inExpr) >= 0
+          val assignAx = x match {
+            case v: BaseVariable =>
+              if (universal) Ax.assignbeq.provable(URename("x_".asVariable, v, semantic = true))
+              else Ax.assignbequalityexists.provable(URename("x_".asVariable, v, semantic = true))
+            case DifferentialSymbol(v) =>
+              if (universal) Ax.Dassignbeq.provable(URename("x_".asVariable, v, semantic = true))
+              else Ax.Dassignbequalityexists.provable(URename("x_".asVariable, v, semantic = true))
+          }
+
+          val skolemize: ProvableSig => ProvableSig =
+            if (pos.isTopLevel && pos.isSucc) allR(pos) andThen implyR(pos)
+            else if (pos.isTopLevel && pos.isAnte) existsL(pos) andThen andL(Symbol("Llast"))
+            else ident
+
+          if (StaticSemantics.freeVars(p).contains(x) && StaticSemantics.freeVars(p).isInfinite) {
+            if (StaticSemantics.freeVars(e).contains(x)) {
+              // case [x:=x+1;][prg;]
+              StaticSemantics
+                .symbols(p)
+                .filter({
+                  case _: SystemConst | _: ProgramConst => true
+                  case _ => false
+                })
+                .map(n => expandFw(n, None))
+                .reduceRightOption[ProvableSig => ProvableSig](_ andThen _) match {
+                case Some(expand) => (expand, assignEquality(pos))
+                case None => throw new TacticInapplicableFailure(
+                    "Assignment " + a.prettyString + " prevented since " + e.prettyString +
+                      " overlaps with the bound and (infinite) free variables of " + p.prettyString
+                  )
+              }
+            } else {
+              // case [x:=y;][prg;]
+              (ident, useAt(assignAx)(pos) andThen skolemize)
+            }
+          } else {
+            if (x.isInstanceOf[BaseVariable] && StaticSemantics.freeVars(p).symbols.contains(DifferentialSymbol(x))) {
+              (
+                ident,
+                useAt(assignAx)(pos) andThen skolemize andThen
+                  (if (pos.isTopLevel && pos.isSucc) eqL2R(AntePosition.base0(sequent.ante.length))(pos, p) andThen
+                     hideL(Symbol("Llast"))
+                   else if (pos.isTopLevel && pos.isAnte)
+                     eqL2R(AntePosition.base0(sequent.ante.length - 1))(Symbol("Llast"), p) andThen
+                       hideL(AntePosition.base0(sequent.ante.length - 1))
+                   else ident),
+              )
+            } else {
+              // @note boundRename and uniformRename for ODE/loop postconditions, and also for the desired effect of "old" having indices and "new" remaining x
+              x match {
+                case _: BaseVariable =>
+                  if (StaticSemantics.freeVars(p).isInfinite) (ident, useAt(assignAx)(pos) andThen skolemize)
+                  else {
+                    val y = TacticHelper.freshNamedSymbol(x, sequent)
+                    (
+                      ident,
+                      ProofRuleTactics.boundRenameFw(x, y)(pos) andThen useAt(assignAx)(pos) andThen
+                        ProofRuleTactics.uniformRenameFw(y, x) andThen skolemize,
+                    )
+                  }
+                case _: DifferentialSymbol => (ident, useAt(assignAx)(pos) andThen skolemize)
+              }
+            }
+          }
+        case Some(e) => throw new TacticInapplicableFailure(
+            "assignEquality only applicable to box assignments [x:=t;], but got " + e.prettyString
+          )
+        case None => throw new IllFormedTacticApplicationException(
+            "Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString
+          )
+      }
+      expand(provable)(expand andThen assign, 0)
+    }
+
+  @Derivation
+  private[btactics] val assignEqualityInfo: PositionTacticInfo = PositionTacticInfo.create(
     name = "assignEquality",
     displayName = Some("[:=]="),
     displayNameLong = Some("Assign Equality"),
     displayLevel = DisplayLevel.All,
     displayPremises = "Γ, x=e |- P, Δ",
     displayConclusion = "Γ |- [x:=e]P, Δ",
+    constructor = TacticConstructor0.create()(() => assignEquality),
   )
-  private[btactics] val assignEquality: BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
-    ProofRuleTactics.requireOneSubgoal(provable, "DLBySubst.assignEqualityFw")
-    val sequent = provable.subgoals.head
-    val (expand: (ProvableSig => ProvableSig), assign: (ProvableSig => ProvableSig)) = sequent.sub(pos) match {
-      // @note have already failed assigning directly so grab fresh name index otherwise
-      // [x:=f(x)]P(x)
-      case Some(Box(a @ Assign(x, e), p)) =>
-        val universal = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(sequent(pos.top), pos.inExpr) >= 0
-        val assignAx = x match {
-          case v: BaseVariable =>
-            if (universal) Ax.assignbeq.provable(URename("x_".asVariable, v, semantic = true))
-            else Ax.assignbequalityexists.provable(URename("x_".asVariable, v, semantic = true))
-          case DifferentialSymbol(v) =>
-            if (universal) Ax.Dassignbeq.provable(URename("x_".asVariable, v, semantic = true))
-            else Ax.Dassignbequalityexists.provable(URename("x_".asVariable, v, semantic = true))
-        }
-
-        val skolemize: ProvableSig => ProvableSig =
-          if (pos.isTopLevel && pos.isSucc) allR(pos) andThen implyR(pos)
-          else if (pos.isTopLevel && pos.isAnte) existsL(pos) andThen andL(Symbol("Llast"))
-          else ident
-
-        if (StaticSemantics.freeVars(p).contains(x) && StaticSemantics.freeVars(p).isInfinite) {
-          if (StaticSemantics.freeVars(e).contains(x)) {
-            // case [x:=x+1;][prg;]
-            StaticSemantics
-              .symbols(p)
-              .filter({
-                case _: SystemConst | _: ProgramConst => true
-                case _ => false
-              })
-              .map(n => expandFw(n, None))
-              .reduceRightOption[ProvableSig => ProvableSig](_ andThen _) match {
-              case Some(expand) => (expand, assignEquality(pos))
-              case None => throw new TacticInapplicableFailure(
-                  "Assignment " + a.prettyString + " prevented since " + e.prettyString +
-                    " overlaps with the bound and (infinite) free variables of " + p.prettyString
-                )
-            }
-          } else {
-            // case [x:=y;][prg;]
-            (ident, useAt(assignAx)(pos) andThen skolemize)
-          }
-        } else {
-          if (x.isInstanceOf[BaseVariable] && StaticSemantics.freeVars(p).symbols.contains(DifferentialSymbol(x))) {
-            (
-              ident,
-              useAt(assignAx)(pos) andThen skolemize andThen
-                (if (pos.isTopLevel && pos.isSucc) eqL2R(AntePosition.base0(sequent.ante.length))(pos, p) andThen
-                   hideL(Symbol("Llast"))
-                 else if (pos.isTopLevel && pos.isAnte)
-                   eqL2R(AntePosition.base0(sequent.ante.length - 1))(Symbol("Llast"), p) andThen
-                     hideL(AntePosition.base0(sequent.ante.length - 1))
-                 else ident),
-            )
-          } else {
-            // @note boundRename and uniformRename for ODE/loop postconditions, and also for the desired effect of "old" having indices and "new" remaining x
-            x match {
-              case _: BaseVariable =>
-                if (StaticSemantics.freeVars(p).isInfinite) (ident, useAt(assignAx)(pos) andThen skolemize)
-                else {
-                  val y = TacticHelper.freshNamedSymbol(x, sequent)
-                  (
-                    ident,
-                    ProofRuleTactics.boundRenameFw(x, y)(pos) andThen useAt(assignAx)(pos) andThen
-                      ProofRuleTactics.uniformRenameFw(y, x) andThen skolemize,
-                  )
-                }
-              case _: DifferentialSymbol => (ident, useAt(assignAx)(pos) andThen skolemize)
-            }
-          }
-        }
-      case Some(e) => throw new TacticInapplicableFailure(
-          "assignEquality only applicable to box assignments [x:=t;], but got " + e.prettyString
-        )
-      case None => throw new IllFormedTacticApplicationException(
-          "Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString
-        )
-    }
-    expand(provable)(expand andThen assign, 0)
-  }
 
   /** Equality assignment to a fresh variable. @see assignEquality @incontext */
-  @Tactic(
+  private[btactics] val assigndEquality: BuiltInPositionTactic = "assigndEquality"
+    .by { (provable: ProvableSig, pos: Position) =>
+      ProofRuleTactics.requireOneSubgoal(provable, "DLBySubst.assigndEquality")
+      val sequent = provable.subgoals.head
+      sequent.sub(pos) match {
+        // @note have already failed assigning directly so grab fresh name index otherwise
+        // [x:=f(x)]P(x)
+        case Some(Diamond(Assign(x, t), p)) =>
+          val y = TacticHelper.freshNamedSymbol(x, sequent)
+          val universal = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(sequent(pos.top), pos.inExpr) >= 0
+          provable(
+            ProofRuleTactics.boundRenameFw(x, y)(pos) andThen
+              useAt(if (universal) Ax.assigndEqualityAll else Ax.assigndEqualityAxiom)(pos) andThen
+              ProofRuleTactics.uniformRenameFw(y, x) andThen
+              (if (pos.isTopLevel && pos.isSucc) allR(pos) andThen implyR(pos)
+               else if (pos.isTopLevel && pos.isAnte) existsL(pos) andThen andL(Symbol("Llast"))
+               else ident),
+            0,
+          )
+        case Some(e) => throw new TacticInapplicableFailure(
+            "assigndEquality only applicable to diamond assignments <x:=t;>, but got " + e.prettyString
+          )
+        case None => throw new IllFormedTacticApplicationException(
+            "Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString
+          )
+      }
+    }
+
+  @Derivation
+  private[btactics] val assigndEqualityInfo: PositionTacticInfo = PositionTacticInfo.create(
     name = "assigndEquality",
     displayName = Some("<:=>="),
     displayNameLong = Some("Assign Equality"),
     displayLevel = DisplayLevel.All,
     displayPremises = "Γ, x=e |- P, Δ",
     displayConclusion = "Γ |- ⟨x:=e⟩P, Δ",
+    constructor = TacticConstructor0.create()(() => assigndEquality),
   )
-  private[btactics] val assigndEquality: BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
-    ProofRuleTactics.requireOneSubgoal(provable, "DLBySubst.assigndEquality")
-    val sequent = provable.subgoals.head
-    sequent.sub(pos) match {
-      // @note have already failed assigning directly so grab fresh name index otherwise
-      // [x:=f(x)]P(x)
-      case Some(Diamond(Assign(x, t), p)) =>
-        val y = TacticHelper.freshNamedSymbol(x, sequent)
-        val universal = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(sequent(pos.top), pos.inExpr) >= 0
-        provable(
-          ProofRuleTactics.boundRenameFw(x, y)(pos) andThen
-            useAt(if (universal) Ax.assigndEqualityAll else Ax.assigndEqualityAxiom)(pos) andThen
-            ProofRuleTactics.uniformRenameFw(y, x) andThen
-            (if (pos.isTopLevel && pos.isSucc) allR(pos) andThen implyR(pos)
-             else if (pos.isTopLevel && pos.isAnte) existsL(pos) andThen andL(Symbol("Llast"))
-             else ident),
-          0,
-        )
-      case Some(e) => throw new TacticInapplicableFailure(
-          "assigndEquality only applicable to diamond assignments <x:=t;>, but got " + e.prettyString
-        )
-      case None => throw new IllFormedTacticApplicationException(
-          "Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString
-        )
-    }
-  }
 
   /**
    * @see
@@ -506,21 +537,25 @@ private object DLBySubst {
    * @note
    *   Uses K modal modus ponens, which is unsound for hybrid games.
    */
-  @Tactic(
-    name = "postCut",
-    displayNameLong = Some("Cut in Postcondition"),
-    displayLevel = DisplayLevel.Browse,
-    displayPremises = "Γ |- [a]C, Δ ;; Γ |- [a](C→P)",
-    displayConclusion = "Γ |- [a]P, Δ",
-  )
-  def postCut(C: Formula): DependentPositionWithAppliedInputTactic = inputanon(
+  def postCut(C: Formula): DependentPositionWithAppliedInputTactic = "postCut".byWithInputs(
+    List(C),
     useAt(
       Ax.K,
       PosInExpr(1 :: 1 :: Nil),
       (us: Option[Subst]) =>
         us.getOrElse(throw new UnsupportedTacticFeature("Unexpected missing substitution in postCut")) ++
           RenUSubst(("p(||)".asFormula, C) :: Nil),
-    )(_: Position) < (label(BelleLabels.cutUse), label(BelleLabels.cutShow))
+    )(_: Position) < (label(BelleLabels.cutUse), label(BelleLabels.cutShow)),
+  )
+
+  @Derivation
+  val postCutInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
+    name = "postCut",
+    displayNameLong = Some("Cut in Postcondition"),
+    displayLevel = DisplayLevel.Browse,
+    displayPremises = "Γ |- [a]C, Δ ;; Γ |- [a](C→P)",
+    displayConclusion = "Γ |- [a]P, Δ",
+    constructor = TacticConstructor1.create(FormulaArg("C"))((C: Formula) => postCut(C)),
   )
 
   /**
@@ -727,37 +762,50 @@ private object DLBySubst {
    * @param invariant
    *   The invariant.
    */
-  @Tactic(
+  def loopRule(J: Formula): DependentPositionWithAppliedInputTactic = "loopRule".byWithInputs(
+    List(J),
+    { (pos: Position, seq: Sequent) =>
+      require(pos.isTopLevel && pos.isSucc, "loopRule only at top-level in succedent, but got " + pos)
+      seq.sub(pos) match {
+        case Some(Box(Loop(a), _)) => label(startTx) &
+            cutR(J)(pos.checkSucc.top) <
+            (
+              label(replaceTxWith(BelleLabels.initCase)),
+              cohide(pos) & implyR(1) &
+                generalize(J, isGame = !FormulaTools.dualFree(a))(1) <
+                (
+                  byUS(Ax.indrule) & label(replaceTxWith(BelleLabels.indStep)),
+                  label(replaceTxWith(BelleLabels.useCase)),
+                ),
+            )
+        case _ => throw new IllegalArgumentException("requirement failed: only applicable for [a*]p(||)")
+      }
+    },
+  )
+
+  @Derivation
+  val loopRuleInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
     name = "loopRule",
     displayNameLong = Some("Loop Rule"),
     displayPremises = "Γ |- J, Δ ;; J |- [a]J ;; J |- P",
     displayConclusion = "Γ |- [a<sup>*</sup>]P, Δ",
+    constructor = TacticConstructor1.create(FormulaArg("J"))((J: Formula) => loopRule(J)),
   )
-  def loopRule(J: Formula): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position, seq: Sequent) =>
-    require(pos.isTopLevel && pos.isSucc, "loopRule only at top-level in succedent, but got " + pos)
-    seq.sub(pos) match {
-      case Some(Box(Loop(a), _)) => label(startTx) &
-          cutR(J)(pos.checkSucc.top) <
-          (
-            label(replaceTxWith(BelleLabels.initCase)),
-            cohide(pos) & implyR(1) &
-              generalize(J, isGame = !FormulaTools.dualFree(a))(1) <
-              (byUS(Ax.indrule) & label(replaceTxWith(BelleLabels.indStep)), label(replaceTxWith(BelleLabels.useCase))),
-          )
-      case _ => throw new IllegalArgumentException("requirement failed: only applicable for [a*]p(||)")
-    }
-  }
 
   /** @see [[TactixLibrary.throughout]] */
-  @Tactic(
+  def throughout(J: Formula): DependentPositionWithAppliedInputTactic = "throughout"
+    .byWithInputs(List(J), throughout(J, SaturateTactic(alphaRule))(_: Position))
+
+  @Derivation
+  val throughoutInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
     name = "throughout",
     displayNameLong = Some("Loop Throughout Invariant"),
     displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ |- J, Δ ;; J |- [a]J ;; J |- [b]J ;; J |- P",
     displayConclusion = "Γ |- [{a;b}<sup>*</sup>]P, Δ",
+    constructor = TacticConstructor1.create(FormulaArg("J"))((J: Formula) => throughout(J)),
   )
-  def throughout(J: Formula): DependentPositionWithAppliedInputTactic =
-    inputanon(throughout(J, SaturateTactic(alphaRule))(_: Position))
+
   def throughout(invariant: Formula, pre: BelleExpr): DependentPositionWithAppliedInputTactic = inputanon(
     (pos: Position) => {
       require(pos.isTopLevel && pos.isSucc, "throughout only at top-level in succedent, but got " + pos)
@@ -792,16 +840,20 @@ private object DLBySubst {
   }
 
   /** [[TactixLibrary.con()]] */
-  @Tactic(
+  def con(x: Variable, J: Formula): DependentPositionWithAppliedInputTactic = "con"
+    .byWithInputs(List(x, J), con(x, J, SaturateTactic(alphaRule))(_: Position))
+
+  @Derivation
+  val conInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
     name = "con",
     displayNameLong = Some("Loop Convergence"),
     displayLevel = DisplayLevel.All,
     displayPremises = "Γ |- ∃x J(x) ;; x≤0, J(x) |- P ;; x>0, J(x) |- ⟨a⟩J(x-1)",
     displayConclusion = "Γ |- ⟨a<sup>*</sup>⟩P, Δ",
-    inputs = "x[x]:variable;;J(x)[x]:formula",
+    constructor = TacticConstructor2
+      .create(VariableArg("x", List("x")), FormulaArg("J(x)", List("x")))((x: Variable, J: Formula) => con(x, J)),
   )
-  def con(x: Variable, J: Formula): DependentPositionWithAppliedInputTactic =
-    inputanon(con(x, J, SaturateTactic(alphaRule))(_: Position))
+
   @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def con(v: Variable, variant: Formula, pre: BelleExpr): DependentPositionWithAppliedInputTactic =
     inputanon((pos: Position, sequent: Sequent) => {
@@ -891,16 +943,9 @@ private object DLBySubst {
    * @example
    *   The variant J(x) ~> (x = z) is specified as x=="x".asVariable, variant == "x = z".asFormula
    */
-  @Tactic(
-    name = "conRule",
-    displayNameLong = Some("Loop Convergence Rule"),
-    displayLevel = DisplayLevel.Browse,
-    displayPremises = "Γ |- ∃x J(x) ;; x≤0, J(x) |- P ;; x>0, J(x) |- ⟨a⟩J(x-1)",
-    displayConclusion = "Γ |- ⟨a<sup>*</sup>⟩P, Δ",
-    inputs = "x:variable;;J[x]:formula",
-  )
-  def conRule(x: Variable, J: Formula): DependentPositionWithAppliedInputTactic =
-    inputanon((pos: Position, sequent: Sequent) => {
+  def conRule(x: Variable, J: Formula): DependentPositionWithAppliedInputTactic = "conRule".byWithInputs(
+    List(x, J),
+    { (pos: Position, sequent: Sequent) =>
       require(pos.isTopLevel && pos.isSucc, "conRule only at top-level in succedent, but got " + pos)
       require(
         sequent(pos) match {
@@ -921,20 +966,37 @@ private object DLBySubst {
               assignd(1, 1 :: Nil) & uniformRename(ur) & label(BelleLabels.indStep),
             ),
         )
-    })
+    },
+  )
+
+  @Derivation
+  val conRuleInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
+    name = "conRule",
+    displayNameLong = Some("Loop Convergence Rule"),
+    displayLevel = DisplayLevel.Browse,
+    displayPremises = "Γ |- ∃x J(x) ;; x≤0, J(x) |- P ;; x>0, J(x) |- ⟨a⟩J(x-1)",
+    displayConclusion = "Γ |- ⟨a<sup>*</sup>⟩P, Δ",
+    constructor = TacticConstructor2
+      .create(VariableArg("x"), FormulaArg("J", List("x")))((x: Variable, J: Formula) => conRule(x, J)),
+  )
 
   /** @see [[TactixLibrary.discreteGhost()]] */
-  @Tactic(
+  private[btactics] def discreteGhost(e: Term, x: scala.Option[Variable]): DependentPositionWithAppliedInputTactic =
+    "discreteGhost".byWithInputs(List(e, x), discreteGhost(e, x, assignInContext = true)(_: Position))
+
+  @Derivation
+  private[btactics] val discreteGhostInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
     name = "discreteGhost",
     displayName = Some("iG"),
     displayNameLong = Some("Discrete Ghost"),
     displayLevel = DisplayLevel.Menu,
     displayPremises = "Γ |- [x:=e]P, Δ",
     displayConclusion = "Γ |- P, Δ",
-    inputs = "e:term;;x[x]:option[variable]",
+    constructor = TacticConstructor2
+      .create(TermArg("e"), OptionArg(VariableArg("x", List("x"))))((e: Term, x: scala.Option[Variable]) =>
+        discreteGhost(e, x)
+      ),
   )
-  private[btactics] def discreteGhost(e: Term, x: Option[Variable]): DependentPositionWithAppliedInputTactic =
-    inputanon(discreteGhost(e, x, assignInContext = true)(_: Position))
 
   /** @see [[TactixLibrary.discreteGhost]] */
   def discreteGhost(e: Term, x: Option[Variable], assignInContext: Boolean = true): DependentPositionTactic =
@@ -1041,29 +1103,34 @@ private object DLBySubst {
    * @return
    *   The tactic.
    */
-  @Tactic(
+  def assignbExists(e: Term): DependentPositionWithAppliedInputTactic = "assignbExistsRule".byWithInputs(
+    List(e),
+    (pos: Position, sequent: Sequent) =>
+      sequent.sub(pos) match {
+        case Some(Exists(vars, _)) =>
+          require(vars.size == 1, "Cannot handle existential lists")
+          val subst = (s: Option[Subst]) =>
+            s.getOrElse(throw new UnsupportedTacticFeature("Expected unification in assignbExists")) ++
+              RenUSubst(USubst("f_()".asTerm ~> e :: Nil))
+          useAt(Ax.assignbexists, PosInExpr(1 :: Nil), subst)(pos)
+        case Some(e) => throw new TacticInapplicableFailure(
+            "assignbExistsRule only applicable to existential quantifier, but got " + e.prettyString
+          )
+        case None => throw new IllFormedTacticApplicationException(
+            "Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString
+          )
+      },
+  )
+
+  @Derivation
+  val assignbExistsInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
     name = "assignbExistsRule",
     displayName = Some("[:=] assign exists"),
     displayNameLong = Some("Translate Quantifier to Assignment"),
     displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ |- [t:=e][x:=t]P, Δ",
     displayConclusion = "Γ |- ∃t [x:=t]P, Δ",
-  )
-  def assignbExists(e: Term): DependentPositionWithAppliedInputTactic = inputanon((pos: Position, sequent: Sequent) =>
-    sequent.sub(pos) match {
-      case Some(Exists(vars, _)) =>
-        require(vars.size == 1, "Cannot handle existential lists")
-        val subst = (s: Option[Subst]) =>
-          s.getOrElse(throw new UnsupportedTacticFeature("Expected unification in assignbExists")) ++
-            RenUSubst(USubst("f_()".asTerm ~> e :: Nil))
-        useAt(Ax.assignbexists, PosInExpr(1 :: Nil), subst)(pos)
-      case Some(e) => throw new TacticInapplicableFailure(
-          "assignbExistsRule only applicable to existential quantifier, but got " + e.prettyString
-        )
-      case None => throw new IllFormedTacticApplicationException(
-          "Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString
-        )
-    }
+    constructor = TacticConstructor1.create(TermArg("e"))((e: Term) => assignbExists(e)),
   )
 
   /**
@@ -1080,29 +1147,34 @@ private object DLBySubst {
    * @return
    *   The tactic.
    */
-  @Tactic(
+  def assignbAll(e: Term): DependentPositionWithAppliedInputTactic = "assignbAllRule".byWithInputs(
+    List(e),
+    (pos: Position, sequent: Sequent) =>
+      sequent.sub(pos) match {
+        case Some(Forall(vars, _)) =>
+          require(vars.size == 1, "Cannot handle universal lists")
+          val subst = (s: Option[Subst]) =>
+            s.getOrElse(throw new UnsupportedTacticFeature("Expected unification in assignbAll")) ++
+              RenUSubst(USubst("f_()".asTerm ~> e :: Nil))
+          useAt(Ax.assignball, PosInExpr(0 :: Nil), subst)(pos)
+        case Some(e) => throw new TacticInapplicableFailure(
+            "[:=] assign all only applicable to box universal quantifier, but got " + e.prettyString
+          )
+        case None => throw new IllFormedTacticApplicationException(
+            "Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString
+          )
+      },
+  )
+
+  @Derivation
+  val assignbAllInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
     name = "assignbAllRule",
     displayName = Some("[:=] assign all"),
     displayNameLong = Some("Translate Quantifier to Assignment"),
     displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ, [t:=e][x:=t]P |- Δ",
     displayConclusion = "Γ, ∀t [x:=t]P |- Δ",
-  )
-  def assignbAll(e: Term): DependentPositionWithAppliedInputTactic = inputanon((pos: Position, sequent: Sequent) =>
-    sequent.sub(pos) match {
-      case Some(Forall(vars, _)) =>
-        require(vars.size == 1, "Cannot handle universal lists")
-        val subst = (s: Option[Subst]) =>
-          s.getOrElse(throw new UnsupportedTacticFeature("Expected unification in assignbAll")) ++
-            RenUSubst(USubst("f_()".asTerm ~> e :: Nil))
-        useAt(Ax.assignball, PosInExpr(0 :: Nil), subst)(pos)
-      case Some(e) => throw new TacticInapplicableFailure(
-          "[:=] assign all only applicable to box universal quantifier, but got " + e.prettyString
-        )
-      case None => throw new IllFormedTacticApplicationException(
-          "Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString
-        )
-    }
+    constructor = TacticConstructor1.create(TermArg("e"))((e: Term) => assignbAll(e)),
   )
 
   /**
@@ -1113,13 +1185,7 @@ private object DLBySubst {
    * Γ1, [a]Q, Γ2  |- Δ1, pos: [a]P, Δ2
    * }}}
    */
-  @Tactic(
-    name = "boxElim",
-    displayNameLong = Some("Eliminate Matching Modalities"),
-    displayPremises = "Q |- P",
-    displayConclusion = "Γ1, [a]Q, Γ2  |- Δ1, [a]P, Δ2",
-  )
-  val boxElim: DependentPositionTactic = anon { (pos: Position, sequent: Sequent) =>
+  val boxElim: DependentPositionTactic = "boxElim".by { (pos: Position, sequent: Sequent) =>
     sequent.sub(pos) match {
       case Some(Box(prg, _)) =>
         val b = sequent
@@ -1138,4 +1204,12 @@ private object DLBySubst {
     }
   }
 
+  @Derivation
+  val boxElimInfo: PositionTacticInfo = PositionTacticInfo.create(
+    name = "boxElim",
+    displayNameLong = Some("Eliminate Matching Modalities"),
+    displayPremises = "Q |- P",
+    displayConclusion = "Γ1, [a]Q, Γ2  |- Δ1, [a]P, Δ2",
+    constructor = TacticConstructor0.create()(() => boxElim),
+  )
 }
