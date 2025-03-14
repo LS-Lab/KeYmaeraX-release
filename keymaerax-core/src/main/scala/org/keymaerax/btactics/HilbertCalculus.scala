@@ -5,17 +5,26 @@
 
 package org.keymaerax.btactics
 
-import org.keymaerax.bellerophon._
+import org.keymaerax.bellerophon.*
 import org.keymaerax.btactics.Idioms.saturate
 import org.keymaerax.btactics.macros.DerivationInfoAugmentors.ProvableInfoAugmentor
-import org.keymaerax.btactics.macros.{DisplayLevel, Tactic}
-import org.keymaerax.core._
-import org.keymaerax.infrastruct.Augmentors._
+import org.keymaerax.btactics.macros.{
+  DisplayLevel,
+  FormulaArg,
+  InputPositionTacticInfo,
+  PlainTacticInfo,
+  PositionTacticInfo,
+  TacticConstructor0,
+  TacticConstructor1,
+}
+import org.keymaerax.core.*
+import org.keymaerax.core.btactics.annotations.Derivation
+import org.keymaerax.infrastruct.*
+import org.keymaerax.infrastruct.Augmentors.*
 import org.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
-import org.keymaerax.infrastruct._
 import org.keymaerax.pt.ProvableSig
 
-import scala.collection.immutable._
+import scala.collection.immutable.*
 import scala.collection.mutable.ListBuffer
 
 /**
@@ -65,8 +74,8 @@ import scala.collection.mutable.ListBuffer
  *   completed
  */
 object HilbertCalculus {
-  import TacticFactory._
-  import UnifyUSCalculus._
+  import TacticFactory.*
+  import UnifyUSCalculus.*
 
   /**
    * True when insisting on internal useAt technology, false when more elaborate external tactic calls are used on
@@ -84,10 +93,13 @@ object HilbertCalculus {
    * @see
    *   [[AxIndex]]
    */
-  @Tactic(name = "stepAt")
-  val stepAt: DependentPositionTactic = UnifyUSCalculus.stepAt(AxIndex.axiomFor)
+  val stepAt: DependentPositionTactic = "stepAt".forward(UnifyUSCalculus.stepAt(AxIndex.axiomFor))
   // = UnifyUSCalculus.stepAt(AxIndex.axiomFor)
   // = anon {(pos:Position) => UnifyUSCalculus.stepAt(AxIndex.axiomFor)(pos)}
+
+  @Derivation
+  val stepAtInfo: PositionTacticInfo = PositionTacticInfo
+    .create(name = "stepAt", constructor = TacticConstructor0.create()(() => stepAt))
 
   //
   // axiomatic rules
@@ -109,8 +121,15 @@ object HilbertCalculus {
    * @see
    *   [[boxTrue]]
    */
-  @Tactic(name = "G", displayPremises = "|- P", displayConclusion = "Γ |- [a]P, Δ")
-  val G: DependentPositionTactic = anon { (pos: Position) => SequentCalculus.cohideR(pos) & DLBySubst.G }
+  val G: DependentPositionTactic = "G".by { (pos: Position) => SequentCalculus.cohideR(pos) & DLBySubst.G }
+
+  @Derivation
+  val GInfo: PositionTacticInfo = PositionTacticInfo.create(
+    name = "G",
+    displayPremises = "|- P",
+    displayConclusion = "Γ |- [a]P, Δ",
+    constructor = TacticConstructor0.create()(() => G),
+  )
 
   /**
    * allG: all generalization rule reduces a proof of `\forall x p(x) |- \forall x q(x)` to proving `p(x) |- q(x)` in
@@ -124,8 +143,15 @@ object HilbertCalculus {
    *   [[UnifyUSCalculus.CMon()]]
    */
   // @todo flexibilize via cohide2 first
-  @Tactic(name = "monall", displayPremises = "P |- Q", displayConclusion = "∀x P |- ∀x Q")
-  lazy val monall: BuiltInTactic = anon { US(Ax.monallrule.provable).result _ }
+  lazy val monall: BuiltInTactic = "monall".by { US(Ax.monallrule.provable).result _ }
+
+  @Derivation
+  val monallInfo: PlainTacticInfo = PlainTacticInfo.create(
+    name = "monall",
+    displayPremises = "P |- Q",
+    displayConclusion = "∀x P |- ∀x Q",
+    constructor = TacticConstructor0.create()(() => monall),
+  )
 
   /**
    * monb: Monotone `[a]p(x) |- [a]q(x)` reduces to proving `p(x) |- q(x)`.
@@ -138,8 +164,15 @@ object HilbertCalculus {
    *   [[UnifyUSCalculus.CMon()]]
    */
   // @todo flexibilize via cohide2 first
-  @Tactic(name = "monb", displayPremises = "P |- Q", displayConclusion = "[a]P |- [a]Q")
-  lazy val monb: BuiltInTactic = anon { US(Ax.monbaxiom.provable).result _ }
+  lazy val monb: BuiltInTactic = "monb".by { US(Ax.monbaxiom.provable).result _ }
+
+  @Derivation
+  val monbInfo: PlainTacticInfo = PlainTacticInfo.create(
+    name = "monb",
+    displayPremises = "P |- Q",
+    displayConclusion = "[a]P |- [a]Q",
+    constructor = TacticConstructor0.create()(() => monb),
+  )
 
   /**
    * mond: Monotone `⟨a⟩p(x) |- ⟨a⟩q(x)` reduces to proving `p(x) |- q(x)`.
@@ -152,8 +185,15 @@ object HilbertCalculus {
    *   [[UnifyUSCalculus.CMon()]]
    */
   // @todo flexibilize via cohide2 first
-  @Tactic(name = "mond", displayPremises = "P |- Q", displayConclusion = "&langle;a&rangle;P |- &langle;a&rangle;Q")
-  lazy val mond: BuiltInTactic = anon { US(Ax.mondrule.provable).result _ }
+  lazy val mond: BuiltInTactic = "mond".by { US(Ax.mondrule.provable).result _ }
+
+  @Derivation
+  val mondInfo: PlainTacticInfo = PlainTacticInfo.create(
+    name = "mond",
+    displayPremises = "P |- Q",
+    displayConclusion = "&langle;a&rangle;P |- &langle;a&rangle;Q",
+    constructor = TacticConstructor0.create()(() => mond),
+  )
 
   //
   // axioms
@@ -165,13 +205,17 @@ object HilbertCalculus {
 
   /** diamond: <.> reduce double-negated box `![a]!p(x)` to a diamond `⟨a⟩p(x)`. */
   lazy val diamond: BuiltInPositionTactic = useAt(Ax.diamond)
-  @Tactic(
+
+  lazy val diamondd: BuiltInPositionTactic = "diamondd".forward(UnifyUSCalculus.useAt(Ax.diamond, PosInExpr(1 :: Nil)))
+
+  @Derivation
+  val diamonddInfo: PositionTacticInfo = PositionTacticInfo.create(
     name = "diamondd",
     displayName = Some("<·>"),
     displayNameAscii = Some("<.>"),
     displayConclusion = "__&langle;a&rangle;P__ ↔ &not;[a]&not;P",
+    constructor = TacticConstructor0.create()(() => diamondd),
   )
-  lazy val diamondd: BuiltInPositionTactic = UnifyUSCalculus.useAt(Ax.diamond, PosInExpr(1 :: Nil))
 
   /**
    * assignb: [:=] simplify assignment `[x:=f;]p(x)` by substitution `p(f)` or equation. Box assignment by substitution
@@ -211,13 +255,7 @@ object HilbertCalculus {
    * @see
    *   [[DLBySubst.assignEquality]]
    */
-  @Tactic(
-    name = "assignb",
-    displayName = Some("[:=]"),
-    revealInternalSteps = true,
-    displayConclusion = "__[x:=e]p(x)__↔p(e)",
-  )
-  lazy val assignb: BuiltInPositionTactic = anon { (pr: ProvableSig, pos: Position) =>
+  lazy val assignb: BuiltInPositionTactic = "assignb".by { (pr: ProvableSig, pos: Position) =>
     if (INTERNAL)
       try { useAt(Ax.assignbAxiom)(pos)(pr) }
       catch { case _: Throwable => useAt(Ax.selfassignb)(pos)(pr) }
@@ -229,6 +267,15 @@ object HilbertCalculus {
           catch { case _: Throwable => DLBySubst.assignEquality(pos)(pr) }
       }
   }
+
+  @Derivation
+  val assignbInfo: PositionTacticInfo = PositionTacticInfo.create(
+    name = "assignb",
+    displayName = Some("[:=]"),
+    displayConclusion = "__[x:=e]p(x)__↔p(e)",
+    revealInternalSteps = true,
+    constructor = TacticConstructor0.create()(() => assignb),
+  )
 
   /** randomb: [:*] simplify nondeterministic assignment `[x:=*;]p(x)` to a universal quantifier `\forall x p(x)` */
   lazy val randomb: BuiltInPositionTactic = useAt(Ax.randomb)
@@ -256,24 +303,31 @@ object HilbertCalculus {
 
   /** box: [.] to reduce double-negated diamond `!⟨a⟩!p(x)` to a box `[a]p(x)`. */
   lazy val box: BuiltInPositionTactic = useAt(Ax.box)
-  @Tactic(
+
+  lazy val boxd: BuiltInPositionTactic = "boxd".forward(UnifyUSCalculus.useAt(Ax.box, PosInExpr(1 :: Nil)))
+
+  @Derivation
+  val boxdInfo: PositionTacticInfo = PositionTacticInfo.create(
     name = "boxd",
     displayName = Some("[·]"),
     displayNameAscii = Some("[.]"),
     displayConclusion = "__[a]P__ ↔ &not;&langle;a&rangle;&not;P",
+    constructor = TacticConstructor0.create()(() => boxd),
   )
-  lazy val boxd: BuiltInPositionTactic = UnifyUSCalculus.useAt(Ax.box, PosInExpr(1 :: Nil))
 
   /** assignd: <:=> simplify assignment `<x:=f;>p(x)` by substitution `p(f)` or equation */
-  @Tactic(
-    name = "assignd",
-    displayName = Some("<:=>"),
-    revealInternalSteps = true,
-    displayConclusion = "__&langle;x:=e&rangle;p(x)__↔p(e)",
-  )
-  lazy val assignd: DependentPositionTactic = anon { (pos: Position) =>
+  lazy val assignd: DependentPositionTactic = "assignd".by { (pos: Position) =>
     useAt(Ax.assigndAxiom)(pos) |! useAt(Ax.selfassignd)(pos) |! DLBySubst.assigndEquality(pos)
   }
+
+  @Derivation
+  val assigndInfo: PositionTacticInfo = PositionTacticInfo.create(
+    name = "assignd",
+    displayName = Some("<:=>"),
+    displayConclusion = "__&langle;x:=e&rangle;p(x)__↔p(e)",
+    revealInternalSteps = true,
+    constructor = TacticConstructor0.create()(() => assignd),
+  )
 
   /** randomd: <:*> simplify nondeterministic assignment `<x:=*;>p(x)` to an existential quantifier `\exists x p(x)` */
   lazy val randomd: BuiltInPositionTactic = useAt(Ax.randomd)
@@ -296,14 +350,19 @@ object HilbertCalculus {
   lazy val duald: BuiltInPositionTactic = useAt(Ax.duald)
 
   lazy val assigndDual: BuiltInPositionTactic = UnifyUSCalculus.useAt(Ax.assignDual2)
-  @Tactic(
+
+  lazy val assignbDual: BuiltInPositionTactic = "assignbDual"
+    .forward(UnifyUSCalculus.useAt(Ax.assignDual2, PosInExpr(1 :: Nil)))
+
+  @Derivation
+  val assignbDualInfo: PositionTacticInfo = PositionTacticInfo.create(
     name = "assignbDual",
     displayName = Some("[:=]D"),
-    displayConclusion = "&langle;x:=f();&rangle;P ↔ __[x:=f();]P__",
+    displayConclusion = "&langle;x:=f()&rangle;P ↔ __[x:=f()]P__",
+    constructor = TacticConstructor0.create()(() => assignbDual),
   )
-  lazy val assignbDual: BuiltInPositionTactic = UnifyUSCalculus.useAt(Ax.assignDual2, PosInExpr(1 :: Nil))
 
-//  /** I: prove a property of a loop by induction with the given loop invariant (hybrid systems) */
+  //  /** I: prove a property of a loop by induction with the given loop invariant (hybrid systems) */
 //  def I(invariant : Formula)  : PositionTactic = TacticLibrary.inductionT(Some(invariant))
 //  def loop(invariant: Formula) = I(invariant)
   /**
@@ -374,39 +433,49 @@ object HilbertCalculus {
    * @see
    *   [[DifferentialEquationCalculus.dC()]]
    */
-  @Tactic(
+  def DC(invariant: Formula): DependentPositionWithAppliedInputTactic = "DC".byWithInputs(
+    List(invariant),
+    { (pos: Position) =>
+      useAt(
+        Ax.DC,
+        (us: Option[Subst]) =>
+          us.getOrElse(throw new UnsupportedTacticFeature("Unexpected missing substitution in DC")) ++
+            RenUSubst(Seq((UnitPredicational("r", AnyArg), invariant))),
+      )(pos) < (LabelBranch(BelleLabels.cutUse), LabelBranch(BelleLabels.cutShow))
+    },
+  )
+
+  @Derivation
+  val DCInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
     name = "DC",
     displayConclusion = "(__[x'=f(x)&Q]P__↔[x'=f(x)&Q∧R]P)←[x'=f(x)&Q]R",
-    inputs = "R:formula",
     revealInternalSteps = true,
+    constructor = TacticConstructor1.create(FormulaArg("R"))((invariant: Formula) => DC(invariant)),
   )
-  def DC(invariant: Formula): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position) =>
-    useAt(
-      Ax.DC,
-      (us: Option[Subst]) =>
-        us.getOrElse(throw new UnsupportedTacticFeature("Unexpected missing substitution in DC")) ++
-          RenUSubst(Seq((UnitPredicational("r", AnyArg), invariant))),
-    )(pos) < (LabelBranch(BelleLabels.cutUse), LabelBranch(BelleLabels.cutShow))
-  }
 
   /**
    * DCd: Diamond Differential Cut a new invariant for a differential equation `<{x'=f(x)&q(x)}>p(x)` reduces to
    * `<{x'=f(x)&q(x)&C(x)}>p(x)` with `[{x'=f(x)&q(x)}]C(x)`.
    */
-  @Tactic(
+  def DCd(invariant: Formula): DependentPositionWithAppliedInputTactic = "DCd".byWithInputs(
+    List(invariant),
+    { (pos: Position) =>
+      useAt(
+        Ax.DCdaxiom,
+        (us: Option[Subst]) =>
+          us.getOrElse(throw new UnsupportedTacticFeature("Unexpected missing substitution in DCd")) ++
+            RenUSubst(Seq((UnitPredicational("r", AnyArg), invariant))),
+      )(pos) < (LabelBranch(BelleLabels.cutUse), LabelBranch(BelleLabels.cutShow))
+    },
+  )
+
+  @Derivation
+  val DCdInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
     name = "DCd",
     displayConclusion = "(__<x'=f(x)&Q>P__↔<x'=f(x)&Q∧R>P)←[x'=f(x)&Q]R",
-    inputs = "R:formula",
     revealInternalSteps = true,
+    constructor = TacticConstructor1.create(FormulaArg("R"))((invariant: Formula) => DCd(invariant)),
   )
-  def DCd(invariant: Formula): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position) =>
-    useAt(
-      Ax.DCdaxiom,
-      (us: Option[Subst]) =>
-        us.getOrElse(throw new UnsupportedTacticFeature("Unexpected missing substitution in DCd")) ++
-          RenUSubst(Seq((UnitPredicational("r", AnyArg), invariant))),
-    )(pos) < (LabelBranch(BelleLabels.cutUse), LabelBranch(BelleLabels.cutShow))
-  }
 
   /**
    * DE: Differential Effect exposes the effect of a differential equation `[x'=f(x)]p(x,x')` on its differential
@@ -533,8 +602,7 @@ object HilbertCalculus {
    * @see
    *   [[UnifyUSCalculus.chase]]
    */
-  @Tactic(name = "derive", displayName = Some("()'"), revealInternalSteps = false /* uninformative as useFor proof */ )
-  lazy val derive: BuiltInPositionTactic = anon { (pr: ProvableSig, pos: Position) =>
+  lazy val derive: BuiltInPositionTactic = "derive".by { (pr: ProvableSig, pos: Position) =>
     ProofRuleTactics.requireOneSubgoal(pr, "derive")
 
     val chaseNegations = anon { (provable: ProvableSig, pos: Position) =>
@@ -580,6 +648,14 @@ object HilbertCalculus {
     pr(saturate(chaseNegations(pos) andThen deepChase(pos)), 0)(deriveVars(pos), 0)
   }
 
+  @Derivation
+  val deriveInfo: PositionTacticInfo = PositionTacticInfo.create(
+    name = "derive",
+    displayName = Some("()'"),
+    revealInternalSteps = false, // uninformative as useFor proof
+    constructor = TacticConstructor0.create()(() => derive),
+  )
+
   //
   // Additional
   //
@@ -596,19 +672,22 @@ object HilbertCalculus {
   // def ind
 
   /** boxTrue: proves `[a]true` directly for hybrid systems `a` that are not hybrid games. */
-  @Tactic(
+  // @note: do not use in derived axioms, instead use useAt(Ax.boxTrueAxiom) to avoid circular dependencies!
+  lazy val boxTrue: BuiltInPositionTactic = "boxTrue".by { (provable: ProvableSig, pos: Position) =>
+    provable(useAt(Ax.boxTrueTrue)(pos).computeResult _, 0)(
+      if (pos.isSucc && pos.isTopLevel) SequentCalculus.closeT.result _ else skip.result _,
+      0,
+    )
+  }
+
+  @Derivation
+  val boxTrueInfo: PositionTacticInfo = PositionTacticInfo.create(
     name = "boxTrue",
     displayName = Some("[]T"),
     displayLevel = DisplayLevel.All,
     displayConclusion = "__[a]⊤__ ↔ ⊤",
+    constructor = TacticConstructor0.create()(() => boxTrue),
   )
-  // @note: do not use in derived axioms, instead use useAt(Ax.boxTrueAxiom) to avoid circular dependencies!
-  lazy val boxTrue: BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
-    (provable(useAt(Ax.boxTrueTrue)(pos).computeResult _, 0)(
-      if (pos.isSucc && pos.isTopLevel) SequentCalculus.closeT.result _ else skip.result _,
-      0,
-    ))
-  }
 
   /*
    *  First-order logic
@@ -648,8 +727,8 @@ object HilbertCalculus {
  *   [[HilbertCalculus.derive]]
  */
 object Derive {
-  import TacticFactory._
-  import UnifyUSCalculus._
+  import TacticFactory.*
+  import UnifyUSCalculus.*
 
   /**
    * True when insisting on internal useAt technology, false when more elaborate external tactic calls are used on
@@ -705,10 +784,18 @@ object Derive {
    *   }}}
    * @incontext
    */
-  @Tactic(name = "Dvar", displayName = Some("(x)'"), displayLevel = DisplayLevel.Browse, displayConclusion = "(x)' = x")
-  lazy val Dvar: DependentPositionTactic = anon { (pos: Position) =>
+  lazy val Dvar: DependentPositionTactic = "Dvar".by { (pos: Position) =>
     (if (INTERNAL) useAt(Ax.DvarAxiom) else DifferentialTactics.Dvariable) (pos)
   }
+
+  @Derivation
+  val DvarInfo: PositionTacticInfo = PositionTacticInfo.create(
+    name = "Dvar",
+    displayName = Some("(x)'"),
+    displayLevel = DisplayLevel.Browse,
+    displayConclusion = "(x)' = x",
+    constructor = TacticConstructor0.create()(() => Dvar),
+  )
 
   /** Dand: &' derives a conjunction `(p(x)&q(x))'` to obtain `p(x)' & q(x)'` */
   lazy val Dand: BuiltInPositionTactic = useAt(Ax.Dand)
