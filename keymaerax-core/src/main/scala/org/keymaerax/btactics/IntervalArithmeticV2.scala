@@ -5,23 +5,32 @@
 
 package org.keymaerax.btactics
 
-import org.keymaerax.bellerophon._
-import org.keymaerax.btactics.SequentCalculus._
-import org.keymaerax.btactics.TacticFactory._
-import org.keymaerax.btactics.TactixLibrary._
-import org.keymaerax.btactics.UnifyUSCalculus._
-import org.keymaerax.btactics.macros.{DisplayLevel, Tactic}
-import org.keymaerax.core._
-import org.keymaerax.infrastruct.Augmentors._
+import org.keymaerax.bellerophon.*
+import org.keymaerax.btactics.SequentCalculus.*
+import org.keymaerax.btactics.TacticFactory.*
+import org.keymaerax.btactics.TactixLibrary.*
+import org.keymaerax.btactics.UnifyUSCalculus.*
+import org.keymaerax.btactics.macros.{
+  DisplayLevel,
+  InputTacticInfo,
+  PlainTacticInfo,
+  PositionTacticInfo,
+  TacticConstructor0,
+  TacticConstructor1,
+  TermArg,
+}
+import org.keymaerax.core.*
+import org.keymaerax.core.btactics.annotations.Derivation
+import org.keymaerax.infrastruct.Augmentors.*
 import org.keymaerax.infrastruct.{PosInExpr, Position, RenUSubst, SuccPosition}
-import org.keymaerax.parser.InterpretedSymbols._
-import org.keymaerax.parser.StringConverter._
+import org.keymaerax.parser.InterpretedSymbols.*
+import org.keymaerax.parser.StringConverter.*
 import org.keymaerax.pt.ProvableSig
 import org.keymaerax.tools.ext.QETacticTool
 
 import java.math.{MathContext, RoundingMode}
 import scala.annotation.{nowarn, tailrec}
-import scala.collection.immutable._
+import scala.collection.immutable.*
 
 /**
  * Interval Arithmetic
@@ -1223,12 +1232,19 @@ object IntervalArithmeticV2 {
     }
   }
 
-  @Tactic(name = "intervalArithmetic", displayName = Some("Interval Arithmetic"), displayLevel = DisplayLevel.Menu)
-  lazy val intervalArithmetic: BelleExpr = anon {
+  lazy val intervalArithmetic: BelleExpr = "intervalArithmetic".by {
     val precision = 15 // @todo: precision as (optional) argument?
     SaturateTactic((orRi |! skip)) & intervalArithmeticPreproc(1) &
       intervalArithmeticBool(precision, ToolProvider.qeTool().get, true)(1)
   }
+
+  @Derivation
+  val intervalArithmeticInfo: PlainTacticInfo = PlainTacticInfo.create(
+    name = "intervalArithmetic",
+    displayName = Some("Interval Arithmetic"),
+    displayLevel = DisplayLevel.Menu,
+    constructor = TacticConstructor0.create()(() => intervalArithmetic),
+  )
 
   def intervalCutTerms(terms: Seq[Term]): BuiltInTactic = anon((provable: ProvableSig) => {
     requireOneSubgoal(provable, "intervalCutTerms")
@@ -1252,15 +1268,18 @@ object IntervalArithmeticV2 {
       }
   })
 
-  @Tactic(
+  def intervalCutTerm(t: Term): InputTactic = "intervalCutTerms".byWithInputs(List(t), intervalCutTerms(Seq(t)))
+
+  @Derivation
+  val intervalCutTermsInfo: InputTacticInfo = InputTacticInfo.create(
     name = "intervalCutTerms" /* @todo old codeName */,
     displayName = Some("Interval Arithmetic Cut"),
     displayLevel = DisplayLevel.Menu,
     // @TODO: closed premise
     displayPremises = "Γ, lower(t)<=t, t<=upper(t) |- Δ",
     displayConclusion = "Γ |- Δ",
+    constructor = TacticConstructor1.create(TermArg("t"))((t: Term) => intervalCutTerm(t)),
   )
-  def intervalCutTerm(t: Term): InputTactic = inputanon { intervalCutTerms(Seq(t)) }
 
   private def terms_of(fml: Formula): List[Term] = fml match {
     case fml: BinaryCompositeFormula => terms_of(fml.left) ++ terms_of(fml.right)
@@ -1271,14 +1290,7 @@ object IntervalArithmeticV2 {
     case _ => List()
   }
 
-  @Tactic(
-    name = "intervalCut",
-    displayName = Some("Interval Arithmetic Cut"),
-    displayLevel = DisplayLevel.Internal,
-    displayPremises = "Γ, lower(t)<=t, t<=upper(t) |- Δ",
-    displayConclusion = "Γ |- Δ",
-  )
-  val intervalCut: DependentPositionTactic = anon { (pos: Position, seq: Sequent) =>
+  val intervalCut: DependentPositionTactic = "intervalCut".by { (pos: Position, seq: Sequent) =>
     seq.sub(pos) match {
       case Some(fml: Formula) => intervalCutTerms(terms_of(fml))
       case Some(t: Term) => intervalCutTerms(Seq(t))
@@ -1290,6 +1302,15 @@ object IntervalArithmeticV2 {
         )
     }
   }
+
+  @Derivation
+  val intervalCutInfo: PositionTacticInfo = PositionTacticInfo.create(
+    name = "intervalCut",
+    displayName = Some("Interval Arithmetic Cut"),
+    displayPremises = "Γ, lower(t)<=t, t<=upper(t) |- Δ",
+    displayConclusion = "Γ |- Δ",
+    constructor = TacticConstructor0.create()(() => intervalCut),
+  )
 
   /**
    * prove formula of the following shape
