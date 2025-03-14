@@ -6,10 +6,11 @@
 package org.keymaerax.btactics
 
 import org.keymaerax.bellerophon.{BelleExpr, DependentTactic, TacticInapplicableFailure}
-import org.keymaerax.btactics.TacticFactory._
-import org.keymaerax.btactics.macros.Tactic
-import org.keymaerax.core._
-import org.keymaerax.parser.StringConverter._
+import org.keymaerax.btactics.TacticFactory.*
+import org.keymaerax.btactics.macros.{PlainTacticInfo, TacticConstructor0}
+import org.keymaerax.core.*
+import org.keymaerax.core.btactics.annotations.Derivation
+import org.keymaerax.parser.StringConverter.*
 
 import scala.annotation.nowarn
 import scala.collection.immutable
@@ -27,13 +28,7 @@ import scala.collection.immutable
  *   Nathan Fulton
  */
 object Transitivity {
-  @Tactic(
-    name = "closeTransitive",
-    displayName = Some("Close Transitive"),
-    displayConclusion = "a>=b, b >= c, c >= z |- a >= z",
-  )
-  val closeTransitive: DependentTactic = anon((s: Sequent) => {
-
+  val closeTransitive: DependentTactic = "closeTransitive".by { (s: Sequent) =>
     val transitiveInequalities = search(s) match {
       case Some(fs) => fs
       case None => throw new TacticInapplicableFailure(
@@ -47,8 +42,8 @@ object Transitivity {
       (
         instantiations(transitiveInequalities)
           .map(variableAndTerm => {
-            val instantiateTactic: BelleExpr = SequentCalculus
-              .allL(variableAndTerm._1, variableAndTerm._2)(Symbol("Llast"))
+            val instantiateTactic: BelleExpr =
+              SequentCalculus.allL(variableAndTerm._1, variableAndTerm._2)(Symbol("Llast"))
             instantiateTactic
           })
           .reduce(_ & _) &
@@ -56,7 +51,15 @@ object Transitivity {
         SequentCalculus.cohideR(Symbol("Rlast")) & TactixLibrary.QE,
       )
 
-  })
+  }
+
+  @Derivation
+  val closeTransitiveInfo: PlainTacticInfo = PlainTacticInfo.create(
+    name = "closeTransitive",
+    displayName = Some("Close Transitive"),
+    displayConclusion = "a>=b, b >= c, c >= z |- a >= z",
+    constructor = TacticConstructor0.create()(() => closeTransitive),
+  )
 
   @nowarn("msg=match may not be exhaustive")
   def closeIds(formulas: List[Formula]): BelleExpr = formulas match {
