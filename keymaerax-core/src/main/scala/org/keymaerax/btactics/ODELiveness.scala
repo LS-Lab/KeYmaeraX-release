@@ -5,28 +5,41 @@
 
 package org.keymaerax.btactics
 
-import org.keymaerax.bellerophon._
-import org.keymaerax.btactics.AnonymousLemmas._
-import org.keymaerax.btactics.DifferentialEquationCalculus._
-import org.keymaerax.btactics.HilbertCalculus._
-import org.keymaerax.btactics.ODEInvariance._
+import org.keymaerax.bellerophon.*
+import org.keymaerax.btactics.AnonymousLemmas.*
+import org.keymaerax.btactics.DifferentialEquationCalculus.*
+import org.keymaerax.btactics.HilbertCalculus.*
+import org.keymaerax.btactics.ODEInvariance.*
 import org.keymaerax.btactics.PropositionalTactics.implyRi
-import org.keymaerax.btactics.SequentCalculus._
+import org.keymaerax.btactics.SequentCalculus.*
 import org.keymaerax.btactics.SimplifierV3.ineqNormalize
-import org.keymaerax.btactics.TacticFactory._
-import org.keymaerax.btactics.TactixLibrary._
-import org.keymaerax.btactics.UnifyUSCalculus._
-import org.keymaerax.btactics.helpers.DifferentialHelper._
-import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
-import org.keymaerax.btactics.macros.{DisplayLevel, ProvableInfo, Tactic}
-import org.keymaerax.core._
-import org.keymaerax.infrastruct.Augmentors._
-import org.keymaerax.infrastruct.DependencyAnalysis._
-import org.keymaerax.infrastruct._
+import org.keymaerax.btactics.TacticFactory.*
+import org.keymaerax.btactics.TactixLibrary.*
+import org.keymaerax.btactics.UnifyUSCalculus.*
+import org.keymaerax.btactics.helpers.DifferentialHelper.*
+import org.keymaerax.btactics.macros.DerivationInfoAugmentors.*
+import org.keymaerax.btactics.macros.{
+  DisplayLevel,
+  ExpressionArg,
+  FormulaArg,
+  InputPositionTacticInfo,
+  OptionArg,
+  PositionTacticInfo,
+  ProvableInfo,
+  TacticConstructor0,
+  TacticConstructor1,
+  TacticConstructor2,
+  TermArg,
+}
+import org.keymaerax.core.*
+import org.keymaerax.core.btactics.annotations.Derivation
+import org.keymaerax.infrastruct.*
+import org.keymaerax.infrastruct.Augmentors.*
+import org.keymaerax.infrastruct.DependencyAnalysis.*
 import org.keymaerax.lemma.Lemma
 import org.keymaerax.parser.Declaration
-import org.keymaerax.parser.StringConverter._
-import org.keymaerax.pt._
+import org.keymaerax.parser.StringConverter.*
+import org.keymaerax.pt.*
 import org.keymaerax.tools.ext.Mathematica
 
 import scala.annotation.nowarn
@@ -812,14 +825,7 @@ object ODELiveness {
    * G, [x'=f(x)&A]B |- [x'=f(x)&Q]P
    * }}}
    */
-  @Tactic(
-    name = "odeUnify",
-    displayNameLong = Some("ODE Unify"),
-    displayLevel = DisplayLevel.Browse,
-    displayPremises = "Γ, [x'=f(x)&A]B |- [x'=f(x),y'=g(y)&Q&B]P, Δ ;; A |- Q",
-    displayConclusion = "Γ, [x'=f(x)&A]B |- [x'=f(x),y'=g(y)&Q]P, Δ",
-  )
-  def odeUnify: DependentPositionTactic = anon((pos: Position, seq: Sequent) => {
+  def odeUnify: DependentPositionTactic = "odeUnify".by { (pos: Position, seq: Sequent) =>
     if (!(pos.isTopLevel && pos.isSucc))
       throw new IllFormedTacticApplicationException("odeUnify is only applicable at a top-level succedent")
 
@@ -877,7 +883,17 @@ object ODELiveness {
           )
       )
     })
-  })
+  }
+
+  @Derivation
+  val odeUnifyInfo: PositionTacticInfo = PositionTacticInfo.create(
+    name = "odeUnify",
+    displayNameLong = Some("ODE Unify"),
+    displayLevel = DisplayLevel.Browse,
+    displayPremises = "Γ, [x'=f(x)&A]B |- [x'=f(x),y'=g(y)&Q&B]P, Δ ;; A |- Q",
+    displayConclusion = "Γ, [x'=f(x)&A]B |- [x'=f(x),y'=g(y)&Q]P, Δ",
+    constructor = TacticConstructor0.create()(() => odeUnify),
+  )
 
   /**
    * A tiny wrapper around cut. This introduces a cut that is compatible for the ODE at a given position (regardless of
@@ -889,30 +905,36 @@ object ODELiveness {
    * G |- C([x'=f(x)&Q]P)
    * }}}
    */
-  @Tactic(
+  def compatCut(R: Formula): DependentPositionWithAppliedInputTactic = "compatCut".byWithInputs(
+    List(R),
+    { (pos: Position, seq: Sequent) =>
+      {
+
+        val (sys, post) = seq.sub(pos) match {
+          case Some(Diamond(sys: ODESystem, post)) => (sys, post)
+          case Some(Box(sys: ODESystem, post)) => (sys, post)
+          case Some(e) => throw new TacticInapplicableFailure(
+              "compatCut only applies to box/diamond of ODEs but got " + e.prettyString
+            )
+          case None => throw new IllFormedTacticApplicationException(
+              "Position " + pos + " does not point to a valid position in sequent " + seq.prettyString
+            )
+        }
+
+        cut(Box(sys, R))
+      }
+    },
+  )
+
+  @Derivation
+  val compatCutInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
     name = "compatCut",
     displayNameLong = Some("Compatible ODE Cut"),
     displayLevel = DisplayLevel.All,
     displayPremises = "Γ, [x'=f(x) & Q]R |- C(⟨x'=f(x) & Q⟩P), Δ ;; Γ |- [x'=f(x) & Q]R, Δ",
     displayConclusion = "Γ |- C(⟨x'=f(x) & Q⟩P), Δ",
-    inputs = "R:formula",
+    constructor = TacticConstructor1.create(FormulaArg("R"))((R: Formula) => compatCut(R)),
   )
-  def compatCut(R: Formula): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position, seq: Sequent) =>
-    {
-
-      val (sys, post) = seq.sub(pos) match {
-        case Some(Diamond(sys: ODESystem, post)) => (sys, post)
-        case Some(Box(sys: ODESystem, post)) => (sys, post)
-        case Some(e) =>
-          throw new TacticInapplicableFailure("compatCut only applies to box/diamond of ODEs but got " + e.prettyString)
-        case None => throw new IllFormedTacticApplicationException(
-            "Position " + pos + " does not point to a valid position in sequent " + seq.prettyString
-          )
-      }
-
-      cut(Box(sys, R))
-    }
-  }
 
   /**
    * Implements K<&> rule Note: uses auto cuts for the later premise
@@ -929,16 +951,10 @@ object ODELiveness {
    * @return
    *   two premises, as shown above when applied to a top-level succedent diamond
    */
-  @Tactic(
-    name = "kDomainDiamond",
-    displayName = Some("K<&>"),
-    displayLevel = DisplayLevel.All,
-    displayPremises = "Γ |- ⟨x'=f(x) & Q⟩ R, Δ ;; Γ |- [x'=f(x) & Q∧¬P]¬R, Δ",
-    displayConclusion = "Γ |- ⟨x'=f(x) & Q⟩ P, Δ",
-  )
   // was kDomD
-  def kDomainDiamond(R: Formula): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position, seq: Sequent) =>
-    {
+  def kDomainDiamond(R: Formula): DependentPositionWithAppliedInputTactic = "kDomainDiamond".byWithInputs(
+    List(R),
+    { (pos: Position, seq: Sequent) =>
       if (!(pos.isTopLevel && pos.isSucc))
         throw new IllFormedTacticApplicationException("kDomD is only applicable at a top-level succedent")
 
@@ -957,8 +973,18 @@ object ODELiveness {
         skip & label(BelleLabels.cutUse),
         useAt(Ax.KDomD, PosInExpr(1 :: Nil))(pos) & odeUnify(pos) & label(BelleLabels.cutShow)
       )
-    }
-  }
+    },
+  )
+
+  @Derivation
+  val kDomainDiamondInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
+    name = "kDomainDiamond",
+    displayName = Some("K<&>"),
+    displayLevel = DisplayLevel.All,
+    displayPremises = "Γ |- ⟨x'=f(x) & Q⟩ R, Δ ;; Γ |- [x'=f(x) & Q∧¬P]¬R, Δ",
+    displayConclusion = "Γ |- ⟨x'=f(x) & Q⟩ P, Δ",
+    constructor = TacticConstructor1.create(FormulaArg("R"))((R: Formula) => kDomainDiamond(R)),
+  )
 
   /**
    * Implements DR<.> rule Note: uses auto cuts for the later premise
@@ -975,35 +1001,41 @@ object ODELiveness {
    * @return
    *   two premises, as shown above when applied to a top-level succedent diamond
    */
-  @Tactic(
+  def dDR(R: Formula): DependentPositionWithAppliedInputTactic = "dDR".byWithInputs(
+    List(R),
+    { (pos: Position, seq: Sequent) =>
+      {
+        if (!(pos.isTopLevel && pos.isSucc))
+          throw new IllFormedTacticApplicationException("dDR is only applicable at a top-level succedent")
+
+        val (sys, post) = seq.sub(pos) match {
+          case Some(Diamond(sys: ODESystem, post)) => (sys, post)
+          case Some(e) =>
+            throw new TacticInapplicableFailure("dDR only applicable to diamond ODEs, but got " + e.prettyString)
+          case None => throw new IllFormedTacticApplicationException(
+              "Position " + pos + " does not point to a valid position in sequent " + seq.prettyString
+            )
+        }
+
+        val newfml = Diamond(ODESystem(sys.ode, R), post)
+
+        cutR(newfml)(pos) < (
+          skip,
+          useAt(Ax.DRd, PosInExpr(1 :: Nil))(pos) & odeUnify(pos)
+        )
+      }
+    },
+  )
+
+  @Derivation
+  val dDRInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
     name = "dDR",
     displayNameLong = Some("Diamond Differential Refinement"),
     displayLevel = DisplayLevel.All,
     displayPremises = "Γ |- ⟨x'=f(x) & R⟩P, Δ ;; Γ |- [x'=f(x) & R]Q, Δ",
     displayConclusion = "Γ |- ⟨x'=f(x) & Q⟩P, Δ",
+    constructor = TacticConstructor1.create(FormulaArg("R"))((R: Formula) => dDR(R)),
   )
-  def dDR(R: Formula): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position, seq: Sequent) =>
-    {
-      if (!(pos.isTopLevel && pos.isSucc))
-        throw new IllFormedTacticApplicationException("dDR is only applicable at a top-level succedent")
-
-      val (sys, post) = seq.sub(pos) match {
-        case Some(Diamond(sys: ODESystem, post)) => (sys, post)
-        case Some(e) =>
-          throw new TacticInapplicableFailure("dDR only applicable to diamond ODEs, but got " + e.prettyString)
-        case None => throw new IllFormedTacticApplicationException(
-            "Position " + pos + " does not point to a valid position in sequent " + seq.prettyString
-          )
-      }
-
-      val newfml = Diamond(ODESystem(sys.ode, R), post)
-
-      cutR(newfml)(pos) < (
-        skip,
-        useAt(Ax.DRd, PosInExpr(1 :: Nil))(pos) & odeUnify(pos)
-      )
-    }
-  }
 
   /**
    * Implements linear vDG rule that adds ghosts to an ODE on the left or right, in either modality For boxes on the
@@ -1741,16 +1773,9 @@ object ODELiveness {
    * @todo:
    *   succeeds but probably unexpectedly when Q is not closed. Best to error instead.
    */
-
-  @Tactic(
-    name = "closedRef",
-    displayNameLong = Some("Closed Domain Refinement"),
-    displayLevel = DisplayLevel.Browse,
-    displayPremises = "Γ |- ⟨x'=f(x) & R⟩P, Δ ;; Γ |- g>0 & [x'=f(x) & R∧¬P∧g≳0]g>0, Δ",
-    displayConclusion = "Γ |- ⟨x'=f(x) & g≳0⟩P, Δ",
-  )
-  def closedRef(R: Formula): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position, seq: Sequent) =>
-    {
+  def closedRef(R: Formula): DependentPositionWithAppliedInputTactic = "closedRef".byWithInputs(
+    List(R),
+    { (pos: Position, seq: Sequent) =>
       if (!(pos.isTopLevel && pos.isSucc))
         throw new IllFormedTacticApplicationException("closedRef is only applicable at a top-level succedent")
 
@@ -1772,8 +1797,18 @@ object ODELiveness {
           odeUnify(pos) & hideL(Symbol("Llast"))
         )
       )
-    }
-  }
+    },
+  )
+
+  @Derivation
+  val closedRefInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
+    name = "closedRef",
+    displayNameLong = Some("Closed Domain Refinement"),
+    displayLevel = DisplayLevel.Browse,
+    displayPremises = "Γ |- ⟨x'=f(x) & R⟩P, Δ ;; Γ |- g>0 & [x'=f(x) & R∧¬P∧g≳0]g>0, Δ",
+    displayConclusion = "Γ |- ⟨x'=f(x) & g≳0⟩P, Δ",
+    constructor = TacticConstructor1.create(FormulaArg("R"))((R: Formula) => closedRef(R)),
+  )
 
   private lazy val curry = remember("(p() -> (q() -> r())) <-> (p()&q()->r())".asFormula, prop, namespace)
 
@@ -1853,42 +1888,53 @@ object ODELiveness {
   })
 
   /** Wrapper around bDG for display. */
-  @Tactic(
+  def bDG(ghost: Expression, p: Term): DependentPositionWithAppliedInputTactic = "bDG".byWithInputs(
+    List(ghost, p),
+    { (pos: Position) =>
+      ghost match {
+        case Equal(l: DifferentialSymbol, r) => ODELiveness.bDG(AtomicODE(l, r), p)(pos)
+        case dp: DifferentialProgram => ODELiveness.bDG(dp, p)(pos)
+        case ODESystem(dp, _) => ODELiveness.bDG(dp, p)(pos)
+        case _ =>
+          throw new IllegalArgumentException("Expected a differential program y′=f(y), but got " + ghost.prettyString)
+      }
+    },
+  )
+
+  @Derivation
+  val bDGInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
     name = "bDG",
     displayNameLong = Some("Bounded Differential Ghost"),
     displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ |- [ghost, x'=f(x) & Q] (||ghost||)^2 <= p, Δ ;; [ghost, x'=f(x) & Q]P, Δ",
     displayConclusion = "Γ |- [{x'=f(x) & Q}]P, Δ",
-    inputs = "ghost:expression ;; p:term",
+    constructor = TacticConstructor2
+      .create(ExpressionArg("ghost"), TermArg("p"))((ghost: Expression, p: Term) => bDG(ghost, p)),
   )
-  def bDG(ghost: Expression, p: Term): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position) =>
-    ghost match {
-      case Equal(l: DifferentialSymbol, r) => ODELiveness.bDG(AtomicODE(l, r), p)(pos)
-      case dp: DifferentialProgram => ODELiveness.bDG(dp, p)(pos)
-      case ODESystem(dp, _) => ODELiveness.bDG(dp, p)(pos)
-      case _ =>
-        throw new IllegalArgumentException("Expected a differential program y′=f(y), but got " + ghost.prettyString)
-    }
-  }
 
   /** Wrapper around vDG for display. */
-  @Tactic(
+  def vDG(ghost: Expression): DependentPositionWithAppliedInputTactic = "vDG".byWithInputs(
+    List(ghost),
+    { (pos: Position) =>
+      ghost match {
+        case Equal(l: DifferentialSymbol, r) => ODELiveness.vDG(AtomicODE(l, r))(pos)
+        case dp: DifferentialProgram => ODELiveness.vDG(dp)(pos)
+        case ODESystem(dp, _) => ODELiveness.vDG(dp)(pos)
+        case _ =>
+          throw new IllegalArgumentException("Expected a differential program y′=f(y), but got " + ghost.prettyString)
+      }
+    },
+  )
+
+  @Derivation
+  val vDGInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
     name = "vDG",
     displayNameLong = Some("Affine Vectorial Differential Ghost"),
     displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ |- [ghost, x'=f(x) & Q]P, Δ",
     displayConclusion = "Γ |- [{x'=f(x) & Q}]P, Δ",
-    inputs = "ghost:expression",
+    constructor = TacticConstructor1.create(ExpressionArg("ghost"))((ghost: Expression) => vDG(ghost)),
   )
-  def vDG(ghost: Expression): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position) =>
-    ghost match {
-      case Equal(l: DifferentialSymbol, r) => ODELiveness.vDG(AtomicODE(l, r))(pos)
-      case dp: DifferentialProgram => ODELiveness.vDG(dp)(pos)
-      case ODESystem(dp, _) => ODELiveness.vDG(dp)(pos)
-      case _ =>
-        throw new IllegalArgumentException("Expected a differential program y′=f(y), but got " + ghost.prettyString)
-    }
-  }
 
   /**
    * dDDG rule
@@ -2004,25 +2050,29 @@ object ODELiveness {
   def dBDG(p: Term, dim: Int): DependentPositionTactic =
     anon((pos: Position, sequent: Sequent) => dBDGInternal(p, dim)(pos, sequent))
 
-  @Tactic(
+  def dBDG(p: Term): DependentPositionWithAppliedInputTactic = "dBDG"
+    .byWithInputs(List(p), { (pos: Position, sequent: Sequent) => dBDGInternal(p, 1)(pos, sequent) })
+
+  @Derivation
+  val dBDGInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
     name = "dBDG",
     displayNameLong = Some("Bounded Diff Ghost"),
-    displayLevel = DisplayLevel.Internal,
     displayPremises = "Γ |- [y'=g(x,y),x'=f(x) & Q]||y||^2 ≤ p(x) ;; Γ |- ⟨x'=f(x) & Q⟩P, Δ",
     displayConclusion = "Γ |- ⟨y'=g(x,y),x'=f(x) & Q⟩P, Δ",
+    constructor = TacticConstructor1.create(TermArg("p"))((p: Term) => dBDG(p)),
   )
-  def dBDG(p: Term): DependentPositionWithAppliedInputTactic =
-    inputanon((pos: Position, sequent: Sequent) => dBDGInternal(p, 1)(pos, sequent))
 
-  @Tactic(
+  def dDDG(L: Term, M: Term): DependentPositionWithAppliedInputTactic = "dDDG"
+    .byWithInputs(List(L, M), { (pos: Position, sequent: Sequent) => dDDGInternal(L, M, 1)(pos, sequent) })
+
+  @Derivation
+  val dDDGInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
     name = "dDDG",
     displayNameLong = Some("Differentially-bounded Diff Ghost"),
-    displayLevel = DisplayLevel.Internal,
     displayPremises = "Γ |- [y'=g(x,y),x'=f(x) & Q](||y||^2)' <= L||y||+M ;; Γ |- ⟨x'=f(x) & Q⟩P, Δ",
     displayConclusion = "Γ |- ⟨y'=g(x,y),x'=f(x) & Q⟩P, Δ",
+    constructor = TacticConstructor2.create(TermArg("L"), TermArg("M"))((L: Term, M: Term) => dDDG(L, M)),
   )
-  def dDDG(L: Term, M: Term): DependentPositionWithAppliedInputTactic =
-    inputanon((pos: Position, sequent: Sequent) => dDDGInternal(L, M, 1)(pos, sequent))
 
   // Convenient wrappers for GEx
   def gEx(hints: List[Formula]): DependentPositionTactic = anon((pos: Position, seq: Sequent) =>
@@ -2030,47 +2080,57 @@ object ODELiveness {
   )
 
   // todo: currently limited to one hint, but we actually need more than that!
-  @Tactic(
+  def gEx(hint: scala.Option[Formula]): DependentPositionWithAppliedInputTactic = "gEx".byWithInputs(
+    List(hint),
+    { (pos: Position) =>
+      odeReduce(strict = true, hint.toList)(pos) & Idioms
+        .?(cohideR(pos) & (byUScaught(Ax.TExge) | byUScaught(Ax.TExgt)) & done)
+    },
+  )
+
+  @Derivation
+  val gExInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
     name = "gEx",
     displayNameLong = Some("Global Existence"),
     displayLevel = DisplayLevel.All,
     displayPremises = "* (hint)",
     displayConclusion = "Γ |- ⟨x'=f(x),t'=1⟩t>s(), Δ",
-  )
-  def gEx(hint: Option[Formula]): DependentPositionWithAppliedInputTactic = inputanon((pos: Position) =>
-    odeReduce(strict = true, hint.toList)(pos) & Idioms
-      .?(cohideR(pos) & (byUScaught(Ax.TExge) | byUScaught(Ax.TExgt)) & done)
+    constructor = TacticConstructor1.create(OptionArg(FormulaArg("hint")))((hint: scala.Option[Formula]) => gEx(hint)),
   )
 
-  @Tactic(
+  def dV(eps: scala.Option[Term]): DependentPositionWithAppliedInputTactic = "dV".byWithInputs(
+    List(eps),
+    { (pos: Position, sequent: Sequent) =>
+      // Check if the postcondition is an atomic inequality
+      // Note: ill-formed applications are caught in the sub-tactics
+      val atomic = sequent.sub(pos) match {
+        case Some(Diamond(_, pred)) => pred.isInstanceOf[GreaterEqual] ||
+          pred.isInstanceOf[Greater] ||
+          pred.isInstanceOf[LessEqual] ||
+          pred.isInstanceOf[Less]
+        case _ => false
+      }
+      if (atomic) {
+        eps match {
+          case None => dVAuto(false)(pos)
+          case Some(ee) => dV(ee)(pos)
+        }
+      } else {
+        eps match {
+          case None => semialgdVAuto(false)(pos)
+          case Some(ee) => semialgdV(ee)(pos)
+        }
+      }
+    },
+  )
+
+  @Derivation
+  val dVInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
     name = "dV",
     displayNameLong = Some("Differential Variant"),
     displayLevel = DisplayLevel.All,
     displayPremises = " Γ |- ∃ε (ε>0 ∧ [x'=f(x)& Q∧¬P](P)'≳ε), Δ ;; Γ |- ∀s ⟨x'=f(x),t'=1 & Q⟩t≳s, Δ",
     displayConclusion = "Γ |- ⟨x'=f(x) & Q⟩P, Δ",
-    inputs = "ε:Option[Term]",
+    constructor = TacticConstructor1.create(OptionArg(TermArg("ε")))((eps: scala.Option[Term]) => dV(eps)),
   )
-  def dV(eps: Option[Term]): DependentPositionWithAppliedInputTactic = inputanon((pos: Position, sequent: Sequent) => {
-    // Check if the postcondition is an atomic inequality
-    // Note: ill-formed applications are caught in the sub-tactics
-    val atomic = sequent.sub(pos) match {
-      case Some(Diamond(_, pred)) => pred.isInstanceOf[GreaterEqual] ||
-        pred.isInstanceOf[Greater] ||
-        pred.isInstanceOf[LessEqual] ||
-        pred.isInstanceOf[Less]
-      case _ => false
-    }
-    if (atomic) {
-      eps match {
-        case None => dVAuto(false)(pos)
-        case Some(ee) => dV(ee)(pos)
-      }
-    } else {
-      eps match {
-        case None => semialgdVAuto(false)(pos)
-        case Some(ee) => semialgdV(ee)(pos)
-      }
-    }
-  })
-
 }
