@@ -20,9 +20,6 @@ ThisBuild / scalacOptions ++= Seq(
   // https://scala-lang.org/api/3.x/scala/annotation/elidable.html
   // TODO Fix this after migrating to Scala 3
   "-Wconf:msg=scala.annotation.elidable is ignored:s",
-
-  // Required for macros
-  "-Ymacro-annotations",
 )
 
 ThisBuild / assemblyMergeStrategy := {
@@ -41,19 +38,9 @@ ThisBuild / assemblyMergeStrategy := {
 // Never execute tests in parallel across all sub-projects
 Global / concurrentRestrictions += Tags.limit(Tags.Test, 1)
 
-lazy val macros = project
-  .in(file("keymaerax-macros"))
-  .disablePlugins(AssemblyPlugin)
-  .settings(
-    name := "KeYmaeraX Macros",
-
-    libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value,
-  )
-
 lazy val core = project
   .in(file("keymaerax-core"))
   .enablePlugins(BuildInfoPlugin)
-  .dependsOn(macros)
   .settings(
     name := "KeYmaeraX Core",
     mainClass := Some("org.keymaerax.cli.KeymaeraxCore"),
@@ -127,7 +114,7 @@ lazy val core = project
 
 lazy val webui = project
   .in(file("keymaerax-webui"))
-  .dependsOn(macros, core)
+  .dependsOn(core)
   .settings(
     name := "KeYmaeraX WebUI",
     mainClass := Some("org.keymaerax.cli.KeymaeraxWebui"),
@@ -189,13 +176,11 @@ lazy val webui = project
 // build KeYmaera X full jar with sbt clean assembly
 lazy val root = project
   .in(file("."))
-  .aggregate(macros, core, webui)
+  .aggregate(core, webui)
   .enablePlugins(ScalaUnidocPlugin)
   .disablePlugins(AssemblyPlugin)
   .settings(
     name := "KeYmaeraX",
 
     Compile / doc / scalacOptions ++= Seq("-doc-root-content", "rootdoc.txt"),
-    ScalaUnidoc / unidoc / scalacOptions += "-Ymacro-expand:none",
-    ScalaUnidoc / unidoc / unidocProjectFilter := inAnyProject -- inProjects(macros),
   )
