@@ -5,24 +5,34 @@
 
 package org.keymaerax.btactics
 
-import org.keymaerax.bellerophon._
+import org.keymaerax.bellerophon.*
 import org.keymaerax.btactics.Idioms.{mapSubpositions, opt}
-import org.keymaerax.btactics.SequentCalculus._
-import org.keymaerax.btactics.TacticFactory._
-import org.keymaerax.btactics.TactixLibrary._
-import org.keymaerax.btactics.UnifyUSCalculus._
+import org.keymaerax.btactics.SequentCalculus.*
+import org.keymaerax.btactics.TacticFactory.*
+import org.keymaerax.btactics.TactixLibrary.*
+import org.keymaerax.btactics.UnifyUSCalculus.*
 import org.keymaerax.btactics.macros.DerivationInfoAugmentors.ProvableInfoAugmentor
-import org.keymaerax.btactics.macros.{DisplayLevel, Tactic}
-import org.keymaerax.core._
-import org.keymaerax.infrastruct.Augmentors._
-import org.keymaerax.infrastruct.StaticSemanticsTools._
-import org.keymaerax.infrastruct._
+import org.keymaerax.btactics.macros.{
+  InputPositionTacticInfo,
+  OptionArg,
+  PlainTacticInfo,
+  PositionTacticInfo,
+  TacticConstructor0,
+  TacticConstructor2,
+  TermArg,
+  VariableArg,
+}
+import org.keymaerax.core.*
+import org.keymaerax.core.btactics.annotations.Derivation
+import org.keymaerax.infrastruct.*
+import org.keymaerax.infrastruct.Augmentors.*
+import org.keymaerax.infrastruct.StaticSemanticsTools.*
 import org.keymaerax.parser.InterpretedSymbols
-import org.keymaerax.parser.StringConverter._
+import org.keymaerax.parser.StringConverter.*
 import org.keymaerax.pt.ProvableSig
 
 import scala.annotation.nowarn
-import scala.collection.immutable._
+import scala.collection.immutable.*
 
 /** Implementation: Tactics to rewrite equalities and introduce abbreviations. */
 @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
@@ -209,13 +219,7 @@ private object EqualityTactics {
   }
 
   /* Rewrites equalities exhaustively with hiding, but only if left-hand side is an atom (variable or uninterpreted function) */
-  @Tactic(
-    name = "atomAllL2R",
-    displayName = Some("L=R all atoms"),
-    displayPremises = "Γ(e) |- Δ(e)",
-    displayConclusion = "Γ(x), x=e |- Δ(e)",
-  )
-  val atomExhaustiveEqL2R: BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
+  val atomExhaustiveEqL2R: BuiltInPositionTactic = "atomAllL2R".by { (provable: ProvableSig, pos: Position) =>
     ProofRuleTactics.requireOneSubgoal(provable, "atomExhaustiveEqL2R")
     val sequent = provable.subgoals.head
     sequent.sub(pos) match {
@@ -232,9 +236,17 @@ private object EqualityTactics {
     }
   }
 
+  @Derivation
+  val atomAllL2RInfo: PositionTacticInfo = PositionTacticInfo.create(
+    name = "atomAllL2R",
+    displayName = Some("L=R all atoms"),
+    displayPremises = "Γ(e) |- Δ(e)",
+    displayConclusion = "Γ(x), x=e |- Δ(e)",
+    constructor = TacticConstructor0.create()(() => atomExhaustiveEqL2R),
+  )
+
   /** Rewrites all atom equalities in the assumptions. */
-  @Tactic(name = "applyEqualities", displayLevel = DisplayLevel.Internal)
-  val applyEqualities: BuiltInTactic = anon { (provable: ProvableSig) =>
+  val applyEqualities: BuiltInTactic = "applyEqualities".by { (provable: ProvableSig) =>
     ProofRuleTactics.requireOneSubgoal(provable, "applyEqualities")
     val seq = provable.subgoals.head
     seq
@@ -254,6 +266,10 @@ private object EqualityTactics {
       })
       .foldLeft(provable)({ (pr, r) => pr(r.result _, 0) })
   }
+
+  @Derivation
+  val applyEqualitiesInfo: PlainTacticInfo = PlainTacticInfo
+    .create(name = "applyEqualities", constructor = TacticConstructor0.create()(() => applyEqualities))
 
   /**
    * Rewrites free occurrences of the right-hand side of an equality into the left-hand side exhaustively.
@@ -358,9 +374,9 @@ private object EqualityTactics {
    * @return
    *   The tactic.
    */
-  @Tactic(name = "abbrvAt", displayLevel = DisplayLevel.Internal)
-  def abbrvAt(e: Term, x: Option[Variable]): DependentPositionWithAppliedInputTactic =
-    inputanon((pos: Position, sequent: Sequent) => {
+  def abbrvAt(e: Term, x: scala.Option[Variable]): DependentPositionWithAppliedInputTactic = "abbrvAt".byWithInputs(
+    List(e, x),
+    { (pos: Position, sequent: Sequent) =>
       val inFml = sequent.sub(pos) match {
         case Some(p: Formula) => p
         case Some(t: Term) => throw new TacticInapplicableFailure(
@@ -398,7 +414,15 @@ private object EqualityTactics {
             (if (polarity >= 0) allL(e)(-1) & implyL(-1) < (cohide(2) & byUS(Ax.equalReflexive), id)
              else existsR(e)(1) & andR(1) < (cohide(1) & byUS(Ax.equalReflexive), id)) & done,
         )
-    })
+    },
+  )
+
+  @Derivation
+  val abbrvAtInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
+    name = "abbrvAt",
+    constructor = TacticConstructor2
+      .create(TermArg("e"), OptionArg(VariableArg("x")))((e: Term, x: scala.Option[Variable]) => abbrvAt(e, x)),
+  )
 
   /**
    * Expands an absolute value function.
@@ -411,8 +435,7 @@ private object EqualityTactics {
    * @return
    *   The tactic.
    */
-  @Tactic(name = "absExp", displayName = Some("Expand absolute value"))
-  val abs: BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
+  val abs: BuiltInPositionTactic = "absExp".by { (provable: ProvableSig, pos: Position) =>
     ProofRuleTactics.requireOneSubgoal(provable, "abs")
     val sequent = provable.subgoals.head
     sequent.at(pos) match {
@@ -447,13 +470,19 @@ private object EqualityTactics {
     }
   }
 
+  @Derivation
+  val absExpInfo: PositionTacticInfo = PositionTacticInfo.create(
+    name = "absExp",
+    displayName = Some("Expand absolute value"),
+    constructor = TacticConstructor0.create()(() => abs),
+  )
+
   private lazy val absContradiction = AnonymousLemmas.remember("f()<0 & f()>=0 <-> false".asFormula, QE, namespace)
   private lazy val minContradiction = AnonymousLemmas.remember("f()>g() & f()<=g() <-> false".asFormula, QE, namespace)
   private lazy val maxContradiction = AnonymousLemmas.remember("f()<g() & f()>=g() <-> false".asFormula, QE, namespace)
 
   /** Expands abs only at a specific position (also works in contexts that bind the argument of abs). */
-  @Tactic(name = "absAt", displayLevel = DisplayLevel.Internal)
-  val absAt: BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
+  val absAt: BuiltInPositionTactic = "absAt".by { (provable: ProvableSig, pos: Position) =>
     ProofRuleTactics.requireOneSubgoal(provable, "absAt")
     val sequent = provable.subgoals.head
     sequent.sub(pos) match {
@@ -545,6 +574,10 @@ private object EqualityTactics {
     }
   }
 
+  @Derivation
+  val absAtInfo: PositionTacticInfo = PositionTacticInfo
+    .create(name = "absAt", constructor = TacticConstructor0.create()(() => absAt))
+
   /**
    * Expands min/max function.
    * @example
@@ -556,8 +589,7 @@ private object EqualityTactics {
    * @return
    *   The tactic.
    */
-  @Tactic(name = "minmax", displayName = Some("Expand min/max"))
-  val minmax: BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
+  val minmax: BuiltInPositionTactic = "minmax".by { (provable: ProvableSig, pos: Position) =>
     ProofRuleTactics.requireOneSubgoal(provable, "minmax")
     val sequent = provable.subgoals.head
     sequent.at(pos) match {
@@ -610,9 +642,15 @@ private object EqualityTactics {
     }
   }
 
+  @Derivation
+  val minmaxInfo: PositionTacticInfo = PositionTacticInfo.create(
+    name = "minmax",
+    displayName = Some("Expand min/max"),
+    constructor = TacticConstructor0.create()(() => minmax),
+  )
+
   /** Expands min/max only at a specific position (also works in contexts that bind some of the arguments). */
-  @Tactic(name = "minmaxAt", displayLevel = DisplayLevel.Internal)
-  val minmaxAt: BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
+  val minmaxAt: BuiltInPositionTactic = "minmaxAt".by { (provable: ProvableSig, pos: Position) =>
     ProofRuleTactics.requireOneSubgoal(provable, "minmaxAt")
     val sequent = provable.subgoals.head
     sequent.sub(pos) match {
@@ -703,6 +741,10 @@ private object EqualityTactics {
     }
   }
 
+  @Derivation
+  val minmaxAtInfo: PositionTacticInfo = PositionTacticInfo
+    .create(name = "minmaxAt", constructor = TacticConstructor0.create()(() => minmaxAt))
+
   private def protectPos(tac: BuiltInPositionTactic): BuiltInPositionTactic =
     anon { (provable: ProvableSig, pos: Position) =>
       val sequent = provable.subgoals.head
@@ -711,8 +753,7 @@ private object EqualityTactics {
     }
 
   /** Expands all special functions (abs/min/max). */
-  @Tactic(name = "expandAll", displayName = Some("Expand all special functions"))
-  val expandAll: BuiltInTactic = anon { (provable: ProvableSig) =>
+  val expandAll: BuiltInTactic = "expandAll".by { (provable: ProvableSig) =>
     ProofRuleTactics.requireOneSubgoal(provable, "expandAll")
     val s = provable.subgoals.head
     val allTopPos = s.ante.indices.map(AntePos(_)) ++ s.succ.indices.map(SuccPos(_))
@@ -746,9 +787,15 @@ private object EqualityTactics {
     ))
   }
 
+  @Derivation
+  val expandAllInfo: PlainTacticInfo = PlainTacticInfo.create(
+    name = "expandAll",
+    displayName = Some("Expand all special functions"),
+    constructor = TacticConstructor0.create()(() => expandAll),
+  )
+
   /** Expands all special functions (abs/min/max) underneath position `pos`. */
-  @Tactic(name = "expandAllAt", displayLevel = DisplayLevel.Internal)
-  val expandAllAt: BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
+  val expandAllAt: BuiltInPositionTactic = "expandAllAt".by { (provable: ProvableSig, pos: Position) =>
     ProofRuleTactics.requireOneSubgoal(provable, "expandAllAt")
     val tactics = Idioms.mapSubpositions(
       pos,
@@ -762,4 +809,8 @@ private object EqualityTactics {
     )
     tactics.foldLeft(provable)({ (pr, r) => pr(r, 0) })
   }
+
+  @Derivation
+  val expandAllAtInfo: PositionTacticInfo = PositionTacticInfo
+    .create(name = "expandAllAt", constructor = TacticConstructor0.create()(() => expandAllAt))
 }
