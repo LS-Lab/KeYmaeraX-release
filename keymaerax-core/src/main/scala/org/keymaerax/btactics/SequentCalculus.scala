@@ -5,15 +5,31 @@
 
 package org.keymaerax.btactics
 
-import org.keymaerax.bellerophon._
+import org.keymaerax.bellerophon.*
 import org.keymaerax.btactics.ProofRuleTactics.requireOneSubgoal
-import org.keymaerax.btactics.TacticFactory._
+import org.keymaerax.btactics.TacticFactory.*
 import org.keymaerax.btactics.TactixLibrary.exhaustiveEqL2R
 import org.keymaerax.btactics.UnifyUSCalculus.{uniformRename, useAt}
-import org.keymaerax.btactics.macros.{DisplayLevel, Tactic, TacticInfo}
+import org.keymaerax.btactics.macros.{
+  DisplayLevel,
+  FormulaArg,
+  InputPositionTacticInfo,
+  InputTacticInfo,
+  OptionArg,
+  PlainTacticInfo,
+  PositionTacticInfo,
+  StringArg,
+  TacticConstructor0,
+  TacticConstructor1,
+  TacticConstructor2,
+  TermArg,
+  TwoPositionTacticInfo,
+  VariableArg,
+}
 import org.keymaerax.core
-import org.keymaerax.core._
-import org.keymaerax.infrastruct.Augmentors._
+import org.keymaerax.core.*
+import org.keymaerax.core.btactics.annotations.Derivation
+import org.keymaerax.infrastruct.Augmentors.*
 import org.keymaerax.infrastruct.{AntePosition, PosInExpr, Position, SuccPosition}
 import org.keymaerax.pt.ProvableSig
 
@@ -46,157 +62,192 @@ object SequentCalculus {
   // Propositional tactics
 
   /** Hide/weaken whether left or right */
-  @Tactic(
-    name = "hide",
-    displayName = Some("W"),
-    displayNameLong = Some("Weaken"),
-    displayPremises = "Γ |- Δ",
-    displayConclusion = "Γ |- P, Δ",
-  )
-  val hide: BuiltInPositionTactic = anon { (pr: ProvableSig, pos: Position) =>
+  val hide: BuiltInPositionTactic = "hide".by { (pr: ProvableSig, pos: Position) =>
     pos match {
       case p: AntePosition => SequentCalculus.hideL(p).computeResult(pr)
       case p: SuccPosition => SequentCalculus.hideR(p).computeResult(pr)
     }
   }
 
+  @Derivation
+  val hideInfo: PositionTacticInfo = PositionTacticInfo.create(
+    name = "hide",
+    displayName = Some("W"),
+    displayNameLong = Some("Weaken"),
+    displayPremises = "Γ |- Δ",
+    displayConclusion = "Γ |- P, Δ",
+    constructor = TacticConstructor0.create()(() => hide),
+  )
+
   /** Hide/weaken left: weaken a formula to drop it from the antecedent ([[org.keymaerax.core.HideLeft HideLeft]]) */
-  @Tactic(
+  val hideL: CoreLeftTactic = "hideL".coreby { (pr: ProvableSig, pos: AntePosition) => pr(HideLeft(pos.checkTop), 0) }
+
+  @Derivation
+  val hideLInfo: PositionTacticInfo = PositionTacticInfo.create(
     name = "hideL",
     displayName = Some("WL"),
     displayNameLong = Some("Weaken Left"),
     displayPremises = "Γ |- Δ",
     displayConclusion = "Γ, P |- Δ",
+    constructor = TacticConstructor0.create()(() => hideL),
   )
-  val hideL: CoreLeftTactic = coreanon { (pr: ProvableSig, pos: AntePosition) => pr(HideLeft(pos.checkTop), 0) }
 
   /** Hide/weaken right: weaken a formula to drop it from the succcedent ([[org.keymaerax.core.HideRight HideRight]]) */
-  @Tactic(
+  val hideR: CoreRightTactic = "hideR".coreby { (pr: ProvableSig, pos: SuccPosition) => pr(HideRight(pos.checkTop), 0) }
+
+  @Derivation
+  val hideRInfo: PositionTacticInfo = PositionTacticInfo.create(
     name = "hideR",
     displayName = Some("WR"),
     displayNameLong = Some("Weaken Right"),
     displayPremises = "Γ |- Δ",
     displayConclusion = "Γ |- P, Δ",
+    constructor = TacticConstructor0.create()(() => hideR),
   )
-  val hideR: CoreRightTactic = coreanon { (pr: ProvableSig, pos: SuccPosition) => pr(HideRight(pos.checkTop), 0) }
 
   /** CoHide/weaken left: drop all other formulas from the sequent ([[org.keymaerax.core.CoHideLeft CoHideLeft]]) */
-  @Tactic(
+  val cohideL: CoreLeftTactic = "cohideL".coreby { (pr: ProvableSig, pos: AntePosition) =>
+    pr(CoHideLeft(pos.checkTop), 0)
+  }
+
+  @Derivation
+  val cohideLInfo: PositionTacticInfo = PositionTacticInfo.create(
     name = "cohideL",
     displayName = Some("WL"),
     displayNameLong = Some("Co-Weaken Left"),
     displayPremises = "P |- ",
     displayConclusion = "Γ, P |- Δ",
+    constructor = TacticConstructor0.create()(() => cohideL),
   )
-  val cohideL: CoreLeftTactic = coreanon { (pr: ProvableSig, pos: AntePosition) => pr(CoHideLeft(pos.checkTop), 0) }
 
   /** CoHide/weaken right: drop all other formulas from the sequent ([[org.keymaerax.core.CoHideRight CoHideRight]]) */
-  @Tactic(
+  val cohideR: CoreRightTactic = "cohideR".coreby { (pr: ProvableSig, pos: SuccPosition) =>
+    pr(CoHideRight(pos.checkTop), 0)
+  }
+
+  @Derivation
+  val cohideRInfo: PositionTacticInfo = PositionTacticInfo.create(
     name = "cohideR",
     displayName = Some("WR"),
     displayNameLong = Some("Co-Weaken Right"),
     displayPremises = "|- P",
     displayConclusion = "Γ |- P, Δ",
+    constructor = TacticConstructor0.create()(() => cohideR),
   )
-  val cohideR: CoreRightTactic = coreanon { (pr: ProvableSig, pos: SuccPosition) => pr(CoHideRight(pos.checkTop), 0) }
 
   /**
    * CoHide/coweaken whether left or right: drop all other formulas from the sequent ([[org.keymaerax.core.CoHideLeft
    * CoHideLeft]])
    */
-  @Tactic(
-    name = "cohide",
-    displayName = Some("W"),
-    displayNameLong = Some("Co-Weaken"),
-    displayPremises = "|- P",
-    displayConclusion = "Γ |- P, Δ",
-  )
-  val cohide: BuiltInPositionTactic = anon { (pr: ProvableSig, pos: Position) =>
+  val cohide: BuiltInPositionTactic = "cohide".by { (pr: ProvableSig, pos: Position) =>
     pos match {
       case p: AntePosition => SequentCalculus.cohideL(p).computeResult(pr)
       case p: SuccPosition => SequentCalculus.cohideR(p).computeResult(pr)
     }
   }
 
+  @Derivation
+  val cohideInfo: PositionTacticInfo = PositionTacticInfo.create(
+    name = "cohide",
+    displayName = Some("W"),
+    displayNameLong = Some("Co-Weaken"),
+    displayPremises = "|- P",
+    displayConclusion = "Γ |- P, Δ",
+    constructor = TacticConstructor0.create()(() => cohide),
+  )
+
   /**
    * CoHide2/coweaken2 both left and right: drop all other formulas from the sequent ([[org.keymaerax.core.CoHide2
    * CoHide2]])
    */
-  @Tactic(
+  val cohide2: BuiltInTwoPositionTactic = "coHide2".by { (pr: ProvableSig, ante: Position, succ: Position) =>
+    require(ante.isAnte && succ.isSucc, "Expects an antecedent and a succedent position.")
+    pr(CoHide2(ante.checkAnte.top, succ.checkSucc.top), 0)
+  }
+
+  @Derivation
+  val coHide2Info: TwoPositionTacticInfo = TwoPositionTacticInfo.create(
     name = "coHide2",
     displayName = Some("WLR"),
     displayNameLong = Some("Co-Weaken Both"),
     displayPremises = "P |- Q",
     displayConclusion = "Γ, P |- Q, Δ",
+    constructor = TacticConstructor0.create()(() => cohide2),
   )
-  val cohide2: BuiltInTwoPositionTactic = anon { (pr: ProvableSig, ante: Position, succ: Position) =>
-    {
-      require(ante.isAnte && succ.isSucc, "Expects an antecedent and a succedent position.")
-      pr(CoHide2(ante.checkAnte.top, succ.checkSucc.top), 0)
-    }
-  }
 
   /** Cohides in succedent, but leaves antecedent as is. */
-  @Tactic(
+  val cohideOnlyR: BuiltInRightTactic = "cohideOnlyR".by { (pr: ProvableSig, pos: SuccPosition) =>
+    val hiddenUntil = (1 to pos.checkTop.getIndex).foldLeft(pr)({ case (p, _) => hideR(1).computeResult(p) })
+    (2 to hiddenUntil.subgoals.head.succ.length).foldLeft(hiddenUntil)({ case (p, _) => hideR(2).computeResult(p) })
+  }
+
+  @Derivation
+  val cohideOnlyRInfo: PositionTacticInfo = PositionTacticInfo.create(
     name = "cohideOnlyR",
     displayName = Some("WR"),
     displayNameLong = Some("Co-Weaken Only Right"),
     displayPremises = "Γ, P |- Q",
     displayConclusion = "Γ, P |- Q, Δ",
+    constructor = TacticConstructor0.create()(() => cohideOnlyR),
   )
-  val cohideOnlyR: BuiltInRightTactic = anon { (pr: ProvableSig, pos: SuccPosition) =>
-    val hiddenUntil = (1 to pos.checkTop.getIndex).foldLeft(pr)({ case (p, _) => hideR(1).computeResult(p) })
-    (2 to hiddenUntil.subgoals.head.succ.length).foldLeft(hiddenUntil)({ case (p, _) => hideR(2).computeResult(p) })
-  }
 
   /** Cohides in antecedent, but leaves succedent as is. */
-  @Tactic(
+  val cohideOnlyL: BuiltInLeftTactic = "cohideOnlyL".by { (pr: ProvableSig, pos: AntePosition) =>
+    val hiddenUntil = (1 to pos.checkTop.getIndex).foldLeft(pr)({ case (p, _) => hideL(-1).computeResult(p) })
+    (2 to hiddenUntil.subgoals.head.ante.length).foldLeft(hiddenUntil)({ case (p, _) => hideL(-2).computeResult(p) })
+  }
+
+  @Derivation
+  val cohideOnlyLInfo: PositionTacticInfo = PositionTacticInfo.create(
     name = "cohideOnlyL",
     displayName = Some("WL"),
     displayNameLong = Some("Co-Weaken Only Left"),
     displayPremises = "|- Q, Δ",
     displayConclusion = "Γ, P |- Q, Δ",
+    constructor = TacticConstructor0.create()(() => cohideOnlyL),
   )
-  val cohideOnlyL: BuiltInLeftTactic = anon { (pr: ProvableSig, pos: AntePosition) =>
-    val hiddenUntil = (1 to pos.checkTop.getIndex).foldLeft(pr)({ case (p, _) => hideL(-1).computeResult(p) })
-    (2 to hiddenUntil.subgoals.head.ante.length).foldLeft(hiddenUntil)({ case (p, _) => hideL(-2).computeResult(p) })
-  }
 
   /** !L Not left: move an negation in the antecedent to the succedent ([[org.keymaerax.core.NotLeft NotLeft]]) */
-  @Tactic(
+  val notL: CoreLeftTactic = "notL".coreby { (pr: ProvableSig, pos: AntePosition) => pr(NotLeft(pos.checkTop), 0) }
+
+  @Derivation
+  val notLInfo: PositionTacticInfo = PositionTacticInfo.create(
     name = "notL",
     displayName = Some("¬L"),
     displayNameAscii = Some("!L"),
     displayPremises = "Γ |- P, Δ",
     displayConclusion = "¬P, Γ |- Δ",
+    constructor = TacticConstructor0.create()(() => notL),
   )
-  val notL: CoreLeftTactic = coreanon { (pr: ProvableSig, pos: AntePosition) => pr(NotLeft(pos.checkTop), 0) }
-  private[btactics] lazy val notLInfo: TacticInfo = notLInfoFromTacticMacro
 
   /** !R Not right: move an negation in the succedent to the antecedent ([[org.keymaerax.core.NotRight NotRight]]) */
-  @Tactic(
+  val notR: CoreRightTactic = "notR".coreby { (pr: ProvableSig, pos: SuccPosition) => pr(NotRight(pos.checkTop), 0) }
+
+  @Derivation
+  val notRInfo: PositionTacticInfo = PositionTacticInfo.create(
     name = "notR",
     displayName = Some("¬R"),
     displayNameAscii = Some("!R"),
     displayPremises = "Γ, P |- Δ",
     displayConclusion = "Γ |- ¬P, Δ",
+    constructor = TacticConstructor0.create()(() => notR),
   )
-  val notR: CoreRightTactic = coreanon { (pr: ProvableSig, pos: SuccPosition) => pr(NotRight(pos.checkTop), 0) }
-  private[btactics] lazy val notRInfo: TacticInfo = notRInfoFromTacticMacro
 
   /**
    * &L And left: split a conjunction in the antecedent into separate assumptions ([[org.keymaerax.core.AndLeft
    * AndLeft]])
    */
-  @Tactic(
+  val andL: CoreLeftTactic = "andL".coreby { (pr: ProvableSig, pos: AntePosition) => pr(AndLeft(pos.checkTop), 0) }
+
+  @Derivation
+  val andLInfo: PositionTacticInfo = PositionTacticInfo.create(
     name = "andL",
     displayName = Some("∧L"),
     displayNameAscii = Some("&L"),
     displayPremises = "Γ, P, Q |- Δ",
     displayConclusion = "P∧Q, Γ |- Δ",
+    constructor = TacticConstructor0.create()(() => andL),
   )
-  val andL: CoreLeftTactic = coreanon { (pr: ProvableSig, pos: AntePosition) => pr(AndLeft(pos.checkTop), 0) }
-  private[btactics] lazy val andLInfo: TacticInfo = andLInfoFromTacticMacro
 
   /**
    * Inverse of [[andL]].
@@ -213,49 +264,63 @@ object SequentCalculus {
    * &R And right: prove a conjunction in the succedent on two separate branches ([[org.keymaerax.core.AndRight
    * AndRight]])
    */
-  @Tactic(
+  val andR: DependentPositionTactic = "andR".by { (pos: Position, seq: Sequent) =>
+    corelabelledby("andR", Right(andRRule), And.unapply, pos, seq)
+  }
+
+  @Derivation
+  val andRInfo: PositionTacticInfo = PositionTacticInfo.create(
     name = "andR",
     displayName = Some("∧R"),
     displayNameAscii = Some("&R"),
     displayPremises = "Γ |- P, Δ ;; Γ |- Q, Δ",
     displayConclusion = "Γ |- P∧Q, Δ",
+    constructor = TacticConstructor0.create()(() => andR),
   )
-  val andR: DependentPositionTactic = anon { (pos: Position, seq: Sequent) =>
-    corelabelledby("andR", Right(andRRule), And.unapply, pos, seq)
+
+  val andRRule: CoreRightTactic = "andRRule".coreby { (pr: ProvableSig, pos: SuccPosition) =>
+    pr(AndRight(pos.checkTop), 0)
   }
-  private[btactics] lazy val andRInfo: TacticInfo = andRInfoFromTacticMacro
-  @Tactic(
+
+  @Derivation
+  val andRRuleInfo: PositionTacticInfo = PositionTacticInfo.create(
     name = "andRRule",
     displayName = Some("∧R"),
     displayNameAscii = Some("&R"),
     displayPremises = "Γ |- P, Δ ;; Γ |- Q, Δ",
     displayConclusion = "Γ |- P∧Q, Δ",
+    constructor = TacticConstructor0.create()(() => andRRule),
   )
-  val andRRule: CoreRightTactic = coreanon { (pr: ProvableSig, pos: SuccPosition) => pr(AndRight(pos.checkTop), 0) }
 
   /**
    * \|L Or left: use a disjunction in the antecedent by assuming each option on separate branches
    * ([[org.keymaerax.core.OrLeft OrLeft]])
    */
-  @Tactic(
+  val orL: DependentPositionTactic = "orL".by { (pos: Position, seq: Sequent) =>
+    corelabelledby("orL", Left(orLRule), Or.unapply, pos, seq)
+  }
+
+  @Derivation
+  val orLInfo: PositionTacticInfo = PositionTacticInfo.create(
     name = "orL",
     displayName = Some("∨L"),
     displayNameAscii = Some("|L"),
     displayPremises = "P, Γ |- Δ ;; Q, Γ |- Δ",
     displayConclusion = "P∨Q, Γ |- Δ",
+    constructor = TacticConstructor0.create()(() => orL),
   )
-  val orL: DependentPositionTactic = anon { (pos: Position, seq: Sequent) =>
-    corelabelledby("orL", Left(orLRule), Or.unapply, pos, seq)
-  }
-  private[btactics] lazy val orLInfo: TacticInfo = orLInfoFromTacticMacro
-  @Tactic(
+
+  val orLRule: CoreLeftTactic = "orLRule".coreby { (pr: ProvableSig, pos: AntePosition) => pr(OrLeft(pos.checkTop), 0) }
+
+  @Derivation
+  val orLRuleInfo: PositionTacticInfo = PositionTacticInfo.create(
     name = "orLRule",
     displayName = Some("∨L"),
     displayNameAscii = Some("|L"),
     displayPremises = "P, Γ |- Δ ;; Q, Γ |- Δ",
     displayConclusion = "P∨Q, Γ |- Δ",
+    constructor = TacticConstructor0.create()(() => orLRule),
   )
-  val orLRule: CoreLeftTactic = coreanon { (pr: ProvableSig, pos: AntePosition) => pr(OrLeft(pos.checkTop), 0) }
 
   /**
    * Inverse of [[orR]].
@@ -272,53 +337,67 @@ object SequentCalculus {
    * \|R Or right: split a disjunction in the succedent into separate formulas to show alternatively
    * ([[org.keymaerax.core.OrRight OrRight]])
    */
-  @Tactic(
+  val orR: CoreRightTactic = "orR".coreby { (pr: ProvableSig, pos: SuccPosition) => pr(OrRight(pos.checkTop), 0) }
+
+  @Derivation
+  val orRInfo: PositionTacticInfo = PositionTacticInfo.create(
     name = "orR",
     displayName = Some("∨R"),
     displayNameAscii = Some("|R"),
     displayPremises = "Γ |- Δ, P, Q",
     displayConclusion = "Γ |- P∨Q, Δ",
+    constructor = TacticConstructor0.create()(() => orR),
   )
-  val orR: CoreRightTactic = coreanon { (pr: ProvableSig, pos: SuccPosition) => pr(OrRight(pos.checkTop), 0) }
-  private[btactics] lazy val orRInfo: TacticInfo = orRInfoFromTacticMacro
 
   /**
    * ->L Imply left: use an implication in the antecedent by proving its left-hand side on one branch and using its
    * right-hand side on the other branch ([[org.keymaerax.core.ImplyLeft ImplyLeft]])
    */
-  @Tactic(
+  val implyL: DependentPositionTactic = "implyL".by { (pos: Position, seq: Sequent) =>
+    corelabelledby("implyL", Left(implyLRule), Imply.unapply, pos, seq)
+  }
+
+  @Derivation
+  val implyLInfo: PositionTacticInfo = PositionTacticInfo.create(
     name = "implyL",
     displayName = Some("→L"),
     displayNameAscii = Some("->L"),
     displayPremises = "Γ |- Δ, P ;; Q, Γ |- Δ",
     displayConclusion = "P→Q, Γ |- Δ",
+    constructor = TacticConstructor0.create()(() => implyL),
   )
-  val implyL: DependentPositionTactic = anon { (pos: Position, seq: Sequent) =>
-    corelabelledby("implyL", Left(implyLRule), Imply.unapply, pos, seq)
+
+  val implyLRule: CoreLeftTactic = "implyLRule".coreby { (pr: ProvableSig, pos: AntePosition) =>
+    pr(ImplyLeft(pos.checkTop), 0)
   }
-  private[btactics] lazy val implyLInfo: TacticInfo = implyLInfoFromTacticMacro
-  @Tactic(
+
+  @Derivation
+  val implyLRuleInfo: PositionTacticInfo = PositionTacticInfo.create(
     name = "implyLRule",
     displayName = Some("→L"),
     displayNameAscii = Some("->L"),
     displayPremises = "Γ |- Δ, P ;; Q, Γ |- Δ",
     displayConclusion = "P→Q, Γ |- Δ",
+    constructor = TacticConstructor0.create()(() => implyLRule),
   )
-  val implyLRule: CoreLeftTactic = coreanon { (pr: ProvableSig, pos: AntePosition) => pr(ImplyLeft(pos.checkTop), 0) }
 
   /**
    * ->R Imply right: prove an implication in the succedent by assuming its left-hand side and proving its right-hand
    * side ([[org.keymaerax.core.ImplyRight ImplyRight]])
    */
-  @Tactic(
+  val implyR: CoreRightTactic = "implyR".coreby { (pr: ProvableSig, pos: SuccPosition) =>
+    pr(ImplyRight(pos.checkTop), 0)
+  }
+
+  @Derivation
+  val implyRInfo: PositionTacticInfo = PositionTacticInfo.create(
     name = "implyR",
     displayName = Some("→R"),
     displayNameAscii = Some("->R"),
     displayPremises = "Γ, P |- Q, Δ",
     displayConclusion = "Γ |- P→Q, Δ",
+    constructor = TacticConstructor0.create()(() => implyR),
   )
-  val implyR: CoreRightTactic = coreanon { (pr: ProvableSig, pos: SuccPosition) => pr(ImplyRight(pos.checkTop), 0) }
-  private[btactics] lazy val implyRInfo: TacticInfo = implyRInfoFromTacticMacro
 
   /**
    * Inverse of [[implyR]].
@@ -332,21 +411,17 @@ object SequentCalculus {
   val implyRi: AppliedBuiltinTwoPositionTactic = implyRi()(AntePos(0), SuccPos(0))
 
   /** eXternal wrapper for implyRi */
-  @Tactic(name = "implyRi")
-  val implyRiX: BuiltInTwoPositionTactic = PropositionalTactics.implyRi(keep = false)
+  val implyRiX: BuiltInTwoPositionTactic = "implyRi".forward(PropositionalTactics.implyRi(keep = false))
+
+  @Derivation
+  val implyRiInfo: TwoPositionTacticInfo = TwoPositionTacticInfo
+    .create(name = "implyRi", constructor = TacticConstructor0.create()(() => implyRiX))
 
   /**
    * <->L Equiv left: use an equivalence by considering both true or both false cases ([[org.keymaerax.core.EquivLeft
    * EquivLeft]])
    */
-  @Tactic(
-    name = "equivL",
-    displayName = Some("↔L"),
-    displayNameAscii = Some("<->L"),
-    displayPremises = "P∧Q, Γ |- Δ ;; ¬P∧¬Q, Γ |- Δ",
-    displayConclusion = "P↔Q, Γ |- Δ",
-  )
-  val equivL: DependentPositionTactic = anon { (pos: Position, seq: Sequent) =>
+  val equivL: DependentPositionTactic = "equivL".by { (pos: Position, seq: Sequent) =>
     corelabelledby(
       "equivL",
       Left(equivLRule),
@@ -356,27 +431,35 @@ object SequentCalculus {
       (l: Formula, r: Formula) => (And(l, r).prettyString, And(Not(l), Not(r)).prettyString),
     )
   }
-  private[btactics] lazy val equivLInfo: TacticInfo = equivLInfoFromTacticMacro
-  @Tactic(
+
+  @Derivation
+  val equivLInfo: PositionTacticInfo = PositionTacticInfo.create(
+    name = "equivL",
+    displayName = Some("↔L"),
+    displayNameAscii = Some("<->L"),
+    displayPremises = "P∧Q, Γ |- Δ ;; ¬P∧¬Q, Γ |- Δ",
+    displayConclusion = "P↔Q, Γ |- Δ",
+    constructor = TacticConstructor0.create()(() => equivL),
+  )
+
+  val equivLRule: CoreLeftTactic = "equivLRule".coreby { (pr: ProvableSig, pos: AntePosition) =>
+    pr(EquivLeft(pos.checkTop), 0)
+  }
+
+  @Derivation
+  val equivLRuleInfo: PositionTacticInfo = PositionTacticInfo.create(
     name = "equivLRule",
     displayName = Some("↔L"),
     displayNameAscii = Some("<->L"),
     displayPremises = "P∧Q, Γ |- Δ ;; ¬P∧¬Q, Γ |- Δ",
     displayConclusion = "P↔Q, Γ |- Δ",
+    constructor = TacticConstructor0.create()(() => equivLRule),
   )
-  val equivLRule: CoreLeftTactic = coreanon { (pr: ProvableSig, pos: AntePosition) => pr(EquivLeft(pos.checkTop), 0) }
 
   /**
    * <->R Equiv right: prove an equivalence by proving both implications ([[org.keymaerax.core.EquivRight EquivRight]])
    */
-  @Tactic(
-    name = "equivR",
-    displayName = Some("↔R"),
-    displayNameAscii = Some("<->R"),
-    displayPremises = "Γ, P |- Δ, Q ;; Γ, Q |- Δ, P",
-    displayConclusion = "Γ |- P↔Q, Δ",
-  )
-  val equivR: DependentPositionTactic = anon { (pos: Position, seq: Sequent) =>
+  val equivR: DependentPositionTactic = "equivR".by { (pos: Position, seq: Sequent) =>
     corelabelledby(
       "equivR",
       Right(equivRRule),
@@ -386,15 +469,30 @@ object SequentCalculus {
       (l: Formula, r: Formula) => (And(l, r).prettyString, And(Not(l), Not(r)).prettyString),
     )
   }
-  private[btactics] lazy val equivRInfo: TacticInfo = equivRInfoFromTacticMacro
-  @Tactic(
+
+  @Derivation
+  val equivRInfo: PositionTacticInfo = PositionTacticInfo.create(
+    name = "equivR",
+    displayName = Some("↔R"),
+    displayNameAscii = Some("<->R"),
+    displayPremises = "Γ, P |- Δ, Q ;; Γ, Q |- Δ, P",
+    displayConclusion = "Γ |- P↔Q, Δ",
+    constructor = TacticConstructor0.create()(() => equivR),
+  )
+
+  val equivRRule: CoreRightTactic = "equivRRule".coreby { (pr: ProvableSig, pos: SuccPosition) =>
+    pr(EquivRight(pos.checkTop), 0)
+  }
+
+  @Derivation
+  val equivRRuleInfo: PositionTacticInfo = PositionTacticInfo.create(
     name = "equivRRule",
     displayName = Some("↔R"),
     displayNameAscii = Some("<->R"),
     displayPremises = "Γ, P |- Δ, Q ;; Γ, Q |- Δ, P",
     displayConclusion = "Γ |- P↔Q, Δ",
+    constructor = TacticConstructor0.create()(() => equivRRule),
   )
-  val equivRRule: CoreRightTactic = coreanon { (pr: ProvableSig, pos: SuccPosition) => pr(EquivRight(pos.checkTop), 0) }
 
   /**
    * cut a formula in to prove it on one branch and then assume it on the other. Or to perform a case distinction on
@@ -406,9 +504,17 @@ object SequentCalculus {
    *         G |- D
    * }}}
    */
-  @Tactic(name = "cut", displayPremises = "Γ, C |- Δ ;; Γ |- Δ, C", displayConclusion = "Γ |- Δ", inputs = "C:formula")
-  def cut(f: Formula): InputTactic =
-    inputanon { cutX(f) & Idioms.<(label(BelleLabels.cutUse), label(BelleLabels.cutShow)) }
+  def cut(f: Formula): InputTactic = "cut"
+    .byWithInputs(List(f), cutX(f) & Idioms.<(label(BelleLabels.cutUse), label(BelleLabels.cutShow)))
+
+  @Derivation
+  val cutInfo: InputTacticInfo = InputTacticInfo.create(
+    name = "cut",
+    displayPremises = "Γ, C |- Δ ;; Γ |- Δ, C",
+    displayConclusion = "Γ |- Δ",
+    constructor = TacticConstructor1.create(FormulaArg("C"))((f: Formula) => cut(f)),
+  )
+
   private def cutX(f: Formula): BuiltInTactic = anon { (provable: ProvableSig) => provable(core.Cut(f), 0) }
 
   /**
@@ -420,17 +526,21 @@ object SequentCalculus {
    *        G |- p, D
    * }}}
    */
-  @Tactic(
+  def cutR(f: Formula): DependentPositionWithAppliedInputTactic = "cutR".corebyWithInputsR(
+    List(f),
+    { (provable: ProvableSig, pos: SuccPosition) =>
+      requireOneSubgoal(provable, "cutR(" + f + ")")
+      provable(core.CutRight(f, pos.top), 0)
+    },
+  )
+
+  @Derivation
+  val cutRInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
     name = "cutR",
     displayPremises = "Γ |- C, Δ ;; Γ |- C→P, Δ",
     displayConclusion = "Γ |- P, Δ",
-    inputs = "C:formula",
+    constructor = TacticConstructor1.create(FormulaArg("C"))((f: Formula) => cutR(f)),
   )
-  def cutR(f: Formula): DependentPositionWithAppliedInputTactic =
-    inputanonR { (provable: ProvableSig, pos: SuccPosition) =>
-      requireOneSubgoal(provable, "cutR(" + f + ")")
-      provable(core.CutRight(f, pos.top), 0)
-    }
 
   /**
    * cut a formula in in place of pos on the left to prove its implication on the second branch and assume it on the
@@ -441,18 +551,22 @@ object SequentCalculus {
    *        p, G |- D
    * }}}
    */
-  @Tactic(
-    name = "cutL",
-    displayPremises = "Γ, C |- Δ ;; Γ |- Δ, P→C",
-    displayConclusion = "Γ, P |- Δ",
-    inputs = "C:formula",
-  )
-  def cutL(f: Formula): DependentPositionWithAppliedInputTactic =
-    inputanonL { (provable: ProvableSig, pos: AntePosition) =>
+  def cutL(f: Formula): DependentPositionWithAppliedInputTactic = "cutL".corebyWithInputsL(
+    List(f),
+    { (provable: ProvableSig, pos: AntePosition) =>
       requireOneSubgoal(provable, "cutL(" + f + ")")
       provable(core.CutLeft(f, pos.top), 0)
       // @todo label BelleLabels.cutUse/cutShow
-    }
+    },
+  )
+
+  @Derivation
+  val cutLInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
+    name = "cutL",
+    displayPremises = "Γ, C |- Δ ;; Γ |- Δ, P→C",
+    displayConclusion = "Γ, P |- Δ",
+    constructor = TacticConstructor1.create(FormulaArg("C"))((f: Formula) => cutL(f)),
+  )
 
   /**
    * cut a formula in in place of pos to prove its implication on the second branch and assume it on the first (whether
@@ -468,8 +582,12 @@ object SequentCalculus {
    *        G |- p, D
    * }}}
    */
-  @Tactic(name = "cutLR")
-  def cutLR(f: Formula): DependentPositionWithAppliedInputTactic = inputanon { cutLRFw(f)(_: Position) }
+  def cutLR(f: Formula): DependentPositionWithAppliedInputTactic = "cutLR"
+    .byWithInputs(List(f), { cutLRFw(f)(_: Position) })
+
+  @Derivation
+  val cutLRInfo: InputPositionTacticInfo = InputPositionTacticInfo
+    .create(name = "cutLR", constructor = TacticConstructor1.create(FormulaArg("f"))((f: Formula) => cutLR(f)))
 
   /** Builtin forward implementation of cutLR. */
   private[btactics] def cutLRFw(f: Formula): BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
@@ -486,16 +604,19 @@ object SequentCalculus {
    * p, q, G |- D
    * }}}
    */
-  @Tactic(
+  val exchangeL: BuiltInTwoPositionTactic = "exchangeL".by { (pr: ProvableSig, posOne: Position, posTwo: Position) =>
+    pr(core.ExchangeLeftRule(posOne.checkAnte.top, posTwo.checkAnte.top), 0)
+  }
+
+  @Derivation
+  val exchangeLInfo: TwoPositionTacticInfo = TwoPositionTacticInfo.create(
     name = "exchangeL",
     displayName = Some("XL"),
     displayNameLong = Some("Exchange Assumptions"),
     displayPremises = "Q, P, Γ |- Δ",
     displayConclusion = "P, Q, Γ |- Δ",
+    constructor = TacticConstructor0.create()(() => exchangeL),
   )
-  val exchangeL: BuiltInTwoPositionTactic = anon { (pr: ProvableSig, posOne: Position, posTwo: Position) =>
-    pr(core.ExchangeLeftRule(posOne.checkAnte.top, posTwo.checkAnte.top), 0)
-  }
 
   /**
    * Exchange right rule reorders succedent.
@@ -505,16 +626,19 @@ object SequentCalculus {
    * G |- p, q, D
    * }}}
    */
-  @Tactic(
+  val exchangeR: BuiltInTwoPositionTactic = "exchangeR".by { (pr: ProvableSig, posOne: Position, posTwo: Position) =>
+    pr(core.ExchangeRightRule(posOne.checkSucc.top, posTwo.checkSucc.top), 0)
+  }
+
+  @Derivation
+  val exchangeRInfo: TwoPositionTacticInfo = TwoPositionTacticInfo.create(
     name = "exchangeR",
     displayName = Some("XR"),
     displayNameLong = Some("Exchange Obligations"),
     displayPremises = "Γ |- Q, P, Δ",
     displayConclusion = "Γ |- P, Q, Δ",
+    constructor = TacticConstructor0.create()(() => exchangeR),
   )
-  val exchangeR: BuiltInTwoPositionTactic = anon { (pr: ProvableSig, posOne: Position, posTwo: Position) =>
-    pr(core.ExchangeRightRule(posOne.checkSucc.top, posTwo.checkSucc.top), 0)
-  }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // First-order tactics
@@ -545,26 +669,32 @@ object SequentCalculus {
    *   x>0   |- \forall x x^2>=0
    *   }}}
    */
-  @Tactic(
+  val allR: BuiltInPositionTactic = "allR".forward(FOQuantifierTactics.allSkolemize)
+
+  @Derivation
+  val allRInfo: PositionTacticInfo = PositionTacticInfo.create(
     name = "allR",
     displayName = Some("∀R"),
     displayNameAscii = Some("allR"),
     displayPremises = "Γ |- p(x), Δ",
     displayConclusion = "Γ |- ∀x p(x), Δ",
+    constructor = TacticConstructor0.create()(() => allR),
   )
-  val allR: BuiltInPositionTactic = FOQuantifierTactics.allSkolemize
-  private[btactics] lazy val allRInfo: TacticInfo = allRInfoFromTacticMacro
-  @Tactic(
+
+  def allRi(t: Term, x: scala.Option[Variable]): DependentPositionWithAppliedInputTactic = "allRi"
+    .byWithInputs(List(t, x), { FOQuantifierTactics.universalGen(x, t)(_: Position) })
+
+  @Derivation
+  val allRiInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
     name = "allRi",
     displayName = Some("∀Ri"),
     displayNameAscii = Some("allRi"),
     displayLevel = DisplayLevel.Browse,
-    inputs = "f:term;;x[x]:option[variable]",
     displayPremises = "Γ |- ∀x p(f(x)), Δ",
     displayConclusion = "Γ |- p(f(y)), Δ",
+    constructor = TacticConstructor2
+      .create(TermArg("f"), OptionArg(VariableArg("x", List("x"))))((t: Term, x: scala.Option[Variable]) => allRi(t, x)),
   )
-  def allRi(t: Term, x: Option[Variable]): DependentPositionWithAppliedInputTactic =
-    inputanon { FOQuantifierTactics.universalGen(x, t)(_: Position) }
 
   /**
    * all left: instantiate a universal quantifier for variable `x` in the antecedent by the concrete instance `inst`.
@@ -577,21 +707,23 @@ object SequentCalculus {
   def allL(x: Variable, inst: Term): BuiltInPositionTactic = FOQuantifierTactics.allInstantiate(Some(x), Some(inst))
 
   /** all left: instantiate a universal quantifier in the antecedent by the concrete instance `e` (itself if None). */
-  @Tactic(
+  def allL(e: scala.Option[Term]): DependentPositionWithAppliedInputTactic = "allL"
+    .byWithInputs(List(e), { FOQuantifierTactics.allInstantiate(None, e)(_: Position) })
+
+  @Derivation
+  val allLInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
     name = "allL",
     displayName = Some("∀L"),
     displayNameAscii = Some("allL"),
-    inputs = "θ[θ]:option[term]",
     displayPremises = "p(θ), Γ |- Δ",
     displayConclusion = "∀x p(x), Γ |- Δ",
+    constructor = TacticConstructor1.create(OptionArg(TermArg("θ", List("θ"))))((e: scala.Option[Term]) => allL(e)),
   )
-  def allL(e: Option[Term]): DependentPositionWithAppliedInputTactic =
-    inputanon { FOQuantifierTactics.allInstantiate(None, e)(_: Position) }
+
   def allL(e: Term): DependentPositionWithAppliedInputTactic = allL(Some(e))
 
   /** all left: instantiate a universal quantifier in the antecedent by itself. */
   val allL: DependentPositionTactic = allL(None)
-  private[btactics] lazy val allLInfo: TacticInfo = allLInfoFromTacticMacro
 
   /** all left: instantiate a universal quantifier in the antecedent by the term obtained from position `instPos`. */
   // @todo turn this into a more general function that obtains data from the sequent.
@@ -616,31 +748,36 @@ object SequentCalculus {
    * G, \forall x p(x) |- D
    * }}}
    */
-  @Tactic(
+  def allLmon(q: Formula): DependentPositionWithAppliedInputTactic = "allLmon".byWithInputs(
+    List(q),
+    { (pos: Position, seq: Sequent) =>
+      seq.sub(pos) match {
+        // @todo faster implementation uses derived axiom Ax.existsDistElim
+        case Some(Forall(x, _)) => cutL(Forall(x, q))(pos) <
+            (
+              label(BelleLabels.cutUse),
+              useAt(Ax.allDistElim)(Symbol("Rlast")) & allR(Symbol("Rlast")) & implyR(Symbol("Rlast")) &
+                label(BelleLabels.cutShow),
+            )
+        case Some(e) => throw new TacticInapplicableFailure(
+            "allLmon only applicable to universal quantifiers on the right, but got " + e.prettyString
+          )
+        case None => throw new IllFormedTacticApplicationException(
+            "Position " + pos + " does not point to a valid position in sequent " + seq.prettyString
+          )
+      }
+    },
+  )
+
+  @Derivation
+  val allLmonInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
     name = "allLmon",
     displayName = Some("M∀L"),
     displayNameAscii = Some("MallL"),
-    inputs = "q(x):formula",
     displayPremises = "Γ, ∀x q(x) |- Δ ;; Γ, p(x) |- Δ, q(x)",
     displayConclusion = "Γ, ∀x p(x) |- Δ",
+    constructor = TacticConstructor1.create(FormulaArg("q(x)"))((q: Formula) => allLmon(q)),
   )
-  def allLmon(q: Formula): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position, seq: Sequent) =>
-    seq.sub(pos) match {
-      // @todo faster implementation uses derived axiom Ax.existsDistElim
-      case Some(Forall(x, _)) => cutL(Forall(x, q))(pos) <
-          (
-            label(BelleLabels.cutUse),
-            useAt(Ax.allDistElim)(Symbol("Rlast")) & allR(Symbol("Rlast")) & implyR(Symbol("Rlast")) &
-              label(BelleLabels.cutShow),
-          )
-      case Some(e) => throw new TacticInapplicableFailure(
-          "allLmon only applicable to universal quantifiers on the right, but got " + e.prettyString
-        )
-      case None => throw new IllFormedTacticApplicationException(
-          "Position " + pos + " does not point to a valid position in sequent " + seq.prettyString
-        )
-    }
-  }
 
   /**
    * all left keep: keeping around the quantifier, instantiate a universal quantifier in the antecedent by the concrete
@@ -651,26 +788,31 @@ object SequentCalculus {
    * \forall x p(x), G |- D
    * }}}
    */
-  @Tactic(
+  def allLkeep(e: Term): DependentPositionWithAppliedInputTactic = "allLkeep".byWithInputs(
+    List(e),
+    { (pos: Position, seq: Sequent) =>
+      seq.sub(pos) match {
+        case Some(Forall(x, p)) => cut(Forall(x, p)) <
+            (allL(e)(Symbol("Llast")), closeId(pos, SuccPosition(seq.succ.length + 1)))
+        case Some(e) => throw new TacticInapplicableFailure(
+            "allLkeep only applicable to universal quantifiers on the right, but got " + e.prettyString
+          )
+        case None => throw new IllFormedTacticApplicationException(
+            "Position " + pos + " does not point to a valid position in sequent " + seq.prettyString
+          )
+      }
+    },
+  )
+
+  @Derivation
+  val allLkeepInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
     name = "allLkeep",
     displayName = Some("∀Lk"),
     displayNameAscii = Some("allLk"),
-    inputs = "θ[θ]:term",
     displayPremises = "∀x p(x), Γ, p(θ) |- Δ",
     displayConclusion = "∀x p(x), Γ |- Δ",
+    constructor = TacticConstructor1.create(TermArg("θ", List("θ")))((e: Term) => allLkeep(e)),
   )
-  def allLkeep(e: Term): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position, seq: Sequent) =>
-    seq.sub(pos) match {
-      case Some(Forall(x, p)) => cut(Forall(x, p)) <
-          (allL(e)(Symbol("Llast")), closeId(pos, SuccPosition(seq.succ.length + 1)))
-      case Some(e) => throw new TacticInapplicableFailure(
-          "allLkeep only applicable to universal quantifiers on the right, but got " + e.prettyString
-        )
-      case None => throw new IllFormedTacticApplicationException(
-          "Position " + pos + " does not point to a valid position in sequent " + seq.prettyString
-        )
-    }
-  }
 
   /**
    * exists left: Skolemize an existential quantifier in the antecedent by introducing a new name for the witness.
@@ -680,28 +822,36 @@ object SequentCalculus {
    * \exists x p(x), G |- D
    * }}}
    */
-  @Tactic(
+  val existsL: BuiltInPositionTactic = "existsL".by { (provable: ProvableSig, pos: Position) =>
+    FOQuantifierTactics.existsSkolemize(pos).computeResult(provable)
+  }
+
+  @Derivation
+  val existsLInfo: PositionTacticInfo = PositionTacticInfo.create(
     name = "existsL",
     displayName = Some("∃L"),
     displayNameAscii = Some("existsL"),
     displayPremises = "p(x), Γ |- Δ",
     displayConclusion = "∃x p(x), Γ |- Δ",
+    constructor = TacticConstructor0.create()(() => existsL),
   )
-  val existsL: BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
-    FOQuantifierTactics.existsSkolemize(pos).computeResult(provable)
-  }
-  private[btactics] lazy val existsLInfo: TacticInfo = existsLInfoFromTacticMacro
-  @Tactic(
+
+  def existsLi(t: Term, x: scala.Option[Variable]): DependentPositionWithAppliedInputTactic = "existsLi"
+    .byWithInputs(List(t, x), { FOQuantifierTactics.existsGen(x, t)(_: Position) })
+
+  @Derivation
+  val existsLiInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
     name = "existsLi",
     displayName = Some("∃Li"),
     displayNameAscii = Some("existsLi"),
     displayLevel = DisplayLevel.Browse,
-    inputs = "f:term;;x[x]:option[variable]",
     displayPremises = "Γ, ∃x p(f(x)) |- Δ",
     displayConclusion = "Γ, p(f(y)) |- Δ",
+    constructor = TacticConstructor2
+      .create(TermArg("f"), OptionArg(VariableArg("x", List("x"))))((t: Term, x: scala.Option[Variable]) =>
+        existsLi(t, x)
+      ),
   )
-  def existsLi(t: Term, x: Option[Variable]): DependentPositionWithAppliedInputTactic =
-    inputanon { FOQuantifierTactics.existsGen(x, t)(_: Position) }
 
   /**
    * exists right: instantiate an existential quantifier for x in the succedent by a concrete instance `inst` as a
@@ -716,22 +866,24 @@ object SequentCalculus {
     .existsInstantiate(Some(x), Some(inst))
 
   /** exists right: instantiate an existential quantifier in the succedent by a concrete instance `inst` as a witness */
-  @Tactic(
+
+  def existsR(e: scala.Option[Term]): DependentPositionWithAppliedInputTactic = "existsR"
+    .byWithInputs(List(e), { (pos: Position) => FOQuantifierTactics.existsInstantiate(None, e)(pos) })
+
+  @Derivation
+  val existsRInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
     name = "existsR",
     displayName = Some("∃R"),
     displayNameAscii = Some("existsR"),
-    inputs = "θ[θ]:option[term]",
     displayPremises = "Γ |- p(θ), Δ",
     displayConclusion = "Γ |- ∃x p(x), Δ",
+    constructor = TacticConstructor1.create(OptionArg(TermArg("θ", List("θ"))))((e: scala.Option[Term]) => existsR(e)),
   )
-  def existsR(e: Option[Term]): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position) =>
-    FOQuantifierTactics.existsInstantiate(None, e)(pos)
-  }
+
   def existsR(e: Term): BuiltInPositionTactic = FOQuantifierTactics.existsInstantiate(None, Some(e))
 
   /** exists right: instantiate an existential quantifier for x in the succedent by itself as a witness */
   val existsR: DependentPositionTactic = existsR(None)
-  private[btactics] lazy val existsRInfo: TacticInfo = existsRInfoFromTacticMacro
 
   /**
    * exists right: instantiate an existential quantifier in the succedent by a concrete term obtained from position
@@ -759,31 +911,36 @@ object SequentCalculus {
    * G |- \exists x p(x), D
    * }}}
    */
-  @Tactic(
+  def existsRmon(q: Formula): DependentPositionWithAppliedInputTactic = "existsRmon".byWithInputs(
+    List(q),
+    { (pos: Position, seq: Sequent) =>
+      seq.sub(pos) match {
+        case Some(Exists(x, _)) => cutR(Exists(x, q))(pos) <
+            (
+              label(BelleLabels.cutUse),
+              // Implementation 1: implyR(pos) & existsL('Llast) & existsR(pos)
+              // Implementation 2:
+              useAt(Ax.existsDistElim)(pos) & allR(pos) & implyR(pos) & label(BelleLabels.cutShow),
+            )
+        case Some(e) => throw new TacticInapplicableFailure(
+            "existsRmon only applicable to existential quantifiers on the right, but got " + e.prettyString
+          )
+        case None => throw new IllFormedTacticApplicationException(
+            "Position " + pos + " does not point to a valid position in sequent " + seq.prettyString
+          )
+      }
+    },
+  )
+
+  @Derivation
+  val existsRmonInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
     name = "existsRmon",
     displayName = Some("M∃R"),
     displayNameAscii = Some("MexistsR"),
-    inputs = "q(x):formula",
     displayPremises = "Γ |- ∃x q(x), Δ ;; Γ, q(x) |- p(x), Δ",
     displayConclusion = "Γ |- ∃x p(x), Δ",
+    constructor = TacticConstructor1.create(FormulaArg("q(x)"))((q: Formula) => existsRmon(q)),
   )
-  def existsRmon(q: Formula): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position, seq: Sequent) =>
-    seq.sub(pos) match {
-      case Some(Exists(x, _)) => cutR(Exists(x, q))(pos) <
-          (
-            label(BelleLabels.cutUse),
-            // Implementation 1: implyR(pos) & existsL('Llast) & existsR(pos)
-            // Implementation 2:
-            useAt(Ax.existsDistElim)(pos) & allR(pos) & implyR(pos) & label(BelleLabels.cutShow),
-          )
-      case Some(e) => throw new TacticInapplicableFailure(
-          "existsRmon only applicable to existential quantifiers on the right, but got " + e.prettyString
-        )
-      case None => throw new IllFormedTacticApplicationException(
-          "Position " + pos + " does not point to a valid position in sequent " + seq.prettyString
-        )
-    }
-  }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // closing tactics
@@ -806,15 +963,18 @@ object SequentCalculus {
    *   false, G |- D
    * }}}
    */
-  @Tactic(
+  val close: BuiltInTactic = "close".by { (pr: ProvableSig) => findClose.result(pr) }
+
+  @Derivation
+  val closeInfo: PlainTacticInfo = PlainTacticInfo.create(
     name = "close",
     displayName = Some("⊥/⊤"),
     displayNameAscii = Some("false/true"),
     displayNameLong = Some("Close by id/⊥/⊤"),
     displayPremises = "*",
     displayConclusion = "Γ, P |- P, Δ",
+    constructor = TacticConstructor0.create()(() => close),
   )
-  val close: BuiltInTactic = anon { (pr: ProvableSig) => findClose.result(pr) }
 
   // alternative implementation
   // @todo optimizable seems like complicated and possibly slow code???
@@ -885,8 +1045,7 @@ object SequentCalculus {
    * }}}
    */
   // @note same name (closeId) as SequentCalculus.closeId for serialization
-  @Tactic(name = "closeId", displayNameLong = Some("Close by Identity"))
-  val closeId: BuiltInTwoPositionTactic = anon((provable: ProvableSig, a: Position, s: Position) => {
+  val closeId: BuiltInTwoPositionTactic = "closeId".by { (provable: ProvableSig, a: Position, s: Position) =>
     ProofRuleTactics.requireOneSubgoal(provable, "closeId(" + a + "," + s + ")")
     try { provable(Close(a.checkAnte.checkTop, s.checkSucc.checkTop), 0) }
     catch {
@@ -895,7 +1054,14 @@ object SequentCalculus {
           ex,
         )
     }
-  })
+  }
+
+  @Derivation
+  val closeIdInfo: TwoPositionTacticInfo = TwoPositionTacticInfo.create(
+    name = "closeId",
+    displayNameLong = Some("Close by Identity"),
+    constructor = TacticConstructor0.create()(() => closeId),
+  )
 
   def close(a: Int, s: Int): BelleExpr = closeId(Position(a).checkAnte.top, Position(s).checkSucc.top)
 
@@ -903,19 +1069,23 @@ object SequentCalculus {
    * closeIdWith: closes the branch with the formula at the given position when the same formula is in the antecedent
    * and succedent ([[org.keymaerax.core.Close Close]])
    */
-  @Tactic(
-    name = "idWith",
-    displayNameLong = Some("Close by Identity"),
-    displayPremises = "*",
-    displayConclusion = "Γ, P |- P, Δ",
-  )
-  val closeIdWith: BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
+  val closeIdWith: BuiltInPositionTactic = "idWith".by { (provable: ProvableSig, pos: Position) =>
     val s = provable.subgoals.head
     pos.top match {
       case p: AntePos => provable(Close(p, SuccPos(closeIdFound(pos, s.succ.indexOf(s(p))))), 0)
       case p: SuccPos => provable(Close(AntePos(closeIdFound(pos, s.ante.indexOf(s(p)))), p), 0)
     }
   }
+
+  @Derivation
+  val idWithInfo: PositionTacticInfo = PositionTacticInfo.create(
+    name = "idWith",
+    displayNameLong = Some("Close by Identity"),
+    displayPremises = "*",
+    displayConclusion = "Γ, P |- P, Δ",
+    constructor = TacticConstructor0.create()(() => closeIdWith),
+  )
+
   @inline
   private def closeIdFound(pos: Position, i: Int): Int =
     if (i >= 0) i
@@ -936,8 +1106,7 @@ object SequentCalculus {
   // @TODO: Currently needs to be new DependentTactic() for some crazy reason: SpoonFeedingInterpreter serializes as "closeId()"
   // if we use  anons {...}, even though the implementation is literally new DependentTactic(...). Mysterious.
   // Maybe the interpreter is checking type equality of anonymous classes somewhere...
-  @Tactic(name = "id", displayPremises = "*", displayConclusion = "Γ, P |- P, Δ")
-  val id: BuiltInTactic = anon { (provable: ProvableSig) =>
+  val id: BuiltInTactic = "id".by { (provable: ProvableSig) =>
     require(provable.subgoals.size == 1, "Expects exactly 1 subgoal, but got " + provable.subgoals.size + " subgoals")
     val s = provable.subgoals.head
     s.ante.intersect(s.succ).headOption match {
@@ -948,26 +1117,39 @@ object SequentCalculus {
     }
   }
 
-  @Tactic(name = "idx", displayPremises = "*", displayConclusion = "Γ, x=y, P(x) |- P(y), Δ")
-  val idx: DependentTactic = new SingleGoalDependentTactic("idx") {
-    override def computeExpr(sequent: Sequent): BelleExpr = {
-      sequent.ante.intersect(sequent.succ).headOption match {
-        case Some(fml) => closeId(AntePos(sequent.ante.indexOf(fml)), SuccPos(sequent.succ.indexOf(fml)))
-        case None =>
-          if (
-            sequent
-              .ante
-              .exists({
-                case _: Equal => true
-                case _ => false
-              })
-          ) SaturateTactic(exhaustiveEqL2R(hide = true)(Symbol("L"))) & id
-          else throw new TacticInapplicableFailure(
-            "Expects same formula in antecedent and succedent. Found:\n" + sequent.prettyString
-          )
-      }
+  @Derivation
+  val idInfo: PlainTacticInfo = PlainTacticInfo.create(
+    name = "id",
+    displayPremises = "*",
+    displayConclusion = "Γ, P |- P, Δ",
+    constructor = TacticConstructor0.create()(() => id),
+  )
+
+  val idx: DependentTactic = "idx".by { (sequent: Sequent) =>
+    sequent.ante.intersect(sequent.succ).headOption match {
+      case Some(fml) => closeId(AntePos(sequent.ante.indexOf(fml)), SuccPos(sequent.succ.indexOf(fml)))
+      case None =>
+        if (
+          sequent
+            .ante
+            .exists({
+              case _: Equal => true
+              case _ => false
+            })
+        ) SaturateTactic(exhaustiveEqL2R(hide = true)(Symbol("L"))) & id
+        else throw new TacticInapplicableFailure(
+          "Expects same formula in antecedent and succedent. Found:\n" + sequent.prettyString
+        )
     }
   }
+
+  @Derivation
+  val idxInfo: PlainTacticInfo = PlainTacticInfo.create(
+    name = "idx",
+    displayPremises = "*",
+    displayConclusion = "Γ, x=y, P(x) |- P(y), Δ",
+    constructor = TacticConstructor0.create()(() => idx),
+  )
 
   /**
    * Alpha bound renaming of `what` to `to` at a specific position (for quantifier/assignment/ode). Variable `to` must
@@ -979,16 +1161,9 @@ object SequentCalculus {
    *   x=y |- [{x'=x}]x>=0
    *   }}}
    */
-  @Tactic(
-    name = "alphaRen",
-    displayName = Some("BR"),
-    displayNameLong = Some("Alpha Bound Rename"),
-    displayPremises = "Γ |- P(y), Δ ;; Γ |- P(x), Δ, x=y",
-    displayConclusion = "Γ |- P(x), Δ",
-    inputs = "x:Variable;;y[y]:Variable",
-  )
-  def alphaRen(what: Variable, to: Variable): DependentPositionWithAppliedInputTactic =
-    inputanon { (pos: Position, seq: Sequent) =>
+  def alphaRen(what: Variable, to: Variable): DependentPositionWithAppliedInputTactic = "alphaRen".byWithInputs(
+    List(what, to),
+    { (pos: Position, seq: Sequent) =>
       if (!pos.isTopLevel) throw new TacticInapplicableFailure("Alpha renaming only applicable at top-level")
       seq.sub(pos) match {
         case Some(where: Formula) =>
@@ -1012,7 +1187,19 @@ object SequentCalculus {
             "Alpha renaming only applicable at formulas, but got " + e.map(_.prettyString)
           )
       }
-    }
+    },
+  )
+
+  @Derivation
+  val alphaRenInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
+    name = "alphaRen",
+    displayName = Some("BR"),
+    displayNameLong = Some("Alpha Bound Rename"),
+    displayPremises = "Γ |- P(y), Δ ;; Γ |- P(x), Δ, x=y",
+    displayConclusion = "Γ |- P(x), Δ",
+    constructor = TacticConstructor2
+      .create(VariableArg("x"), VariableArg("y", List("y")))((what: Variable, to: Variable) => alphaRen(what, to)),
+  )
 
   /**
    * Alpha renaming of `what` to `to` everywhere in the sequent. Formulas that have variable `to` occur free are
@@ -1024,74 +1211,72 @@ object SequentCalculus {
    *   [x:=0;]x>=0 |- [{x'=x}]x>=0, [x:=y;]x=y
    *   }}}
    */
-  @Tactic(
+  def alphaRenAll(what: Variable, to: Variable): InputTactic = "alphaRenAll".byWithInputs(
+    List(what, to),
+    { (seq: Sequent) =>
+      val anteIdxs = seq
+        .ante
+        .indices
+        .filter(i =>
+          !StaticSemantics.boundVars(seq.ante(i)).intersect(Set(what, DifferentialSymbol(what))).isEmpty &&
+            !StaticSemantics.freeVars(seq.ante(i)).contains(to)
+        )
+      val succIdxs = seq
+        .succ
+        .indices
+        .filter(i =>
+          !StaticSemantics.boundVars(seq.succ(i)).intersect(Set(what, DifferentialSymbol(what))).isEmpty &&
+            !StaticSemantics.freeVars(seq.succ(i)).contains(to)
+        )
+      val anteRewrite = anteIdxs
+        .map(i => alphaRen(what, to)(AntePos(i)) < (Idioms.nil, id))
+        .reduceRightOption[BelleExpr](_ & _)
+        .getOrElse(Idioms.nil)
+      val succRewrite = succIdxs
+        .map(i => alphaRen(what, to)(SuccPos(i)) < (Idioms.nil, id))
+        .reduceRightOption[BelleExpr](_ & _)
+        .getOrElse(Idioms.nil)
+
+      if (seq.ante.contains(Equal(what, to))) {
+        anteRewrite & succRewrite & exhaustiveEqL2R(hide = false)(AntePos(seq.ante.indexOf(Equal(what, to))))
+      } else if (
+        seq
+          .ante
+          .zipWithIndex
+          .filter({ case (_, i) => anteIdxs.contains(i) })
+          .forall({ case (f, _) => !StaticSemantics.freeVars(f).contains(what) }) &&
+        seq
+          .succ
+          .zipWithIndex
+          .filter({ case (_, i) => succIdxs.contains(i) })
+          .forall({ case (f, _) => !StaticSemantics.freeVars(f).contains(to) })
+      ) {
+        cut(Exists(List(what), Equal(what, to))) <
+          (
+            existsL(Symbol("Llast")) & anteRewrite & succRewrite & exhaustiveEqL2R(hide = true)(Symbol("Llast")) &
+              uniformRename(Variable(what.name, Some(what.index.map(_ + 1).getOrElse(0))), what),
+            cohide(Symbol("Rlast")) & existsR(to)(1) & UnifyUSCalculus.byUS(Ax.equalReflexive),
+          )
+      } else {
+        cut(Equal(what, to)) < (anteRewrite & succRewrite & exhaustiveEqL2R(hide = true)(Symbol("Llast")), Idioms.nil)
+      }
+    },
+  )
+
+  @Derivation
+  val alphaRenAllInfo: InputTacticInfo = InputTacticInfo.create(
     name = "alphaRenAll",
     displayName = Some("α-renall"),
     displayNameAscii = Some("alpha-renall"),
     displayNameLong = Some("Alpha Rename All"),
     displayPremises = "Γ(y) |- Δ(y) ;; Γ(x) |- Δ(x), x=y",
     displayConclusion = "Γ(x) |- Δ(x)",
-    inputs = "x:Variable;;y[y]:Variable",
+    constructor = TacticConstructor2
+      .create(VariableArg("x"), VariableArg("y", List("y")))((what: Variable, to: Variable) => alphaRenAll(what, to)),
   )
-  def alphaRenAll(what: Variable, to: Variable): InputTactic = inputanon { (seq: Sequent) =>
-    val anteIdxs = seq
-      .ante
-      .indices
-      .filter(i =>
-        !StaticSemantics.boundVars(seq.ante(i)).intersect(Set(what, DifferentialSymbol(what))).isEmpty &&
-          !StaticSemantics.freeVars(seq.ante(i)).contains(to)
-      )
-    val succIdxs = seq
-      .succ
-      .indices
-      .filter(i =>
-        !StaticSemantics.boundVars(seq.succ(i)).intersect(Set(what, DifferentialSymbol(what))).isEmpty &&
-          !StaticSemantics.freeVars(seq.succ(i)).contains(to)
-      )
-    val anteRewrite = anteIdxs
-      .map(i => alphaRen(what, to)(AntePos(i)) < (Idioms.nil, id))
-      .reduceRightOption[BelleExpr](_ & _)
-      .getOrElse(Idioms.nil)
-    val succRewrite = succIdxs
-      .map(i => alphaRen(what, to)(SuccPos(i)) < (Idioms.nil, id))
-      .reduceRightOption[BelleExpr](_ & _)
-      .getOrElse(Idioms.nil)
-
-    if (seq.ante.contains(Equal(what, to))) {
-      anteRewrite & succRewrite & exhaustiveEqL2R(hide = false)(AntePos(seq.ante.indexOf(Equal(what, to))))
-    } else if (
-      seq
-        .ante
-        .zipWithIndex
-        .filter({ case (_, i) => anteIdxs.contains(i) })
-        .forall({ case (f, _) => !StaticSemantics.freeVars(f).contains(what) }) &&
-      seq
-        .succ
-        .zipWithIndex
-        .filter({ case (_, i) => succIdxs.contains(i) })
-        .forall({ case (f, _) => !StaticSemantics.freeVars(f).contains(to) })
-    ) {
-      cut(Exists(List(what), Equal(what, to))) <
-        (
-          existsL(Symbol("Llast")) & anteRewrite & succRewrite & exhaustiveEqL2R(hide = true)(Symbol("Llast")) &
-            uniformRename(Variable(what.name, Some(what.index.map(_ + 1).getOrElse(0))), what),
-          cohide(Symbol("Rlast")) & existsR(to)(1) & UnifyUSCalculus.byUS(Ax.equalReflexive),
-        )
-    } else {
-      cut(Equal(what, to)) < (anteRewrite & succRewrite & exhaustiveEqL2R(hide = true)(Symbol("Llast")), Idioms.nil)
-    }
-  }
 
   /** Alpha renaming everywhere in the sequent using an equality at a specific position in the antecedent. */
-  @Tactic(
-    name = "alphaRenAllBy",
-    displayName = Some("α-renallby"),
-    displayNameAscii = Some("alpha-renallby"),
-    displayNameLong = Some("Alpha Rename All By Equality"),
-    displayPremises = "Γ(y), x=y |- Δ(y)",
-    displayConclusion = "Γ(x), x=y |- Δ(x)",
-  )
-  val alphaRenAllBy: DependentPositionTactic = anon { (pos: Position, seq: Sequent) =>
+  val alphaRenAllBy: DependentPositionTactic = "alphaRenAllBy".by { (pos: Position, seq: Sequent) =>
     if (!pos.isAnte) throw new TacticInapplicableFailure(
       "Alpha renaming all by position must point to an equality of variabes in the antecedent"
     )
@@ -1102,6 +1287,17 @@ object SequentCalculus {
         )
     }
   }
+
+  @Derivation
+  val alphaRenAllByInfo: PositionTacticInfo = PositionTacticInfo.create(
+    name = "alphaRenAllBy",
+    displayName = Some("α-renallby"),
+    displayNameAscii = Some("alpha-renallby"),
+    displayNameLong = Some("Alpha Rename All By Equality"),
+    displayPremises = "Γ(y), x=y |- Δ(y)",
+    displayConclusion = "Γ(x), x=y |- Δ(x)",
+    constructor = TacticConstructor0.create()(() => alphaRenAllBy),
+  )
 
   // alternative implementation
   /*anon {(seq: Sequent) =>
@@ -1118,18 +1314,22 @@ object SequentCalculus {
    *   G |- true, D
    * }}}
    */
-  @Tactic(
+  val closeT: BuiltInTactic = "closeT".by { (pr: ProvableSig) =>
+    ProofRuleTactics.closeTrue(Symbol("R"), True).computeResult(pr)
+  }
+  //  val closeT: BelleExpr = "closeTrue" by { ProofRuleTactics.closeTrue('R, True) }
+
+  @Derivation
+  val closeTInfo: PlainTacticInfo = PlainTacticInfo.create(
     name = "closeT",
     displayName = Some("⊤R"),
     displayNameAscii = Some("trueR"),
     displayNameLong = Some("Close ⊤"),
     displayPremises = "*",
     displayConclusion = "Γ |- ⊤, Δ",
+    constructor = TacticConstructor0.create()(() => closeT),
   )
-  val closeT: BuiltInTactic = anon { (pr: ProvableSig) =>
-    ProofRuleTactics.closeTrue(Symbol("R"), True).computeResult(pr)
-  }
-//  val closeT: BelleExpr = "closeTrue" by { ProofRuleTactics.closeTrue('R, True) }
+
   /**
    * closeF: closes the branch when false is in the antecedent ([[org.keymaerax.core.CloseFalse CloseFalse]]).
    * {{{
@@ -1138,18 +1338,22 @@ object SequentCalculus {
    *   false, G |- D
    * }}}
    */
-  @Tactic(
+  val closeF: BuiltInTactic = "closeF".by { (pr: ProvableSig) =>
+    ProofRuleTactics.closeFalse(Symbol("L"), False).computeResult(pr)
+  }
+
+  //  val closeF: BelleExpr = "closeFalse" by { ProofRuleTactics.closeFalse('L, False) }
+
+  @Derivation
+  val closeFInfo: PlainTacticInfo = PlainTacticInfo.create(
     name = "closeF",
     displayName = Some("⊥L"),
     displayNameAscii = Some("falseL"),
     displayNameLong = Some("Close ⊥"),
     displayPremises = "*",
     displayConclusion = "Γ, ⊥ |- Δ",
+    constructor = TacticConstructor0.create()(() => closeF),
   )
-  val closeF: BuiltInTactic = anon { (pr: ProvableSig) =>
-    ProofRuleTactics.closeFalse(Symbol("L"), False).computeResult(pr)
-  }
-//  val closeF: BelleExpr = "closeFalse" by { ProofRuleTactics.closeFalse('L, False) }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // derived propositional
@@ -1163,17 +1367,20 @@ object SequentCalculus {
    * G |- a->b,  D
    * }}}
    */
-  @Tactic(
+  val equivifyR: CoreRightTactic = "equivifyR".coreby { (pr: ProvableSig, pos: SuccPosition) =>
+    pr(EquivifyRight(pos.checkTop), 0)
+  }
+
+  @Derivation
+  val equivifyRInfo: PositionTacticInfo = PositionTacticInfo.create(
     name = "equivifyR",
     displayName = Some("→2↔"),
     displayNameAscii = Some("->2<->R"),
     displayNameLong = Some("Strengthen to Equivalence"),
     displayPremises = "Γ |- P↔Q, Δ",
     displayConclusion = "Γ |- P→Q, Δ",
+    constructor = TacticConstructor0.create()(() => equivifyR),
   )
-  val equivifyR: CoreRightTactic = coreanon { (pr: ProvableSig, pos: SuccPosition) =>
-    pr(EquivifyRight(pos.checkTop), 0)
-  }
 
   /**
    * Modus Ponens: p&(p->q) -> q.
@@ -1199,17 +1406,20 @@ object SequentCalculus {
    * p<->q, G |-  D
    * }}}
    */
-  @Tactic(
+  val commuteEquivL: CoreLeftTactic = "commuteEquivL".coreby { (pr: ProvableSig, pos: AntePosition) =>
+    pr(CommuteEquivLeft(pos.checkTop), 0)
+  }
+
+  @Derivation
+  val commuteEquivLInfo: PositionTacticInfo = PositionTacticInfo.create(
     name = "commuteEquivL",
     displayName = Some("↔cL"),
     displayNameAscii = Some("<->cLR"),
     displayNameLong = Some("Commute Equivalence Left"),
     displayPremises = "Q↔P, Γ |- Δ",
     displayConclusion = "P↔Q, Γ |- Δ",
+    constructor = TacticConstructor0.create()(() => commuteEquivL),
   )
-  val commuteEquivL: CoreLeftTactic = coreanon { (pr: ProvableSig, pos: AntePosition) =>
-    pr(CommuteEquivLeft(pos.checkTop), 0)
-  }
 
   /**
    * Commute equivalence on the right [[org.keymaerax.core.CommuteEquivRight CommuteEquivRight]].
@@ -1219,26 +1429,32 @@ object SequentCalculus {
    * G |- p<->q, D
    * }}}
    */
-  @Tactic(
+  val commuteEquivR: CoreRightTactic = "commuteEquivR".coreby { (pr: ProvableSig, pos: SuccPosition) =>
+    pr(CommuteEquivRight(pos.checkTop), 0)
+  }
+
+  @Derivation
+  val commuteEquivRInfo: PositionTacticInfo = PositionTacticInfo.create(
     name = "commuteEquivR",
     displayName = Some("↔cR"),
     displayNameAscii = Some("<->cR"),
     displayNameLong = Some("Commute Equivalence Right"),
     displayPremises = "Γ |- Q↔P, Δ",
     displayConclusion = "Γ |- P↔Q, Δ",
+    constructor = TacticConstructor0.create()(() => commuteEquivR),
   )
-  val commuteEquivR: CoreRightTactic = coreanon { (pr: ProvableSig, pos: SuccPosition) =>
-    pr(CommuteEquivRight(pos.checkTop), 0)
-  }
 
   /** Commute equality `a=b` to `b=a` */
-  @Tactic(
+  lazy val commuteEqual: BuiltInPositionTactic = "commuteEqual".forward(UnifyUSCalculus.useAt(Ax.equalCommute))
+
+  @Derivation
+  val commuteEqualInfo: PositionTacticInfo = PositionTacticInfo.create(
     name = "commuteEqual",
     displayName = Some("=c"),
     displayNameLong = Some("Commute Equal"),
     displayConclusion = "__p=q__ ↔ q=p",
+    constructor = TacticConstructor0.create()(() => commuteEqual),
   )
-  lazy val commuteEqual: BuiltInPositionTactic = UnifyUSCalculus.useAt(Ax.equalCommute)
 
   // Equality rewriting tactics
 
@@ -1270,8 +1486,11 @@ object SequentCalculus {
    * @see
    *   [[BelleLabels]]
    */
-  @Tactic(name = "label")
-  def label(s: String): InputTactic = inputanon { label(BelleTopLevelLabel(s)) }
+  def label(s: String): InputTactic = "label".byWithInputs(List(s), label(BelleTopLevelLabel(s)))
+
+  @Derivation
+  val labelInfo: InputTacticInfo = InputTacticInfo
+    .create(name = "label", constructor = TacticConstructor1.create(StringArg("s"))(((s: String) => label(s))))
 
   /**
    * Mark the current proof branch and all subbranches `s``.
