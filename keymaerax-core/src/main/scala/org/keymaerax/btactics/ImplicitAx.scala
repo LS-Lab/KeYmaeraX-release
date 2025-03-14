@@ -5,25 +5,26 @@
 
 package org.keymaerax.btactics
 
-import org.keymaerax.bellerophon._
-import org.keymaerax.btactics.AnonymousLemmas._
+import org.keymaerax.bellerophon.*
+import org.keymaerax.btactics.AnonymousLemmas.*
 import org.keymaerax.btactics.Ax.boxTrueAxiom
-import org.keymaerax.btactics.DifferentialEquationCalculus._
-import org.keymaerax.btactics.HilbertCalculus._
-import org.keymaerax.btactics.SequentCalculus._
-import org.keymaerax.btactics.TacticFactory.inputanon
-import org.keymaerax.btactics.TactixLibrary._
-import org.keymaerax.btactics.UnifyUSCalculus._
-import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
-import org.keymaerax.btactics.macros._
-import org.keymaerax.core._
-import org.keymaerax.infrastruct.Augmentors._
+import org.keymaerax.btactics.DifferentialEquationCalculus.*
+import org.keymaerax.btactics.HilbertCalculus.*
+import org.keymaerax.btactics.SequentCalculus.*
+import org.keymaerax.btactics.TacticFactory.{inputanon, TacticForNameFactory}
+import org.keymaerax.btactics.TactixLibrary.*
+import org.keymaerax.btactics.UnifyUSCalculus.*
+import org.keymaerax.btactics.macros.*
+import org.keymaerax.btactics.macros.DerivationInfoAugmentors.*
+import org.keymaerax.core.*
+import org.keymaerax.core.btactics.annotations.Derivation
+import org.keymaerax.infrastruct.*
+import org.keymaerax.infrastruct.Augmentors.*
 import org.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
-import org.keymaerax.infrastruct._
 import org.keymaerax.lemma.Lemma
-import org.keymaerax.parser.StringConverter._
+import org.keymaerax.parser.StringConverter.*
 import org.keymaerax.parser.{Declaration, ODEToInterpreted}
-import org.keymaerax.pt._
+import org.keymaerax.pt.*
 import org.slf4j.LoggerFactory
 
 import scala.annotation.nowarn
@@ -1034,14 +1035,9 @@ object ImplicitAx {
   )
 
   // Helper to prove a property (typically of a user-provided interpreted function) by unfolding it into a differential equation proof
-  @Tactic(
-    name = "diffUnfold",
-    displayLevel = DisplayLevel.Browse,
-    displayPremises = "Γ |- P(t0), Δ ;; v=t0 |- [v'=1 & v<=v0]P(v) ;; v=t0 |- [v'=(-1) & v0<=v]P(v)",
-    displayConclusion = "Γ |- P(v0), Δ",
-  )
-  def diffUnfold(v0: Term, t0: Term): DependentPositionWithAppliedInputTactic =
-    inputanon { (pos: Position, seq: Sequent) =>
+  def diffUnfold(v0: Term, t0: Term): DependentPositionWithAppliedInputTactic = "diffUnfold".byWithInputs(
+    List(v0, t0),
+    { (pos: Position, seq: Sequent) =>
       {
         require(pos.isSucc && pos.isTopLevel, "differential equation unfolding only at top-level succedent")
 
@@ -1070,7 +1066,17 @@ object ImplicitAx {
               choiceb(pos) & andR(pos)
           )
       }
-    }
+    },
+  )
+
+  @Derivation
+  val diffUnfoldInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
+    name = "diffUnfold",
+    displayLevel = DisplayLevel.Browse,
+    displayPremises = "Γ |- P(t0), Δ ;; v=t0 |- [v'=1 & v<=v0]P(v) ;; v=t0 |- [v'=(-1) & v0<=v]P(v)",
+    displayConclusion = "Γ |- P(v0), Δ",
+    constructor = TacticConstructor2.create(TermArg("v0"), TermArg("t0"))((v0: Term, t0: Term) => diffUnfold(v0, t0)),
+  )
 
   lazy val existsFwdBack: Lemma = remember(
     "<{v_'=1}>P(v_) | <{v_'=(-1)}>P(v_) -> \\exists x_ P(x_)".asFormula,
@@ -1081,14 +1087,9 @@ object ImplicitAx {
   )
 
   // Diamond version of diffUnfold for existentials
-  @Tactic(
-    name = "diffUnfoldD",
-    displayLevel = DisplayLevel.Browse,
-    displayPremises = "Γ, v=t0 |- <v'=1>P(v) ∨ <v'=(-1)> P(v), Δ ",
-    displayConclusion = "Γ |- ∃v P(v), Δ",
-  )
-  def diffUnfoldD(t0: Term): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position, seq: Sequent) =>
-    {
+  def diffUnfoldD(t0: Term): DependentPositionWithAppliedInputTactic = "diffUnfoldD".byWithInputs(
+    List(t0),
+    { (pos: Position, seq: Sequent) =>
       require(pos.isSucc && pos.isTopLevel, "differential equation unfolding only at top-level succedent")
 
       val (v, fml) = seq.sub(pos) match {
@@ -1110,9 +1111,17 @@ object ImplicitAx {
         cohideR(Symbol("Rlast")) & existsR(t0)(1) & byUS(Ax.equalReflexive),
         implyR(pos) & existsL(Symbol("Llast")) & useAt(expAx, PosInExpr(1 :: Nil))(pos)
       )
+    },
+  )
 
-    }
-  }
+  @Derivation
+  val diffUnfoldDInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
+    name = "diffUnfoldD",
+    displayLevel = DisplayLevel.Browse,
+    displayPremises = "Γ, v=t0 |- <v'=1>P(v) ∨ <v'=(-1)> P(v), Δ ",
+    displayConclusion = "Γ |- ∃v P(v), Δ",
+    constructor = TacticConstructor1.create(TermArg("t0"))((t0: Term) => diffUnfoldD(t0)),
+  )
 
   // Hack version of generalize to work for diamond
   private def generalized(f: Formula): DependentPositionWithAppliedInputTactic =
