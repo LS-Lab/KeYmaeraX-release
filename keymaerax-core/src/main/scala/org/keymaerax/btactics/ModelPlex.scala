@@ -6,23 +6,24 @@
 package org.keymaerax.btactics
 
 import org.keymaerax.Logging
-import org.keymaerax.bellerophon._
-import org.keymaerax.btactics.HilbertCalculus._
+import org.keymaerax.bellerophon.*
+import org.keymaerax.btactics.HilbertCalculus.*
 import org.keymaerax.btactics.Idioms.mapSubpositions
-import org.keymaerax.btactics.SequentCalculus._
-import org.keymaerax.btactics.TacticFactory._
+import org.keymaerax.btactics.SequentCalculus.*
+import org.keymaerax.btactics.TacticFactory.*
 import org.keymaerax.btactics.TacticHelper.timed
-import org.keymaerax.btactics.TactixLibrary._
-import org.keymaerax.btactics.UnifyUSCalculus._
+import org.keymaerax.btactics.TactixLibrary.*
+import org.keymaerax.btactics.UnifyUSCalculus.*
 import org.keymaerax.btactics.helpers.DifferentialHelper
-import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
-import org.keymaerax.btactics.macros.{AxiomInfo, Tactic}
-import org.keymaerax.core.{Variable, _}
-import org.keymaerax.infrastruct.Augmentors._
+import org.keymaerax.btactics.macros.DerivationInfoAugmentors.*
+import org.keymaerax.btactics.macros.{AxiomInfo, FormulaArg, InputTacticInfo, ListArg, StringArg, TacticConstructor1}
+import org.keymaerax.core.btactics.annotations.Derivation
+import org.keymaerax.core.{Variable, *}
+import org.keymaerax.infrastruct.*
+import org.keymaerax.infrastruct.Augmentors.*
 import org.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
-import org.keymaerax.infrastruct._
 import org.keymaerax.lemma.Lemma
-import org.keymaerax.parser.StringConverter._
+import org.keymaerax.parser.StringConverter.*
 import org.keymaerax.parser.{Declaration, InterpretedSymbols, TacticReservedSymbols}
 import org.keymaerax.pt.ProvableSig
 import org.keymaerax.tools.ext.{Atom, OneOf, QETacticTool, SimplificationTool}
@@ -120,20 +121,34 @@ object ModelPlex extends ModelPlexTrait with Logging {
 
   }
 
-  @Tactic(name = "mxSynthesize", displayNameLong = Some("ModelPlex Monitor Synthesis"))
-  def mxSynthesize(kind: String): InputTactic = inputanon {
+  def mxSynthesize(kind: String): InputTactic = "mxSynthesize".byWithInputs(
+    List(kind),
     kind match {
       case "controller" => controllerMonitorByChase(1)
       case "model" => modelMonitorByChase(1)
       case _ => throw new IllFormedTacticApplicationException(
           "Unknown ModelPlex option '" + kind + "'; please use one of [controller|model]"
         )
-    }
-  }
+    },
+  )
 
-  @Tactic(name = "mxAutoInstantiate", displayNameLong = Some("ModelPlex Auto-Instantiation"))
-  def mxAutoInstantiate(assumptions: List[Formula]): InputTactic =
-    inputanon { mxAutoInstantiate(assumptions, List.empty, Some(ModelPlex.mxSimplify)) }
+  @Derivation
+  val mxSynthesizeInfo: InputTacticInfo = InputTacticInfo.create(
+    name = "mxSynthesize",
+    displayNameLong = Some("ModelPlex Monitor Synthesis"),
+    constructor = TacticConstructor1.create(StringArg("kind"))((kind: String) => mxSynthesize(kind)),
+  )
+
+  def mxAutoInstantiate(assumptions: List[Formula]): InputTactic = "mxAutoInstantiate"
+    .byWithInputs(List(assumptions), mxAutoInstantiate(assumptions, List.empty, Some(ModelPlex.mxSimplify)))
+
+  @Derivation
+  val mxAutoInstantiateInfo: InputTacticInfo = InputTacticInfo.create(
+    name = "mxAutoInstantiate",
+    displayNameLong = Some("ModelPlex Auto-Instantiation"),
+    constructor = TacticConstructor1
+      .create(ListArg(FormulaArg("assumptions")))((assumptions: List[Formula]) => mxAutoInstantiate(assumptions)),
+  )
 
   def mxAutoInstantiate(
       assumptions: List[Formula],
@@ -149,14 +164,23 @@ object ModelPlex extends ModelPlexTrait with Logging {
     )
   }
 
-  @Tactic(name = "mxFormatShape", displayNameLong = Some("ModelPlex Monitor Shape Formatting"))
-  def mxFormatShape(shape: String): InputTactic = inputanon((seq: Sequent) =>
-    shape match {
-      case "boolean" => PropositionalTactics.rightAssociate(SuccPos(0))
-      case "metricprg" => PropositionalTactics.rightAssociate(SuccPos(0)) & ModelPlex
-          .chaseToTests(combineTests = false)(1) * 2
-      case "metricfml" => toMetricT(seq.succ.head)
-    }
+  def mxFormatShape(shape: String): InputTactic = "mxFormatShape".byWithInputs(
+    List(shape),
+    { (seq: Sequent) =>
+      shape match {
+        case "boolean" => PropositionalTactics.rightAssociate(SuccPos(0))
+        case "metricprg" => PropositionalTactics.rightAssociate(SuccPos(0)) & ModelPlex
+            .chaseToTests(combineTests = false)(1) * 2
+        case "metricfml" => toMetricT(seq.succ.head)
+      }
+    },
+  )
+
+  @Derivation
+  val mxFormatShapeInfo: InputTacticInfo = InputTacticInfo.create(
+    name = "mxFormatShape",
+    displayNameLong = Some("ModelPlex Monitor Shape Formatting"),
+    constructor = TacticConstructor1.create(StringArg("shape"))((shape: String) => mxFormatShape(shape)),
   )
 
   /** Normalizes formula `f` into the shape A -> [a;]S. */
