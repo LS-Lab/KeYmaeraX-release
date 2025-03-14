@@ -45,8 +45,6 @@ lazy val core = project
     name := "KeYmaeraX Core",
     mainClass := Some("org.keymaerax.cli.KeymaeraxCore"),
 
-    libraryDependencies += "org.scala-lang" % "scala-compiler" % scalaVersion.value,
-
     libraryDependencies += "cc.redberry" %% "rings.scaladsl" % "2.5.8",
     libraryDependencies += "com.github.scopt" %% "scopt" % "4.1.0",
     libraryDependencies += "com.lihaoyi" %% "fastparse" % "3.1.1",

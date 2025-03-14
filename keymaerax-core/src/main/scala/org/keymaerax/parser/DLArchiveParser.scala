@@ -5,20 +5,19 @@
 
 package org.keymaerax.parser
 
+import fastparse.*
 import fastparse.JavaWhitespace.whitespace
-import fastparse._
 import org.keymaerax.bellerophon.BelleExpr
-import org.keymaerax.bellerophon.parser.{DLTacticParser, TacticParser}
-import org.keymaerax.core._
+import org.keymaerax.bellerophon.parser.DLTacticParser
+import org.keymaerax.core.*
 import org.keymaerax.parser.DLParser.parseException
 import org.keymaerax.parser.ODEToInterpreted.FromProgramException
 import org.keymaerax.{Configuration, GlobalState}
 
-import java.io.FileInputStream
-import scala.collection.immutable._
+import java.io.{File, FileInputStream}
+import scala.collection.immutable.*
 import scala.collection.mutable.ListBuffer
 import scala.io.Source
-import scala.tools.nsc.io.File
 
 /**
  * Parse a differential dynamic logic archive file string to a list of archive entries. Splits a KeYmaera X archive into
