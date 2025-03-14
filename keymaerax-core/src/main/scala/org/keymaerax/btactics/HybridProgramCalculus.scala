@@ -5,10 +5,11 @@
 
 package org.keymaerax.btactics
 
-import org.keymaerax.bellerophon._
-import org.keymaerax.btactics.TacticFactory._
-import org.keymaerax.btactics.macros.{DisplayLevel, Tactic}
-import org.keymaerax.core._
+import org.keymaerax.bellerophon.*
+import org.keymaerax.btactics.TacticFactory.*
+import org.keymaerax.btactics.macros.{DisplayLevel, FormulaArg, InputPositionTacticInfo, TacticConstructor1}
+import org.keymaerax.core.*
+import org.keymaerax.core.btactics.annotations.Derivation
 import org.keymaerax.infrastruct.Position
 
 /**
@@ -78,19 +79,20 @@ object HybridProgramCalculus {
    *   }}}
    */
   // @todo code name on cheat sheet is generalize
-  @Tactic(
+  def generalize(C: Formula): DependentPositionWithAppliedInputTactic = "MR"
+    .byWithInputs(List(C), { (pos: Position) => DLBySubst.generalize(C)(pos) })
+
+  @Derivation
+  val generalizeInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
     name = "MR",
     displayNameLong = Some("Monotonicity"),
     displayPremises = "Γ |- [a]Q, Δ ;; Q |- P",
     displayConclusion = "Γ |- [a]P, Δ",
     displayContextPremises = "Γ |- C( Γ<sub>const</sub>∧[a]Q ), Δ ;; Γ<sub>const</sub>, Q |- P",
     displayContextConclusion = "Γ |- C( [a]P ), Δ",
-    inputs = "Q:formula",
     revealInternalSteps = true,
+    constructor = TacticConstructor1.create(FormulaArg("Q"))((C: Formula) => generalize(C)),
   )
-  def generalize(C: Formula): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position) =>
-    DLBySubst.generalize(C)(pos)
-  }
 
   /**
    * loop: prove a property of a loop by induction with the given loop invariant. For hybrid systems wipes conditions
@@ -132,7 +134,11 @@ object HybridProgramCalculus {
    * @note
    *   Beware that, unlike for hybrid systems, the order of premises for hybrid games is Post, Step, Init.
    */
-  @Tactic(
+  def loop(invariant: Formula): DependentPositionWithAppliedInputTactic = "loop"
+    .byWithInputs(List(invariant), { (pos: Position) => DLBySubst.loop(invariant)(pos) })
+
+  @Derivation
+  val loopInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
     name = "loop",
     displayNameLong = Some("Loop Invariant"),
     displayLevel = DisplayLevel.All,
@@ -140,11 +146,8 @@ object HybridProgramCalculus {
     displayConclusion = "Γ |- [a<sup>*</sup>]P, Δ",
     revealInternalSteps = true,
     // @note contextPremises, contextConclusion without J not allowed
-    inputs = "J:formula",
+    constructor = TacticConstructor1.create(FormulaArg("J"))((invariant: Formula) => loop(invariant)),
   )
-  def loop(invariant: Formula): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position) =>
-    DLBySubst.loop(invariant)(pos)
-  }
 
   /**
    * fp: make use of an assumption `⟨a*⟩P` to read off a fixpoint `J` of `⟨a⟩` that is implied by postcondition `P`.
@@ -174,7 +177,11 @@ object HybridProgramCalculus {
    * @param fixpoint
    *   A formula `J` that is a prefixpoint of `⟨a⟩` that also follows from `P`.
    */
-  @Tactic(
+  def fp(fixpoint: Formula): DependentPositionWithAppliedInputTactic = "fp"
+    .byWithInputs(List(fixpoint), { (pos: Position) => DLBySubst.fpRule(fixpoint)(pos) })
+
+  @Derivation
+  val fpInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
     name = "fp",
     displayNameLong = Some("Fixpoint"),
     displayLevel = DisplayLevel.All,
@@ -182,11 +189,8 @@ object HybridProgramCalculus {
     displayConclusion = "Γ, &langle;a<sup>*</sup>&rangle;P |- Δ",
     revealInternalSteps = true,
     // @note contextPremises, contextConclusion without J not allowed
-    inputs = "J:formula",
+    constructor = TacticConstructor1.create(FormulaArg("J"))((fixpoint: Formula) => fp(fixpoint)),
   )
-  def fp(fixpoint: Formula): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position) =>
-    DLBySubst.fpRule(fixpoint)(pos)
-  }
 
   /**
    * iG discreteGhost: introduces a discrete ghost called `ghost` defined as term `t`; if `ghost` is None the tactic
