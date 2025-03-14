@@ -5,27 +5,28 @@
 
 package org.keymaerax.btactics
 
-import org.keymaerax.bellerophon._
-import org.keymaerax.btactics.AnonymousLemmas._
-import org.keymaerax.btactics.DifferentialEquationCalculus._
-import org.keymaerax.btactics.DifferentialTactics._
-import org.keymaerax.btactics.HilbertCalculus._
-import org.keymaerax.btactics.Idioms._
+import org.keymaerax.bellerophon.*
+import org.keymaerax.btactics.AnonymousLemmas.*
+import org.keymaerax.btactics.DifferentialEquationCalculus.*
+import org.keymaerax.btactics.DifferentialTactics.*
+import org.keymaerax.btactics.HilbertCalculus.*
+import org.keymaerax.btactics.Idioms.*
 import org.keymaerax.btactics.ODELiveness.vDG
-import org.keymaerax.btactics.SequentCalculus._
-import org.keymaerax.btactics.SimplifierV3._
-import org.keymaerax.btactics.TacticFactory._
-import org.keymaerax.btactics.TactixLibrary._
-import org.keymaerax.btactics.UnifyUSCalculus._
-import org.keymaerax.btactics.helpers.DifferentialHelper._
-import org.keymaerax.btactics.macros.{DisplayLevel, Tactic}
-import org.keymaerax.core._
-import org.keymaerax.infrastruct.Augmentors._
+import org.keymaerax.btactics.SequentCalculus.*
+import org.keymaerax.btactics.SimplifierV3.*
+import org.keymaerax.btactics.TacticFactory.*
+import org.keymaerax.btactics.TactixLibrary.*
+import org.keymaerax.btactics.UnifyUSCalculus.*
+import org.keymaerax.btactics.helpers.DifferentialHelper.*
+import org.keymaerax.btactics.macros.{DisplayLevel, PositionTacticInfo, TacticConstructor0}
+import org.keymaerax.core.*
+import org.keymaerax.core.btactics.annotations.Derivation
+import org.keymaerax.infrastruct.Augmentors.*
 import org.keymaerax.infrastruct.{DependencyAnalysis, PosInExpr, Position, RenUSubst, UnificationMatch}
-import org.keymaerax.lemma._
+import org.keymaerax.lemma.*
 import org.keymaerax.parser.Declaration
-import org.keymaerax.parser.InterpretedSymbols._
-import org.keymaerax.parser.StringConverter._
+import org.keymaerax.parser.InterpretedSymbols.*
+import org.keymaerax.parser.StringConverter.*
 import org.keymaerax.pt.{ElidingProvable, ProvableSig}
 import org.keymaerax.tools.qe.BigDecimalQETool
 import org.keymaerax.tools.{SMTQeException, ToolEvidence, ToolException}
@@ -33,7 +34,7 @@ import org.slf4j.LoggerFactory
 
 import scala.annotation.nowarn
 import scala.collection.immutable
-import scala.collection.immutable._
+import scala.collection.immutable.*
 import scala.collection.mutable.ListBuffer
 
 /**
@@ -867,13 +868,7 @@ object ODEInvariance {
     namespace,
   )
 
-  @Tactic(
-    name = "domainStuck",
-    displayLevel = DisplayLevel.Browse,
-    displayPremises = "Γ, t=0 |- ⟨t'=1,x'=f(x) & ~Q ∨ t=0⟩ t!=0, Δ",
-    displayConclusion = "Γ |- [x'=f(x) & Q}]P, Δ",
-  )
-  def domainStuck: DependentPositionTactic = anon((pos: Position, seq: Sequent) => {
+  def domainStuck: DependentPositionTactic = "domainStuck".by { (pos: Position, seq: Sequent) =>
     if (!(pos.isTopLevel && pos.isSucc)) throw new IllFormedTacticApplicationException(
       "domainStuck: position " + pos + " must point to a top-level succedent position"
     )
@@ -936,7 +931,16 @@ object ODEInvariance {
               )
           )
       )
-  })
+  }
+
+  @Derivation
+  val domainStuckInfo: PositionTacticInfo = PositionTacticInfo.create(
+    name = "domainStuck",
+    displayLevel = DisplayLevel.Browse,
+    displayPremises = "Γ, t=0 |- ⟨t'=1,x'=f(x) & ~Q ∨ t=0⟩ t!=0, Δ",
+    displayConclusion = "Γ |- [x'=f(x) & Q}]P, Δ",
+    constructor = TacticConstructor0.create()(() => domainStuck),
+  )
 
   /**
    * Explicitly calculate the conjunctive rank of a list of polynomials (uses conjunctive optimization from SAS'14)
@@ -1200,14 +1204,7 @@ object ODEInvariance {
    *   Khalil Ghorbal, Andrew Sogokon, and André Platzer.
    *   [[https://doi.org/10.1007/978-3-319-10936-7_10 Invariance of conjunctions of polynomial equalities for algebraic differential equations]].
    */
-  @Tactic(
-    name = "dRI",
-    displayName = Some("(Conj.) Differential Radical Invariants"),
-    displayLevel = DisplayLevel.Browse,
-    displayPremises = "Γ, Q |- p*=0",
-    displayConclusion = "Γ |- [x'=f(x) & Q}]p=0, Δ",
-  )
-  val dRI: DependentPositionTactic = anon((pos: Position, seq: Sequent) => {
+  val dRI: DependentPositionTactic = "dRI".by { (pos: Position, seq: Sequent) =>
     if (!(pos.isTopLevel && pos.isSucc)) throw new IllFormedTacticApplicationException(
       "dRI: position " + pos + " must point to a top-level succedent position"
     )
@@ -1254,17 +1251,20 @@ object ODEInvariance {
       dgVdbx(cofactors, groebner)(pos) &
       DebuggingTactics.debug("Final QE", debugTactic) &
       cohideR(pos) & DW(1) & G(1) & QE
-  })
+  }
+
+  @Derivation
+  val dRIInfo: PositionTacticInfo = PositionTacticInfo.create(
+    name = "dRI",
+    displayName = Some("(Conj.) Differential Radical Invariants"),
+    displayLevel = DisplayLevel.Browse,
+    displayPremises = "Γ, Q |- p*=0",
+    displayConclusion = "Γ |- [x'=f(x) & Q}]p=0, Δ",
+    constructor = TacticConstructor0.create()(() => dRI),
+  )
 
   // todo: this needs a better tactic interface
-  @Tactic(
-    name = "dgVdbxAuto",
-    displayName = Some("Vectorial Darboux (auto)"),
-    displayLevel = DisplayLevel.Browse,
-    displayPremises = "Γ |- [x'=f(x)& Q & p*!=0]p!=0, Δ",
-    displayConclusion = "Γ |- [x'=f(x) & Q}]p!=0, Δ",
-  )
-  val dgVdbxAuto: DependentPositionTactic = anon((pos: Position, seq: Sequent) => {
+  val dgVdbxAuto: DependentPositionTactic = "dgVdbxAuto".by { (pos: Position, seq: Sequent) =>
     if (!(pos.isTopLevel && pos.isSucc)) throw new IllFormedTacticApplicationException(
       "dgVdbxAuto: position " + pos + " must point to a top-level succedent position"
     )
@@ -1295,7 +1295,17 @@ object ODEInvariance {
     val (r, groebner, cofactors) = rank(sys, polys)
 
     dgVdbx(cofactors, groebner, negate)(pos)
-  })
+  }
+
+  @Derivation
+  val dgVdbxAutoInfo: PositionTacticInfo = PositionTacticInfo.create(
+    name = "dgVdbxAuto",
+    displayName = Some("Vectorial Darboux (auto)"),
+    displayLevel = DisplayLevel.Browse,
+    displayPremises = "Γ |- [x'=f(x)& Q & p*!=0]p!=0, Δ",
+    displayConclusion = "Γ |- [x'=f(x) & Q}]p!=0, Δ",
+    constructor = TacticConstructor0.create()(() => dgVdbxAuto),
+  )
 
   private lazy val cauchy_schwartz_lem = remember(
     "b()>=0 & c()>=0 & a()*a() <= b()*c() -> (a()+u()*v())*(a()+u()*v()) <= (b()+u()*u())*(c()+v()*v())".asFormula,
@@ -1511,14 +1521,7 @@ object ODEInvariance {
    * G |- [x'=f(x)&Q]P
    * }}}
    */
-  @Tactic(
-    name = "dFP",
-    displayName = Some("Differential Fixed Point"),
-    displayLevel = DisplayLevel.Browse,
-    displayPremises = "Γ, x=x0 |-[x'=f(x) & Q &x=x0}]P, Δ ;; Γ |- f(x) = 0",
-    displayConclusion = "Γ |- [x'=f(x) & Q}]P, Δ",
-  )
-  val dFP: DependentPositionTactic = anon((pos: Position, seq: Sequent) => {
+  val dFP: DependentPositionTactic = "dFP".by { (pos: Position, seq: Sequent) =>
     if (!(pos.isTopLevel && pos.isSucc)) throw new IllFormedTacticApplicationException(
       "dFP: position " + pos + " must point to a top-level succedent position"
     )
@@ -1538,7 +1541,17 @@ object ODEInvariance {
       skip,
       dRI(pos)
     )
-  })
+  }
+
+  @Derivation
+  val dFPInfo: PositionTacticInfo = PositionTacticInfo.create(
+    name = "dFP",
+    displayName = Some("Differential Fixed Point"),
+    displayLevel = DisplayLevel.Browse,
+    displayPremises = "Γ, x=x0 |-[x'=f(x) & Q &x=x0}]P, Δ ;; Γ |- f(x) = 0",
+    displayConclusion = "Γ |- [x'=f(x) & Q}]P, Δ",
+    constructor = TacticConstructor0.create()(() => dFP),
+  )
 
   /** Helper and lemmas */
   private lazy val lemPosMul = remember("a() >= 0 -> b() <= c() -> b()*a() <= c()*a()".asFormula, QE).fact
@@ -2079,16 +2092,18 @@ object ODEInvariance {
       .reduce(vecvec_sum)
   }
 
-  @Tactic(
+  def nilpotentSolve: DependentPositionTactic = "nilpotentSolve".forward(nilpotentSolve(false))
+
+  @Derivation
+  val nilpotentSolveInfo: PositionTacticInfo = PositionTacticInfo.create(
     name = "nilpotentSolve",
     displayName = Some("[']n"),
     displayNameLong = Some("nilsolve"),
     displayLevel = DisplayLevel.Menu,
     displayPremises = "Γ,x=x0,t=0 |- [x'=f(x),t'=1&q(x)&x=y(x0,t)]p(x), Δ",
     displayConclusion = "Γ |- [x'=f(x)&q(x)]p(x), Δ",
-    revealInternalSteps = false,
+    constructor = TacticConstructor0.create()(() => nilpotentSolve),
   )
-  def nilpotentSolve: DependentPositionTactic = nilpotentSolve(false)
 
   /**
    * Given a top-level succedent position corresponding to [x'=f(x)&Q]P with x'=f(x) a linear, nilpotent ODE, solve the
