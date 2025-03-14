@@ -5,19 +5,28 @@
 
 package org.keymaerax.btactics
 
-import org.keymaerax.bellerophon._
-import org.keymaerax.btactics.SequentCalculus._
-import org.keymaerax.btactics.TacticFactory._
-import org.keymaerax.btactics.UnifyUSCalculus._
-import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
-import org.keymaerax.btactics.macros.{AxiomInfo, DisplayLevel, ProvableInfo, Tactic}
-import org.keymaerax.core._
-import org.keymaerax.infrastruct.Augmentors._
-import org.keymaerax.infrastruct._
-import org.keymaerax.parser.StringConverter._
+import org.keymaerax.bellerophon.*
+import org.keymaerax.btactics.SequentCalculus.*
+import org.keymaerax.btactics.TacticFactory.*
+import org.keymaerax.btactics.UnifyUSCalculus.*
+import org.keymaerax.btactics.macros.DerivationInfoAugmentors.*
+import org.keymaerax.btactics.macros.{
+  AxiomInfo,
+  DisplayLevel,
+  InputPositionTacticInfo,
+  ListArg,
+  ProvableInfo,
+  TacticConstructor1,
+  VariableArg,
+}
+import org.keymaerax.core.*
+import org.keymaerax.core.btactics.annotations.Derivation
+import org.keymaerax.infrastruct.*
+import org.keymaerax.infrastruct.Augmentors.*
+import org.keymaerax.parser.StringConverter.*
 import org.keymaerax.pt.ProvableSig
 
-import scala.collection.immutable._
+import scala.collection.immutable.*
 
 /** Implementation: [[FOQuantifierTactics]] provides tactics for instantiating quantifiers. */
 protected object FOQuantifierTactics {
@@ -665,18 +674,20 @@ protected object FOQuantifierTactics {
    * @return
    *   The tactic.
    */
-  @Tactic(
+  def universalClosure(order: List[Variable]): DependentPositionWithAppliedInputTactic = "universalClosure"
+    .byWithInputs(List(order), { (pos: Position) => universalClosureFw(order)(pos) })
+
+  @Derivation
+  val universalClosureInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
     name = "universalClosure",
     displayName = Some("∀Cl"),
     displayNameAscii = Some("allClosure"),
     displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ |- \\forall order p(x,y,z), Δ",
     displayConclusion = "Γ |- p(x,y,z), Δ",
-    inputs = "order:list[variable]",
+    constructor = TacticConstructor1
+      .create(ListArg(VariableArg("order")))((order: List[Variable]) => universalClosure(order)),
   )
-  def universalClosure(order: List[Variable]): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position) =>
-    universalClosureFw(order)(pos)
-  }
 
   /** Builtin forward implementation of universalClosure. */
   private[btactics] def universalClosureFw(order: List[Variable]): BuiltInPositionTactic =
