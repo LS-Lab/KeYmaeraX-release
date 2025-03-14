@@ -5,13 +5,23 @@
 
 package org.keymaerax.btactics
 
-import org.keymaerax.bellerophon._
+import org.keymaerax.bellerophon.*
 import org.keymaerax.btactics.ProofRuleTactics.requireOneSubgoal
-import org.keymaerax.btactics.macros.{DerivationInfo, Tactic}
-import org.keymaerax.core._
-import org.keymaerax.infrastruct.Augmentors._
+import org.keymaerax.btactics.macros.{
+  DerivationInfo,
+  ExpressionArg,
+  InputPositionTacticInfo,
+  InputTacticInfo,
+  OptionArg,
+  StringArg,
+  TacticConstructor1,
+  TacticConstructor2,
+}
+import org.keymaerax.core.*
+import org.keymaerax.core.btactics.annotations.Derivation
+import org.keymaerax.infrastruct.*
+import org.keymaerax.infrastruct.Augmentors.*
 import org.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
-import org.keymaerax.infrastruct._
 import org.keymaerax.lemma.{Lemma, LemmaDB, LemmaDBFactory}
 import org.keymaerax.parser.{Declaration, KeYmaeraXOmitInterpretationPrettyPrinter}
 import org.keymaerax.pt.ProvableSig
@@ -25,7 +35,7 @@ import scala.collection.mutable.ListBuffer
 
 /** @author Nathan Fulton */
 object DebuggingTactics {
-  import TacticFactory._
+  import TacticFactory.*
 
   // @todo import a debug flag as in Tactics.DEBUG
   private val DEBUG = Configuration(Configuration.Keys.DEBUG) == "true"
@@ -64,8 +74,16 @@ object DebuggingTactics {
       }
     }
 
-  @Tactic(name = "debug", displayName = Some("Debug"), displayNameAscii = Some("debug"))
-  def debugX(msg: String): StringInputTactic = inputanonS { (p: ProvableSig) => debug(msg).result(p) }
+  def debugX(msg: String): StringInputTactic = "debug"
+    .byWithInputsS(List(msg), { (p: ProvableSig) => debug(msg).result(p) })
+
+  @Derivation
+  val debugXInfo: InputTacticInfo = InputTacticInfo.create(
+    name = "debug",
+    displayName = Some("Debug"),
+    displayNameAscii = Some("debug"),
+    constructor = TacticConstructor1.create(StringArg("msg"))((msg: String) => debugX(msg)),
+  )
 
   /** print is a no-op tactic that prints a message and the current provable, regardless of DEBUG being true or false */
   def print(message: => String): BuiltInTactic = debug(message, doPrint = true)
@@ -75,8 +93,17 @@ object DebuggingTactics {
    * indices), regardless of DEBUG being true or false
    */
   def printIndexed(message: => String): BuiltInTactic = debug(message, doPrint = true, _.prettyString)
-  @Tactic(name = "print", displayName = Some("Print"), displayNameAscii = Some("print"))
-  def printX(msg: String): StringInputTactic = inputanonS { (p: ProvableSig) => printIndexed(msg).result(p) }
+
+  def printX(msg: String): StringInputTactic = "print"
+    .byWithInputsS(List(msg), { (p: ProvableSig) => printIndexed(msg).result(p) })
+
+  @Derivation
+  val printXInfo: InputTacticInfo = InputTacticInfo.create(
+    name = "print",
+    displayName = Some("Print"),
+    displayNameAscii = Some("print"),
+    constructor = TacticConstructor1.create(StringArg("msg"))((msg: String) => printX(msg)),
+  )
 
   /** debug is a no-op tactic that prints a message and the current provable, if the system property DEBUG is true. */
   def debugAt(message: => String, doPrint: Boolean = DEBUG): BuiltInPositionTactic = new BuiltInPositionTactic("debug")
@@ -148,7 +175,7 @@ object DebuggingTactics {
       message: => String,
       ex: (=> String) => Throwable,
   ): DependentPositionWithAppliedInputTactic = {
-    import TacticFactory._
+    import TacticFactory.*
     // @todo serialize exception
     ("assert" byWithInputs
       (
@@ -264,7 +291,7 @@ object DebuggingTactics {
       message: => String,
       ex: (=> String) => Throwable,
   ): DependentPositionWithAppliedInputTactic = {
-    import TacticFactory._
+    import TacticFactory.*
     // @todo serialize exception
     ("assert" byWithInputs
       (
@@ -292,16 +319,39 @@ object DebuggingTactics {
    */
   def assertE(expected: => Expression, message: => String): DependentPositionWithAppliedInputTactic =
     assertE(expected, message, new TacticAssertionError(_))
-  @Tactic(name = "assert", displayName = Some("Assert"), displayNameAscii = Some("assert"))
-  def assertX(expected: Expression, msg: String): DependentPositionWithAppliedInputTactic =
-    inputanon { DebuggingTactics.assertE(expected, msg)(_: Position) }
+
+  def assertX(expected: Expression, msg: String): DependentPositionWithAppliedInputTactic = "assert"
+    .byWithInputs(List(expected, msg), { DebuggingTactics.assertE(expected, msg)(_: Position) })
+
+  @Derivation
+  val assertXInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
+    name = "assert",
+    displayName = Some("Assert"),
+    displayNameAscii = Some("assert"),
+    constructor = TacticConstructor2
+      .create(ExpressionArg("expected"), StringArg("msg"))((expected: Expression, msg: String) =>
+        assertX(expected, msg)
+      ),
+  )
 
   /** @see [[TactixLibrary.done]] */
   lazy val done: BelleExpr = done(None, None)
   def done(msg: String): StringInputTactic = done(Some(msg), None)
   def done(msg: String, storeLemma: Option[String]): StringInputTactic = done(Some(msg), storeLemma)
-  @Tactic(name = "done", displayName = Some("Done"), displayNameAscii = Some("done"))
-  def done(msg: Option[String], lemmaName: Option[String]): StringInputTactic = doneImpl(msg.getOrElse(""), lemmaName)
+
+  def done(msg: scala.Option[String], lemmaName: scala.Option[String]): StringInputTactic = "done"
+    .forward(doneImpl(msg.getOrElse(""), lemmaName))
+
+  @Derivation
+  val doneInfo: InputTacticInfo = InputTacticInfo.create(
+    name = "done",
+    displayName = Some("Done"),
+    displayNameAscii = Some("done"),
+    constructor = TacticConstructor2.create(OptionArg(StringArg("msg")), OptionArg(StringArg("lemmaName")))(
+      (msg: scala.Option[String], lemmaName: scala.Option[String]) => done(msg, lemmaName)
+    ),
+  )
+
   private def doneImpl(msg: String = "", storeLemma: Option[String] = None): StringInputTactic = new StringInputTactic(
     "done",
     if (msg.nonEmpty && storeLemma.isDefined) msg :: storeLemma.get :: Nil else if (msg.nonEmpty) msg :: Nil else Nil,
@@ -318,14 +368,24 @@ object DebuggingTactics {
   }
 
   /** Placeholder for a tactic string that is not executed. */
-  @Tactic(name = "pending")
-  def pending(tactic: String): StringInputTactic = {
+  def pending(tactic: String): StringInputTactic = "pending".forward {
     val t = tactic.replace("\"", "\\\"").replace("\\\\\"", "\\\"")
     pendingX(t)
   }
 
-  @Tactic(name = "pendingX")
-  def pendingX(tactic: String): StringInputTactic = inputanonS { (ps: ProvableSig) => ps }
+  @Derivation
+  val pendingInfo: InputTacticInfo = InputTacticInfo.create(
+    name = "pending",
+    constructor = TacticConstructor1.create(StringArg("tactic"))((tactic: String) => pending(tactic)),
+  )
+
+  def pendingX(tactic: String): StringInputTactic = "pendingX".byWithInputsS(List(tactic), { (ps: ProvableSig) => ps })
+
+  @Derivation
+  val pendingXInfo: InputTacticInfo = InputTacticInfo.create(
+    name = "pendingX",
+    constructor = TacticConstructor1.create(StringArg("tactic"))((tactic: String) => pendingX(tactic)),
+  )
 }
 
 case class Case(fml: Formula, simplify: Boolean = true) {
@@ -334,7 +394,7 @@ case class Case(fml: Formula, simplify: Boolean = true) {
 
 /** @author Nathan Fulton */
 object Idioms {
-  import TacticFactory._
+  import TacticFactory.*
 
   lazy val nil: BuiltInTactic = anonnoop { (provable: ProvableSig) => provable }
 
