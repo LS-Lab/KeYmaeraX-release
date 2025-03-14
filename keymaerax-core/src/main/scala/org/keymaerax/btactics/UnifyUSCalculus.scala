@@ -5,28 +5,48 @@
 
 package org.keymaerax.btactics
 
-import org.keymaerax.bellerophon.{InapplicableUnificationKeyFailure, _}
-import org.keymaerax.btactics.DebuggingTactics._
-import org.keymaerax.btactics.Idioms._
-import org.keymaerax.btactics.PropositionalTactics._
-import org.keymaerax.btactics.SequentCalculus.{andLi => _, implyRi => _, _}
-import org.keymaerax.btactics.TacticFactory._
-import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
-import org.keymaerax.btactics.macros.{AxiomInfo, DerivationInfo, ProvableInfo, Tactic, TacticInfo, Unifier}
-import org.keymaerax.core.StaticSemantics._
-import org.keymaerax.core._
-import org.keymaerax.infrastruct.Augmentors._
+import org.keymaerax.bellerophon.{InapplicableUnificationKeyFailure, *}
+import org.keymaerax.btactics.DebuggingTactics.*
+import org.keymaerax.btactics.Idioms.*
+import org.keymaerax.btactics.PropositionalTactics.*
+import org.keymaerax.btactics.SequentCalculus.{andLi as _, implyRi as _, *}
+import org.keymaerax.btactics.TacticFactory.*
+import org.keymaerax.btactics.macros.DerivationInfoAugmentors.*
+import org.keymaerax.btactics.macros.{
+  AxiomInfo,
+  DerivationInfo,
+  ExpressionArg,
+  FormulaArg,
+  InputPositionTacticInfo,
+  InputTacticInfo,
+  ListArg,
+  OptionArg,
+  PlainTacticInfo,
+  PosInExprArg,
+  PositionTacticInfo,
+  ProvableInfo,
+  StringArg,
+  SubstitutionArg,
+  TacticConstructor0,
+  TacticConstructor1,
+  TacticConstructor2,
+  Unifier,
+}
+import org.keymaerax.core.*
+import org.keymaerax.core.StaticSemantics.*
+import org.keymaerax.core.btactics.annotations.Derivation
+import org.keymaerax.infrastruct.*
+import org.keymaerax.infrastruct.Augmentors.*
 import org.keymaerax.infrastruct.PosInExpr.HereP
 import org.keymaerax.infrastruct.Position.seqPos2Position
-import org.keymaerax.infrastruct.StaticSemanticsTools._
-import org.keymaerax.infrastruct._
+import org.keymaerax.infrastruct.StaticSemanticsTools.*
 import org.keymaerax.lemma.Lemma
 import org.keymaerax.parser.Declaration
 import org.keymaerax.pt.ProvableSig
 import org.slf4j.LoggerFactory
 
 import scala.annotation.nowarn
-import scala.collection.immutable._
+import scala.collection.immutable.*
 import scala.util.Try
 
 /**
@@ -119,28 +139,40 @@ object UnifyUSCalculus {
    * @see
    *   [[TactixLibrary.done]]
    */
-  @Tactic(name = "skip")
-  val skip: BuiltInTactic = anonnoop { Idioms.ident.result }
+  val skip: BuiltInTactic = "skip".forward(anonnoop { Idioms.ident.result })
+
+  @Derivation
+  val skipInfo: PlainTacticInfo = PlainTacticInfo
+    .create(name = "skip", constructor = TacticConstructor0.create()(() => skip))
 
   /** nil=skip is a no-op tactic that has no effect */
-  @Tactic(name = "nil")
-  val nil: BuiltInTactic = anonnoop { Idioms.nil.result }
+  val nil: BuiltInTactic = "nil".forward(anonnoop { Idioms.nil.result })
+
+  @Derivation
+  val nilInfo: PlainTacticInfo = PlainTacticInfo
+    .create(name = "nil", constructor = TacticConstructor0.create()(() => nil))
 
   /**
    * A no-op tactic that as no effect but marks an open proof task.
    * @see
    *   [[skip]],[[nil]]
    */
-  @Tactic(name = "todo")
-  val todo: BuiltInTactic = anonnoop { Idioms.todo.result }
+  val todo: BuiltInTactic = "todo".forward(anonnoop { Idioms.todo.result })
+
+  @Derivation
+  val todoInfo: PlainTacticInfo = PlainTacticInfo
+    .create(name = "todo", constructor = TacticConstructor0.create()(() => todo))
 
   /**
    * fail is a tactic that always fails as being inapplicable
    * @see
    *   [[skip]]
    */
-  @Tactic(name = "fail")
-  val fail: BuiltInTactic = anon { (_: ProvableSig) => throw new TacticInapplicableFailure("fail") }
+  val fail: BuiltInTactic = "fail".by { (_: ProvableSig) => throw new TacticInapplicableFailure("fail") }
+
+  @Derivation
+  val failInfo: PlainTacticInfo = PlainTacticInfo
+    .create(name = "fail", constructor = TacticConstructor0.create()(() => fail))
 
   /* ******************************************************************
    * Stepping auto-tactic
@@ -331,40 +363,47 @@ object UnifyUSCalculus {
 
   /** Do-not-call: exclusively for internal tactic interpreter usage. */
   @deprecated("Exclusively use for tactic interpreters")
-  @Tactic(
+  private[btactics]
+  // NB: anon (Sequent) is necessary even though argument "seq" is not referenced:
+  // this ensures that TacticInfo initialization routine can initialize byUSX without executing the body
+  def byUSX(P: String, S: Option[Formula]): InputTactic = "byUS".byWithInputs(
+    List(P, S),
+    { (_seq: Sequent) =>
+      S match {
+        case None => UnifyUSCalculus.byUS(AxiomInfo(P), us => us)
+        case Some(substFml: Formula) =>
+          val subst = RenUSubst(
+            FormulaTools
+              .conjuncts(substFml)
+              .map({
+                case Equal(l, r) => (l, r)
+                case Equiv(l, r) => (l, r)
+                case s => throw new IllegalArgumentException(
+                    "Expected substitution of the shape t=s or p<->q, but got " + s.prettyString
+                  )
+              })
+          )
+          UnifyUSCalculus.byUS(AxiomInfo(P), (_: UnificationMatch.Subst) => subst)
+      }
+    },
+  )
+
+  @Derivation @nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.byUSX")
+  val byUSXInfo: InputTacticInfo = InputTacticInfo.create(
     name = "byUS",
     displayName = Some("US"),
     displayNameAscii = Some("byUS"),
     displayPremises = "|- P",
     displayConclusion = "|- S(P)",
+    constructor = TacticConstructor2
+      .create(StringArg("P"), OptionArg(FormulaArg("S")))((P: String, S: Option[Formula]) => byUSX(P, S)),
   )
-  private[btactics]
-  // NB: anon (Sequent) is necessary even though argument "seq" is not referenced:
-  // this ensures that TacticInfo initialization routine can initialize byUSX without executing the body
-  def byUSX(P: String, S: Option[Formula]): InputTactic = inputanon { (_seq: Sequent) =>
-    S match {
-      case None => UnifyUSCalculus.byUS(AxiomInfo(P), us => us)
-      case Some(substFml: Formula) =>
-        val subst = RenUSubst(
-          FormulaTools
-            .conjuncts(substFml)
-            .map({
-              case Equal(l, r) => (l, r)
-              case Equiv(l, r) => (l, r)
-              case s => throw new IllegalArgumentException(
-                  "Expected substitution of the shape t=s or p<->q, but got " + s.prettyString
-                )
-            })
-        )
-        UnifyUSCalculus.byUS(AxiomInfo(P), (_: UnificationMatch.Subst) => subst)
-    }
-  }
 
   /* ******************************************************************
    * unification and matching based auto-tactics (backward tableaux/sequent)
      *******************************************************************/
 
-  import TacticFactory._
+  import TacticFactory.*
   import org.keymaerax.btactics.macros.DerivationInfoAugmentors.AxiomInfoAugmentor
 
   /**
@@ -375,33 +414,45 @@ object UnifyUSCalculus {
 
   /** Do-not-call: exclusively for internal tactic interpreter usage. */
   // @note serializes as useAt({`axiomName`},{`k`})
-  @deprecated("Exclusively use for tactic interpreters") @Tactic(name = "useAt")
-  private[btactics] def useAtX(axiom: String, key: Option[String]): DependentPositionWithAppliedInputTactic =
-    inputanon { (pos: Position, seq: Sequent) =>
-      val keyPos = key.map(k => PosInExpr(k.split("\\.").map(Integer.parseInt).toList))
-      val info = AxiomInfo(axiom)
-      TryCatch(
-        keyPos match {
-          case None => UnifyUSCalculus.useAt(info)(pos) // @note serializes as codeName
-          case Some(k) =>
-            if (k != info.key) UnifyUSCalculus.useAt(info.provable, k)(pos)
-            else UnifyUSCalculus.useAt(info)(pos) // @note serializes as codeName
-        },
-        classOf[InapplicableUnificationKeyFailure],
-        (ex: InapplicableUnificationKeyFailure) => {
-          val keyExpr = keyPos match {
-            case None => info.provable.conclusion.sub(SuccPosition.base0(0, info.key))
-            case Some(k) => info.provable.conclusion.sub(SuccPosition.base0(0, k))
-          }
-          throw new InapplicableUnificationKeyFailure(
-            "Axiom " + axiom + " is not applicable at " +
-              seq.sub(pos).map(_.prettyString).getOrElse("<unknown>") +
-              "; cannot match with axiom key " + keyExpr.map(_.prettyString).getOrElse("<unknown>"),
-            ex,
-          )
-        },
-      )
-    }
+  @deprecated("Exclusively use for tactic interpreters")
+  private[btactics] def useAtX(axiom: String, key: Option[String]): DependentPositionWithAppliedInputTactic = "useAt"
+    .byWithInputs(
+      List(axiom, key),
+      { (pos: Position, seq: Sequent) =>
+        val keyPos = key.map(k => PosInExpr(k.split("\\.").map(Integer.parseInt).toList))
+        val info = AxiomInfo(axiom)
+        TryCatch(
+          keyPos match {
+            case None => UnifyUSCalculus.useAt(info)(pos) // @note serializes as codeName
+            case Some(k) =>
+              if (k != info.key) UnifyUSCalculus.useAt(info.provable, k)(pos)
+              else UnifyUSCalculus.useAt(info)(pos) // @note serializes as codeName
+          },
+          classOf[InapplicableUnificationKeyFailure],
+          (ex: InapplicableUnificationKeyFailure) => {
+            val keyExpr = keyPos match {
+              case None => info.provable.conclusion.sub(SuccPosition.base0(0, info.key))
+              case Some(k) => info.provable.conclusion.sub(SuccPosition.base0(0, k))
+            }
+            throw new InapplicableUnificationKeyFailure(
+              "Axiom " + axiom + " is not applicable at " +
+                seq.sub(pos).map(_.prettyString).getOrElse("<unknown>") +
+                "; cannot match with axiom key " + keyExpr.map(_.prettyString).getOrElse("<unknown>"),
+              ex,
+            )
+          },
+        )
+      },
+    )
+
+  @Derivation @nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.useAtX")
+  val useAtInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
+    name = "useAt",
+    constructor = TacticConstructor2
+      .create(StringArg("axiom"), OptionArg(StringArg("key")))((axiom: String, key: Option[String]) =>
+        useAtX(axiom, key)
+      ),
+  )
 
   /**
    * useAt(axiom)(pos) uses the given axiom/axiomatic rule at the given position in the sequent (by unifying and
@@ -660,11 +711,21 @@ object UnifyUSCalculus {
   /** @see [[US()]] */
   def uniformSubstitute(subst: USubst): InputTactic = inputanon { US(subst) }
 
-  @Tactic(name = "US", displayPremises = "|- P", displayConclusion = "|- S(P)")
-  def USX(S: List[SubstitutionPair]): InputTactic = inputanonP { (pr: ProvableSig) =>
-    // add user-provided substitutions to the definitions
-    US(USubst(S))(pr).reapply(pr.defs ++ Declaration.fromSubst(S, pr.defs))
-  }
+  def USX(S: List[SubstitutionPair]): InputTactic = "US".byWithInputsP(
+    List(S),
+    { (pr: ProvableSig) =>
+      // add user-provided substitutions to the definitions
+      US(USubst(S))(pr).reapply(pr.defs ++ Declaration.fromSubst(S, pr.defs))
+    },
+  )
+
+  @Derivation
+  val USXInfo: InputTacticInfo = InputTacticInfo.create(
+    name = "US",
+    displayPremises = "|- P",
+    displayConclusion = "|- S(P)",
+    constructor = TacticConstructor1.create(ListArg(SubstitutionArg("S")))((S: List[SubstitutionPair]) => USX(S)),
+  )
 
   private[btactics] def useAt(fact: ProvableSig, key: PosInExpr, inst: Option[Subst] => Subst): BuiltInPositionTactic =
     // @note linearity info no longer holds for nondefault key
@@ -1243,8 +1304,15 @@ object UnifyUSCalculus {
    * @see
    *   [[UnifyUSCalculus.CMon(PosInExpr)]]
    */
-  @Tactic(name = "CQ", displayPremises = "e=k", displayConclusion = "c(e)↔c(k)")
-  def CQ(inEqPos: PosInExpr): InputTactic = inputanon { CQFw(inEqPos) }
+  def CQ(inEqPos: PosInExpr): InputTactic = "CQ".byWithInputs(List(inEqPos), CQFw(inEqPos))
+
+  @Derivation
+  val CQInfo: InputTacticInfo = InputTacticInfo.create(
+    name = "CQ",
+    displayPremises = "e=k",
+    displayConclusion = "c(e)↔c(k)",
+    constructor = TacticConstructor1.create(PosInExprArg("inEqPos"))((inEqPos: PosInExpr) => CQ(inEqPos)),
+  )
 
   /** Builtin forward implementation of CQ. */
   private[btactics] def CQFw(inEqPos: PosInExpr): BuiltInTactic = anon { (provable: ProvableSig) =>
@@ -1312,8 +1380,15 @@ object UnifyUSCalculus {
    * @see
    *   [[UnifyUSCalculus.CMon(PosInExpr)]]
    */
-  @Tactic(name = "CQimp", displayPremises = "e=k", displayConclusion = "c(e)→c(k)")
-  def CQimp(inEqPos: PosInExpr): InputTactic = inputanon { CQimpFw(inEqPos) }
+  def CQimp(inEqPos: PosInExpr): InputTactic = "CQimp".byWithInputs(List(inEqPos), CQimpFw(inEqPos))
+
+  @Derivation
+  val CQimpInfo: InputTacticInfo = InputTacticInfo.create(
+    name = "CQimp",
+    displayPremises = "e=k",
+    displayConclusion = "c(e)→c(k)",
+    constructor = TacticConstructor1.create(PosInExprArg("inEqPos"))((inEqPos: PosInExpr) => CQimp(inEqPos)),
+  )
 
   /** Builtin forward implementation of CQimp. */
   private[btactics] def CQimpFw(inEqPos: PosInExpr): BuiltInTactic = anon { (provable: ProvableSig) =>
@@ -1381,8 +1456,15 @@ object UnifyUSCalculus {
    * @see
    *   [[UnifyUSCalculus.CMon(PosInExpr)]]
    */
-  @Tactic(name = "CQrevimp", displayPremises = "k=e", displayConclusion = "c(e)→c(k)")
-  def CQrevimp(inEqPos: PosInExpr): InputTactic = inputanon { CQrevimpFw(inEqPos) }
+  def CQrevimp(inEqPos: PosInExpr): InputTactic = "CQrevimp".byWithInputs(List(inEqPos), CQrevimpFw(inEqPos))
+
+  @Derivation
+  val CQrevimpInfo: InputTacticInfo = InputTacticInfo.create(
+    name = "CQrevimp",
+    displayPremises = "k=e",
+    displayConclusion = "c(e)→c(k)",
+    constructor = TacticConstructor1.create(PosInExprArg("inEqPos"))((inEqPos: PosInExpr) => CQrevimp(inEqPos)),
+  )
 
   /** Builtin forward implementation of CQrevimp. */
   private[btactics] def CQrevimpFw(inEqPos: PosInExpr): BuiltInTactic = anon { (provable: ProvableSig) =>
@@ -1462,8 +1544,15 @@ object UnifyUSCalculus {
    *   Germany, Proceedings, LNCS. Springer, 2015.
    *   [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic. arXiv 1503.01981]]
    */
-  @Tactic(name = "CECongruence", displayPremises = "P↔Q", displayConclusion = "C{P}↔C{Q}")
-  def CE(inEqPos: PosInExpr): InputTactic = inputanon { CEFw(inEqPos) }
+  def CE(inEqPos: PosInExpr): InputTactic = "CECongruence".byWithInputs(List(inEqPos), CEFw(inEqPos))
+
+  @Derivation
+  val CEInfo: InputTacticInfo = InputTacticInfo.create(
+    name = "CECongruence",
+    displayPremises = "P↔Q",
+    displayConclusion = "C{P}↔C{Q}",
+    constructor = TacticConstructor1.create(PosInExprArg("inEqPos"))((inEqPos: PosInExpr) => CE(inEqPos)),
+  )
 
   /** Builtin forward implementation of CE. */
   private[btactics] def CEFw(inEqPos: PosInExpr): BuiltInTactic = anon { (provable: ProvableSig) =>
@@ -1516,8 +1605,15 @@ object UnifyUSCalculus {
    *   Germany, Proceedings, LNCS. Springer, 2015.
    *   [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic. arXiv 1503.01981]]
    */
-  @Tactic(name = "CEimp", displayPremises = "P↔Q", displayConclusion = "C{P}→C{Q}")
-  def CEimp(inEqPos: PosInExpr): InputTactic = inputanon { CEimpFw(inEqPos) }
+  def CEimp(inEqPos: PosInExpr): InputTactic = "CEimp".byWithInputs(List(inEqPos), CEimpFw(inEqPos))
+
+  @Derivation
+  val CEimpInfo: InputTacticInfo = InputTacticInfo.create(
+    name = "CEimp",
+    displayPremises = "P↔Q",
+    displayConclusion = "C{P}→C{Q}",
+    constructor = TacticConstructor1.create(PosInExprArg("inEqPos"))((inEqPos: PosInExpr) => CEimp(inEqPos)),
+  )
 
   /** Builtin forward implementation of CEimp. */
   private[btactics] def CEimpFw(inEqPos: PosInExpr): BuiltInTactic = anon { (provable: ProvableSig) =>
@@ -1570,8 +1666,15 @@ object UnifyUSCalculus {
    *   Germany, Proceedings, LNCS. Springer, 2015.
    *   [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic. arXiv 1503.01981]]
    */
-  @Tactic(name = "CErevimp", displayPremises = "Q↔P", displayConclusion = "C{P}→C{Q}")
-  def CErevimp(inEqPos: PosInExpr): InputTactic = inputanon { CErevimpFw(inEqPos) }
+  def CErevimp(inEqPos: PosInExpr): InputTactic = "CErevimp".byWithInputs(List(inEqPos), CErevimpFw(inEqPos))
+
+  @Derivation
+  val CErevimpInfo: InputTacticInfo = InputTacticInfo.create(
+    name = "CErevimp",
+    displayPremises = "Q↔P",
+    displayConclusion = "C{P}→C{Q}",
+    constructor = TacticConstructor1.create(PosInExprArg("inEqPos"))((inEqPos: PosInExpr) => CErevimp(inEqPos)),
+  )
 
   /** Builtin forward implementation of CErevimp. */
   private[btactics] def CErevimpFw(inEqPos: PosInExpr): BuiltInTactic = anon { (provable: ProvableSig) =>
@@ -1637,8 +1740,15 @@ object UnifyUSCalculus {
    * @see
    *   [[HilbertCalculus.mond]]
    */
-  @Tactic(name = "CMonCongruence", displayPremises = "P→Q", displayConclusion = "C{P}→C{Q}")
-  def CMon(inEqPos: PosInExpr): InputTactic = inputanon { CMonFw(inEqPos) }
+  def CMon(inEqPos: PosInExpr): InputTactic = "CMonCongruence".byWithInputs(List(inEqPos), CMonFw(inEqPos))
+
+  @Derivation
+  val CMonCongruenceInfo: InputTacticInfo = InputTacticInfo.create(
+    name = "CMonCongruence",
+    displayPremises = "P→Q",
+    displayConclusion = "C{P}→C{Q}",
+    constructor = TacticConstructor1.create(PosInExprArg("inEqPos"))((inEqPos: PosInExpr) => CMon(inEqPos)),
+  )
 
   /** Builtin forward implementation of CMon. */
   @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
@@ -1683,10 +1793,9 @@ object UnifyUSCalculus {
    * @see
    *   [[CMon()]]
    */
-  @Tactic(name = "CMon", displayPremises = "P→Q", displayConclusion = "C{P}→C{Q}")
-  def CMon: BuiltInRightTactic = anon { (provable: ProvableSig, pos: SuccPosition) =>
+  def CMon: BuiltInRightTactic = "CMon".by { (provable: ProvableSig, pos: SuccPosition) =>
     // require(pos.isIndexDefined(sequent), "Cannot apply at undefined position " + pos + " in sequent " + sequent)
-    (provable(CoHideRight(pos.top), 0)(CMonFw(PosInExpr(pos.inExpr.pos.tail)).result _, 0))
+    provable(CoHideRight(pos.top), 0)(CMonFw(PosInExpr(pos.inExpr.pos.tail)).result _, 0)
   }
   //  def CMon: DependentPositionTactic = new DependentPositionTactic("CMon") {
   //    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
@@ -1697,6 +1806,14 @@ object UnifyUSCalculus {
   //      }
   //    }
   //  }
+
+  @Derivation
+  val CMonInfo: PositionTacticInfo = PositionTacticInfo.create(
+    name = "CMon",
+    displayPremises = "P→Q",
+    displayConclusion = "C{P}→C{Q}",
+    constructor = TacticConstructor0.create()(() => CMon),
+  )
 
   /**
    * CEat(fact) uses the equivalence `left<->right` or equality `left=right` or implication `left->right` fact for
@@ -1926,14 +2043,16 @@ object UnifyUSCalculus {
    * @see
    *   [[UnifyUSCalculus.CEat(Provable)]]
    */
-  @Tactic(
+  def cutAt(repl: Expression): DependentPositionWithAppliedInputTactic = "cutAt"
+    .byWithInputs(List(repl), { (pos: Position) => cutAtFw(repl)(pos) })
+
+  @Derivation
+  val cutAtInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
     name = "cutAt",
     displayPremises = "Γ |- C{repl}, Δ ;; Γ |- C{repl}→C{c}, Δ",
     displayConclusion = "Γ |- C{c}, Δ",
+    constructor = TacticConstructor1.create(ExpressionArg("repl"))((repl: Expression) => cutAt(repl)),
   )
-  def cutAt(repl: Expression): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position) =>
-    cutAtFw(repl)(pos)
-  }
 
   /** Builtin forward implementation of cutAt. */
   private[btactics] def cutAtFw(repl: Expression): BuiltInPositionTactic =
@@ -2972,23 +3091,29 @@ object UnifyUSCalculus {
    * critical choices. Unlike [[TactixLibrary.chaseAt]] will not branch or use propositional rules, merely transform the
    * chosen formula in place.
    */
-  @Tactic(name = "chase", displayNameLong = Some("Decompose"))
-  val chase: BuiltInPositionTactic = anon { chase(3, 3, AxIndex.axiomsFor(_: Expression)).computeResult _ }
-  private[btactics] lazy val chaseInfo: TacticInfo = chaseInfoFromTacticMacro
+  val chase: BuiltInPositionTactic = "chase".by { chase(3, 3, AxIndex.axiomsFor(_: Expression)).computeResult _ }
+
+  @Derivation
+  val chaseInfo: PositionTacticInfo = PositionTacticInfo
+    .create(name = "chase", displayNameLong = Some("Decompose"), constructor = TacticConstructor0.create()(() => chase))
 
   /**
    * Chases the expression at the indicated position forward. Unlike [[chase]] descends into formulas and terms
    * exhaustively.
    */
-  @Tactic(name = "deepChase", displayNameLong = Some("Deep Decompose"))
-  val deepChase: BuiltInPositionTactic = anon { (pr: ProvableSig, pos: Position) =>
+  val deepChase: BuiltInPositionTactic = "deepChase".by { (pr: ProvableSig, pos: Position) =>
     ProofRuleTactics.requireOneSubgoal(pr, "deepChase")
     val expanded = pr(TactixLibrary.expandAllDefsFw(Nil), 0)
     val chased = expanded(chase(3, 3, AxIndex.verboseAxiomsFor(_: Expression))(pos), 0)
     if (chased != expanded) chased else pr
   }
 
-  private[btactics] lazy val deepChaseInfo: TacticInfo = deepChaseInfoFromTacticMacro
+  @Derivation
+  val deepChaseInfo: PositionTacticInfo = PositionTacticInfo.create(
+    name = "deepChase",
+    displayNameLong = Some("Deep Decompose"),
+    constructor = TacticConstructor0.create()(() => deepChase),
+  )
 
   /**
    * Chase with bounded breadth and giveUp to stop.
