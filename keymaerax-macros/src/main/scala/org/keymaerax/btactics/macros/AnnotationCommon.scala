@@ -5,8 +5,6 @@
 
 package org.keymaerax.btactics.macros
 
-import scala.reflect.macros.blackbox
-
 object AnnotationCommon {
   type ExprPos = List[Int]
 
@@ -150,34 +148,6 @@ object AnnotationCommon {
         )
 
       case _ => throw new Exception("tactic with premises or inputs must have a conclusion")
-    }
-  }
-
-  def astForArgInfo(ai: ArgInfo)(implicit c: blackbox.Context): c.universe.Tree = {
-    import c.universe.*
-    ai match {
-      case GeneratorArg(name) => q"""new org.keymaerax.btactics.macros.GeneratorArg($name)"""
-      case VariableArg(name, allowsFresh) => q"""new org.keymaerax.btactics.macros.VariableArg($name, $allowsFresh)"""
-      case NumberArg(name, allowsFresh) => q"""new org.keymaerax.btactics.macros.NumberArg($name, $allowsFresh)"""
-      case StringArg(name, allowsFresh) => q"""new org.keymaerax.btactics.macros.StringArg($name, $allowsFresh)"""
-      case PosInExprArg(name, allowsFresh) => q"""new org.keymaerax.btactics.macros.PosInExprArg($name, $allowsFresh)"""
-      case SubstitutionArg(name, allowsFresh) =>
-        q"""new org.keymaerax.btactics.macros.SubstitutionArg($name, $allowsFresh)"""
-      case OptionArg(arg) => q"""new org.keymaerax.btactics.macros.OptionArg(${astForArgInfo(arg)})"""
-      case FormulaArg(name, allowsFresh) => q"""new org.keymaerax.btactics.macros.FormulaArg($name, $allowsFresh)"""
-      case ListArg(arg) => q"""new org.keymaerax.btactics.macros.ListArg(${astForArgInfo(arg)})"""
-      case ta: TermArg => q"""new org.keymaerax.btactics.macros.TermArg(${ta.name}, ${ta.allowsFresh})"""
-      case ea: ExpressionArg => q"""new org.keymaerax.btactics.macros.ExpressionArg (${ea.name}, ${ea.allowsFresh})"""
-    }
-  }
-
-  def astForDisplayLevel(level: DisplayLevel)(implicit c: blackbox.Context): c.universe.Tree = {
-    import c.universe.*
-    level match {
-      case DisplayLevel.Internal => q"org.keymaerax.btactics.macros.DisplayLevel.Internal"
-      case DisplayLevel.Browse => q"org.keymaerax.btactics.macros.DisplayLevel.Browse"
-      case DisplayLevel.Menu => q"org.keymaerax.btactics.macros.DisplayLevel.Menu"
-      case DisplayLevel.All => q"org.keymaerax.btactics.macros.DisplayLevel.All"
     }
   }
 
