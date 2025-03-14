@@ -5,24 +5,25 @@
 
 package org.keymaerax.btactics
 
-import org.keymaerax.bellerophon._
-import org.keymaerax.btactics.AnonymousLemmas._
-import org.keymaerax.btactics.Idioms._
+import org.keymaerax.bellerophon.*
+import org.keymaerax.btactics.AnonymousLemmas.*
+import org.keymaerax.btactics.Idioms.*
 import org.keymaerax.btactics.PropositionalTactics.prop
-import org.keymaerax.btactics.SequentCalculus._
-import org.keymaerax.btactics.TacticFactory._
-import org.keymaerax.btactics.TactixLibrary._
-import org.keymaerax.btactics.UnifyUSCalculus._
-import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
-import org.keymaerax.btactics.macros.{DisplayLevel, Tactic}
-import org.keymaerax.core._
-import org.keymaerax.infrastruct.Augmentors._
-import org.keymaerax.infrastruct._
-import org.keymaerax.parser.StringConverter._
+import org.keymaerax.btactics.SequentCalculus.*
+import org.keymaerax.btactics.TacticFactory.*
+import org.keymaerax.btactics.TactixLibrary.*
+import org.keymaerax.btactics.UnifyUSCalculus.*
+import org.keymaerax.btactics.macros.DerivationInfoAugmentors.*
+import org.keymaerax.btactics.macros.{DisplayLevel, PlainTacticInfo, PositionTacticInfo, TacticConstructor0}
+import org.keymaerax.core.*
+import org.keymaerax.core.btactics.annotations.Derivation
+import org.keymaerax.infrastruct.*
+import org.keymaerax.infrastruct.Augmentors.*
+import org.keymaerax.parser.StringConverter.*
 import org.keymaerax.pt.ProvableSig
 
 import scala.annotation.nowarn
-import scala.collection.immutable._
+import scala.collection.immutable.*
 import scala.util.Try
 
 /**
@@ -1098,14 +1099,17 @@ object SimplifierV3 {
     }
   }
 
-  @Tactic(
+  val simplify: BuiltInPositionTactic = "simplify".forward(simpTac())
+
+  @Derivation
+  val simplifyInfo: PositionTacticInfo = PositionTacticInfo.create(
     name = "simplify",
     displayName = Some("Simplify"),
     displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ |- simplify(P), Δ",
     displayConclusion = "Γ |- P, Δ",
+    constructor = TacticConstructor0.create()(() => simplify),
   )
-  val simplify: BuiltInPositionTactic = simpTac()
 
   /** Simplifies with full context (antecedent + negated succedent). */
   val simplifyAllCtx: BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
@@ -1194,14 +1198,17 @@ object SimplifierV3 {
     succ(hideTrues, 0)(hideFalses, 0)
   }
 
-  @Tactic(
+  val fullSimplify: BuiltInTactic = "fullSimplify".forward(fullSimpTac())
+
+  @Derivation
+  val fullSimplifyInfo: PlainTacticInfo = PlainTacticInfo.create(
     name = "fullSimplify",
     displayName = Some("Full Simplify"),
     displayLevel = DisplayLevel.Browse,
     displayPremises = "simplify(Γ |- P, Δ)",
     displayConclusion = "Γ |- P, Δ",
+    constructor = TacticConstructor0.create()(() => fullSimplify),
   )
-  val fullSimplify: BuiltInTactic = fullSimpTac()
 
   /** Term simplification indices */
 
