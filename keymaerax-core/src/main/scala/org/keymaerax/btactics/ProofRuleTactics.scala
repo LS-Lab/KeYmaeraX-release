@@ -5,14 +5,26 @@
 
 package org.keymaerax.btactics
 
-import org.keymaerax.bellerophon._
-import org.keymaerax.btactics.TacticFactory._
-import org.keymaerax.btactics.macros.{DisplayLevel, Tactic, TacticInfo}
-import org.keymaerax.core._
+import org.keymaerax.bellerophon.*
+import org.keymaerax.btactics.TacticFactory.*
+import org.keymaerax.btactics.macros.{
+  DisplayLevel,
+  InputPositionTacticInfo,
+  InputTacticInfo,
+  PositionTacticInfo,
+  TacticConstructor0,
+  TacticConstructor1,
+  TacticConstructor2,
+  VariableArg,
+}
+import org.keymaerax.core.*
+import org.keymaerax.core.btactics.annotations.Derivation
 import org.keymaerax.infrastruct.Augmentors.SequentAugmentor
 import org.keymaerax.infrastruct.{AntePosition, Position, SuccPosition}
 import org.keymaerax.pt.ProvableSig
 import org.keymaerax.{core, Logging}
+
+import scala.annotation.nowarn
 
 /**
  * Implementation: [[ProofRuleTactics]] contains tactical implementations of the propositional sequent calculus and
@@ -68,14 +80,18 @@ private object ProofRuleTactics extends Logging {
    * @see
    *   [[org.keymaerax.core.UniformRenaming]]
    */
-  @Tactic(
+  def uniformRename(what: Variable, repl: Variable): InputTactic = "uniformRename"
+    .byWithInputs(List(what, repl), uniformRenameFw(what, repl))
+
+  @Derivation
+  val uniformRenameInfo: InputTacticInfo = InputTacticInfo.create(
     name = "uniformRename",
     displayName = Some("UR"),
     displayPremises = "P(y) |- Q(y)",
     displayConclusion = "P(x) |- Q(x)",
-    inputs = "x:variable ;; y:variable",
+    constructor = TacticConstructor2
+      .create(VariableArg("x"), VariableArg("y"))((what: Variable, repl: Variable) => uniformRename(what, repl)),
   )
-  def uniformRename(what: Variable, repl: Variable): InputTactic = inputanon { uniformRenameFw(what, repl) }
 
   /** Builtin forward implementation of uniformRename. */
   private[btactics] def uniformRenameFw(what: Variable, repl: Variable): BuiltInTactic =
@@ -102,15 +118,19 @@ private object ProofRuleTactics extends Logging {
    *   if this bound renaming is not admissible for s at the indicated position because repl,repl',what' already
    *   occurred, or because a semantic symbol occurs, or because the formula at `pos` has the wrong shape.
    */
-  @Tactic(
+  def boundRename(what: Variable, repl: Variable): DependentPositionWithAppliedInputTactic = "boundRename"
+    .byWithInputs(List(what, repl), { (pos: Position) => boundRenameFw(what, repl)(pos) })
+
+  @Derivation
+  val boundRenameInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
     name = "boundRename",
     displayName = Some("BR"),
     displayPremises = "Γ |- ∀y Q(y), Δ",
     displayConclusion = "Γ |- ∀x Q(x), Δ",
-    inputs = "x:variable;;y:variable",
+    constructor = TacticConstructor2
+      .create(VariableArg("x"), VariableArg("y"))((what: Variable, repl: Variable) => boundRename(what, repl)),
   )
-  def boundRename(what: Variable, repl: Variable): DependentPositionWithAppliedInputTactic =
-    inputanon { (pos: Position) => boundRenameFw(what, repl)(pos) }
+
   def boundRenameFw(what: Variable, repl: Variable): BuiltInPositionTactic = anon { (pr: ProvableSig, pos: Position) =>
     val sequent = pr.subgoals.head
     if (pos.isTopLevel) topBoundRenaming(what, repl)(pos).computeResult(pr)
@@ -141,16 +161,9 @@ private object ProofRuleTactics extends Logging {
   }
 
   /** Bound renaming at a position (must point to universal quantifier or assignment). */
-  @Tactic(
-    name = "boundRenameAt",
-    displayName = Some("BRat"),
-    displayLevel = DisplayLevel.Browse,
-    displayPremises = "Γ |- ∀y Q(y), Δ",
-    displayConclusion = "Γ |- ∀x Q(x), Δ",
-    inputs = "y:variable",
-  )
-  def boundRenameAt(repl: Variable): DependentPositionWithAppliedInputTactic =
-    inputanon { (pos: Position, sequent: Sequent) =>
+  def boundRenameAt(repl: Variable): DependentPositionWithAppliedInputTactic = "boundRenameAt".byWithInputs(
+    List(repl),
+    { (pos: Position, sequent: Sequent) =>
       sequent.sub(pos) match {
         case Some(Forall(DifferentialSymbol(v) :: Nil, p)) => DLBySubst.stutter(v)(pos) & boundRename(v, repl)(pos) &
             HilbertCalculus.assignb(pos)
@@ -166,7 +179,18 @@ private object ProofRuleTactics extends Logging {
             "Expected quantifier or assignment at position " + pos.prettyString + ", but got " + ex.map(_.prettyString)
           )
       }
-    }
+    },
+  )
+
+  @Derivation
+  val boundRenameAtInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
+    name = "boundRenameAt",
+    displayName = Some("BRat"),
+    displayLevel = DisplayLevel.Browse,
+    displayPremises = "Γ |- ∀y Q(y), Δ",
+    displayConclusion = "Γ |- ∀x Q(x), Δ",
+    constructor = TacticConstructor1.create(VariableArg("y"))((repl: Variable) => boundRenameAt(repl)),
+  )
 
   private def topBoundRenaming(what: Variable, repl: Variable): PositionalTactic =
     anon { (provable: ProvableSig, pos: Position) =>
@@ -235,26 +259,36 @@ private object ProofRuleTactics extends Logging {
    *   if the quantified variable that is to be Skolemized already occurs free in the sequent. Use [[BoundRenaming]] to
    *   resolve.
    */
-  @Tactic(name = "skolem", displayPremises = "Γ |- p(x), Δ", displayConclusion = "Γ |- ∀x p(x), Δ")
-  val skolemizeR: BuiltInRightTactic = anon { (provable: ProvableSig, pos: SuccPosition) =>
-    {
-      require(pos.isTopLevel, "Skolemization only at top-level")
-      provable(core.Skolemize(pos.top), 0)
-    }
+  val skolemizeR: BuiltInRightTactic = "skolem".by { (provable: ProvableSig, pos: SuccPosition) =>
+    require(pos.isTopLevel, "Skolemization only at top-level")
+    provable(core.Skolemize(pos.top), 0)
   }
 
-  @deprecated("Use SequentCalculus.closeT instead") @Tactic(name = "closeTrue")
-  private[btactics] val closeTrue: BuiltInRightTactic = anon { (provable: ProvableSig, pos: SuccPosition) =>
+  @Derivation
+  val skolemInfo: PositionTacticInfo = PositionTacticInfo.create(
+    name = "skolem",
+    displayPremises = "Γ |- p(x), Δ",
+    displayConclusion = "Γ |- ∀x p(x), Δ",
+    constructor = TacticConstructor0.create()(() => skolemizeR),
+  )
+
+  @deprecated("Use SequentCalculus.closeT instead")
+  private[btactics] val closeTrue: BuiltInRightTactic = "closeTrue".by { (provable: ProvableSig, pos: SuccPosition) =>
     requireOneSubgoal(provable, "closeTrue")
     provable(core.CloseTrue(pos.top), 0)
   }
-  private[btactics] lazy val closeTrueInfo: TacticInfo = closeTrueInfoFromTacticMacro
 
-  @deprecated("Use SequentCalculus.closeF instead") @Tactic(name = "closeFalse")
-  private[btactics] val closeFalse: BuiltInLeftTactic = anon { (provable: ProvableSig, pos: AntePosition) =>
+  @Derivation @nowarn("cat=deprecation&origin=org.keymaerax.btactics.ProofRuleTactics.closeTrue")
+  private[btactics] val closeTrueInfo: PositionTacticInfo = PositionTacticInfo
+    .create(name = "closeTrue", constructor = TacticConstructor0.create()(() => closeTrue))
+
+  @deprecated("Use SequentCalculus.closeF instead")
+  private[btactics] val closeFalse: BuiltInLeftTactic = "closeFalse".by { (provable: ProvableSig, pos: AntePosition) =>
     requireOneSubgoal(provable, "closeFalse")
     provable(core.CloseFalse(pos.top), 0)
   }
-  private[btactics] lazy val closeFalseInfo: TacticInfo = closeFalseInfoFromTacticMacro
 
+  @Derivation @nowarn("cat=deprecation&origin=org.keymaerax.btactics.ProofRuleTactics.closeFalse")
+  private[btactics] val closeFalseInfo: PositionTacticInfo = PositionTacticInfo
+    .create(name = "closeFalse", constructor = TacticConstructor0.create()((() => closeFalse)))
 }
