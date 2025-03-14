@@ -6,30 +6,31 @@
 package org.keymaerax.btactics
 
 import org.keymaerax.Configuration
-import org.keymaerax.bellerophon._
-import org.keymaerax.btactics.AnonymousLemmas._
-import org.keymaerax.btactics.Idioms._
+import org.keymaerax.bellerophon.*
+import org.keymaerax.btactics.AnonymousLemmas.*
+import org.keymaerax.btactics.Idioms.*
 import org.keymaerax.btactics.PropositionalTactics.toSingleFormula
-import org.keymaerax.btactics.SequentCalculus._
-import org.keymaerax.btactics.TacticFactory._
-import org.keymaerax.btactics.TactixLibrary._
-import org.keymaerax.btactics.UnifyUSCalculus._
-import org.keymaerax.btactics.macros.Tactic
-import org.keymaerax.core._
-import org.keymaerax.infrastruct.Augmentors._
+import org.keymaerax.btactics.SequentCalculus.*
+import org.keymaerax.btactics.TacticFactory.*
+import org.keymaerax.btactics.TactixLibrary.*
+import org.keymaerax.btactics.UnifyUSCalculus.*
+import org.keymaerax.btactics.macros.{InputTacticInfo, ListArg, StringArg, TacticConstructor1, VariableArg}
+import org.keymaerax.core.*
+import org.keymaerax.core.btactics.annotations.Derivation
+import org.keymaerax.infrastruct.*
+import org.keymaerax.infrastruct.Augmentors.*
 import org.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
-import org.keymaerax.infrastruct._
-import org.keymaerax.parser.StringConverter._
+import org.keymaerax.parser.StringConverter.*
 import org.keymaerax.parser.{Declaration, InterpretedSymbols, TacticReservedSymbols}
 import org.keymaerax.pt.ProvableSig
-import org.keymaerax.tools._
+import org.keymaerax.tools.*
 import org.keymaerax.tools.ext.QETacticTool
 import org.keymaerax.tools.install.ToolConfiguration
 import org.keymaerax.tools.qe.MathematicaOpSpec
 
 import scala.annotation.{nowarn, tailrec}
-import scala.collection.immutable._
-import scala.math.Ordering.Implicits._
+import scala.collection.immutable.*
+import scala.math.Ordering.Implicits.*
 import scala.util.{Failure, Success, Try}
 
 /**
@@ -42,11 +43,11 @@ import scala.util.{Failure, Success, Try}
 private object ToolTactics {
   private val namespace = "tooltactics"
 
-  @Tactic(name = "useSolver")
   // NB: anon (Sequent) is necessary even though argument "seq" is not referenced:
   // this ensures that TacticInfo initialization routine can initialize byUSX without executing the body
-  def switchSolver(toolStr: String): InputTactic = inputanon { (_: Sequent) =>
-    {
+  def switchSolver(toolStr: String): InputTactic = "useSolver".byWithInputs(
+    List(toolStr),
+    { (_: Sequent) =>
       val tool = ToolName.parse(toolStr)
 
       def isWolframProvider(p: ToolProvider): Boolean = p match {
@@ -106,8 +107,14 @@ private object ToolTactics {
           throw new InputFormatFailure("Unknown tool " + tool + "; please use one of mathematica|wolframengine|z3")
       }
       Idioms.nil
-    }
-  }
+    },
+  )
+
+  @Derivation
+  val switchSolver: InputTacticInfo = InputTacticInfo.create(
+    name = "useSolver",
+    constructor = TacticConstructor1.create(StringArg("toolStr"))((toolStr: String) => switchSolver(toolStr)),
+  )
 
   /** Assert that there is no counter example. skip if none, error if there is. */
   // was  "assertNoCEX"
@@ -210,8 +217,13 @@ private object ToolTactics {
   }
 
   /** QE preparation steps, forms universal closure in the `order` of variables (lexicographic if empty). */
-  @Tactic(name = "prepareQE")
-  def prepareQE(order: List[Variable]): InputTactic = inputanonP { prepareQE(order, skip) }
+  def prepareQE(order: List[Variable]): InputTactic = "prepareQE".byWithInputs(List(order), { prepareQE(order, skip) })
+
+  @Derivation
+  val prepareQEInfo: InputTacticInfo = InputTacticInfo.create(
+    name = "prepareQE",
+    constructor = TacticConstructor1.create(ListArg(VariableArg("order")))((order: List[Variable]) => prepareQE(order)),
+  )
 
   /** Performs QE and fails if the goal isn't closed. */
   def fullQE(defs: Declaration, order: List[Variable] = Nil)(qeTool: => QETacticTool): BelleExpr = internal(
