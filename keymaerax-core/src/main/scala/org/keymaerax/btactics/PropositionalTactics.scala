@@ -5,15 +5,22 @@
 
 package org.keymaerax.btactics
 
-import org.keymaerax.bellerophon._
-import org.keymaerax.btactics.SequentCalculus._
-import org.keymaerax.btactics.TacticFactory._
+import org.keymaerax.bellerophon.*
+import org.keymaerax.btactics.SequentCalculus.*
+import org.keymaerax.btactics.TacticFactory.*
 import org.keymaerax.btactics.TacticHelper.timed
-import org.keymaerax.btactics.TactixLibrary._
+import org.keymaerax.btactics.TactixLibrary.*
 import org.keymaerax.btactics.macros.DerivationInfoAugmentors.ProvableInfoAugmentor
-import org.keymaerax.btactics.macros.{AxiomInfo, Tactic, TacticInfo}
-import org.keymaerax.core.{Close, Cut, EquivLeft, NotLeft, _}
-import org.keymaerax.infrastruct.Augmentors._
+import org.keymaerax.btactics.macros.{
+  AxiomInfo,
+  PlainTacticInfo,
+  PositionTacticInfo,
+  TacticConstructor0,
+  TwoPositionTacticInfo,
+}
+import org.keymaerax.core.btactics.annotations.Derivation
+import org.keymaerax.core.{Close, Cut, EquivLeft, NotLeft, *}
+import org.keymaerax.infrastruct.Augmentors.*
 import org.keymaerax.infrastruct.{
   AntePosition,
   FormulaTools,
@@ -224,10 +231,10 @@ private[keymaerax] object PropositionalTactics extends Logging {
               )
             )
             case Some(_: Box) =>
-              import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
+              import org.keymaerax.btactics.macros.DerivationInfoAugmentors.*
               provable(UnifyUSCalculus.US(Ax.monbaxiom.provable), 0)
             case Some(_: Diamond) =>
-              import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
+              import org.keymaerax.btactics.macros.DerivationInfoAugmentors.*
               provable(UnifyUSCalculus.US(Ax.mondrule.provable), 0)
             case Some(_: Forall) => provable(
                 FOQuantifierTactics.allSkolemize(SuccPos(0)) andThen
@@ -259,8 +266,7 @@ private[keymaerax] object PropositionalTactics extends Logging {
     }
 
   /** Automated modus ponens for p->q ==> ; tries to automatically prove p from the rest of the assumptions. */
-  @Tactic(name = "autoMP")
-  private[btactics] val autoMP: DependentPositionTactic = anon { (pos: Position, seq: Sequent) =>
+  private[btactics] val autoMP: DependentPositionTactic = "autoMP".by { (pos: Position, seq: Sequent) =>
     seq(pos.checkAnte.checkTop) match {
       case Imply(p, _) =>
         val pi = seq.ante.indexWhere(_ == p)
@@ -302,7 +308,10 @@ private[keymaerax] object PropositionalTactics extends Logging {
       case _ => throw new TacticInapplicableFailure("Applicable only to implications at top-level in the antecedent")
     }
   }
-  private[btactics] lazy val autoMPInfo: TacticInfo = autoMPInfoFromTacticMacro
+
+  @Derivation
+  private[btactics] val autoMPInfo: PositionTacticInfo = PositionTacticInfo
+    .create(name = "autoMP", constructor = TacticConstructor0.create()(() => autoMP))
 
   /**
    * Converts a sequent into a single formula.
@@ -316,8 +325,7 @@ private[keymaerax] object PropositionalTactics extends Logging {
    *   (A ^ B) -> (S \/ T \/ U)
    * }}}
    */
-  @Tactic(name = "toSingleFormula")
-  val toSingleFormula: BuiltInTactic = anon { (pr: ProvableSig) =>
+  val toSingleFormula: BuiltInTactic = "toSingleFormula".by { (pr: ProvableSig) =>
     ProofRuleTactics.requireOneSubgoal(pr, "toSingleFormula")
     val sequent = pr.subgoals.head
     if (sequent.ante.isEmpty && sequent.succ.isEmpty) {
@@ -367,6 +375,10 @@ private[keymaerax] object PropositionalTactics extends Logging {
       )
     }
   }
+
+  @Derivation
+  val toSingleFormulaInfo: PlainTacticInfo = PlainTacticInfo
+    .create(name = "toSingleFormula", constructor = TacticConstructor0.create()(() => toSingleFormula))
 
   /** Forward propositional tactic for internal use (does not create branch labels). */
   val prop: BuiltInTactic = prop(alphaRules, betaRules)(List.empty, List.empty)
@@ -548,67 +560,71 @@ private[keymaerax] object PropositionalTactics extends Logging {
    *   \forall x. p(x) <-> q(z), p(x) |-
    * }}}
    */
-  @Tactic(
+  val equivRewriting: BuiltInTwoPositionTactic = "equivRewriting"
+    .by { (p: ProvableSig, equivPos: Position, targetPos: Position) =>
+      assert(p.subgoals.length == 1, "Assuming one subgoal.")
+      val seq = p.subgoals.head
+      val target = seq(targetPos).asInstanceOf[Formula]
+      seq(equivPos) match {
+        case Equiv(l, r) =>
+          if (targetPos.isTopLevel) instantiatedEquivRewritingImpl(p, equivPos, targetPos.top)
+          else {
+            val (ctx, e) = seq.at(targetPos)
+            val repl = if (e == l) r else l
+            val equiv = Equiv(ctx(e), ctx(repl))
+            (p(Cut(equiv), 0)
+            // use cut equivalence ctx(l) <-> ctx(r)
+            (instantiatedEquivRewriting(AntePos(seq.ante.length), targetPos.top), 0)(
+              HideLeft(AntePos(seq.ante.length)),
+              0,
+            )
+            // show cut; @todo more targeted tactic
+            (prop, 1))
+          }
+        case fa: Forall =>
+          /*
+           * Game plan:
+           *   1. Compute the instantiation of p(equivPos) that matches p(targetPos)
+           *   2. Cut in a new quantified equivalence
+           *   3. Perform instantiations on this new quantified equivalence.
+           *   4. perform instantiatedEquivRewritingImpl using the newly instantiated equivalence
+           *   5. Hide the instantiated equivalence OR the original assumption.
+           */
+          assert(
+            targetPos.isTopLevel,
+            "Equivalence rewriting of universally quantified fact only when target is top-level",
+          )
+
+          // step 1
+          val instantiation = computeInstantiation(fa, target)
+
+          val cutPos = AntePos(p.subgoals.head.ante.length) // Position of equivalence to instantiate.
+
+          // step 2: input is p and output is postCut
+          (
+            p(Cut(fa), 0)(closeId(equivPos.checkAnte.top, SuccPos(p.subgoals.head.succ.length)), 1)
+            // step 3: input is postCut and output is instantiatedEquivalence
+            (
+              vars(fa)
+                .map(x => FOQuantifierTactics.allInstantiate(Some(x), Some(instantiation(x)))(cutPos))
+                .foldLeft(_: ProvableSig)({ case (pr, r) => pr(r, 0) }),
+              0,
+            )
+            // step 4
+            (instantiatedEquivRewritingImpl(_, cutPos, targetPos.top), 0)
+            // step 5
+            (if (targetPos.isAnte) HideLeft(targetPos.checkAnte.top) else HideLeft(cutPos), 0)
+          )
+      }
+    }
+
+  @Derivation
+  val equivRewritingInfo: TwoPositionTacticInfo = TwoPositionTacticInfo.create(
     name = "equivRewriting",
     displayPremises = "Γ, ∀X p(X) <-> q(X) |- q(Z), Δ",
     displayConclusion = "Γ, ∀X p(X) <-> q(X) |- p(Z), Δ",
+    constructor = TacticConstructor0.create()(() => equivRewriting),
   )
-  val equivRewriting: BuiltInTwoPositionTactic = anon((p: ProvableSig, equivPos: Position, targetPos: Position) => {
-    assert(p.subgoals.length == 1, "Assuming one subgoal.")
-    val seq = p.subgoals.head
-    val target = seq(targetPos).asInstanceOf[Formula]
-    seq(equivPos) match {
-      case Equiv(l, r) =>
-        if (targetPos.isTopLevel) instantiatedEquivRewritingImpl(p, equivPos, targetPos.top)
-        else {
-          val (ctx, e) = seq.at(targetPos)
-          val repl = if (e == l) r else l
-          val equiv = Equiv(ctx(e), ctx(repl))
-          (p(Cut(equiv), 0)
-          // use cut equivalence ctx(l) <-> ctx(r)
-          (instantiatedEquivRewriting(AntePos(seq.ante.length), targetPos.top), 0)(
-            HideLeft(AntePos(seq.ante.length)),
-            0,
-          )
-          // show cut; @todo more targeted tactic
-          (prop, 1))
-        }
-      case fa: Forall =>
-        /*
-         * Game plan:
-         *   1. Compute the instantiation of p(equivPos) that matches p(targetPos)
-         *   2. Cut in a new quantified equivalence
-         *   3. Perform instantiations on this new quantified equivalence.
-         *   4. perform instantiatedEquivRewritingImpl using the newly instantiated equivalence
-         *   5. Hide the instantiated equivalence OR the original assumption.
-         */
-        assert(
-          targetPos.isTopLevel,
-          "Equivalence rewriting of universally quantified fact only when target is top-level",
-        )
-
-        // step 1
-        val instantiation = computeInstantiation(fa, target)
-
-        val cutPos = AntePos(p.subgoals.head.ante.length) // Position of equivalence to instantiate.
-
-        // step 2: input is p and output is postCut
-        (
-          p(Cut(fa), 0)(closeId(equivPos.checkAnte.top, SuccPos(p.subgoals.head.succ.length)), 1)
-          // step 3: input is postCut and output is instantiatedEquivalence
-          (
-            vars(fa)
-              .map(x => FOQuantifierTactics.allInstantiate(Some(x), Some(instantiation(x)))(cutPos))
-              .foldLeft(_: ProvableSig)({ case (pr, r) => pr(r, 0) }),
-            0,
-          )
-          // step 4
-          (instantiatedEquivRewritingImpl(_, cutPos, targetPos.top), 0)
-          // step 5
-          (if (targetPos.isAnte) HideLeft(targetPos.checkAnte.top) else HideLeft(cutPos), 0)
-        )
-    }
-  })
 
   private def computeInstantiation(fa: Forall, target: Formula): RenUSubst = {
     val equiv = bodyOf(fa)
@@ -739,12 +755,18 @@ private[keymaerax] object PropositionalTactics extends Logging {
       (NotLeft(negatedOtherPos), 0)(HideLeft(AntePos(postCut.subgoals(1).ante.length - 2)), 0))
     }
   }
-  @Tactic(name = "instantiatedEquivRewriting")
-  val instantiatedEquivRewriting: BuiltInTwoPositionTactic =
-    anon((p: ProvableSig, equivPos: Position, targetPos: Position) => {
+
+  val instantiatedEquivRewriting: BuiltInTwoPositionTactic = "instantiatedEquivRewriting"
+    .by { (p: ProvableSig, equivPos: Position, targetPos: Position) =>
       assert(targetPos.isTopLevel, "Simple equivalence rewriting only when target is top-level")
       instantiatedEquivRewritingImpl(p, equivPos, targetPos.top)
-    })
+    }
+
+  @Derivation
+  val instantiatedEquivRewritingInfo: TwoPositionTacticInfo = TwoPositionTacticInfo.create(
+    name = "instantiatedEquivRewriting",
+    constructor = TacticConstructor0.create()(() => instantiatedEquivRewriting),
+  )
 
   // endregion
 
@@ -1075,8 +1097,7 @@ private[keymaerax] object PropositionalTactics extends Logging {
   }
 
   /** Reassociates the formula at position `pos` to default right-associativity. */
-  @Tactic(name = "rightAssociate")
-  def rightAssociate: BuiltInPositionTactic = anon { (p: ProvableSig, pos: Position) =>
+  def rightAssociate: BuiltInPositionTactic = "rightAssociate".by { (p: ProvableSig, pos: Position) =>
     ProofRuleTactics.requireOneSubgoal(p, "PropositionalTactics.rightAssociate")
     p.subgoals.head.sub(pos) match {
       case Some(f: Formula) =>
@@ -1087,6 +1108,10 @@ private[keymaerax] object PropositionalTactics extends Logging {
         )
     }
   }
+
+  @Derivation
+  val rightAssociateInfo: PositionTacticInfo = PositionTacticInfo
+    .create(name = "rightAssociate", constructor = TacticConstructor0.create()(() => rightAssociate))
 
   /** Apply sub-proofs at a right-associated goal. */
   private def applySubproofs(subProofs: List[ProvableSig], key: PosInExpr): BuiltInPositionTactic =
