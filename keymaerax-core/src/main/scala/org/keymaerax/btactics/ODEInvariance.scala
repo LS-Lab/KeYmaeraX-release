@@ -1708,8 +1708,8 @@ object ODEInvariance extends Logging {
     // This generates the last one STRICT
     val firsts = lies.take(trueBound)
     val last = lies.last
-    val opGt = if (geq) Greater else Less
-    val opGe = if (geq) GreaterEqual else LessEqual
+    val opGt = if (geq) Greater.apply else Less.apply
+    val opGe = if (geq) GreaterEqual.apply else LessEqual.apply
 
     // todo: return p*=0 as well, but not needed for now
     firsts.foldRight(opGt(last, Number(0)): Formula)((p, f) => And(opGe(p, Number(0)), Imply(Equal(p, Number(0)), f)))

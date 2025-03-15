@@ -822,14 +822,14 @@ object ModelPlex extends ModelPlexTrait with Logging {
     val readInitialSensors = skipPostfixedAssignments(senseVars.map(AssignAny.apply))
     val readSensors = skipPostfixedAssignments(sensePostVars.values.toList.sorted[NamedSymbol].map(AssignAny.apply))
     val readCtrls = skipPostfixedAssignments(ctrlVars.sorted[NamedSymbol].map(AssignAny.apply))
-    val copySensors = skipPostfixedAssignments(sensePostVars.toList.sortBy[NamedSymbol](_._1).map(Assign.tupled))
+    val copySensors = skipPostfixedAssignments(sensePostVars.toList.sortBy[NamedSymbol](_._1).map(Assign.apply.tupled))
 
     val sense = Compose(readSensors, Compose(Test(plantMonitor), copySensors))
     // ctrlVars+:=*;
     val ctrl = skipPostfixedAssignments(ctrlVars.map(postVar).map(AssignAny.apply))
     // senseVars\ctrlVars:=senseVars
     val nonCtrlState = skipPostfixedAssignments(
-      (senseVars.toSet -- ctrlVars.toSet).toList.sorted[NamedSymbol].map(v => postVar(v) -> v).map(Assign.tupled)
+      (senseVars.toSet -- ctrlVars.toSet).toList.sorted[NamedSymbol].map(v => postVar(v) -> v).map(Assign.apply.tupled)
     )
     // ctrlVars:=ctrlVarsTemp
     val operationalize = skipPostfixedAssignments(ctrlVars.map(v => Assign(v, postVar(v))))

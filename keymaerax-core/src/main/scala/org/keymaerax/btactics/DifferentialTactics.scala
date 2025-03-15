@@ -1682,8 +1682,8 @@ private object DifferentialTactics extends Logging {
         )
     }
     val (lhs, rhs, openSetConstructor) = postcondition match {
-      case GreaterEqual(l, r) => (l, r, Greater)
-      case LessEqual(l, r) => (l, r, Less)
+      case GreaterEqual(l, r) => (l, r, Greater.apply)
+      case LessEqual(l, r) => (l, r, Less.apply)
       case _ => throw new TacticInapplicableFailure(
           s"splitWeakInequality Expected a weak inequality in the post condition (<= or >=) but found: $postcondition"
         )

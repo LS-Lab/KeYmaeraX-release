@@ -465,7 +465,7 @@ object SOSSolve {
       }
     def elimDenoms(denoms: List[(Boolean, Term, Term, Position)]): BelleExpr = denoms match {
       case (eq, num, denom, pos) :: denoms =>
-        val (cmp, divNePrv) = if (eq) (Equal, Ax.divNeEq) else (NotEqual, Ax.divNeNe)
+        val (cmp, divNePrv) = if (eq) (Equal.apply, Ax.divNeEq) else (NotEqual.apply, Ax.divNeNe)
         cutL(cmp(num, Number(0)))(pos) & Idioms.<(
           elimDenoms(denoms),
           useAt(divNePrv, PosInExpr(1 :: Nil))(1) &

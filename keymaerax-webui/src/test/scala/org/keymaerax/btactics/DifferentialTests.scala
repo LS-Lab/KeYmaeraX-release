@@ -2049,12 +2049,12 @@ class DifferentialTests extends TacticTestBase {
                 True,
               )
               val cmp = rand.rand.nextInt(6) match {
-                case 0 => Equal
-                case 1 => GreaterEqual
-                case 2 => Greater
-                case 3 => LessEqual
-                case 4 => Less
-                case 5 => NotEqual
+                case 0 => Equal.apply
+                case 1 => GreaterEqual.apply
+                case 2 => Greater.apply
+                case 3 => LessEqual.apply
+                case 4 => Less.apply
+                case 5 => NotEqual.apply
               }
               val swapit =
                 if (rand.rand.nextBoolean()) (a: Term, b: Term) => cmp(a, b) else (a: Term, b: Term) => cmp(b, a)
