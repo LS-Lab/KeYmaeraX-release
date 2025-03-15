@@ -64,9 +64,11 @@ lazy val core = project
     // Since some dependencies updated to slf4j 2 already, we have to use an slf4j 2 provider
     // and force all other dependencies to use slf4j 2 as well via sbt's default version conflict resolution.
     //
-    // https://github.com/jokade/slogging?tab=readme-ov-file#getting-started
+    // https://www.slf4j.org/manual.html#projectDep
+    // https://github.com/lightbend-labs/scala-logging
     // https://www.baeldung.com/slf4j-with-log4j2-logback#Log4j2
-    libraryDependencies += "biz.enef" %% "slogging-slf4j" % "0.6.2",
+    libraryDependencies += "org.slf4j" % "slf4j-api" % "2.0.17", // Force slf4j 2
+    libraryDependencies += "com.typesafe.scala-logging" %% "scala-logging" % "3.9.5",
     libraryDependencies += "org.apache.logging.log4j" % "log4j-api" % "2.24.3",
     libraryDependencies += "org.apache.logging.log4j" % "log4j-core" % "2.24.3",
     libraryDependencies += "org.apache.logging.log4j" % "log4j-slf4j2-impl" % "2.24.3",

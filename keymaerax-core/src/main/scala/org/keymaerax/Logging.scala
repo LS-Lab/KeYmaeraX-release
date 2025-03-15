@@ -5,7 +5,7 @@
 
 package org.keymaerax
 
-import slogging.LazyLogging
+import com.typesafe.scalalogging.LazyLogging
 
 /** Provides a class-specific logger. */
 trait Logging extends LazyLogging {}
