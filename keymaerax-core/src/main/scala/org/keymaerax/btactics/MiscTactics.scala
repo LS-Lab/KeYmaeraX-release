@@ -644,14 +644,6 @@ object TacticFactory {
    */
   implicit class TacticForNameFactory(val name: String) extends Logging {
     if (name == "") throw new InternalError("Don't use empty name, use ANON for anonymous inner tactics")
-    /*if (false)*/ {
-      try {
-        if (name != ANON && DerivationInfo.ofCodeName(name).codeName.toLowerCase() != name.toLowerCase()) logger.warn(
-          "WARNING: codeName should be changed to a consistent name: " + name + " vs. " +
-            DerivationInfo.ofCodeName(name).codeName
-        )
-      } catch { case ex: IllegalArgumentException => logger.warn("WARNING: codeName not found: " + name, ex) }
-    }
 
     /** Creates a named tactic */
     def by(t: BelleExpr): BelleExpr = NamedTactic(name, t)
