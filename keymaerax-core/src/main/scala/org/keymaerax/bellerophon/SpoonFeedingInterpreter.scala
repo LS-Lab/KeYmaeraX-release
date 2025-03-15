@@ -8,8 +8,8 @@ package org.keymaerax.bellerophon
 import org.keymaerax.Logging
 import org.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import org.keymaerax.btactics.DebuggingTactics
-import org.keymaerax.core._
-import org.keymaerax.infrastruct.Augmentors._
+import org.keymaerax.core.*
+import org.keymaerax.infrastruct.Augmentors.*
 import org.keymaerax.infrastruct.{RenUSubst, RestrictedBiDiUnificationMatch}
 import org.keymaerax.parser.Declaration
 import org.keymaerax.pt.ProvableSig
@@ -475,9 +475,7 @@ case class SpoonFeedingInterpreter(
                   catch {
                     // in contrast to .unifiable, this suppresses "Sequent un-unifiable Un-Unifiable" message, which clutter STDIO.
                     // fall back to user-provided substitution
-                    case _: UnificationException =>
-                      // if (BelleExpr.DEBUG) println("USubst Pattern Incomplete -- could not find a unifier for any option" + t)
-                      (RenUSubst(Nil), expr)
+                    case _: UnificationException => (RenUSubst(Nil), expr)
                   }
                 case _ =>
                   throw new IllFormedTacticApplicationException("Cannot unify non-sequent types.").inContext(t, "")

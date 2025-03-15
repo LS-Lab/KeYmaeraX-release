@@ -60,7 +60,6 @@ object BellePrettyPrinter extends (BelleExpr => String) {
   @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   private def pp(e: BelleExpr, indent: Int): String = {
     // Prefer the code name if one exists for this tactic, but looking up code name may throw exception.
-    //      println("Looking for a code name for " + e)
     Try(TacticInfo.apply(e.prettyString)).toOption match {
       // Anything that needs a generator (e.g. master) will never be a BelleExpr so might as well take the codeName
       // directly for those.

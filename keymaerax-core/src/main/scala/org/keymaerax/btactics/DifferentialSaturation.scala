@@ -7,13 +7,13 @@ package org.keymaerax.btactics
 
 import org.keymaerax.Logging
 import org.keymaerax.bellerophon.ProverSetupException
-import org.keymaerax.btactics.helpers.DifferentialHelper._
-import org.keymaerax.btactics.TactixLibrary._
-import org.keymaerax.tools.ext.SimplificationTool
-import org.keymaerax.core._
+import org.keymaerax.btactics.TactixLibrary.*
+import org.keymaerax.btactics.helpers.DifferentialHelper.*
+import org.keymaerax.core.*
 import org.keymaerax.infrastruct.{FormulaTools, SubstitutionHelper, UnificationMatch}
+import org.keymaerax.tools.ext.SimplificationTool
 
-import scala.collection.immutable._
+import scala.collection.immutable.*
 import scala.collection.mutable.ListBuffer
 
 /**
@@ -177,10 +177,7 @@ object DifferentialSaturation extends Logging {
     // val fml = diffClosure(Imply(dom,invCand),ode)
     val fml = diffClosure(invCand, ode) // todo: disabled saturation
 
-    // println("Candidate",candidate,dom)
-    // println("closure of derivative",fml)
     // val fml = instClosure(Imply(dom,invCand),instvars)
-    // println("Formula:"+fml)
     val substeqns = guessInstantiations(fml, instvars)
 
     // Find the first substitution that results in a non-trivial invariant term

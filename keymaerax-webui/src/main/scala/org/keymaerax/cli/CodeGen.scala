@@ -5,10 +5,11 @@
 
 package org.keymaerax.cli
 
-import org.keymaerax.btactics._
+import org.keymaerax.Logging
+import org.keymaerax.btactics.*
 import org.keymaerax.codegen.{CGenerator, CMonitorGenerator, CodeGenerator}
 import org.keymaerax.core.{BaseVariable, Equiv, Formula, Imply, StaticSemantics, True}
-import org.keymaerax.infrastruct.Augmentors._
+import org.keymaerax.infrastruct.Augmentors.*
 import org.keymaerax.infrastruct.FormulaTools
 import org.keymaerax.parser.{ArchiveParser, ParsedArchiveEntry}
 
@@ -16,7 +17,7 @@ import java.io.PrintWriter
 import scala.reflect.io.File
 
 /** Code generator command-line interface. */
-object CodeGen {
+object CodeGen extends Logging {
 
   /**
    * Code generator.
@@ -56,7 +57,7 @@ object CodeGen {
       else codegen(e, interval, outputFileName, head, vars)
       outputFileName
     })
-    println("Generated\n  " + written.mkString("\n  "))
+    logger.info(s"Generated\n${written.mkString("\n  ")}")
   }
 
   def codegen(
@@ -68,27 +69,27 @@ object CodeGen {
   ): Unit = {
     if (interval) {
       // @todo check that when assuming the output formula as an additional untrusted lemma, the Provable isProved.
-      System
-        .err
-        .println(
-          "Cannot yet augment compiled code with interval arithmetic to guard against floating-point roundoff errors\n(use -nointerval instead)"
-        )
+      logger.error(
+        """Cannot yet augment compiled code with interval arithmetic to guard
+          |against floating-point roundoff errors (use -nointerval instead)"""".stripMargin
+      )
 
-      println("Interval arithmetic: unfinished")
-      System.err.println("Interval arithmetic: unfinished")
+      logger.error("Interval arithmetic: unfinished")
       // @todo wipe out output file PrintWriter above has already emptied the output file
       // @todo pw.close()
       KeymaeraxCore.exit(-1)
       // TODO what to do when proof cannot be checked?
     } else {
-      println(
-        "Interval arithmetic: Skipped interval arithmetic generation\n(use -interval to guard against floating-point roundoff errors)"
+      logger.info(
+        """Interval arithmetic: Skipped interval arithmetic generation
+          |(use -interval to guard against floating-point roundoff errors)""".stripMargin
       )
     }
 
     val inputFormula = entry.model.asInstanceOf[Formula]
     if (!inputFormula.isFOL) {
-      println("Input is not an arithmetic formula; please use option '-modelplex' first to obtain a monitor formula")
+      logger
+        .error("Input is not an arithmetic formula; please use option '-modelplex' first to obtain a monitor formula")
       KeymaeraxCore.exit(-1)
     }
 
@@ -107,7 +108,7 @@ object CodeGen {
     val output = (
       new CGenerator(new CMonitorGenerator(Symbol("resist"), entry.defs), True, entry.defs)
     )(inputFormula, theVars, Set(), outputFileName)
-    Console.println("[codegen time " + (System.currentTimeMillis() - codegenStart) + "ms]")
+    logger.debug(s"[codegen time ${System.currentTimeMillis() - codegenStart} ms]")
     val pw = new PrintWriter(outputFileName)
     pw.write(head)
     pw.write("/* @evidence: print of CGenerator of input */\n\n")
@@ -124,7 +125,8 @@ object CodeGen {
     val monitorFml = entry.model.asInstanceOf[Formula]
 
     if (!monitorFml.isFOL) {
-      println("Input is not an arithmetic formula; please use option '-modelplex' first to obtain a monitor formula")
+      logger
+        .error("Input is not an arithmetic formula; please use option '--modelplex' first to obtain a monitor formula")
       KeymaeraxCore.exit(-1)
     }
 

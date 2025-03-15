@@ -7,10 +7,10 @@ package org.keymaerax.btactics.helpers
 
 import org.keymaerax.bellerophon.{BelleExpr, BuiltInTactic}
 import org.keymaerax.btactics.UnifyUSCalculus
-import org.keymaerax.core._
-import org.keymaerax.infrastruct.Augmentors._
+import org.keymaerax.core.*
+import org.keymaerax.infrastruct.Augmentors.*
 import org.keymaerax.parser.KeYmaeraXPrettyPrinter
-import org.keymaerax.parser.StringConverter._
+import org.keymaerax.parser.StringConverter.*
 import org.keymaerax.pt.ProvableSig
 import org.keymaerax.tools.qe.DefaultSMTConverter
 import org.keymaerax.{Configuration, FileConfiguration, Logging}
@@ -220,8 +220,8 @@ object QELogger extends Logging {
         print("Exporting " + e._1 + "...")
         try {
           exportSmtLibFormat(e._2.toFormula, filePath.replace("${entryname}", uniqueName(e._1)), exporter)
-          println("done")
-        } catch { case ex: Throwable => println("failed: " + ex.getMessage) }
+          logger.trace("done")
+        } catch { case ex: Throwable => logger.trace(s"failed: ${ex.getMessage}") }
       } else if (filterDuplicates) seqs += e._2
     }
     processLog(parseStr2, export, logPath)

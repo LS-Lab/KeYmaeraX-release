@@ -5,20 +5,21 @@
 
 package org.keymaerax.cli
 
+import org.keymaerax.Logging
 import org.keymaerax.info.FullName
 
 import java.lang.management.ManagementFactory
 import java.nio.file.Path
 import scala.sys.process.Process
 
-object Relauncher {
+object Relauncher extends Logging {
   private val ExtraJvmArgs = Seq("-Xss20M")
 
   private case class LaunchCommand(jvmCmd: String, allArgs: Seq[String])
 
   private def getLaunchCommand(cliArgs: Seq[String]): Option[LaunchCommand] = {
-    import scala.jdk.CollectionConverters._
-    import scala.jdk.OptionConverters._
+    import scala.jdk.CollectionConverters.*
+    import scala.jdk.OptionConverters.*
 
     val info = ProcessHandle.current().info()
     val jvmCmd = info.command().toScala.getOrElse(return None)
@@ -47,11 +48,11 @@ object Relauncher {
    *   The arguments that were passed to the main function.
    */
   def relaunchOrExit(cliArgs: Seq[String]): Nothing = {
-    println(s"Restarting $FullName with sufficient stack space.")
+    logger.info(s"Restarting $FullName with sufficient stack space.")
 
     val launchCmd = getLaunchCommand(cliArgs).getOrElse {
-      println(s"Failed to restart $FullName because the launch arguments could not be determined.")
-      println(s"Try starting $FullName with ${ExtraJvmArgs.mkString(" ")} and ${Options.LaunchFlag}.")
+      logger.error(s"Failed to restart $FullName because the launch arguments could not be determined.")
+      logger.error(s"Try starting $FullName with ${ExtraJvmArgs.mkString(" ")} and ${Options.LaunchFlag}.")
       sys.exit(1)
     }
 

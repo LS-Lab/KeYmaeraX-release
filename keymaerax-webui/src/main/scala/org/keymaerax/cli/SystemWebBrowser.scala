@@ -5,15 +5,15 @@
 
 package org.keymaerax.cli
 
-import org.keymaerax.Configuration
 import org.keymaerax.info.{Os, OsType}
+import org.keymaerax.{Configuration, Logging}
 
-import java.awt.Desktop._
-import java.awt.GraphicsEnvironment._
+import java.awt.Desktop.*
+import java.awt.GraphicsEnvironment.*
 import javax.swing.{JLabel, JOptionPane}
 
 /** Opens the default web browser pointed to the KeYmaera X URL. Created by nfulton on 9/17/15. */
-object SystemWebBrowser {
+object SystemWebBrowser extends Logging {
 
   /** @note location is not a URL/URI because it could be stuff like about:config or whatever... */
   def apply(location: String): Unit = {
@@ -33,8 +33,8 @@ object SystemWebBrowser {
           new JLabel(s"""<html>Point your browser to <a href="$location">$location</a></html>"""),
         )
       } else if (Configuration.getBoolean(Configuration.Keys.IS_DOCKER).getOrElse(false)) {
-        println(s"Point your browser to http://localhost:" + Configuration(Configuration.Keys.PORT))
-      } else { println(s"Point your browser to $location") }
+        logger.info(s"Point your browser to http://localhost:${Configuration(Configuration.Keys.PORT)}")
+      } else { logger.info(s"Point your browser to $location") }
     } catch {
       case _: java.awt.HeadlessException =>
       case _: java.lang.ClassNotFoundException =>

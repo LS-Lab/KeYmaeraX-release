@@ -209,7 +209,6 @@ object IsabelleSyntax {
     //      val change = useFor(compf,PosInExpr(1::Nil))(SuccPosition(1,0::1::Nil))(split)
     //      val reassm = useFor("<;> compose",PosInExpr(1::Nil))(SuccPosition(1,0::Nil))(change)
     ////      val retprog = reassm.conclusion.succ(0).sub(PosInExpr(1::Nil)).get
-    //      println("exp",reassm)
     //      (prog,pf)
     //
     //    }

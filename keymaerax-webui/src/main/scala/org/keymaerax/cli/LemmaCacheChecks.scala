@@ -5,15 +5,15 @@
 
 package org.keymaerax.cli
 
-import org.keymaerax.Configuration
 import org.keymaerax.info.{Version, VersionNumber}
+import org.keymaerax.{Configuration, Logging}
 
 import java.io.IOException
 import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.{FileVisitResult, Files, NoSuchFileException, Path, SimpleFileVisitor}
 import scala.util.Try
 
-object LemmaCacheChecks {
+object LemmaCacheChecks extends Logging {
   private def versionFile(cacheDir: Path): Path = cacheDir.resolve("VERSION")
 
   /** Clear the cache if it was created by a different version of KeYmaera X. */
@@ -33,7 +33,7 @@ object LemmaCacheChecks {
 
   /** Create an empty cache with current version file at the path, removing any existing cache in the process. */
   private def clearCache(cacheDir: Path): Unit = {
-    println("Clearing your cache because of an update.")
+    logger.info("Clearing your cache because of an update.")
 
     createDirectory(cacheDir.getParent)
     deleteDirectory(cacheDir)

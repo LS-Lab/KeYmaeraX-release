@@ -33,7 +33,7 @@ import org.keymaerax.tools.ext.SmtLibReader
 import org.keymaerax.tools.install.ToolConfiguration
 import org.keymaerax.tools.qe.{DefaultSMTConverter, KeYmaeraToMathematica}
 import org.keymaerax.tools.{KeYmaeraXTool, ToolName, ToolPathFinder}
-import org.keymaerax.{Configuration, FileConfiguration, KeYmaeraXStartup}
+import org.keymaerax.{Configuration, FileConfiguration, KeYmaeraXStartup, Logging}
 
 import java.io.{FileReader, PrintWriter}
 import java.nio.file.{Files, Paths}
@@ -43,7 +43,7 @@ import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.sys.ShutdownHookThread
 
 /** Command-line interface for the KeYmaera X core jar. */
-object KeymaeraxCore {
+object KeymaeraxCore extends Logging {
   def main(args: Array[String]): Unit = {
     val options = Options.parseArgs(args.toSeq, name = s"$TechnicalName-core", webui = false)
     if (!options.launch) Relauncher.relaunchOrExit(args.toSeq)
@@ -65,7 +65,7 @@ object KeymaeraxCore {
       if (Files.exists(Paths.get(value))) {
         Configuration.set(Configuration.Keys.MATHEMATICA_LINK_NAME, value, saveToFile = false)
       } else {
-        println("[Error -mathkernel] Mathematica kernel file does not exist: " + value)
+        logger.error(s"--mathkernel: Mathematica kernel file does not exist: $value")
         exit(2)
       }
     }
@@ -74,7 +74,7 @@ object KeymaeraxCore {
       if (Files.exists(Paths.get(value))) {
         Configuration.set(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR, value, saveToFile = false)
       } else {
-        println("[Error -jlink] Path to JLink native library does not exist: " + value)
+        logger.error(s"--jlink: Path to JLink native library does not exist: $value")
         exit(2)
       }
     }
@@ -99,7 +99,7 @@ object KeymaeraxCore {
     for (value <- options.z3Path) {
       if (Files.exists(Paths.get(value))) { Configuration.set(Configuration.Keys.Z3_PATH, value, saveToFile = false) }
       else {
-        println("[Error -z3path] Z3 executable does not exist: " + value)
+        logger.error(s"-z3path: Z3 executable does not exist: $value")
         exit(2)
       }
     }
@@ -114,10 +114,10 @@ object KeymaeraxCore {
     options.command match {
       // Core commands
       case Some(Command.Setup) =>
-        println("Initializing lemma cache...")
+        logger.info("Initializing lemma cache...")
         initializeBackend(options.toToolConfig)
         KeYmaeraXStartup.initLemmaCache()
-        println("...done")
+        logger.info("...done")
       case Some(cmd: Command.Prove) =>
         initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile(ToolName.Z3)))
         KeYmaeraXProofChecker.prove(
@@ -153,9 +153,9 @@ object KeymaeraxCore {
           resultOut = System.out,
         )
       // Unknown or no commands
-      case Some(command) => println("WARNING: Unknown command " + command)
+      case Some(command) => logger.warn(s"Unknown command $command")
       case None =>
-        println("ERROR: No command specified")
+        logger.error("No command specified")
         options.printUsageAndExitWithError()
     }
   }
@@ -283,22 +283,20 @@ object KeymaeraxCore {
 
   /** Parses the content of file `fileName`. */
   private def parseProblemFile(fileName: String): Boolean = {
-    println("Parsing " + fileName + "...")
+    logger.info(s"Parsing $fileName...")
     try {
       ArchiveParser
         .parseFromFile(fileName)
         .foreach(e => {
-          println(e.name)
-          println(PrettyPrinter(e.model))
-          println("Parsed file successfully")
+          logger.info(e.name)
+          logger.info(PrettyPrinter(e.model))
+          logger.info("Parsed file successfully")
         })
       true
     } catch {
       case e: Throwable =>
         if (Configuration(Configuration.Keys.DEBUG) == "true") e.printStackTrace()
-        println(e.getMessage)
-        println(e.getCause)
-        println("Failed to parse file")
+        logger.error("Failed to parse file", e)
         false
     }
   }
@@ -307,13 +305,12 @@ object KeymaeraxCore {
     val source = scala.io.Source.fromFile(fileName, org.keymaerax.core.ENCODING)
     try {
       BelleParser(source.getLines().mkString("\n"))
-      println("Parsed file successfully")
+      logger.info("Parsed file successfully")
       true
     } catch {
       case e: Throwable =>
         if (Configuration(Configuration.Keys.DEBUG) == "true") e.printStackTrace()
-        println(e)
-        println("Failed to parse file")
+        logger.error("Failed to parse file", e)
         false
     } finally { source.close() }
   }
@@ -419,5 +416,4 @@ object KeymaeraxCore {
       case None => println(converted)
     }
   }
-
 }

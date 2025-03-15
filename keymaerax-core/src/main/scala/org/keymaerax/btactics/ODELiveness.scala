@@ -743,8 +743,6 @@ object ODELiveness {
         val lsr = ls.filter(vs => vs.intersect(unremovable).isEmpty)
         val lsu = ls.filter(vs => vs.intersect(unremovable).nonEmpty)
 
-        // println(ls)
-
         // We will remove the ODEs in ls from back to front
         val odeGroups = lsr.map(vs => {
           val odes = vs.map(vv => odels(vv))
@@ -868,8 +866,6 @@ object ODELiveness {
         case _ => ()
       }
     }
-
-    // println("compatible asms: ", ls)
 
     ls.foldLeft[BelleExpr](skip)((in, fp) => {
       val (dom, pr, f, i, tac) = (fp._1, fp._2, fp._3, fp._4, fp._5)

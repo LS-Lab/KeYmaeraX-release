@@ -7,18 +7,15 @@ package org.keymaerax.cli
 
 import org.keymaerax.hydra.{DBAbstractionObj, DatabasePopulator, ModelPOJO, SQLite}
 import org.keymaerax.info.VersionNumber
-import org.keymaerax.{Configuration, UpdateChecker}
-import spray.json.DefaultJsonProtocol._
-import spray.json._
+import org.keymaerax.{Configuration, Logging, UpdateChecker}
+import spray.json.*
+import spray.json.DefaultJsonProtocol.*
 
 import java.io.{File, FileInputStream, FileOutputStream}
 import javax.swing.JOptionPane
 import scala.io.{Codec, Source}
 
-object DatabaseChecks {
-  private def printlnDebug(msg: String): Unit = {
-    if (Configuration.getBoolean(Configuration.Keys.DEBUG).getOrElse(false)) println(msg)
-  }
+object DatabaseChecks extends Logging {
 
   /** Error message printed when the database upgrade fails. */
   private def upgradeFailedMessage(defaultName: String, backupPath: String): String = {
@@ -53,32 +50,32 @@ object DatabaseChecks {
    */
   def exitIfDeprecated(): Unit = {
     val dbVersion = SQLite.versionOf(SQLite.ProdDB)
-    println(s"Database version: $dbVersion")
+    logger.info(s"Database version: $dbVersion")
 
     cleanupGuestData()
     LoadingDialogFactory().addToStatus(25, Some("Checking database version..."))
     if (UpdateChecker.dbUpgradeRequired(dbVersion).getOrElse(false)) {
       // @todo maybe it makes more sense for the JSON file to associate each KeYmaera X version to a list of database and cache versions that work with that version.
       val backupPath = Configuration.path(Configuration.Keys.DB_PATH) + s"-$dbVersion-*"
-      println("Backing up database to " + backupPath)
+      logger.info(s"Backing up database to $backupPath")
       val defaultName = new File(Configuration.path(Configuration.Keys.DB_PATH)).getName
       try {
-        println("Upgrading database...")
+        logger.info("Upgrading database...")
         val upgradedDbVersion = upgradeDatabase(dbVersion)
         if (UpdateChecker.dbUpgradeRequired(upgradedDbVersion).getOrElse(false)) {
           val message = upgradeFailedMessage(defaultName, backupPath)
-          println(message)
+          logger.error(message)
           JOptionPane.showMessageDialog(null, message)
           sys.exit(-1)
         } else {
-          println(
-            "Successful database upgrade to version: " + SQLite.ProdDB.getConfiguration("version").config("version")
+          logger.info(
+            s"Successful database upgrade to version: ${SQLite.ProdDB.getConfiguration("version").config("version")}"
           )
         }
       } catch {
         case e: Throwable =>
           val message = upgradeFailedMessage(defaultName, backupPath) + "\n\nInternal error details:"
-          println(message)
+          logger.error(message)
           e.printStackTrace()
           JOptionPane.showMessageDialog(null, message)
           sys.exit(-1)
@@ -89,10 +86,10 @@ object DatabaseChecks {
   /** Deletes all outdated guest models and proofs from the database. */
   private def cleanupGuestData(): Unit = {
     LoadingDialogFactory().addToStatus(10, Some("Guest model updates ..."))
-    printlnDebug("Cleaning up guest data...")
+    logger.debug("Cleaning up guest data...")
     val deleteModels = listOutdatedModels()
     val deleteModelsStatements = deleteModels.map("delete from models where _id = " + _.modelId)
-    printlnDebug("...deleting " + deleteModels.size + " guest models")
+    logger.debug(s"...deleting ${deleteModels.size} guest models")
     if (deleteModels.nonEmpty) {
       val session = SQLite.ProdDB.sqldb.createSession()
       val conn = session.conn
@@ -104,13 +101,13 @@ object DatabaseChecks {
         val stmt = conn.createStatement()
         deleteModelsStatements.foreach(stmt.addBatch)
         stmt.executeBatch()
-      } catch { case e: Throwable => println("Error cleaning up guest data"); throw e }
+      } catch { case e: Throwable => logger.error("Error cleaning up guest data", e); throw e }
       finally {
         conn.close()
         session.close()
       }
     }
-    printlnDebug("done.")
+    logger.debug("done.")
   }
 
   /** Returns a list of outdated guest-user created models (literal model content comparison) */
@@ -118,18 +115,18 @@ object DatabaseChecks {
     val db = DBAbstractionObj.defaultDatabase
     val tempUsers = db.getTempUsers
     val tempUrlsAndModels: List[(String, List[ModelPOJO])] = tempUsers.map(u => {
-      printlnDebug("Updating guest " + u.userName + "...")
+      logger.debug("Updating guest " + u.userName + "...")
       val models = db.getModelList(u.userName)
-      printlnDebug("...with " + models.size + " guest models")
+      logger.debug("...with " + models.size + " guest models")
       (u.userName, models)
     })
 
     tempUrlsAndModels.flatMap({ case (url, models) =>
       try {
         if (models.nonEmpty) {
-          printlnDebug("Reading guest source " + url)
+          logger.debug("Reading guest source " + url)
           val content = DatabasePopulator.readKyx(url)
-          printlnDebug("Comparing cached and source content")
+          logger.debug("Comparing cached and source content")
           models.flatMap(m =>
             content.find(_.name == m.name) match {
               case Some(DatabasePopulator.TutorialEntry(_, model, _, _, _, _, _)) if model == m.keyFile => None

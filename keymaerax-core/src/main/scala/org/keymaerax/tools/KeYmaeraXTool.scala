@@ -11,7 +11,7 @@ import org.keymaerax.bellerophon.IOListeners.{QEFileLogListener, QELogListener, 
 import org.keymaerax.btactics.*
 import org.keymaerax.core.{Formula, PrettyPrinter, Program, Sequent}
 import org.keymaerax.infrastruct.Augmentors.SequentAugmentor
-import org.keymaerax.{Configuration, GlobalState}
+import org.keymaerax.{Configuration, GlobalState, Logging}
 
 import scala.annotation.tailrec
 
@@ -22,7 +22,7 @@ import scala.annotation.tailrec
  * @author
  *   Stefan Mitsch
  */
-object KeYmaeraXTool extends Tool {
+object KeYmaeraXTool extends Tool with Logging {
   // TODO Convert to Scala 3 enum
   sealed trait InterpreterChoice
   object InterpreterChoice {
@@ -93,7 +93,7 @@ object KeYmaeraXTool extends Tool {
       override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, Throwable]): Unit = {
         stopwatchListener.end(input, expr, output)
         input match {
-          case BelleProvable(p, _) if logCondition(p, expr) => println(s"${stopwatchListener.duration}ms")
+          case BelleProvable(p, _) if logCondition(p, expr) => println(s"${stopwatchListener.duration} ms")
           case _ => // nothing to do
         }
       }
@@ -132,15 +132,15 @@ object KeYmaeraXTool extends Tool {
 
       val errors = DerivationInfoRegistry.init(initDerivationInfoRegistry)
       if (errors.nonEmpty) {
-        println()
-        println("Errors occurred during derived axiom initialization.")
-        println("Continuing with restricted functionality!")
-        println("For more details, set the --debug flag.")
-        for (error <- errors) println(s" - $error")
-        println()
-        println("Try increasing the derivation timeout by setting AXIOM_DERIVE_TIMEOUT")
-        println("to a higher value (specified in seconds) in your config file.")
-        println()
+        logger.warn("")
+        logger.warn("Errors occurred during derived axiom initialization.")
+        logger.warn("Continuing with restricted functionality!")
+        logger.warn("For more details, set the --debug flag.")
+        for (error <- errors) logger.warn(s" - $error")
+        logger.warn("")
+        logger.warn("Try increasing the derivation timeout by setting AXIOM_DERIVE_TIMEOUT")
+        logger.warn("to a higher value (specified in seconds) in your config file.")
+        logger.warn("")
       }
 
       // Restore old timeout

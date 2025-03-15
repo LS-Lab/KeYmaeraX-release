@@ -118,7 +118,6 @@ object DependencyAnalysis {
   // The ODE is linear if all the variables on the RHS occur linearly
   def isLinearODE(vs: Map[BaseVariable, Term]): Boolean = {
     // val vars = vs.keySet
-    // println(vars)
     vs.values
       .forall(t => {
         val dv = degVar(t, vs.keySet)
@@ -221,13 +220,10 @@ object DependencyAnalysis {
   // Naive DFS starting from a variable
   // Returns a set of newly visited variables and a visit order
   def dfs_aux[A](v: A, adjlist: Map[A, Set[A]], done: Set[A]): (List[A], Set[A]) = {
-    // println("DFS: ",v,done)
-
     // Already visited or visiting
     if (done.contains(v)) (List(), done)
     else if (adjlist.contains(v)) {
       val ls = adjlist(v).foldLeft((List[A](), done + v))((l, vv) => {
-        // println(v,l,vv)
         val (ls, vis) = dfs_aux(vv, adjlist, l._2)
         (ls ++ l._1, vis)
       })

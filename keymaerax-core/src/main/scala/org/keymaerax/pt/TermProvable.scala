@@ -5,9 +5,9 @@
 
 package org.keymaerax.pt
 
-import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
-import org.keymaerax.btactics.macros._
-import org.keymaerax.core._
+import org.keymaerax.btactics.macros.*
+import org.keymaerax.btactics.macros.DerivationInfoAugmentors.*
+import org.keymaerax.core.*
 import org.keymaerax.infrastruct.{ProvableHelper, UnificationTools}
 import org.keymaerax.lemma.Lemma
 import org.keymaerax.parser.Declaration
@@ -509,17 +509,7 @@ object TermProvable {
 
   val axioms: immutable.Map[String, ProvableSig] = Provable
     .axioms
-    .map(x =>
-      (
-        x._1,
-        TermProvable(
-          ElidingProvable.axioms.apply(x._1), { // println("Provable-axiom:" + x._1);
-            AxiomTerm(x._1)
-          },
-          Declaration(Map.empty),
-        ),
-      )
-    )
+    .map(x => (x._1, TermProvable(ElidingProvable.axioms.apply(x._1), { AxiomTerm(x._1) }, Declaration(Map.empty))))
 
   val rules: immutable.Map[String, ProvableSig] = Provable
     .rules

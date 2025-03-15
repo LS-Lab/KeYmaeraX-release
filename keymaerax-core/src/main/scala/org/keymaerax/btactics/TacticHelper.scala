@@ -5,15 +5,17 @@
 
 package org.keymaerax.btactics
 
+import org.keymaerax.Logging
 import org.keymaerax.bellerophon.TacticInapplicableFailure
-import org.keymaerax.core._
+import org.keymaerax.core.*
 import org.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import org.keymaerax.infrastruct.{AntePosition, ExpressionTraversal, PosInExpr, Position}
 
+import java.util.Date
 import scala.annotation.nowarn
 
 /** Some commonly useful helper utilities for basic tactic implementations. */
-object TacticHelper {
+object TacticHelper extends Logging {
 
   /** Returns a fresh index for `name` in formula `f`. */
   def freshIndexInFormula(name: String, f: Formula): Option[Int] = freshIndexInExpression(name, f)
@@ -221,11 +223,11 @@ object TacticHelper {
 
   /** Executes the `task` with timing information printed to stdout. */
   def timed[A](task: => A, msg: String): A = {
-//    println(msg + "... " + new Date())
+    logger.trace(s"$msg... ${new Date()}")
     val tic = System.currentTimeMillis()
     val result = task
     val toc = System.currentTimeMillis()
-//    println("...done (" + ((toc - tic) / 1000) + "s)")
+    logger.trace(s"...done (${(toc - tic) / 1000} s)")
     result
   }
 }

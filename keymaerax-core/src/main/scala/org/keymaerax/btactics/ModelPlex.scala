@@ -1781,13 +1781,17 @@ object ModelPlex extends ModelPlexTrait with Logging {
         })
         .reduce(_ ++ _)
 
-      println("Symbols: " + es.mkString(",") + "\nQF symbols: " + qfs.mkString(",") + "\nDiff: " + expand.mkString(","))
+      logger.trace(
+        s"""Symbols: ${es.mkString(",")}
+           |QF symbols: ${qfs.mkString(",")}
+           |Diff: ${expand.mkString(",")}""".stripMargin
+      )
       val subst = USubst(
         defs
           .substs
           .filter({ case SubstitutionPair(what, _) => StaticSemantics.symbols(what).intersect(expand).nonEmpty })
       )
-      println("Substitution: " + subst.subsDefsInput.mkString(","))
+      logger.trace(s"Substitution: ${subst.subsDefsInput.mkString(",")}")
 
       val innerProof = timed(
         ProvableSig.startProof(Equiv(exists, qfResult), defs)(
@@ -1802,7 +1806,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
       assert(innerProof.isProved, "Expected closed inner proof, but got open goals")
 
       val innermostPos = innermostQuantifierPos(fml)
-      println("Finished quantifier " + x + " at " + innermostPos.prettyString + ", advancing outwards")
+      logger.trace(s"Finished quantifier $x at ${innermostPos.prettyString}, advancing outwards")
 
       val outerProof = stepwisePartialQE(ctx(qfResult), assumptions, defs, tool)(subst)
       val Equiv(_, outerQf) = outerProof.conclusion.succ.head

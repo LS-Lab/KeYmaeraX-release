@@ -6,9 +6,9 @@
 package org.keymaerax.bellerophon
 
 import org.keymaerax.Logging
-import org.keymaerax.btactics.{Ax, HilbertCalculus, TacticFactory, TactixLibrary, UnifyUSCalculus}
-import org.keymaerax.core._
-import org.keymaerax.infrastruct.Augmentors._
+import org.keymaerax.btactics.{Ax, HilbertCalculus, TacticFactory, UnifyUSCalculus}
+import org.keymaerax.core.*
+import org.keymaerax.infrastruct.Augmentors.*
 import org.keymaerax.infrastruct.{Position, RenUSubst, RestrictedBiDiUnificationMatch}
 import org.keymaerax.pt.ProvableSig
 
@@ -17,7 +17,7 @@ import scala.annotation.{nowarn, tailrec}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future, Promise}
-import scala.util.control.Breaks._
+import scala.util.control.Breaks.*
 import scala.util.{Failure, Success, Try}
 
 /**
@@ -616,9 +616,7 @@ abstract class BelleBaseInterpreter(
             catch {
               // in contrast to .unifiable, this suppresses "Sequent un-unifiable Un-Unifiable" message, which clutter STDIO.
               // fall back to user-provided substitution
-              case e: UnificationException =>
-                // if (BelleExpr.DEBUG) println("USubst Pattern Incomplete -- could not find a unifier for any option" + t)
-                (RenUSubst(Nil), expr)
+              case e: UnificationException => (RenUSubst(Nil), expr)
             }
           case _ => throw new IllFormedTacticApplicationException("Cannot unify non-sequent types.").inContext(t, "")
         }
@@ -844,11 +842,11 @@ case class ConcurrentInterpreter(
       // @note new internal interpreters because otherwise apply will notify listeners, which currently assume sequential tactic execution
       val interpreters = exprs.map(e => e -> ConcurrentInterpreter())
       val cancellables = interpreters.map({ case (e, i) => Cancellable(i(e, v)) })
-      println("Waiting for first one to succeed: " + expr.prettyString)
+      logger.trace(s"Waiting for first one to succeed: ${expr.prettyString}")
       val result = Await.result(firstToSucceed(cancellables.map(_.future)), Duration.Inf)
       cancellables.foreach(_.cancel())
       interpreters.foreach(_._2.kill())
-      println("Parallel done: " + expr.prettyString + "\n  with result: " + result.prettyString)
+      logger.trace(s"Parallel done: ${expr.prettyString}\n  with result: ${result.prettyString}")
       result
 
     case ChooseSome(options, e) =>

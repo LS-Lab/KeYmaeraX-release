@@ -1478,7 +1478,6 @@ object UnifyUSCalculus extends Logging {
     )
     sequent.succ.head match {
       case Imply(p, q) =>
-        //          println("CQr: " + Ax.CQrevimplyCongruence + "\n" + Ax.CQrevimplyCongruence.provable + "\nfor: " + Imply(p,q))
         val (ctxF, f) = p.at(inEqPos)
         val (ctxG, g) = q.at(inEqPos)
         require(ctxF == ctxG, "Same context expected, but got contexts " + ctxF + " and " + ctxG)
@@ -1672,7 +1671,6 @@ object UnifyUSCalculus extends Logging {
     )
     sequent.succ.head match {
       case Imply(l, r) =>
-        //          println("NOW: " + Ax.CErevimplyCongruence + "\n" + Ax.CErevimplyCongruence.provable + "\nfor: " + Imply(l,r))
         if (inEqPos == HereP) commuteEquivR(1).computeResult(equivifyR(1).computeResult(provable))
         else {
           val (ctxP, p) = l.at(inEqPos)

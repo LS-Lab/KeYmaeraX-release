@@ -534,7 +534,6 @@ object ODEInvariance extends Logging {
           "Position does not point to a valid position in sequent " + seq.prettyString
         )
     }
-    // println(p,t)
     val unlocked = GreaterEqual(Minus(p, Power(Minus(t, s), Number(2 * bound))), Number(0))
     dR(unlocked)(1) < (
       lpgeqUnlock(bound),
@@ -1232,8 +1231,6 @@ object ODEInvariance extends Logging {
     }
     val (r, groebner, cofactors) = rank(sys, polys)
 
-    // println(r,groebner,cofactors)
-
     diffUnpackEvolutionDomainInitially(pos) &
       DebuggingTactics.debug("dgVdbx", debugTactic) &
       dgVdbx(cofactors, groebner)(pos) &
@@ -1334,7 +1331,6 @@ object ODEInvariance extends Logging {
       ) & QE,
     )
     // val pr1 = proveBy(fml1 , QE)
-    // println(pr1)
     val sgn = And(GreaterEqual(unorm, Number(0)), GreaterEqual(vnorm, Number(0)))
 
     val pr = proveBy(And(fml1, sgn), andR(1) < (by(pr1), prove_sos_positive))
@@ -1411,7 +1407,6 @@ object ODEInvariance extends Logging {
       val subst = UnificationMatch.unifiable(csLhs, dot_prod(gi, p)).get
       cs(subst.usubst)
     })
-    // println("Cauchy Schwartz: ",gdot)
 
     // Sum the sub-terms:
     // sum_i (G_i.p)^2 <= sum_i ||G_i||^2 ||p||^2
@@ -1430,10 +1425,8 @@ object ODEInvariance extends Logging {
           lemma.conclusion.succ(0).sub(PosInExpr(1 :: Nil)).get.asInstanceOf[Formula],
           useAt(lemma, PosInExpr(1 :: Nil))(1) & andR(1) < (by(cur), by(pr)),
         )
-        // println(uspr)
         uspr
       })
-    // println("Sum: ",sum)
 
     // Multiply both sides by ||p||^2
     // sum_i (G_i.p)^2 ||p||^2 <= sum_i ||G_i||^2 ||p||^2 ||p||^2
@@ -1447,7 +1440,6 @@ object ODEInvariance extends Logging {
     // ((Gp).p)^2 <= sum_i (G_i.p)^2 ||p||^2 <= sum_i ||G_i||^2 ||p||^2 ||p||^2
     val trans1 = useFor(lemTrans, PosInExpr(0 :: Nil))(Position(1))(cs)
     val trans = useFor(trans1, PosInExpr(0 :: Nil))(Position(1))(sump)
-    // println("Trans: ",trans)
 
     // Upper bound
     val ub1 = useFor(lemUb, PosInExpr(0 :: Nil))(Position(1))(pnormpos)
@@ -1933,15 +1925,12 @@ object ODEInvariance extends Logging {
         throw new UnsupportedTacticFeature("Normalization failed to reach normal form " + fml)
 
       val f2 = fml.asInstanceOf[GreaterEqual]
-      // println("Rank reordering:",rankReorder(ODESystem(ode,dom),post))
 
       val (pf, inst, qetac) =
         try { pStarHomPlus(ode, dom, f2.left, bound, Some(And(dom, post))) }
         catch {
           case ex: IllegalArgumentException => throw new TacticInapplicableFailure("sAI is unable to compute p*", ex)
         }
-
-      // println("HOMPLUS:"+pf+" "+inst)
 
       // Performs rewriting to and from the normal form
       // Isn't there a faster way to do this rewrite??

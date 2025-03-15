@@ -12,7 +12,7 @@ import org.keymaerax.btactics.Ax.boxTrueAxiom
 import org.keymaerax.btactics.DifferentialEquationCalculus.*
 import org.keymaerax.btactics.HilbertCalculus.*
 import org.keymaerax.btactics.SequentCalculus.*
-import org.keymaerax.btactics.TacticFactory.{TacticForNameFactory, inputanon}
+import org.keymaerax.btactics.TacticFactory.{inputanon, TacticForNameFactory}
 import org.keymaerax.btactics.TactixLibrary.*
 import org.keymaerax.btactics.UnifyUSCalculus.*
 import org.keymaerax.btactics.macros.*
@@ -56,7 +56,6 @@ object ImplicitAx extends Logging {
 
   private def registerDiffAx(f: Function, p: ProvableSig): Unit = {
     val (name, codename) = canonicalDiffAxName(f)
-    // println("Registering derived differential axiom: ",name)
     logger.debug(s"Registering derived differential axiom: $name codename: $codename provable: $p")
 
     val fml = p.conclusion.succ(0) // ==> (f(x))' = ...
@@ -119,8 +118,6 @@ object ImplicitAx extends Logging {
   private def registerInitAx(f: Function, p: ProvableSig): Unit = {
 
     val (name, codename) = canonicalInitAxName(f)
-
-    // println("Registering initial condition: ",name)
     logger.debug(s"Registering initial condition: $name codename: $codename provable: $p")
 
     val fml = p.conclusion.succ(0) // ==> f(0) = ...
@@ -180,7 +177,6 @@ object ImplicitAx extends Logging {
   private def registerDefAx(f: Function, p: ProvableSig): Unit = {
 
     val (name, codename) = canonicalDefAxName(f)
-    // println("Registering implicit definition: ",name)
     logger.debug(s"Registering implicit definition: $name codename: $codename provable: $p")
 
     val fml = p.conclusion.succ(0) // ==> ._0 = f(._1 <-> ...
@@ -723,7 +719,6 @@ object ImplicitAx extends Logging {
 
     // Canonicalize the shape of the implicit definition
     val canonPr = canonicalize(ode, fs)
-    // println("Canonicalized: ", canonPr)
 
     // Set up for partial derivatives
 
@@ -735,7 +730,6 @@ object ImplicitAx extends Logging {
     val defExpPre = defExpandToBox(renode.ode)
     val unif = UnificationMatch(defExpPre.conclusion.succ(0).sub(PosInExpr(0 :: Nil)).get.asInstanceOf[Formula], renfml)
     val defExp = unif.toForward(defExpPre)
-    // println("Def expand: ",defExp)
 
     val equations = canonPr.map(p => p.conclusion.succ(0).sub(PosInExpr(0 :: Nil)).get.asInstanceOf[Equal])
     val parDerPre = partialDer(equations.length)
@@ -747,8 +741,6 @@ object ImplicitAx extends Logging {
     val unif3 = UnificationMatch(tab.conclusion.succ(0).sub(PosInExpr(0 :: Nil)).get, Box(renodeR, equationsAnd))
     val parDer = unif2.toForward(tab)
     val parDerR = unif3.toForward(tab)
-    // println("Partial der: ",parDer)
-    // println("Partial der R: ",parDerR)
 
     val pdfml = parDer.conclusion.succ(0).sub(PosInExpr(1 :: Nil)).get.asInstanceOf[Formula]
 

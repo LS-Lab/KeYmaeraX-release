@@ -708,7 +708,6 @@ object SOSSolve {
       case Some(Equal(clhs, crhs)) =>
         val cofact = proveBy(NotEqual(cofactor, Number(0)), RCF)
         val instMulZero = useFor(mulZero, PosInExpr(0 :: Nil))(Position(1))(cofact)
-        // println(pos,lhs,rhs,cofactor)
         val pr = proveBy(
           Equiv(Equal(clhs, crhs), Equal(lhs, rhs)),
           useAt(eqAnte)(1, PosInExpr(0 :: Nil)) & useAt(eqAnte)(1, PosInExpr(1 :: Nil)) &

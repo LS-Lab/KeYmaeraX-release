@@ -5,7 +5,8 @@
 
 package org.keymaerax.codegen
 
-import org.keymaerax.core._
+import org.keymaerax.Logging
+import org.keymaerax.core.*
 import org.keymaerax.infrastruct.Augmentors.FormulaAugmentor
 import org.keymaerax.parser.{Declaration, KeYmaeraXPrettyPrinter}
 
@@ -20,7 +21,8 @@ import scala.annotation.nowarn
  * @author
  *   Ran Ji
  */
-abstract class FormulaTermGenerator(termContainer: Expression => String, defs: Declaration) extends CodeGenerator {
+abstract class FormulaTermGenerator(termContainer: Expression => String, defs: Declaration)
+    extends CodeGenerator with Logging {
 
   /** Identifier corresponding to a NamedSymbol */
   protected def nameIdentifier(s: NamedSymbol): String
@@ -88,7 +90,7 @@ abstract class FormulaTermGenerator(termContainer: Expression => String, defs: D
   protected def compilePower(base: Term, exp: Term): CTerm = {
     if (base.equals(Number(0))) {
       // @todo since when is that the case?
-      println("[warning] generating 0^0")
+      logger.warn("generating 0^0")
       if (exp.equals(Number(0))) CNumber(1.0) // 0^0 =1
       else CNumber(0.0) // 0^x = 0
     } else {

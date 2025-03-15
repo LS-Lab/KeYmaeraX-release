@@ -5,7 +5,6 @@
 
 package org.keymaerax.btactics
 
-import org.keymaerax.GlobalState
 import org.keymaerax.bellerophon.*
 import org.keymaerax.bellerophon.parser.BelleParser
 import org.keymaerax.btactics.ArithmeticSimplification.smartHide
@@ -46,7 +45,7 @@ import org.keymaerax.parser.StringConverter.StringToStringConverter
 import org.keymaerax.pt.ProvableSig
 import org.keymaerax.tools.ToolEvidence
 import org.keymaerax.tools.ext.{AllOf, Atom, Mathematica, OneOf}
-import org.slf4j.LoggerFactory
+import org.keymaerax.{GlobalState, Logging}
 
 import java.io.File
 import scala.annotation.nowarn
@@ -98,9 +97,7 @@ import scala.util.Try
  */
 @nowarn("msg=match may not be exhaustive") @nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
 @nowarn("cat=deprecation&origin=org.keymaerax.bellerophon.DependentTwoPositionTactic")
-object TactixLibrary {
-  private val logger = LoggerFactory.getLogger(getClass) // @note instead of "with Logging" to avoid cyclic dependencies
-
+object TactixLibrary extends Logging {
   // active invariant generators etc.
 
   /**
@@ -544,7 +541,7 @@ object TactixLibrary {
                   try { gen.generate(seq, pos, defs).iterator.map(_.formula) }
                   catch {
                     case err: Exception =>
-                      logger.warn("ChooseSome: error listing options " + err, err)
+                      logger.warn("ChooseSome: error listing options", err)
                       List[Formula]().iterator
                   },
                 (inv: Formula) => HybridProgramCalculus.loop(inv)(pos) & onAll(explore(gen)),
@@ -680,7 +677,7 @@ object TactixLibrary {
                   try { invSupplier.generate(seq, pos, defs).iterator.map(_.formula) }
                   catch {
                     case err: Exception =>
-                      logger.warn("ChooseSome: error listing options " + err, err)
+                      logger.warn("ChooseSome: error listing options", err)
                       List[Formula]().iterator
                   },
                 (inv: Formula) =>
@@ -694,7 +691,7 @@ object TactixLibrary {
                   try { gen.generate(seq, pos, defs).iterator.map(_.formula) }
                   catch {
                     case err: Exception =>
-                      logger.warn("ChooseSome: error listing options " + err, err)
+                      logger.warn("ChooseSome: error listing options", err)
                       List[Formula]().iterator
                   },
                 (inv: Formula) =>

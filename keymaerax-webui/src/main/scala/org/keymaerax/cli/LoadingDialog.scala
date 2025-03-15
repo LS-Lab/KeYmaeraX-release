@@ -88,7 +88,6 @@ class GraphicalLoadingDialog() extends LoadingDialog {
   window.setVisible(true)
 
   override def addToStatus(x: Int, msg: Option[String]): Unit = {
-    // println("PROGRESS: " + x + "\t" + msg)
     progressLabel.setText(msg.getOrElse(initialMsg))
     val newValue = progressBar.getValue + x
     progressBar.setValue(newValue)

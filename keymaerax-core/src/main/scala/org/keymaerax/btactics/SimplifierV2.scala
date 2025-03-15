@@ -213,7 +213,6 @@ object SimplifierV2 {
 
     // val fin = chaseFor(3,3,e=>AxiomIndex.axiomsFor(e),(s,p)=>pr=>pr)(SuccPosition(1,1::Nil))(apf)
     val ft = extract(apf).asInstanceOf[Term]
-    // println("Final: "+fin)
     (ft, apf)
   }
 
@@ -608,7 +607,6 @@ object SimplifierV2 {
    */
   @nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
   def formulaSimp(f: Formula, ctx: IndexedSeq[Formula] = IndexedSeq()): (Formula, ProvableSig) = {
-    // println("At: "+f+" Context: "+ctx)
     // todo: remove the use of prop from short circuit branches
     // Recursive simplification
     val (recf: Formula, recpr: ProvableSig) = f match {

@@ -5,14 +5,14 @@
 
 package org.keymaerax.cli
 
-import org.keymaerax.Configuration
 import org.keymaerax.info.FullName
+import org.keymaerax.{Configuration, Logging}
 
 import java.io.IOException
 import java.net.ServerSocket
 import javax.swing.JOptionPane
 
-object PortChecks {
+object PortChecks extends Logging {
 
   /**
    * Check if KeYmaera X can bind to the port that the webui will later bind to. If it can't, notify the user and exit
@@ -31,7 +31,7 @@ object PortChecks {
         val msg = s"""$FullName can't bind to port $port: $e
                      |Please ensure no other program is currently bound to the port, then try again.
                      |""".stripMargin.stripLineEnd
-        println(msg)
+        logger.error(msg)
         JOptionPane.showMessageDialog(null, msg)
         sys.exit(1)
     }

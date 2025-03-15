@@ -854,8 +854,6 @@ object SwitchedSystems {
     val derivatives = derPair.map(_._1)
     val derbods = derPair.map(_._2)
 
-    // println(derivatives)
-
     val derFml = derivatives.reduceRight(And(_, _))
 
     // k is an upper bound on all kis
@@ -2586,9 +2584,6 @@ object SwitchedSystems {
 
     // Initialize the system in any ODE
     val init = Compose(resetclk, (0 to transitions.length - 1).map(i => Assign(u, Number(i))).reduceLeft(Choice.apply))
-
-    //    println(ctrl)
-    //    println(plant)
 
     Compose(init, Loop(body))
   }

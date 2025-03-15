@@ -365,7 +365,6 @@ trait BaseMatcher extends Matcher with Logging {
    *   always.
    */
   protected def ununifiable(shape: Expression, input: Expression): Nothing = {
-    // println(new UnificationException(shape.toString, input.toString))
     throw new UnificationException(shape, input)
   }
 
@@ -375,7 +374,6 @@ trait BaseMatcher extends Matcher with Logging {
    *   always.
    */
   protected def ununifiable(shape: Sequent, input: Sequent): Nothing = {
-    // println(new UnificationException(shape.toString, input.toString))
     throw new SeqUnificationException(shape, input)
   }
 

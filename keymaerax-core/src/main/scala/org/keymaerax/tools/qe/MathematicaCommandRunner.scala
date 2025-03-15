@@ -6,10 +6,10 @@
 package org.keymaerax.tools.qe
 
 import com.wolfram.jlink.{Expr, KernelLink, MathLinkException}
-import org.keymaerax.tools.qe.MathematicaConversion._
-import org.keymaerax.tools._
+import org.keymaerax.tools.*
+import org.keymaerax.tools.qe.MathematicaConversion.*
 import org.keymaerax.{Configuration, Logging}
-import org.slf4j.{LoggerFactory, MarkerFactory}
+import org.slf4j.MarkerFactory
 
 /** Interface for running and cancelling a Mathematica command. */
 trait MathematicaCommandRunner {
@@ -108,7 +108,7 @@ case class JLinkMathematicaCommandRunner(ml: KernelLink) extends BaseMathematica
       disposeAfter(
         checkErrorMsgCmd,
         expr => {
-          LoggerFactory.getLogger(getClass).debug(MarkerFactory.getMarker(logMarkerName), expr.toString)
+          logger.debug(MarkerFactory.getMarker(logMarkerName), expr.toString)
 
           ml.synchronized {
             dispatch(expr)

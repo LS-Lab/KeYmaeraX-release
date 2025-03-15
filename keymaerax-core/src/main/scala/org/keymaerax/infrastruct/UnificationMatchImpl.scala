@@ -769,7 +769,6 @@ class UnificationMatchUSubstAboveURen extends /*Insistent*/ Matcher with Logging
           )
       )
     val renamedSubst = inverseRename(subst)
-//    if (DEBUG) println("\n  unify: " + e1.prettyString + "\n  with:  " + e2.prettyString + "\n  subst: " + subst + "\n  gives: " + e1s + "\n  ren:   " + ren + "\n  invren: " + renamedSubst + "\n  sum:   " + (renamedSubst ++ ren) + "\n  result: " + (renamedSubst ++ ren)(e1))
     renamedSubst ++ ren
   }
 

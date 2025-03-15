@@ -5,7 +5,6 @@
 
 package org.keymaerax.btactics
 
-import org.keymaerax.Configuration
 import org.keymaerax.bellerophon.*
 import org.keymaerax.btactics.AnonymousLemmas.*
 import org.keymaerax.btactics.Idioms.*
@@ -35,6 +34,7 @@ import org.keymaerax.tools.*
 import org.keymaerax.tools.ext.QETacticTool
 import org.keymaerax.tools.install.ToolConfiguration
 import org.keymaerax.tools.qe.MathematicaOpSpec
+import org.keymaerax.{Configuration, Logging}
 
 import scala.annotation.{nowarn, tailrec}
 import scala.collection.immutable.*
@@ -48,7 +48,7 @@ import scala.util.{Failure, Success, Try}
  * @author
  *   Stefan Mitsch
  */
-private object ToolTactics {
+private object ToolTactics extends Logging {
   private val namespace = "tooltactics"
 
   // NB: anon (Sequent) is necessary even though argument "seq" is not referenced:
@@ -80,7 +80,7 @@ private object ToolTactics {
           if (p.isInitialized) ToolProvider.setProvider(p) else setFirstSuccessfulProvider(providers.tail, msg)
         } catch {
           case _: Throwable =>
-            println("Failed to initialize first provider, attempting next")
+            logger.warn("Failed to initialize first provider, attempting next")
             setFirstSuccessfulProvider(providers.tail, msg)
         }
       }

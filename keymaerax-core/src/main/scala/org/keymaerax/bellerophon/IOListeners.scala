@@ -5,14 +5,14 @@
 
 package org.keymaerax.bellerophon
 
+import org.keymaerax.Logging
 import org.keymaerax.bellerophon.parser.BellePrettyPrinter
-import org.keymaerax.btactics.{TactixLibrary, UnifyUSCalculus}
+import org.keymaerax.btactics.UnifyUSCalculus
 import org.keymaerax.btactics.helpers.QELogger
 import org.keymaerax.core.{False, Formula, Sequent, StaticSemantics}
-import org.keymaerax.infrastruct.Augmentors._
+import org.keymaerax.infrastruct.Augmentors.*
 import org.keymaerax.pt.ProvableSig
 
-import java.io.PrintStream
 import scala.annotation.nowarn
 import scala.collection.mutable
 
@@ -78,14 +78,10 @@ object IOListeners {
 
   class InterpreterConsistencyListener extends IOListener() {
     private var stack: List[BelleExpr] = Nil
-    override def begin(input: BelleValue, expr: BelleExpr): Unit = {
-      // println("Begin " + expr.prettyString + "@" + expr.hashCode() + " on " + Thread.currentThread().hashCode())
-      stack = expr +: stack
-    }
+    override def begin(input: BelleValue, expr: BelleExpr): Unit = { stack = expr +: stack }
 
     override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, Throwable]): Unit = {
       val expected = stack.head
-      // println("End " + expr.prettyString + "@" + expr.hashCode() + " on " + Thread.currentThread().hashCode())
       assert(
         expr.eq(expected),
         "Popping unexpected " + expr.prettyString + "@" + expr.hashCode() + "; tail is " + expected.prettyString + "@" +
@@ -98,8 +94,7 @@ object IOListeners {
   }
 
   /** Prints tactic progress to the console. */
-  class PrintProgressListener(t: BelleExpr, stepInto: List[String] = Nil, printer: PrintStream = Console.out)
-      extends IOListener() {
+  class PrintProgressListener(t: BelleExpr, stepInto: List[String] = Nil) extends IOListener() with Logging {
     private lazy val nilNames =
       List(UnifyUSCalculus.nil.prettyString, UnifyUSCalculus.todo.prettyString, UnifyUSCalculus.skip.prettyString)
     private var executionStack = (t -> 0) :: Nil // branch index =0 except for BranchTactic
@@ -150,25 +145,24 @@ object IOListeners {
         case EitherTactic(l :: _) =>
           // @todo change to fit BelleBaseInterpreter.EitherTactic execution
           executionStack = (l -> 0) +: executionStack
-        case ApplyDefTactic(DefTactic(name, e)) => printer.println(name); executionStack = (e -> 0) +: executionStack
-        case e: AppliedPositionTactic => printer.print(BellePrettyPrinter(e) + "... ")
+        case ApplyDefTactic(DefTactic(name, e)) => logger.trace(name); executionStack = (e -> 0) +: executionStack
+        case e: AppliedPositionTactic => logger.trace(s"${BellePrettyPrinter(e)}... ")
         case e: NamedBelleExpr if e.isInternal => // always step into internal tactics
         // avoid duplicate printing of DependentPositionTactic and AppliedDependentPositionTactic
         case _: DependentPositionTactic =>
         case e: NamedBelleExpr /*if e.getClass == executionStack.head._1.getClass*/ =>
           start = System.currentTimeMillis()
-          printer.print(BellePrettyPrinter(e) + "... ")
-          if (e.name == "QE" || e.name == "smartQE") printer.println("\n" + input.prettyString)
+          logger.trace(s"${BellePrettyPrinter(e)}... ")
+          if (e.name == "QE" || e.name == "smartQE") logger.trace(s"${input.prettyString}")
         case Using(_, c) => c match {
             case e: NamedBelleExpr /*if e.getClass == executionStack.head._1.getClass*/ =>
               start = System.currentTimeMillis()
-              printer.print(BellePrettyPrinter(e) + "... ")
-              if (e.name == "QE" || e.name == "smartQE") printer.println("\n" + input.prettyString)
+              logger.trace(s"${BellePrettyPrinter(e)}... ")
+              if (e.name == "QE" || e.name == "smartQE") logger.trace(s"${input.prettyString}")
             case _ =>
           }
         case _ =>
       }
-      printer.flush()
     }
 
     @nowarn("msg=match may not be exhaustive")
@@ -202,28 +196,27 @@ object IOListeners {
         }
 
         expr match {
-          case ApplyDefTactic(DefTactic(name, _)) => printer.println(name + " done (" + status + ")")
-          case _: AppliedPositionTactic => printer.println("done (" + status + ")")
+          case ApplyDefTactic(DefTactic(name, _)) => logger.trace(s"$name done ($status)")
+          case _: AppliedPositionTactic => logger.trace("done ($status)")
           case e: NamedBelleExpr if e.name == "QE" || e.name == "smartQE" =>
-            printer.println(e.name + " done (" + status + ", " + (System.currentTimeMillis() - start) + "ms)")
+            logger.trace(s"${e.name} done ($status, ${System.currentTimeMillis() - start} ms)")
           case Using(_, c) => c match {
               case e: NamedBelleExpr if e.name == "QE" || e.name == "smartQE" =>
-                printer.println(e.name + " done (" + status + ", " + (System.currentTimeMillis() - start) + "ms)")
+                logger.trace(s"${e.name} done ($status, ${System.currentTimeMillis() - start} ms)")
               case _ =>
             }
           case n: NamedBelleExpr if !n.isInternal =>
-            printer.println(n.name + " done (" + status + ", " + (System.currentTimeMillis() - start) + "ms)")
+            logger.trace(s"${n.name} done ($status, ${System.currentTimeMillis() - start} ms)")
           case _ =>
         }
       } else if (executionStack.nonEmpty && stepInto(executionStack.head._1)) {
         val popTo = executionStack.indexWhere(_._1.eq(expr))
         // @todo fix root cause of wrong stack
         if (popTo >= 0) {
-          println("WARNING skipped end of: " + executionStack.take(popTo).map(_._1.prettyString).mkString(","))
+          logger.trace(s"Skipped end of: ${executionStack.take(popTo).map(_._1.prettyString).mkString(",")}")
           executionStack = executionStack.drop(popTo).tail
-        } else { println("WARNING end of unrecorded beginning " + expr.prettyString) }
+        } else { logger.trace(s"End of unrecorded beginning ${expr.prettyString}") }
       }
-      printer.flush()
     }
 
     override def kill(): Unit = {}

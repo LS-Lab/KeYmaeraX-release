@@ -804,7 +804,6 @@ object PolynomialArith extends Logging {
         sequent.sub(pos) match {
           case Some(t: Term) =>
             val (tt, pr) = normalise(t, false)
-            // println(tt,pr)
             CEat(useFor(Ax.equalCommute)(SuccPos(0))(pr))(pos)
           case _ => ident
         }

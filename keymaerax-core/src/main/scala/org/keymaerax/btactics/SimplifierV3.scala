@@ -298,9 +298,7 @@ object SimplifierV3 {
     val rw = taxs(rect, ctx).to(LazyList).flatMap(pr => applyTermProvable(rect, ctx, pr)).headOption
     rw match {
       case None => (rect, recpropt)
-      case Some((tt, prem, pr)) =>
-        // println("Simplified ",t," to ",tt)
-        recpropt match {
+      case Some((tt, prem, pr)) => recpropt match {
           case None => (tt, Some(prem, pr))
           case Some((prem2, pr2)) =>
             val premise = And(prem2, prem)

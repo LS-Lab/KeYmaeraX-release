@@ -5,14 +5,14 @@
 
 package org.keymaerax.cli
 
-import org.keymaerax.Configuration
 import org.keymaerax.info.FullName
+import org.keymaerax.{Configuration, Logging}
 
 import java.nio.file.{FileAlreadyExistsException, Files, Paths}
 import javax.swing.JOptionPane
 import scala.sys.ShutdownHookThread
 
-object GlobalLockChecks {
+object GlobalLockChecks extends Logging {
 
   /**
    * Try to atomically acquire a global lock file, notifying the user and exiting on failure. Uses both CLI and GUI
@@ -38,7 +38,7 @@ object GlobalLockChecks {
                      |manually delete the lock file at the following path, then try again:
                      |$path
                      |""".stripMargin.stripLineEnd
-        println(msg)
+        logger.error(msg)
         if (graphical) JOptionPane.showMessageDialog(null, msg)
         sys.exit(1)
       case e: Throwable =>
@@ -46,7 +46,7 @@ object GlobalLockChecks {
                      |Please ensure $FullName has permissions to read from and write to the following path:
                      |$path
                      |""".stripMargin.stripLineEnd
-        println(msg)
+        logger.error(msg)
         if (graphical) JOptionPane.showMessageDialog(null, msg)
         sys.exit(1)
     }

@@ -229,7 +229,6 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
   /** Parse the input string in the concrete syntax as a differential dynamic logic expression */
   def apply(input: String, lax: Boolean): Expression = {
     val tokenStream = KeYmaeraXLexer.inMode(input, ExpressionMode)
-    // if (DEBUG) println("\t" + input)
     try { parse(tokenStream, lax) }
     catch { case e: ParseException => throw e.inInput(input, Some(tokenStream)) }
   }
@@ -1033,7 +1032,6 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
                 || optok <= op(st, la, List(t2.kind, ExpressionKind)) && optok
                   .assoc == LeftAssociative && op(st, la, List(t2.kind, ExpressionKind)).assoc == LeftAssociative)
             ) {
-              // println("\tGOT: " + tok + "\t" + "LA: " + la + "\tAfter: " + s + "\tRemaining: " + input)
               val result = elaborate(st, optok1, optok.asInstanceOf[BinaryOpSpec[Expression]], t1, t2, lax)
               if (statementSemicolon && result.isInstanceOf[AtomicProgram]) {
                 if (la == SEMI) reduce(shift(st), 4, result, sl.spanTo(el), r)
@@ -1694,7 +1692,6 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
    * responsibility is to disambiguate different operators with the same notation based on kinds and parse state.
    */
   private[parser] def op(st: ParseState, tok: Terminal, kinds: List[Kind]): OpSpec = {
-    // println("\top(" + tok +" " + kinds)
     tok match {
       // @note could almost(!) replace by reflection to search through all OpSpec and check their images.
       // terms

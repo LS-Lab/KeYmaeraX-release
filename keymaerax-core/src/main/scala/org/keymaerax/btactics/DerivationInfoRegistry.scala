@@ -6,11 +6,11 @@
 package org.keymaerax.btactics
 
 import io.github.classgraph.ClassGraph
+import org.keymaerax.Logging
 import org.keymaerax.bellerophon.*
 import org.keymaerax.btactics.macros.*
 import org.keymaerax.core.*
 import org.keymaerax.core.btactics.annotations.Derivation
-import org.keymaerax.{Configuration, Logging}
 
 import java.lang.reflect.{Field, InvocationTargetException}
 import scala.annotation.{nowarn, tailrec}
@@ -123,12 +123,8 @@ object DerivationInfoRegistry extends Logging {
             val className = field.getDeclaringClass.getName
             val fieldName = field.getName
 
-            if (Configuration.getBoolean(Configuration.Keys.DEBUG).getOrElse(false)) {
-              // For debugging, the stack trace might be useful.
-              println()
-              println(s"Error while registering (in $className) $fieldName: $t")
-              t.printStackTrace(System.out)
-            }
+            // For debugging, the stack trace might be useful.
+            logger.debug(s"Error while registering (in $className) $fieldName", t)
 
             Some(s"Error while registering (in $className) $fieldName")
         }

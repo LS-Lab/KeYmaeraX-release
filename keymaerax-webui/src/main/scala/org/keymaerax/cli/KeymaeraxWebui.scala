@@ -25,7 +25,7 @@ import org.keymaerax.parser.*
 import org.keymaerax.parser.StringConverter.*
 import org.keymaerax.pt.ProvableSig
 import org.keymaerax.tools.{ToolEvidence, ToolName}
-import org.keymaerax.{Configuration, FileConfiguration, GlobalState}
+import org.keymaerax.{Configuration, FileConfiguration, GlobalState, Logging}
 
 import java.io.PrintWriter
 import scala.collection.immutable.{List, Nil}
@@ -33,7 +33,7 @@ import scala.reflect.io.File
 import scala.sys.ShutdownHookThread
 
 /** Command-line interface for the KeYmaera X webui jar. */
-object KeymaeraxWebui {
+object KeymaeraxWebui extends Logging {
   def main(args: Array[String]): Unit = {
     val options = Options.parseArgs(args.toSeq, name = s"$TechnicalName-webui", webui = true)
     if (!options.launch) Relauncher.relaunchOrExit(args.toSeq)
@@ -146,14 +146,14 @@ object KeymaeraxWebui {
       }
 
       // check safety proof
-      println(s"Checking safety proof ${inputEntry.name}...")
+      logger.info(s"Checking safety proof ${inputEntry.name}...")
       assert(
         TactixLibrary.proveBy(inputEntry.model.asInstanceOf[Formula], inputEntry.tactics.head._3).isProved,
         s"Sandbox synthesis requires a provably safe input model, but ${inputEntry.name} is not proved.",
       )
-      println(s"Done checking safety proof ${inputEntry.name}")
+      logger.info(s"Done checking safety proof ${inputEntry.name}")
 
-      println("Synthesizing sandbox and safety proof...")
+      logger.info("Synthesizing sandbox and safety proof...")
       val ((sandbox, sbTactic), lemmas) = ModelPlex.createSandbox(
         inputEntry.name,
         inputEntry.tactics.head._3,
@@ -162,7 +162,7 @@ object KeymaeraxWebui {
         synthesizeProofs = false,
         defs = inputEntry.defs,
       )(inputModel)
-      println("Done synthesizing sandbox and safety proof")
+      logger.info("Done synthesizing sandbox and safety proof")
 
       val db = new TempDBTools(Nil)
 
@@ -182,10 +182,10 @@ object KeymaeraxWebui {
       })
       // check and store lemmas
       lemmaEntries.foreach(entry => {
-        println(s"Checking sandbox lemma ${entry.name}...")
+        logger.info(s"Checking sandbox lemma ${entry.name}...")
         val lemmaProof = TactixLibrary.proveBy(entry.model.asInstanceOf[Formula], entry.tactics.head._3)
         assert(lemmaProof.isProved, s"Aborting sandbox synthesis: sandbox lemma ${entry.name} was not provable.")
-        println(s"Done checking sandbox lemma ${entry.name}")
+        logger.info(s"Done checking sandbox lemma ${entry.name}")
         val lemmaName = "user" + File.separator + entry.name
         if (LemmaDBFactory.lemmaDB.contains(lemmaName)) LemmaDBFactory.lemmaDB.remove(lemmaName)
         val evidence = Lemma.requiredEvidence(
@@ -209,12 +209,12 @@ object KeymaeraxWebui {
         Map.empty,
       )
       // check sandbox proof
-      println("Checking sandbox safety...")
+      logger.info("Checking sandbox safety...")
       assert(
         TactixLibrary.proveBy(sandboxEntry.model.asInstanceOf[Formula], sandboxEntry.tactics.head._3).isProved,
         "Aborting sandbox synthesis: sandbox safety was not derivable from input model safety proof.",
       )
-      println("Done checking sandbox safety")
+      logger.info("Done checking sandbox safety")
 
       val archive = (lemmaEntries :+ sandboxEntry)
         .map(new KeYmaeraXArchivePrinter(PrettierPrintFormatProvider(_, 80))(_))
@@ -222,7 +222,7 @@ object KeymaeraxWebui {
       val pw = new PrintWriter(outputFileName)
       pw.write(archive)
       pw.close()
-      println(s"Sandbox synthesis successful: $outputFileName")
+      logger.info(s"Sandbox synthesis successful: $outputFileName")
     } else if (vars.isDefined) {
       val parsedVars = makeVariables(vars.get).toList
       val kind = monitor.getOrElse(ModelPlexKind.Model)
@@ -280,7 +280,7 @@ object KeymaeraxWebui {
           tactic.trim.stripPrefix("expandAllDefs").trim.stripPrefix(";").trim match {
             case "auto" | "autoClose" | "master" => (name, tactic, t) // @todo record and export automated steps
             case _ =>
-              println("==== Entry " + e.name + ": running tactic " + name + " for conversion")
+              logger.info(s"==== Entry ${e.name}: running tactic ${name} for conversion")
               val additionalListeners = new PrintProgressListener(t, Nil) :: Nil
               val tempDB = new TempDBTools(additionalListeners)
               val proofId = tempDB.createProof(e.fileContent, e.name, name)
@@ -306,7 +306,7 @@ object KeymaeraxWebui {
                 // TODO A succinct tactic converter that prints with index positions
               }
               val (converted, _) = tree.tacticString(converter)
-              println("==== Done tactic " + name)
+              logger.info(s"==== Done tactic $name")
               (name, converted, t)
           }
         })

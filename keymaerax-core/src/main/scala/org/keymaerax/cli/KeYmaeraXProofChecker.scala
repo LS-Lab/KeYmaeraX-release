@@ -5,7 +5,6 @@
 
 package org.keymaerax.cli
 
-import org.keymaerax.GlobalState
 import org.keymaerax.bellerophon.IOListeners.PrintProgressListener
 import org.keymaerax.bellerophon.parser.BelleParser
 import org.keymaerax.bellerophon.{
@@ -18,12 +17,13 @@ import org.keymaerax.bellerophon.{
 }
 import org.keymaerax.btactics.{TactixLibrary, ToolProvider}
 import org.keymaerax.core.{insist, False, Formula, PrettyPrinter, Sequent, USubst}
-import org.keymaerax.infrastruct.Augmentors._
+import org.keymaerax.infrastruct.Augmentors.*
 import org.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import org.keymaerax.parser.{ArchiveParser, Declaration, KeYmaeraXExtendedLemmaParser, ParsedArchiveEntry}
 import org.keymaerax.pt.ProvableSig
 import org.keymaerax.tools.ToolEvidence
-import org.slf4j.{LoggerFactory, MarkerFactory}
+import org.keymaerax.{GlobalState, Logging}
+import org.slf4j.MarkerFactory
 
 import java.io.PrintWriter
 import java.net.URLEncoder
@@ -38,7 +38,7 @@ import scala.concurrent.{Await, ExecutionContext, Future, TimeoutException}
 import scala.reflect.io.File
 
 /** Proof checker command-line interface implementation. */
-object KeYmaeraXProofChecker {
+object KeYmaeraXProofChecker extends Logging {
   // TODO Convert to Scala 3 enum
   object StatisticsPrinter extends Enumeration {
     val Csv: Value = Value
@@ -252,7 +252,7 @@ object KeYmaeraXProofChecker {
     val inFiles = findFiles(in)
     val archiveContent = inFiles
       .map(p => p -> ArchiveParser.parseFromFile(p.toFile.getAbsolutePath).filterNot(_.isExercise))
-    println("Proving entries from " + archiveContent.size + " files")
+    logger.info(s"Proving entries from ${archiveContent.size} files")
 
     val conjectureFiles = conjecture.map(findFiles).getOrElse(List.empty)
     val conjectureContent = conjectureFiles
@@ -332,8 +332,7 @@ object KeYmaeraXProofChecker {
     }
 
     val csvStatistics = printer.print(archiveStatistics)
-    val statisticsLogger = LoggerFactory.getLogger(getClass)
-    statisticsLogger.info(MarkerFactory.getMarker("PROOF_STATISTICS"), csvStatistics)
+    logger.info(MarkerFactory.getMarker("PROOF_STATISTICS"), csvStatistics)
 
     if (archiveStatistics.exists(_.status == "disproved")) sys.exit(-3)
     if (archiveStatistics.exists(_.status == "failed")) sys.exit(-2)
@@ -372,9 +371,9 @@ object KeYmaeraXProofChecker {
         else entry.tactics
     }
 
-    println("Proving " + path + "#" + entry.name + " ...")
+    logger.info(s"Proving $path#${entry.name} ...")
     if (t.isEmpty) {
-      println("Unknown tactic " + tacticName + ", skipping entry")
+      logger.warn(s"Unknown tactic $tacticName, skipping entry")
       ProofStatistics(
         entry.name,
         tacticName.getOrElse("auto").toString,
@@ -403,7 +402,7 @@ object KeYmaeraXProofChecker {
             args,
           )
 
-          println("Done " + path + "#" + entry.name + " (" + proofStat.status + ")")
+          logger.info(s"Done $path#${entry.name} (${proofStat.status})")
 
           proofStat.witness match {
             case Some(proof) => if (entry.kind == "lemma") {
