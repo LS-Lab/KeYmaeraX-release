@@ -6,23 +6,23 @@
 package org.keymaerax.btactics
 
 import org.keymaerax.bellerophon.TacticStatistics
-import org.keymaerax.btactics.BenchmarkTests._
+import org.keymaerax.btactics.BenchmarkTests.*
 import org.keymaerax.core.{Box, False, Formula, Imply, ODESystem, Program, Sequent, SuccPos}
 import org.keymaerax.hydra.DatabasePopulator
 import org.keymaerax.hydra.DatabasePopulator.TutorialEntry
-import org.keymaerax.parser._
+import org.keymaerax.parser.*
 import org.keymaerax.tags.ExtremeTest
 import org.keymaerax.tools.ToolOperationManagement
 import org.keymaerax.{Configuration, GlobalState}
 import org.scalatest.exceptions.TestFailedDueToTimeoutException
-import org.scalatest.prop.TableDrivenPropertyChecks._
+import org.scalatest.prop.TableDrivenPropertyChecks.*
 import org.scalatest.time.{Seconds, Span}
 import org.scalatest.{AppendedClues, Suites}
 
-import java.io.PrintWriter
+import java.io.{File, PrintWriter}
+import java.nio.file.{Files, Path}
 import scala.collection.immutable.{IndexedSeq, Map, Nil}
 import scala.language.postfixOps
-import scala.reflect.io.File
 
 /**
  * Benchmarks.
@@ -92,11 +92,9 @@ class BenchmarkExporter(val benchmarkName: String, val url: String) extends Tact
     val printedContent = entries.map(printer(_)).mkString("\n\n")
 
     // @todo tactic legacy format (so far only id -> closeId renamed manually after export)
-    val archive = File(EXPORT_DIR + "legacy")
-    archive.createDirectory()
-    val pw = (archive / File(url.substring(url.lastIndexOf("/") + 1))).printWriter()
-    pw.write(printedContent)
-    pw.close()
+    val archive = Path.of(EXPORT_DIR + "legacy")
+    Files.createDirectory(archive)
+    Files.writeString(archive.resolve(url.substring(url.lastIndexOf("/") + 1)), printedContent)
   }
 
   it should "export KeYmaera X stripped" ignore withTactics {
@@ -107,11 +105,9 @@ class BenchmarkExporter(val benchmarkName: String, val url: String) extends Tact
     val printer = new KeYmaeraXArchivePrinter(PrettierPrintFormatProvider(_, 80))
     val printedStrippedContent = entries.map(stripEntry).map(printer(_)).mkString("\n\n")
 
-    val archive = File(EXPORT_DIR + "stripped" + url.substring(url.lastIndexOf("/") + 1))
-    archive.createDirectory()
-    val pws = archive.printWriter()
-    pws.write(printedStrippedContent)
-    pws.close()
+    val archive = Path.of(EXPORT_DIR + "stripped" + url.substring(url.lastIndexOf("/") + 1))
+    Files.createDirectory(archive)
+    Files.writeString(archive, printedStrippedContent)
   }
 
   it should "export KeYmaera 3 format" in withTactics {
@@ -127,13 +123,11 @@ class BenchmarkExporter(val benchmarkName: String, val url: String) extends Tact
         })
     )
 
-    val archive = File(EXPORT_DIR + url.substring(url.lastIndexOf("/") + 1))
-    archive.createDirectory()
+    val archive = Path.of(EXPORT_DIR + url.substring(url.lastIndexOf("/") + 1))
+    Files.createDirectory(archive)
     printedEntries.foreach(e => {
       // replace special characters in file name
-      val pw = (archive / File(e._1 + ".key")).printWriter()
-      pw.write(e._2)
-      pw.close()
+      Files.writeString(archive.resolve(e._1 + ".key"), e._2)
     })
   }
 

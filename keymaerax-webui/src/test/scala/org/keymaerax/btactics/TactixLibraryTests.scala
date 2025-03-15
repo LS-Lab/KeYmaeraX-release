@@ -5,34 +5,34 @@
 
 package org.keymaerax.btactics
 
-import org.keymaerax.bellerophon._
-import org.keymaerax.btactics.DifferentialEquationCalculus._
-import org.keymaerax.btactics.HilbertCalculus._
-import org.keymaerax.btactics.SequentCalculus._
-import org.keymaerax.btactics.TacticFactory._
-import org.keymaerax.btactics.TactixLibrary._
-import org.keymaerax.btactics.UnifyUSCalculus._
+import org.keymaerax.bellerophon.*
+import org.keymaerax.btactics.DifferentialEquationCalculus.*
+import org.keymaerax.btactics.HilbertCalculus.*
+import org.keymaerax.btactics.SequentCalculus.*
+import org.keymaerax.btactics.TacticFactory.*
+import org.keymaerax.btactics.TactixLibrary.*
+import org.keymaerax.btactics.UnifyUSCalculus.*
 import org.keymaerax.btactics.macros.TacticInfo
-import org.keymaerax.core._
+import org.keymaerax.core.*
 import org.keymaerax.infrastruct.{PosInExpr, Position, SuccPosition}
 import org.keymaerax.lemma.{Lemma, LemmaDBFactory}
-import org.keymaerax.parser.StringConverter._
+import org.keymaerax.parser.StringConverter.*
 import org.keymaerax.parser.{ArchiveParser, Declaration}
 import org.keymaerax.pt.ProvableSig
 import org.keymaerax.tagobjects.{IgnoreInBuildTest, SlowTest, TodoTest}
 import org.keymaerax.tags.{SummaryTest, UsualTest}
 import org.keymaerax.tools.{ToolEvidence, ToolOperationManagement}
 import org.keymaerax.{Configuration, GlobalState}
-import org.scalatest.LoneElement._
-import org.scalatest.OptionValues._
-import org.scalatest.time.SpanSugar._
+import org.scalatest.LoneElement.*
+import org.scalatest.OptionValues.*
+import org.scalatest.time.SpanSugar.*
 
+import java.io.File
 import scala.annotation.nowarn
-import scala.collection.immutable._
+import scala.collection.immutable.*
 import scala.collection.mutable.ListBuffer
 import scala.io.Source
 import scala.language.postfixOps
-import scala.reflect.io.File
 
 /**
  * Tactix Library Test.
