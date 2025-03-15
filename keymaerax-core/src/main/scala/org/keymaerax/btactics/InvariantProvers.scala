@@ -5,19 +5,18 @@
 
 package org.keymaerax.btactics
 
-import org.keymaerax.GlobalState
-import org.keymaerax.bellerophon._
+import org.keymaerax.bellerophon.*
 import org.keymaerax.btactics.Idioms.?
-import org.keymaerax.btactics.TacticFactory._
-import org.keymaerax.core._
-import org.keymaerax.infrastruct.Augmentors.{SequentAugmentor, _}
+import org.keymaerax.btactics.TacticFactory.*
+import org.keymaerax.core.*
+import org.keymaerax.infrastruct.Augmentors.{SequentAugmentor, *}
 import org.keymaerax.infrastruct.{Augmentors, DependencyAnalysis, PosInExpr, Position}
 import org.keymaerax.parser.Declaration
 import org.keymaerax.pt.ProvableSig
-import org.slf4j.LoggerFactory
+import org.keymaerax.{GlobalState, Logging}
 
 import scala.annotation.nowarn
-import scala.util.control.Breaks._
+import scala.util.control.Breaks.*
 
 /**
  * Invariant proof automation with generators.
@@ -25,11 +24,9 @@ import scala.util.control.Breaks._
  * @author
  *   Andre Platzer
  */
-object InvariantProvers {
-  import TactixLibrary._
-  import UnifyUSCalculus._
-
-  private val logger = LoggerFactory.getLogger(getClass) // @note instead of "with Logging" to avoid cyclic dependencies
+object InvariantProvers extends Logging {
+  import TactixLibrary.*
+  import UnifyUSCalculus.*
 
   /**
    * loopSR: cleverly prove a property of a loop automatically by induction, trying hard to generate loop invariants.
@@ -89,7 +86,7 @@ object InvariantProvers {
   private def feedOneAfterTheOther[A <: Expression](
       gen: Iterator[A]
   ): (ProvableSig, ProverException) => Seq[Expression] = { (_, e) =>
-    logger.debug("SnR loop status " + e)
+    logger.debug(s"SnR loop status $e")
     if (gen.hasNext) gen.next() :: Nil else throw new BelleNoProgress("loopSR ran out of loop invariant candidates")
   }
 
@@ -148,7 +145,7 @@ object InvariantProvers {
                           .map(_.formula)
                           .filterNot(localInv => odePost.contains(localInv)),
                       (localInv: Formula) => {
-                        logger.debug("loopPostMaster local " + localInv)
+                        logger.debug(s"loopPostMaster local $localInv")
                         DebuggingTactics.debug("local") &
                           DifferentialEquationCalculus.dC(localInv)(pos) <
                           (DifferentialEquationCalculus.dW(pos) & QE, DifferentialTactics.mathematicaODE(pos)) & done &
@@ -172,11 +169,11 @@ object InvariantProvers {
             currentCandidate match {
               // @note updates "global" candidates
               case Some(cand) =>
-                logger.debug("loopPostMaster subst " + USubst(Seq(jjl ~>> cand, jja ~> True)))
+                logger.debug(s"loopPostMaster subst ${USubst(Seq(jjl ~>> cand, jja ~> True))}")
                 // plug in true for jja, commit if succeeded. Else plug in init for jja and generate
                 val wouldBeSeq = USubst(Seq(jjl ~>> cand, jja ~> True))(sequent)
                 lazy val wouldBeSubgoals = pr(USubst(Seq(jjl ~>> cand, jja ~> True)))
-                logger.debug("loopPostMaster looks at\n" + wouldBeSeq)
+                logger.debug(s"loopPostMaster looks at $wouldBeSeq")
                 // @note first check induction step; then lazily check all subgoals (candidate may not be true initially or not strong enough)
                 val stepProof = proveBy(wouldBeSeq, ?(finishOff))
                 if (
@@ -186,7 +183,7 @@ object InvariantProvers {
                   ).isProved
                 ) {
                   // proof will work so no need to change candidate
-                  logger.debug("Proof will work " + wouldBeSubgoals.prettyString)
+                  logger.debug(s"Proof will work ${wouldBeSubgoals.prettyString}")
                   currentCandidate
                 } else {
                   logger.debug("loopPostMaster progressing")
@@ -200,7 +197,7 @@ object InvariantProvers {
                   while (candidates.hasNext) {
                     val next = Some(candidates.next())
                     if (next != currentCandidate) {
-                      logger.debug("loopPostMaster next    " + next.get)
+                      logger.debug(s"loopPostMaster next    ${next.get}")
                       return next
                     }
                   }
@@ -212,7 +209,7 @@ object InvariantProvers {
           def generateOnTheFly[A <: Expression](
               pos: Position
           ): (ProvableSig, ProverException) => scala.collection.immutable.Seq[Expression] = {
-            logger.debug("loopPostMaster init " + candidate)
+            logger.debug(s"loopPostMaster init $candidate")
             (pr: ProvableSig, _: ProverException) => {
               var sawODE: Boolean = false
               // @note updates "global" candidate
@@ -235,7 +232,7 @@ object InvariantProvers {
               }
               candidate match {
                 case Some(c) =>
-                  logger.debug("loopPostMaster cand    " + c)
+                  logger.debug(s"loopPostMaster cand    $c")
                   // c for jjl, eventual True for jja
                   c :: True :: Nil
                 case None =>

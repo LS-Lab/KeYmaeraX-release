@@ -27,7 +27,7 @@ object DBAbstractionObj extends Logging {
   }
 
   val dblocation: String = getLocation(isTest = false)
-  logger.info("Using database " + dblocation)
+  logger.info(s"Using database $dblocation")
   val testLocation: String = getLocation(isTest = true)
 }
 

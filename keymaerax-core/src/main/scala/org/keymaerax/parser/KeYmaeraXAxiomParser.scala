@@ -29,7 +29,7 @@ object KeYmaeraXAxiomParser extends (String => List[(String, Formula)]) with Log
    */
   def apply(input: String): List[(String, Formula)] = {
     val tokens = KeYmaeraXLexer.inMode(input, AxiomFileMode)
-    logger.debug("Tokens are: " + tokens)
+    logger.debug(s"Tokens are: $tokens")
     try { parseAxioms(tokens) }
     catch { case e: ParseException => throw e.inContext("<AxiomBase>" /*input*/ ) }
   }
@@ -72,7 +72,7 @@ object KeYmaeraXAxiomParser extends (String => List[(String, Formula)]) with Log
       case Token(DOUBLE_QUOTES_STRING(x), _) => x
       case _ => throw new AssertionError("Require should have failed.")
     }
-    logger.debug("Axiom " + name)
+    logger.debug(s"Axiom $name")
     // Find the End. token and exclude it.
     val (axiomTokens, remainderTokens) =
       // 1st element is AXIOM_BEGIN, 2nd is AXIOM_NAME, 3rd is optional .

@@ -232,9 +232,9 @@ object DifferentialSaturation extends Logging {
     var ineqinvs = ListBuffer[(Term, Map[Variable, Term])]()
     var domain = dom.to(ListBuffer)
     for (cs <- candSets) {
-      logger.trace("Parametric invariants for " + cs)
+      logger.trace(s"Parametric invariants for $cs")
       for (deg <- List.range(1, degLimit)) {
-        logger.trace("Degree " + deg)
+        logger.trace(s"Degree $deg")
 
         // Try for equational invariant first
         val eqinv = parametricInvariant(ode, domain.toList, cs, insts, fresh, deg, tool, false) match {
@@ -242,7 +242,7 @@ object DifferentialSaturation extends Logging {
           case Some((t, s, iv, nf)) =>
             insts = iv
             fresh = nf
-            logger.trace("Found = invariant " + t)
+            logger.trace(s"Found = invariant $t")
             // This unfortunately seems to make PQE do badly...
             domain += Equal(t, Number(0))
             eqinvs += ((t, s))
@@ -257,7 +257,7 @@ object DifferentialSaturation extends Logging {
             case Some((t, s, iv, nf)) =>
               insts = iv
               fresh = nf
-              logger.trace("Found >= invariant " + t)
+              logger.trace(s"Found >= invariant $t")
               // This unfortunately seems to make PQE do badly...
               domain += GreaterEqual(t, Number(0))
               ineqinvs += ((t, s))

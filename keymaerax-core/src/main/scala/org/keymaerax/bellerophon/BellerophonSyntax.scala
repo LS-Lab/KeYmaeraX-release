@@ -530,8 +530,12 @@ trait AtPosition[T <: BelleExpr] extends BelleExpr with (PositionLocator => T) w
           )
       }
     // @todo how to check expected formula?
-    case Symbol("Llast") => logger.info("INFO: will not check expected for 'Llast yet"); apply(LastAnte(0))
-    case Symbol("Rlast") => logger.info("INFO: will not check expected for 'Rlast yet"); apply(LastSucc(0))
+    case Symbol("Llast") =>
+      logger.debug("Will not check expected for 'Llast yet")
+      apply(LastAnte(0))
+    case Symbol("Rlast") =>
+      logger.debug("Will not check expected for 'Rlast yet")
+      apply(LastSucc(0))
   }
   final def apply(locator: Symbol, expected: Expression): T = apply(locator, expected, BuiltinSymbols.all)
 

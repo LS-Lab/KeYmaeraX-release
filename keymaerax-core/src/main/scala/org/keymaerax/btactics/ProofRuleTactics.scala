@@ -236,7 +236,7 @@ private object ProofRuleTactics extends Logging {
                 SequentCalculus.close(-1, 1),
             ),
         )
-        logger.debug("contextualize.side " + side)
+        logger.debug(s"contextualize.side $side")
         UnifyUSCalculus.CEat(side)(pos)
       }
     )

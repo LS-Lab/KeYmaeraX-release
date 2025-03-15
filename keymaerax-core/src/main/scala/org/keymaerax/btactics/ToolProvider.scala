@@ -89,19 +89,20 @@ object ToolProvider extends ToolProvider with Logging {
     try {
       if (p.init()) { MultiToolProvider(p :: init(new Z3ToolProvider) :: Nil) }
       else {
-        val msg = s"""Unable to connect to $toolName, switching to Z3
-                     |Please check your $toolName configuration in KeYmaera X->Preferences
-            """.stripMargin
-        logger.info(msg)
+        logger.warn(
+          s"""Unable to connect to $toolName, switching to Z3
+             |Please check your $toolName configuration in KeYmaera X->Preferences""".stripMargin
+        )
         init(new Z3ToolProvider)
       }
     } catch {
       case ex: Throwable =>
-        val msg = s"""Unable to connect to $toolName, switching to Z3
-                     |Please check your $toolName configuration in KeYmaera X->Preferences
-                     |$toolName initialization failed with the error below
-            """.stripMargin
-        logger.warn(msg, ex)
+        logger.warn(
+          s"""Unable to connect to $toolName, switching to Z3
+             |Please check your $toolName configuration in KeYmaera X->Preferences
+             |$toolName initialization failed with the error below
+             |$ex""".stripMargin
+        )
         logger.info(s"Starting with Z3 since $toolName initialization failed")
         init(new Z3ToolProvider)
     }

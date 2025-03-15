@@ -205,7 +205,7 @@ class JLinkMathematicaLink(val engineName: String) extends MathematicaLink with 
     try {
       ml =
         if (tcpip.nonEmpty && tcpip != "false") {
-          logger.info("Connecting to Math Kernel over TCPIP to " + tcpip)
+          logger.info(s"Connecting to Math Kernel over TCPIP to $tcpip")
           val port :: machine = tcpip match {
             case "true" => DEFAULT_PORT :: Nil
             case _ => tcpip.split("@").toList
@@ -231,7 +231,7 @@ class JLinkMathematicaLink(val engineName: String) extends MathematicaLink with 
             } else { ("-linkmode" :: "connect" :: "-linkprotocol" :: "tcpip" :: "-linkname" :: tcpip :: Nil).toArray }
           MathLinkFactory.createKernelLink(args)
         } else {
-          logger.info("Launching " + engineName)
+          logger.info(s"Launching $engineName")
           val args =
             ("-linkmode" :: "launch" :: "-linkprotocol" :: "tcpip" :: "-linkname" :: "\"" + linkName + "\" -mathlink" ::
               Nil).toArray
@@ -247,38 +247,40 @@ class JLinkMathematicaLink(val engineName: String) extends MathematicaLink with 
         isActivated(version) match {
           case Some((true, date)) => isComputing match {
               case Some(true) =>
-                logger.info(
-                  "Connected to " + engineName + " v" + version + " (TCPIP=" + tcpip + ", license expires " + date + ")"
-                )
+                logger.info(s"Connected to $engineName v$version (TCPIP=$tcpip, license expires $date)")
                 true // everything ok
               case Some(false) =>
                 logger.error(
-                  "ERROR: Test computation in " + engineName + " failed, shutting down.\n Please start a standalone " +
-                    engineName +
-                    " notebook and check that it can compute simple facts, such as 6*9. Then restart KeYmaera X."
+                  s"""Test computation in $engineName failed, shutting down.
+                     |Please start a standalone $engineName notebook and check that it can compute
+                     |simple facts, such as 6*9. Then restart KeYmaera X.""".stripMargin
                 )
                 throw new IllegalStateException(
-                  "Test computation in " + engineName + " failed.\n Please start a standalone " + engineName +
-                    " notebook and check that it can compute simple facts, such as 6*9. Then restart KeYmaera X."
+                  s"""Test computation in $engineName failed, shutting down.
+                     |Please start a standalone $engineName notebook and check that it can compute
+                     |simple facts, such as 6*9. Then restart KeYmaera X."""
                 )
               case None =>
                 logger.warn(
-                  "WARNING: Unable to determine state of " + engineName + ", " + engineName +
-                    " may not be working.\n Restart KeYmaera X if you experience problems using arithmetic tactics."
-                ); true
+                  s"""Unable to determine state of $engineName, $engineName may not be working.
+                     |Restart KeYmaera X if you experience problems using arithmetic tactics.""".stripMargin
+                )
+                true
             }
           case Some((false, date)) =>
             logger.warn(
-              "WARNING: " + engineName + " seems not activated or license might be expired (expires " + date + "), " +
-                engineName + " may not be working.\n A valid license is necessary to use " + engineName +
-                " as backend of KeYmaera X.\n If you experience problems during proofs, please renew your license and restart KeYmaera X."
-            ); true
+              s"""$engineName seems not activated or license might be expired (expires $date),
+                 |$engineName may not be working. A valid license is necessary to use $engineName
+                 |as backend of KeYmaera X. If you experience problems during proofs,
+                 |please renew your license and restart KeYmaera X.""".stripMargin
+            )
+            true
           // throw new IllegalStateException("Mathematica is not activated or Mathematica license is expired.\n A valid license is necessary to use Mathematica as backend of KeYmaera X.\n Please renew your Mathematica license and restart KeYmaera X.")
           case None =>
             logger.warn(
-              "WARNING: " + engineName +
-                " may not be activated or license might be expired.\n A valid license is necessary to use " +
-                engineName + " as backend of KeYmaera X.\n Please check your license manually."
+              s"""$engineName may not be activated or license might be expired.
+                 |A valid license is necessary to use $engineName as backend of KeYmaera X.
+                 |Please check your license manually.""".stripMargin
             ); true
         }
       }
@@ -300,32 +302,36 @@ class JLinkMathematicaLink(val engineName: String) extends MathematicaLink with 
           if e.getErrCode == 1004 && e.getMessage.contains("Link failed to open") && remainingTrials > 0 =>
         // link did not open, wait a little and retry
         logger.info(
-          "Repeating connection attempt\n" + engineName + " J/Link failed to open " + e +
-            "\nRepeating connection attempt (remaining trials: " + (remainingTrials - 1) + ")\n" + diagnostic
+          s"""$engineName J/Link failed to open: $e
+             |Repeating connection attempt (remaining trials: ${remainingTrials - 1})
+             |$diagnostic""".stripMargin
         )
         Thread.sleep(10000)
         init(linkName, jlinkLibDir, tcpip, remainingTrials - 1)
       case e: MathLinkException =>
         logger.error(
-          "Shutting down since " + engineName + " J/Link errored " + e +
-            "\nPlease double check configuration and license.\n" + diagnostic,
+          s"""Shutting down since $engineName J/Link errored: $e
+             |Please double check configuration and license.
+             |$diagnostic""".stripMargin,
           e,
         )
         shutdown()
         false
       case ex: IOException =>
         logger.error(
-          "Shutting down since " + engineName +
-            " was not reachable under the configured path. \nPlease double check configuration paths.\n" + diagnostic,
+          s"""Shutting down since $engineName was not reachable under the configured path.
+             |Please double check configuration paths.
+             |$diagnostic""".stripMargin,
           ex,
         )
         shutdown()
         false
       case ex: Throwable =>
         logger.warn(
-          "Unknown error " + ex + "\n" + engineName +
-            " may or may not be working. If you experience problems, please double check configuration paths and license.\n" +
-            diagnostic,
+          s"""Unknown error $ex
+             |$engineName may or may not be working.
+             |If you experience problems, please double check configuration paths and license.
+             |$diagnostic""".stripMargin,
           ex,
         )
         true
@@ -336,13 +342,13 @@ class JLinkMathematicaLink(val engineName: String) extends MathematicaLink with 
   def shutdown(): Unit = {
     if (ml == null) logger.trace("No need to shut down MathKernel if no link has been initialized")
     else {
-      logger.debug("Shutting down " + engineName + "...")
+      logger.debug(s"Shutting down $engineName...")
       val l: KernelLink = ml
       ml = null
       l.abandonEvaluation()
       l.terminateKernel()
       l.close()
-      logger.info("Disconnected from " + engineName)
+      logger.info(s"Disconnected from $engineName")
     }
     mathProcess match {
       case Some(p) =>
@@ -413,7 +419,7 @@ class JLinkMathematicaLink(val engineName: String) extends MathematicaLink with 
             executor.remove(taskId)
             throw ex
           case ex: ToolCriticalException =>
-            logger.warn(ex.getMessage, ex)
+            logger.warn(s"${ex.getMessage}", ex)
             executor.remove(taskId, force = true)
             try { restart() }
             catch {
@@ -434,7 +440,7 @@ class JLinkMathematicaLink(val engineName: String) extends MathematicaLink with 
         // @note Thread is interrupted by another thread (e.g., UI button 'stop')
         cancel()
         executor.remove(taskId, force = true)
-        logger.debug("Initiated aborting " + engineName)
+        logger.debug(s"Initiated aborting $engineName")
         throw MathematicaComputationUserAbortException("Mathematica task aborted")
     }
   }
@@ -451,7 +457,7 @@ class JLinkMathematicaLink(val engineName: String) extends MathematicaLink with 
     val (major, minor) = disposeAfter(
       ml.getExpr,
       version => {
-        logger.debug("Running " + engineName + " version " + version.toString)
+        logger.debug(s"Running $engineName version $version")
         val versionParts = version.toString.split("\\.")
         if (versionParts.length >= 2) (versionParts(0), versionParts(1)) else ("Unknown", "Unknown")
       },
@@ -467,7 +473,7 @@ class JLinkMathematicaLink(val engineName: String) extends MathematicaLink with 
     val infinity = ExprFactory.makeExpr(new MExpr(Expr.SYMBOL, "DirectedInfinity"), Array(new MExpr(1L)))
     try {
       def toDate(date: Array[MExpr]): Option[LocalDate] = {
-        logger.debug(engineName + " license expires: " + date.mkString)
+        logger.debug(s"$engineName license expires: ${date.mkString(",")}")
         if (date.length >= 3 && date(0).integerQ() && date(1).integerQ() && date(2).integerQ()) {
           Some(LocalDate.of(date(0).asInt(), date(1).asInt(), date(2).asInt()))
         } else { None }
@@ -491,16 +497,17 @@ class JLinkMathematicaLink(val engineName: String) extends MathematicaLink with 
             case Version("12", _, _) => checkExpired(toDate(licenseExpirationDate.args.head.args))
             case Version(major, minor, _) =>
               logger.debug(
-                "WARNING: Cannot check license expiration date since unknown " + engineName + " version " + major +
-                  "." + minor + ", only version 9.x, 10.x, and 11.x supported. " + engineName +
-                  " requests may fail if license is expired."
+                s"""Cannot check license expiration date since unknown $engineName version $major.$minor,
+                   |only version 9.x, 10.x, and 11.x supported.
+                   |$engineName requests may fail if license is expired.""".stripMargin
               )
               None
           }
           // @note date disposed as part of licenseExpirationDate
         } catch {
           case e: ExprFormatException =>
-            logger.warn("WARNING: Unable to determine " + engineName + " expiration date\n cause: " + e, e); None
+            logger.warn(s"Unable to determine $engineName expiration date", e)
+            None
         }
 
       ml.evaluate(MathematicaOpSpec.licenseExpirationDate.op.toString)
@@ -517,7 +524,7 @@ class JLinkMathematicaLink(val engineName: String) extends MathematicaLink with 
       Some(disposeAfter(ml.getExpr, e => e.integerQ() && e.asInt() == 54))
     } catch {
       // @todo need better error reporting, this way it will never show up on UI
-      case e: Throwable => logger.warn("WARNING: " + engineName + " may not be functional \n cause: " + e, e); None
+      case e: Throwable => logger.warn(s"$engineName may not be functional", e); None
     }
   }
 }
@@ -554,45 +561,59 @@ class WolframScript extends MathematicaLink with Logging {
       isActivated(version) match {
         case Some((true, date)) => isComputing match {
             case Some(true) =>
-              logger.info("Connected to Wolfram Engine v" + version + " (license expires " + date + ")")
+              logger.info(s"Connected to Wolfram Engine v$version (license expires $date)")
               true // everything ok
             case Some(false) =>
               logger.error(
-                "ERROR: Test computation in Wolfram Engine failed, shutting down.\n Please start a standalone Wolfram Engine and check that it can compute simple facts, such as 6*9. Then restart KeYmaera X."
+                """Test computation in Wolfram Engine failed, shutting down.
+                  |Please start a standalone Wolfram Engine and check that it can compute
+                  |simple facts, such as 6*9. Then restart KeYmaera X.""".stripMargin
               )
               throw new IllegalStateException(
-                "Test computation in Wolfram Engine failed.\n Please start a standalone Wolfram Engine and check that it can compute simple facts, such as 6*9. Then restart KeYmaera X."
+                """Test computation in Wolfram Engine failed, shutting down.
+                  |Please start a standalone Wolfram Engine and check that it can compute
+                  |simple facts, such as 6*9. Then restart KeYmaera X.""".stripMargin
               )
             case None =>
               logger.warn(
-                "WARNING: Unable to determine state of Wolfram Engine, Wolfram Engine may not be working.\n Restart KeYmaera X if you experience problems using arithmetic tactics."
-              ); true
+                """Unable to determine state of Wolfram Engine, Wolfram Engine may not be working.
+                  |Restart KeYmaera X if you experience problems using arithmetic tactics.""".stripMargin
+              )
+              true
           }
         case Some((false, date)) =>
           logger.warn(
-            "WARNING: Wolfram Engine seems not activated or license might be expired (expires " + date +
-              "), Wolfram Engine may not be working.\n A valid license is necessary to use Wolfram Engine as backend of KeYmaera X.\n If you experience problems during proofs, please renew your license and restart KeYmaera X."
-          ); true
+            s"""Wolfram Engine seems not activated or license might be expired (expires $date),
+               |Wolfram Engine may not be working. A valid license is necessary to use
+               |Wolfram Engine as backend of KeYmaera X. If you experience problems
+               |during proofs, please renew your license and restart KeYmaera X.""".stripMargin
+          )
+          true
         case None =>
           logger.warn(
-            "WARNING: Wolfram Engine may not be activated or license might be expired.\n A valid license is necessary to use Wolfram Engine as backend of KeYmaera X.\n Please check your license manually."
-          ); true
+            """Wolfram Engine may not be activated or license might be expired.
+              |A valid license is necessary to use Wolfram Engine as backend of KeYmaera X.
+              |Please check your license manually.""".stripMargin
+          )
+          true
       }
     } catch {
       case e: MathLinkException
           if e.getErrCode == 1004 && e.getMessage.contains("Link failed to open") && remainingTrials > 0 =>
         // link did not open, wait a little and retry
         logger.info(
-          "Repeating connection attempt\nWolfram Engine failed to open " + e +
-            "\nRepeating connection attempt (remaining trials: " + (remainingTrials - 1) + ")\n" + diagnostic
+          s"""Wolfram Engine failed to open: $e
+             |Repeating connection attempt (remaining trials: ${remainingTrials - 1})
+             |$diagnostic""".stripMargin
         )
         Thread.sleep(10000)
         init(remainingTrials - 1)
       case ex: Throwable =>
         logger.warn(
-          "Unknown error " + ex +
-            "\nWolfram Engine may or may not be working. If you experience problems, please double check configuration paths and license.\n" +
-            diagnostic,
+          s"""Unknown error: $ex
+             |Wolfram Engine may or may not be working.
+             |If you experience problems, please double check configuration paths and license.
+             |$diagnostic""".stripMargin,
           ex,
         )
         true
@@ -650,7 +671,7 @@ class WolframScript extends MathematicaLink with Logging {
             executor.remove(taskId)
             throw ex
           case ex: ToolExternalException =>
-            logger.warn(ex.getMessage, ex)
+            logger.warn(s"${ex.getMessage}", ex)
             executor.remove(taskId, force = true)
             try { restart() }
             catch {
@@ -688,7 +709,7 @@ class WolframScript extends MathematicaLink with Logging {
     val (major, minor) = disposeAfter(
       mmResult,
       version => {
-        logger.debug("Running Wolfram Engine version " + version.toString)
+        logger.debug(s"Running Wolfram Engine version $version")
         val versionParts = version.toString.split("\\.")
         if (versionParts.length >= 2) (versionParts(0), versionParts(1))
         else if (versionParts.nonEmpty) (versionParts(0), "0")
@@ -705,7 +726,7 @@ class WolframScript extends MathematicaLink with Logging {
     val infinity = ExprFactory.makeExpr(new MExpr(Expr.SYMBOL, "DirectedInfinity"), Array(new MExpr(1L)))
     try {
       def toDate(date: Array[MExpr]): Option[LocalDate] = {
-        logger.debug("Wolfram Engine license expires: " + date.mkString)
+        logger.debug(s"Wolfram Engine license expires: ${date.mkString(",")}")
         if (date.length >= 3 && date(0).integerQ() && date(1).integerQ() && date(2).integerQ()) {
           Some(LocalDate.of(date(0).asInt(), date(1).asInt(), date(2).asInt()))
         } else { None }
@@ -726,15 +747,14 @@ class WolframScript extends MathematicaLink with Logging {
             case Version("12", _, _) => checkExpired(toDate(licenseExpirationDate.args.head.args))
             case Version(major, minor, _) =>
               logger.debug(
-                "WARNING: Cannot check license expiration date since unknown Wolfram Engine version " + major + "." +
-                  minor + ", only version 12.x supported. Wolfram Engine requests may fail if license is expired."
+                s"""Cannot check license expiration date since unknown Wolfram Engine version $major.$minor,
+                   |only version 12.x supported. Wolfram Engine requests may fail if license is expired.""".stripMargin
               )
               None
           }
           // @note date disposed as part of licenseExpirationDate
         } catch {
-          case e: ExprFormatException =>
-            logger.warn("WARNING: Unable to determine Wolfram Engine expiration date\n cause: " + e, e); None
+          case e: ExprFormatException => logger.warn("Unable to determine Wolfram Engine expiration date", e); None
         }
 
       val result = evaluate(MathematicaOpSpec.licenseExpirationDate.op.toString)

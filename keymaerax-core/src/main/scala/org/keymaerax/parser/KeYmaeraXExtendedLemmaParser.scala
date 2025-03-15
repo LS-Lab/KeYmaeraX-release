@@ -50,7 +50,7 @@ object KeYmaeraXExtendedLemmaParser
       // @todo sort checking
       val input = ParserHelper.removeBOM(inputWithPossibleBOM)
       val tokens = KeYmaeraXLexer.inMode(input, LemmaFileMode)
-      logger.debug("Tokens are: " + tokens)
+      logger.debug(s"Tokens are: $tokens")
       parseLemma(tokens)
     } catch {
       case e: ParseException => throw e.inContext("input:  " + inputWithPossibleBOM)

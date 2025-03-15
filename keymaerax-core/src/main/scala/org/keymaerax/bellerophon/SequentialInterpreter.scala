@@ -500,7 +500,7 @@ abstract class BelleBaseInterpreter(
           case e: Throwable =>
             throw new IllFormedTacticApplicationException("Unable to start inner proof in let: " + e.getMessage, e)
         }
-      logger.debug("INFO: " + expr + " considers\n" + in + "\nfor outer\n" + provable)
+      logger.debug(s"$expr considers\n$in\nfor outer\n$provable")
       apply(innerMost, BelleProvable(in, lbl)) match {
         case p: BelleDelayedSubstProvable =>
           try {
@@ -911,11 +911,11 @@ abstract class SequentialInterpreter(
       var result: Option[BelleValue] = None
       while (result.isEmpty && !isDead && opts.hasNext) {
         val o = opts.next()
-        logger.debug("ChooseSome: try " + o)
+        logger.debug(s"ChooseSome: try $o")
         val someResult: Option[BelleValue] =
           try { Some(apply(e(o), v)) }
           catch { case err: BelleProofSearchControl => errors += "in " + o + " " + err + "\n"; None }
-        logger.debug("ChooseSome: try " + o + " got " + someResult)
+        logger.debug(s"ChooseSome: try $o got $someResult")
         (someResult, e) match {
           case (Some(p: BelleProvable), _) => result = Some(p)
           case (Some(p), _: PartialTactic) => result = Some(p)

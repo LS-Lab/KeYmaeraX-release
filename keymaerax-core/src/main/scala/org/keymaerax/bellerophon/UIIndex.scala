@@ -5,13 +5,13 @@
 
 package org.keymaerax.bellerophon
 
+import org.keymaerax.Logging
 import org.keymaerax.btactics.ImplicitAx
-import org.keymaerax.infrastruct.Augmentors._
-import org.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
-import org.keymaerax.core._
-import org.keymaerax.infrastruct._
 import org.keymaerax.btactics.macros.{DerivationInfo, OptionArg}
-import org.slf4j.LoggerFactory
+import org.keymaerax.core.*
+import org.keymaerax.infrastruct.*
+import org.keymaerax.infrastruct.Augmentors.*
+import org.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 
 import scala.annotation.tailrec
 
@@ -23,8 +23,7 @@ import scala.annotation.tailrec
  * @see
  *   [[org.keymaerax.btactics.AxIndex]]
  */
-object UIIndex {
-  private val logger = LoggerFactory.getLogger(UIIndex.getClass)
+object UIIndex extends Logging {
 
   /**
    * Give the canonical (derived) axiom name or tactic names that simplifies the expression expr, optionally considering
@@ -67,10 +66,9 @@ object UIIndex {
       val isSucc = pos.nonEmpty && pos.get.isSucc
 
       val alwaysApplicable = "chaseAt" :: Nil
-      logger.debug(
-        "allStepsAt(" + expr + ") at " + pos + " which " + (if (isTop) "is top" else "is not top") + " and " +
-          (if (isAnte) "is ante" else "is succ")
-      )
+      logger
+        .debug(s"allStepsAt($expr) at $pos which ${if (isTop) "is top" else "is not top"} and ${if (isAnte) "is ante"
+          else "is succ"}")
       expr match {
         case Differential(t) =>
           val tactics = t match {
@@ -344,7 +342,7 @@ object UIIndex {
     //    if (!axioms.isEmpty && pos.isDefined && pos.get.isTopLevel)
     //      axioms ++ (if (pos.get.isAnte) "hideL" :: /*"cutL" ::*/ Nil else "hideR" :: /*"cutR" ::*/ Nil)
     //    else
-    logger.debug("allStepsAt=" + axioms)
+    logger.debug(s"allStepsAt=$axioms")
     axioms
   }
 }

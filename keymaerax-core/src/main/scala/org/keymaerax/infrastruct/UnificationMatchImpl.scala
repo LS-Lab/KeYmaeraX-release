@@ -64,7 +64,7 @@ abstract class SchematicComposedUnificationMatch extends SchematicUnificationMat
     try { compose(unify(Subst(u1)(s2), t2), u1) }
     catch {
       case e: ProverException =>
-        logger.trace("      try converse since " + e.getMessage)
+        logger.trace(s"      try converse since ${e.getMessage}")
         val u2 = unify(s2, t2)
         compose(unify(t1, Subst(u2)(s1)), u2)
     }
@@ -74,7 +74,7 @@ abstract class SchematicComposedUnificationMatch extends SchematicUnificationMat
     try { compose(unify(Subst(u1)(s2), t2), u1) }
     catch {
       case e: ProverException =>
-        logger.trace("      try converse since " + e.getMessage)
+        logger.trace(s"      try converse since ${e.getMessage}")
         val u2 = unify(s2, t2)
         compose(unify(t1, Subst(u2)(s1)), u2)
     }
@@ -86,16 +86,16 @@ abstract class SchematicComposedUnificationMatch extends SchematicUnificationMat
     } catch {
       case e: ProverException =>
         try {
-          logger.trace("      try converse since " + e.getMessage)
+          logger.trace(s"      try converse since ${e.getMessage}")
           compose(unify(t2, Subst(u1)(s2)), u1)
         } catch {
           case e: ProverException =>
-            logger.trace("      try next converse since " + e.getMessage)
+            logger.trace(s"      try next converse since ${e.getMessage}")
             val u2 = unify(s2, t2)
             try { compose(unify(t1, Subst(u2)(s1)), u2) }
             catch {
               case e: ProverException =>
-                logger.trace("      try final converse since " + e.getMessage)
+                logger.trace(s"      try final converse since ${e.getMessage}")
                 compose(unify(Subst(u2)(s1), t1), u2)
             }
         }
@@ -106,7 +106,7 @@ abstract class SchematicComposedUnificationMatch extends SchematicUnificationMat
     try { compose(unify(Subst(u1)(s2), t2), u1) }
     catch {
       case e: ProverException =>
-        logger.trace("      try converse since " + e.getMessage)
+        logger.trace(s"      try converse since ${e.getMessage}")
         val u2 = unify(s2, t2)
         compose(unify(t1, Subst(u2)(s1)), u2)
     }
@@ -121,7 +121,7 @@ abstract class SchematicComposedUnificationMatch extends SchematicUnificationMat
     try { compose(unifyODE(Subst(u1)(s2), t2), u1) }
     catch {
       case e: ProverException =>
-        logger.trace("      try converse since " + e.getMessage)
+        logger.trace(s"      try converse since ${e.getMessage}")
         val u2 = unifyODE(s2, t2)
         compose(unifyODE(t1, Subst(u2)(s1)), u2)
     }
@@ -179,13 +179,12 @@ class UnificationMatchBase extends SchematicComposedUnificationMatch {
               throw e.inContext("unify.compose failed on " + sp._1 + " and " + sp._2 + " for " + us)
           }
         ) ++ after.filter(sp => !before.exists(op => op._1 == sp._1))
-        logger.trace(
-          "      unify.compose: " + after.mkString(", ") + " with " + before.mkString(", ") + " is " + r.mkString(", ")
-        )
+        logger
+          .trace(s"      unify.compose: ${after.mkString(", ")} with ${before.mkString(", ")} is ${r.mkString(", ")}")
         r
       } catch {
         case e: Throwable =>
-          logger.trace("UnificationMatch.compose({" + after.mkString(", ") + "} , {" + before.mkString(", ") + "})");
+          logger.trace(s"UnificationMatch.compose({${after.mkString(", ")}} , {${before.mkString(", ")}})");
           throw e
       }
     }
@@ -652,11 +651,11 @@ private class UnificationMatchURenAboveUSubst extends /*Insistent*/ Matcher with
 
   override def unifiable(shape: Expression, input: Expression): Option[Subst] =
     try { Some(apply(shape, input)) }
-    catch { case e: UnificationException => logger.debug("Expression un-unifiable " + e); None }
+    catch { case e: UnificationException => logger.debug("Expression un-unifiable", e); None }
 
   override def unifiable(shape: Sequent, input: Sequent): Option[Subst] =
     try { Some(apply(shape, input)) }
-    catch { case e: UnificationException => logger.debug("Sequent un-unifiable " + e); None }
+    catch { case e: UnificationException => logger.debug("Sequent un-unifiable", e); None }
 
   override def apply(e1: Expression, e2: Expression): Subst = {
     try { unify(e1, e2) }
@@ -718,11 +717,11 @@ class UnificationMatchUSubstAboveURen extends /*Insistent*/ Matcher with Logging
 
   override def unifiable(shape: Expression, input: Expression): Option[Subst] =
     try { Some(apply(shape, input)) }
-    catch { case e: UnificationException => logger.debug("Expression un-unifiable " + e); None }
+    catch { case e: UnificationException => logger.debug("Expression un-unifiable", e); None }
 
   override def unifiable(shape: Sequent, input: Sequent): Option[Subst] =
     try { Some(apply(shape, input)) }
-    catch { case e: UnificationException => logger.debug("Sequent un-unifiable " + e); None }
+    catch { case e: UnificationException => logger.debug("Sequent un-unifiable", e); None }
 
   @nowarn("msg=match may not be exhaustive")
   private def staple(e: Expression, ren: Subst, subst: Subst): Subst = {
@@ -750,7 +749,7 @@ class UnificationMatchUSubstAboveURen extends /*Insistent*/ Matcher with Logging
             replaceFree(rhs)(ren(argOfPred(what.asInstanceOf[PredOf].func)), dot)
           )
       }
-      logger.debug("\t\t\tINFO: post-hoc optimizable: " + repl + " dottify " + r)
+      logger.debug(s"post-hoc optimizable: $repl dottify $r")
       r
     }
     // @note URename with TRANSPOSITION=true are their own inverses
@@ -777,8 +776,10 @@ class UnificationMatchUSubstAboveURen extends /*Insistent*/ Matcher with Logging
   private def unify(e1: Expression, e2: Expression): Subst = {
     val subst = usubstUMatcher(e1, e2)
     logger.debug(
-      "\n  unify: " + e1.prettyString + "\n  with:  " + e2.prettyString + "\n  subst: " + subst + "\n  gives: " +
-        subst(e1)
+      s"""  unify: ${e1.prettyString}
+         |  with:  ${e2.prettyString}
+         |  subst: $subst
+         |  gives: ${subst(e1)}""".stripMargin
     )
     val ren = renUMatcher(subst(e1), e2)
     // @note instead of post-hoc stapling could also add a third pass that unifies with the resulting renaming `ren` in mind.
@@ -853,7 +854,7 @@ object NonSubstUnificationMatch extends FreshUnificationMatch {
     try { compose(unify(unifier(u1)(s2), t2), u1) }
     catch {
       case e: ProverException =>
-        logger.trace("      try converse since " + e.getMessage)
+        logger.trace(s"      try converse since ${e.getMessage}")
         val u2 = unify(s2, t2)
         compose(unify(t1, unifier(u2)(s1)), u2)
     }
@@ -864,7 +865,7 @@ object NonSubstUnificationMatch extends FreshUnificationMatch {
     try { compose(unify(unifier(u1)(s2), t2), u1) }
     catch {
       case e: ProverException =>
-        logger.trace("      try converse since " + e.getMessage)
+        logger.trace(s"      try converse since ${e.getMessage}")
         val u2 = unify(s2, t2)
         compose(unify(t1, unifier(u2)(s1)), u2)
     }
@@ -875,7 +876,7 @@ object NonSubstUnificationMatch extends FreshUnificationMatch {
     try { compose(unify(unifier(u1)(s2), t2), u1) }
     catch {
       case e: ProverException =>
-        logger.trace("      try converse since " + e.getMessage)
+        logger.trace(s"      try converse since ${e.getMessage}")
         val u2 = unify(s2, t2)
         compose(unify(t1, unifier(u2)(s1)), u2)
     }

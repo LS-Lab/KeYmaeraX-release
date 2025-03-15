@@ -88,7 +88,7 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
       list(vectorField, vars, k2m(ode.constraint)),
       k2m(postCond),
     )
-    logger.debug("Raw Mathematica input into Pegasus: " + problem)
+    logger.debug(s"Raw Mathematica input into Pegasus: $problem")
 
     def timeoutExpr(t: Int) = if (t >= 0) int(t) else infinity
 
@@ -176,7 +176,7 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
 
     try {
       val (output, result) = run(command)
-      logger.debug("Generated invariant: " + result.prettyString + " from raw output " + output)
+      logger.debug(s"Generated invariant: ${result.prettyString} from raw output $output")
       val (invariants, flag) = PegasusM2KConverter.extractResult(result)
       assert(flag == True || flag == False, "Expected invariant/candidate flag, but got " + flag.prettyString)
       if (flag == True) Left(invariants) :: Nil else Right(invariants) :: Nil
@@ -200,7 +200,7 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
     )
 
     val (output, result) = runUnchecked(command.toString)
-    logger.debug("LZZ check: " + result.prettyString + " from raw output " + output)
+    logger.debug(s"LZZ check: ${result.prettyString} from raw output $output")
     result match {
       case True => true
       case False => false
@@ -257,14 +257,14 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
 
     try {
       val (output, result) = runUnchecked(command.toString, CEXM2KConverter)
-      logger.debug("Counterexample: " + result + " from raw output " + output)
+      logger.debug(s"Counterexample: $result from raw output $output")
       result match {
         case Left(cex: Formula) => cex match {
             case False =>
-              logger.debug("No counterexample, Mathematica returned: " + cex.prettyString)
+              logger.debug(s"No counterexample, Mathematica returned: ${cex.prettyString}")
               None
             case _ =>
-              logger.debug("Counterexample " + cex.prettyString)
+              logger.debug(s"Counterexample ${cex.prettyString}")
               Some(
                 FormulaTools
                   .conjuncts(cex)
@@ -278,7 +278,7 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
               )
           }
         case _ =>
-          logger.debug("No counterexample, Mathematica returned: " + result)
+          logger.debug(s"No counterexample, Mathematica returned: $result")
           None
       }
     } catch {
@@ -325,7 +325,7 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
         assert(n.value.toInt == 5)
         (List(i1, i2), List(n1, n2, n3))
       case _ =>
-        logger.warn("Incorrect pattern returned: " + output)
+        logger.warn(s"Incorrect pattern returned: $output")
         (List(), List())
     }
   }

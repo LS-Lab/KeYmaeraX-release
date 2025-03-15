@@ -68,15 +68,15 @@ object HyDRAInitializer extends Logging {
       val config = toolConfig(options, preferredTool)
       createTool(options, config, preferredTool)
     } catch {
-      case e: Throwable =>
-        val msg = s"""===> WARNING: Failed to initialize Mathematica.
-                     |You should configure settings in the UI and restart KeYmaera X.
-                     |Or specify the paths to the libraries for your system explicitly from command line by running
-                     |  java -jar keymaerax.jar -mathkernel pathtokernel -jlink pathtojlink
-                     |Current configuration:
-                     |${org.keymaerax.tools.diagnostic}
-          """.stripMargin
-        logger.warn(msg, e)
+      case e: Throwable => logger.warn(
+          s"""===> WARNING: Failed to initialize Mathematica.
+             |You should configure settings in the UI and restart KeYmaera X.
+             |Or specify the paths to the libraries for your system explicitly from command line by running
+             |  java -jar keymaerax.jar -mathkernel pathtokernel -jlink pathtojlink
+             |Current configuration:
+             |${org.keymaerax.tools.diagnostic}""".stripMargin,
+          e,
+        )
     }
 
     LoadingDialogFactory().addToStatus(15, Some("Updating lemma caches..."))

@@ -532,7 +532,7 @@ object DbPlainExecStepProofTreeNode extends Logging {
         DbStepPathNodeId(step.previousStep, Some(step.branchOrder)),
         proof,
         () => {
-          logger.debug("WARNING: ripple loading (node parent)");
+          logger.debug("ripple loading (node parent)");
           db.getPlainExecutionStep(proof.info.proofId, step.previousStep.get).get
         },
       )
@@ -600,7 +600,7 @@ case class DbPlainExecStepProofTreeNode(
         DbStepPathNodeId(Some(pId), parentBranch),
         proof,
         () => {
-          logger.debug("WARNING: ripple loading (parent " + pId + ")");
+          logger.debug(s"ripple loading (parent $pId)");
           db.getPlainExecutionStep(proof.info.proofId, pId).get
         },
       ))

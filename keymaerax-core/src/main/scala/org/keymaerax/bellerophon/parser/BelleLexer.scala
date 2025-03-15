@@ -35,7 +35,7 @@ object BelleLexer extends (String => List[BelleToken]) with Logging {
     // @todo not sure if this position is Ok. This is what's used in the KeYmaera X lexer.
     val startingLocation = SuffixRegion(1, 1)
 
-    logger.debug("LEX: " + correctedInput)
+    logger.debug(s"LEX: $correctedInput")
     lex(s, startingLocation)
   }
 

@@ -259,9 +259,7 @@ private[core] object AxiomBase extends Logging {
       val res = DLAxiomParser(loadAxiomString())
       insist(res.length == res.map(k => k._1).distinct.length, "No duplicate axiom names during parse of AxiomBase")
       res.map(k => (k._1 -> k._2)).toMap
-    } catch {
-      case e: Exception => logger.error("Cannot read axioms", e); println("Cannot read axioms " + e); sys.exit(10)
-    }
+    } catch { case e: Exception => logger.error("Cannot read axioms", e); sys.exit(10) }
   } ensuring (assertCheckAxiomFile _, "checking parse of axioms against expected outcomes")
 
   /** Redundant code checking expected form of axioms after parsing */

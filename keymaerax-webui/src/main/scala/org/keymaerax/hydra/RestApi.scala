@@ -68,7 +68,7 @@ object RestApi extends Logging {
   def completeResponse(response: Response): ToResponseMarshallable = {
     // @note log all error responses
     response match {
-      case e: ErrorResponse => logger.warn("Error response details: " + e.msg, e.exn)
+      case e: ErrorResponse => logger.warn(s"Error response details: ${e.msg}", e.exn)
       case _ => /* nothing to do */
     }
 

@@ -97,7 +97,7 @@ class MathematicaSOSsolveTool(override val link: MathematicaLink)
 
     try {
       val (output, result) = run(command)
-      logger.debug("Found witness: " + result.prettyString + " from raw output " + output)
+      logger.debug(s"Found witness: ${result.prettyString} from raw output $output")
       val (sos, cofactors, lininst) = decodeWitness(result)
       sos match {
         case Number(n) if n.compareTo(0) <= 0 => NoSOS

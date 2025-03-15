@@ -46,7 +46,7 @@ class Z3Solver(val z3Path: String, val converter: SMTConverter) extends ToolOper
   def qe(f: Formula): Formula = {
     val smtCode = converter(f)
     val z3Output = runZ3Smt(smtCode, "z3sat", getOperationTimeout) // @note (check-sat) gives unsat, sat or unknown
-    logger.debug(s"[Z3 result] From calling Z3 on ${f.prettyString}: " + z3Output + "\n")
+    logger.debug(s"[Z3 result] From calling Z3 on ${f.prettyString}: $z3Output")
     // @todo So far does not handle get-model or unsat-core
     // @note only accepts output that consists of one of the following words, except for trailing whitespace
     z3Output.stripLineEnd match {
@@ -66,7 +66,7 @@ class Z3Solver(val z3Path: String, val converter: SMTConverter) extends ToolOper
    * output.
    */
   private[tools] def runZ3Smt(z3Command: String, tmpFilePrefix: String, timeout: Int): String = {
-    logger.debug("[Calling Z3...] \n" + z3Command)
+    logger.debug(s"[Calling Z3...] $z3Command")
 
     val smtFile = File.createTempFile(tmpFilePrefix, ".smt2")
     val writer = new FileWriter(smtFile)

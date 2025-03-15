@@ -247,7 +247,11 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
         val msg = "semantics: Expect unique names_index that identify a unique type." +
           "\nambiguous: " + ambiguous.map(_.fullString).mkString(" and ")
         if (lax) {
-          logger.trace("WARNING: " + "Semantic analysis" + "\nin " + "parsed: " + printer.stringify(parse) + "\n" + msg)
+          logger.trace(
+            s"""Semantic analysis
+               |in parsed: ${printer.stringify(parse)}
+               |$msg""".stripMargin
+          )
           parse
         } else {
           throw ParseException(
@@ -403,7 +407,7 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
   )
 
   private[parser] var theAnnotationListener: (Program, Formula) => Unit = { (p, inv) =>
-    logger.trace("Annotation: " + p + " @invariant(" + inv + ")")
+    logger.trace(s"Annotation: $p @invariant($inv)")
   }
 
   /**
@@ -450,8 +454,8 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
   // @todo reorder cases also such that pretty cases like fully parenthesized get parsed fast and early
   private def parseStep(st: ParseState, lax: Boolean): ParseState = {
     val ParseState(s, (next @ Token(la, laloc)) :: _) = st
-    logger.info(s.toString)
-    logger.info(la.toString)
+    logger.trace(s"$s")
+    logger.trace(s"$la")
     // @note This table of LR Parser matches needs an entry for every prefix substring of the grammar.
     s match {
       // nonproductive: help KeYmaeraXLexer recognize := * with whitespaces as ASSIGNANY

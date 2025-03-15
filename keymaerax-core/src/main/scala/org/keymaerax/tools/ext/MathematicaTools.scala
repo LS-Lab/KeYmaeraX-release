@@ -472,7 +472,7 @@ object PegasusM2KConverter extends UncheckedBaseM2KConverter with Logging {
         ),
       )
     }
-    logger.debug("Pegasus raw result: " + e)
+    logger.debug(s"Pegasus raw result: $e")
     And(convertResultType(e.args()(0)), convertResult(e.args()(1)))
   }
 
@@ -684,10 +684,10 @@ class MathematicaCEXTool(override val link: MathematicaLink)
       run(input) match {
         case (_, Left(cex: Formula)) => cex match {
             case False =>
-              logger.debug("No counterexample, Mathematica returned: " + cex.prettyString)
+              logger.debug(s"No counterexample, Mathematica returned: ${cex.prettyString}")
               None
             case _ =>
-              logger.debug("Counterexample " + cex.prettyString)
+              logger.debug(s"Counterexample ${cex.prettyString}")
               Some(
                 FormulaTools
                   .conjuncts(cex)
@@ -701,7 +701,7 @@ class MathematicaCEXTool(override val link: MathematicaLink)
               )
           }
         case result =>
-          logger.debug("No counterexample, Mathematica returned: " + result)
+          logger.debug(s"No counterexample, Mathematica returned: ${result}")
           None
       }
     } else { None }

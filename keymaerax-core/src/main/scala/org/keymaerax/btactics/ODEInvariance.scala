@@ -5,6 +5,7 @@
 
 package org.keymaerax.btactics
 
+import org.keymaerax.Logging
 import org.keymaerax.bellerophon.*
 import org.keymaerax.btactics.AnonymousLemmas.*
 import org.keymaerax.btactics.DifferentialEquationCalculus.*
@@ -30,7 +31,6 @@ import org.keymaerax.parser.StringConverter.*
 import org.keymaerax.pt.{ElidingProvable, ProvableSig}
 import org.keymaerax.tools.qe.BigDecimalQETool
 import org.keymaerax.tools.{SMTQeException, ToolEvidence, ToolException}
-import org.slf4j.LoggerFactory
 
 import scala.annotation.nowarn
 import scala.collection.immutable
@@ -46,9 +46,8 @@ import scala.collection.mutable.ListBuffer
  *   [[org.keymaerax.Bibliography.LicsPlatzerT18 Differential equation axiomatization: The impressive power of differential ghosts]]
  */
 
-object ODEInvariance {
+object ODEInvariance extends Logging {
   private val namespace = "odeinvariance"
-  private val logger = LoggerFactory.getLogger(getClass) // @note instead of "with Logging" to avoid cyclic dependencies
   private val debugTactic = false
 
   // Lie derivative
@@ -566,7 +565,7 @@ object ODEInvariance {
               // This is a workaround
               case e: BelleThrowable if e.getCause.isInstanceOf[SMTQeException] => proveBy(False, skip)
             }
-          logger.debug(pr2.toString)
+          logger.debug(s"$pr2")
           if (pr2.isProved) Some(f) else None
         }
 
@@ -575,7 +574,7 @@ object ODEInvariance {
         var acc = ListBuffer[Formula]()
         var domC = dom
         while (true) {
-          logger.debug("Domain: " + domC)
+          logger.debug(s"Domain: $domC")
           // Pull out the ones that are rank 1
           val checkls = ls.map(f =>
             rankOneFml(ode, domC, f) match {
@@ -586,7 +585,7 @@ object ODEInvariance {
           val l = checkls.collect { case Left(v) => v }
           val r: List[Formula] = checkls.collect { case Right(v) => v }
           acc ++= r
-          logger.debug("Acc: " + acc)
+          logger.debug(s"Acc: $acc")
           if (l.length == checkls.length) return None
           else if (l.length == 0) return Some(acc.foldRight(True: Formula)((x, y) => And(x, y)))
           else {

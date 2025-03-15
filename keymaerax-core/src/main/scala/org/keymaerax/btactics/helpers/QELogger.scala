@@ -78,7 +78,7 @@ object QELogger extends Logging {
     try {
       val f = file(path)
       f.delete()
-    } catch { case ex: Exception => logger.error("Failed to delete log", ex) }
+    } catch { case ex: Exception => logger.error(s"Failed to delete log", ex) }
   }
 
   /** Appends the conclusion `pr` and the goal `s` under `name` to the file at `path`. */
@@ -92,7 +92,7 @@ object QELogger extends Logging {
       val fw = new FileWriter(f, true)
       fw.append(namestr)
       fw.close()
-    } catch { case ex: Exception => logger.error("Failed to record sequent", ex) }
+    } catch { case ex: Exception => logger.error(s"Failed to record sequent", ex) }
   }
 
   /** Parses string `s` of the form Name # Seq # Seq; returns None if not of that form. */
@@ -106,7 +106,7 @@ object QELogger extends Logging {
         Some(ss(0), pr, seq)
       } catch {
         case ex: Exception =>
-          logger.error("Failed to parse " + s, ex)
+          logger.error(s"Failed to parse $s", ex)
           None
       }
   }
@@ -119,7 +119,7 @@ object QELogger extends Logging {
       try { Some(ss(0), ss(2).asSequent) }
       catch {
         case ex: Exception =>
-          logger.error("Failed to parse " + s, ex)
+          logger.error(s"Failed to parse $s", ex)
           None
       }
   }
@@ -259,8 +259,7 @@ object QELogger extends Logging {
       case "-convert" :: value :: tail => parseOptions(parsedOptions ++ Map("convert" -> value), tail)
       case "-logpath" :: value :: tail => parseOptions(parsedOptions ++ Map("logpath" -> value), tail)
       case "-outputpath" :: value :: tail => parseOptions(parsedOptions ++ Map("outputpath" -> value), tail)
-      case option :: tail =>
-        logger.warn("[Warning] Unknown option " + option + "\n\n"); parseOptions(parsedOptions, tail)
+      case option :: tail => logger.warn(s"Unknown option $option"); parseOptions(parsedOptions, tail)
     }
 
 }

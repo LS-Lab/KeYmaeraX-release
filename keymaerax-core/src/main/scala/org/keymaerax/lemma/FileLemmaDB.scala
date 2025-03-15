@@ -45,8 +45,7 @@ class FileLemmaDB extends LemmaDBBase with Logging {
   /** File handle to lemma database (creates parent directories if non-existent). */
   private lazy val lemmadbpath: File = {
     val file = new File(cachePath + File.separator + "lemmadb")
-    if (!file.exists() && !file.mkdirs()) logger
-      .warn("WARNING: FileLemmaDB cache did not get created: " + file.getAbsolutePath)
+    if (!file.exists() && !file.mkdirs()) logger.warn(s"FileLemmaDB cache did not get created: ${file.getAbsolutePath}")
     file
   }
 

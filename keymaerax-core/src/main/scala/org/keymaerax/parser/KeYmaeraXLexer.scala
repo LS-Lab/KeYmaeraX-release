@@ -65,7 +65,7 @@ object KeYmaeraXLexer extends (String => List[Token]) with Logging {
   // @todo performance bottleneck
   def inMode(input: String, mode: LexerMode): KeYmaeraXLexer.TokenStream = {
     val correctedInput = normalizeNewlines(input)
-    logger.debug("LEX: " + correctedInput)
+    logger.debug(s"LEX: $correctedInput")
     val output = lex(correctedInput, SuffixRegion(1, 1), mode)
     require(!output.exists(x => x.tok == ANYTHING), "output should not contain ??")
     require(output.last.tok.equals(EOF), "Expected EOF but found " + output.last.tok)

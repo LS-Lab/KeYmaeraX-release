@@ -8,7 +8,6 @@ package org.keymaerax.btactics
 import org.keymaerax.bellerophon.*
 import org.keymaerax.btactics.ProofRuleTactics.requireOneSubgoal
 import org.keymaerax.btactics.macros.{
-  DerivationInfo,
   ExpressionArg,
   InputPositionTacticInfo,
   InputTacticInfo,
@@ -27,20 +26,17 @@ import org.keymaerax.parser.{Declaration, KeYmaeraXOmitInterpretationPrettyPrint
 import org.keymaerax.pt.ProvableSig
 import org.keymaerax.tools.ToolEvidence
 import org.keymaerax.{Configuration, Logging}
-import org.slf4j.LoggerFactory
 
 import scala.annotation.nowarn
 import scala.collection.immutable
 import scala.collection.mutable.ListBuffer
 
 /** @author Nathan Fulton */
-object DebuggingTactics {
+object DebuggingTactics extends Logging {
   import TacticFactory.*
 
   // @todo import a debug flag as in Tactics.DEBUG
   private val DEBUG = Configuration(Configuration.Keys.DEBUG) == "true"
-
-  private val logger = LoggerFactory.getLogger(getClass)
 
   def error(e: Throwable): BuiltInTactic = new BuiltInTactic("Error") with NoOpTactic {
     override def result(provable: ProvableSig): ProvableSig = throw e
@@ -57,7 +53,7 @@ object DebuggingTactics {
 
   def recordQECall(): BuiltInTactic = new BuiltInTactic("recordQECall") with NoOpTactic {
     override def result(provable: ProvableSig): ProvableSig = {
-      logger.info(s"QE CALL\n==QE==\n${provable.subgoals(0).prettyString}\n==END_QE==")
+      logger.debug(s"QE CALL\n==QE==\n${provable.subgoals(0).prettyString}\n==END_QE==")
       provable
     }
   }
@@ -69,7 +65,7 @@ object DebuggingTactics {
   def debug(message: => String, doPrint: Boolean = DEBUG, printer: ProvableSig => String = _.toString): BuiltInTactic =
     anonnoop { (provable: ProvableSig) =>
       {
-        if (doPrint) logger.info("===== " + message + " ==== " + printer(provable) + " =====")
+        if (doPrint) logger.debug(s"===== $message ==== ${printer(provable)} =====")
         provable
       }
     }
@@ -111,9 +107,11 @@ object DebuggingTactics {
     override def computeResult(provable: ProvableSig, pos: Position): ProvableSig = {
       if (doPrint) this
         .logger
-        .info(
-          "===== " + message + " ==== " + "\n\t with formula: " + provable.subgoals.head.at(pos) + " at position " +
-            pos + " of first subgoal," + "\n\t entire provable: " + provable + " ====="
+        .debug(
+          s"""===== $message =====
+             |with formula: ${provable.subgoals.head.at(pos)} at position $pos of first subgoal,
+             |entire provable: $provable
+             |=====""".stripMargin
         )
       provable
     }

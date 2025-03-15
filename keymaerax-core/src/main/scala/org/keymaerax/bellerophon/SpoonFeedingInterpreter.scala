@@ -612,11 +612,11 @@ case class SpoonFeedingInterpreter(
             var result: Option[(BelleValue, ExecutionContext)] = None
             while (opts.hasNext && result.isEmpty) {
               val o = opts.next()
-              logger.debug("ChooseSome: try " + o)
+              logger.debug(s"ChooseSome: try $o")
               val someResult: Option[(BelleValue, ExecutionContext)] =
                 try { Some(runTactic(e(o), goal, level, ctx, strict, convertPending = false, executePending = true)) }
                 catch { case err: BelleThrowable => errors += "in " + o + " " + err + "\n"; None }
-              logger.debug("ChooseSome: try " + o + " got " + someResult)
+              logger.debug(s"ChooseSome: try $o got $someResult")
               (someResult, e) match {
                 case (Some((p: BelleProvable, pctx)), _) => result = Some((p, pctx))
                 case (Some((p, pctx)), _: PartialTactic) => result = Some((p, pctx))
@@ -708,7 +708,7 @@ case class SpoonFeedingInterpreter(
 
           // forward to inner interpreter
           case _ =>
-            if (level > 0) logger.debug("Missing feature: unable to step into " + tactic.prettyString)
+            if (level > 0) logger.debug(s"Missing feature: unable to step into ${tactic.prettyString}")
             if (!strict && tactic.isInstanceOf[NoOpTactic]) {
               // skip recording no-op tactics in non-strict mode (but execute, may throw exceptions that we expect)
               runningInner = inner(Nil)

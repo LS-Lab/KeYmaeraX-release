@@ -101,7 +101,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
     val proofStart = System.currentTimeMillis()
     val result = TactixLibrary.proveBy(ProvableSig.startPlainProof(mxInputSequent), tactic)
     val proofDuration = System.currentTimeMillis() - proofStart
-    logger.info("[proof time " + proofDuration + "ms]")
+    logger.debug(s"[proof time $proofDuration ms]")
 
     assert(
       result.subgoals.size == 1 && result.subgoals.head.ante.isEmpty &&
@@ -1154,7 +1154,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
         case _: Exists => Ax.existsStutter :: Nil
         case _: Forall => Ax.allStutter :: Nil
         case _: And => Ax.andStutter :: Nil
-        case _ => logger.trace("Chasing " + e.prettyString); AxIndex.axiomsFor(e)
+        case _ => logger.trace(s"Chasing ${e.prettyString}"); AxIndex.axiomsFor(e)
       },
   )
 
@@ -1208,7 +1208,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
       case _: Forall => Ax.allStutter :: Nil
       // run inside sliding window conjunction
       case _: And => Ax.andStutter :: Nil
-      case _ => logger.trace("Chasing " + e.prettyString); AxIndex.axiomsFor(e)
+      case _ => logger.trace(s"Chasing ${e.prettyString}"); AxIndex.axiomsFor(e)
     }
 
   /** Solves ODEs for model monitors, chases in ODE postcondition after solving. */

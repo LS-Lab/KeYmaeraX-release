@@ -615,7 +615,7 @@ case class TermProvable(provable: ProvableSig, pt: ProofTerm, defs: Declaration)
           TermProvable(provable(subProvable, subgoal), thePt, defs ++ subderivation.defs)
         } else if (derivedAxiom.isDefined) {
           val term = Sub(pt, AxiomTerm(derivedAxiom.get.codeName), subgoal)
-          logger.trace("derivedaxiom codename: " + derivedAxiom.get.codeName)
+          logger.trace(s"derivedaxiom codename: ${derivedAxiom.get.codeName}")
           TermProvable(
             ElidingProvable(derivedAxiom.get.provable.underlyingProvable, defs ++ subderivation.defs),
             term,

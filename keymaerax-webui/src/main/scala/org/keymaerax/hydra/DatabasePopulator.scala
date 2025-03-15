@@ -132,7 +132,7 @@ object DatabasePopulator extends Logging {
     val now = Calendar.getInstance()
 
     def doImport(entry: TutorialEntry): Either[(String, Int), String] = {
-      logger.info("Importing model " + entry.name + "...")
+      logger.info(s"Importing model ${entry.name}...")
       val result = db.createModel(
         user,
         entry.name,

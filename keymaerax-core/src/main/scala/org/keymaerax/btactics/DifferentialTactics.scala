@@ -936,7 +936,7 @@ private object DifferentialTactics extends Logging {
     sequent.sub(pos) match {
       case Some(Differential(x: Variable)) =>
         if (OPTIMIZED) {
-          logger.debug("Dvariable " + keyPart + " on " + x)
+          logger.debug(s"Dvariable $keyPart on $x")
           val fact = UnificationMatch.apply(keyPart, Differential(x)).toForward(axiom.provable)
           pr(CEat(fact)(pos), 0)
         } else {
@@ -1409,9 +1409,8 @@ private object DifferentialTactics extends Logging {
         try { InvariantGenerator.differentialInvariantGenerator.generate(seq, pos, defs) }
         catch {
           case err: Exception =>
-            logger.warn(
-              "Failed to produce a proof for this ODE. Underlying cause: ChooseSome: error listing options " + err
-            )
+            logger
+              .warn(s"Failed to produce a proof for this ODE. Underlying cause: ChooseSome: error listing options $err")
             LazyList[Invariant]()
         }
 
@@ -1581,7 +1580,7 @@ private object DifferentialTactics extends Logging {
     ): DependentPositionTactic = fastODE(try { generator.generate(seq, pos, defs).iterator }
     catch {
       case ex: Exception =>
-        logger.warn("Failed to produce a proof for this ODE. Underlying cause: generator error listing options " + ex)
+        logger.warn(s"Failed to produce a proof for this ODE. Underlying cause: generator error listing options $ex")
         onGeneratorError(ex).iterator
     })(
       // @note aborts with error if the ODE was left unchanged -- invariant generators failed
@@ -2211,7 +2210,7 @@ private object DifferentialTactics extends Logging {
       spooky,
       (pr: ProvableSig) => {
         assume(pr.subgoals.length == 1, "exactly one subgoal from DA induction step expected")
-        logger.debug("Instantiate::\n" + pr)
+        logger.debug(s"Instantiate::\n$pr")
         // induction step condition \forall x \forall ghost condition>=0
         val condition = FormulaTools.kernel(pr.subgoals.head.succ.head) match {
           case Imply(_, GreaterEqual(condition, Number(n))) if n == 0 => condition
@@ -2219,20 +2218,20 @@ private object DifferentialTactics extends Logging {
           case _ => throw new AssertionError("DGauto: Unexpected shape " + pr)
         }
         // @todo a witness of Reduce of >=0 would suffice
-        logger.debug("Solve[" + condition + "==0" + "," + spooky + "]")
+        logger.debug(s"Solve[$condition==0,$spooky]")
         ToolProvider
           .solverTool()
           .getOrElse(throw new ProverSetupException("DGAuto requires a SolutionTool, but got None"))
           .solve(Equal(condition, Number(0)), spooky :: Nil) match {
           case Some(Equal(l, r)) if l == spooky =>
-            logger.debug("Need ghost " + ghost + "'=(" + r + ")*" + ghost + " for " + quantity)
+            logger.debug(s"Need ghost $ghost'=($r)*$ghost for $quantity")
             constructedGhost = Some(r)
             r
           case None =>
-            logger.debug("Solve[" + condition + "==0" + "," + spooky + "]")
+            logger.debug(s"Solve[$condition==0,$spooky]")
             throw new TacticInapplicableFailure("DGauto could not solve conditions: " + condition + ">=0")
           case Some(stuff) =>
-            logger.debug("Solve[" + condition + "==0" + "," + spooky + "]")
+            logger.debug(s"Solve[$condition==0,$spooky]")
             throw new TacticInapplicableFailure("DGauto got unexpected solution format: " + condition + ">=0\n" + stuff)
         }
       },
@@ -2243,7 +2242,7 @@ private object DifferentialTactics extends Logging {
     ) & QE & done
     // fallback rescue tactic if proper misbehaves
     val fallback: DependentPositionTactic = anon((pos: Position, _: Sequent) => {
-      logger.debug("DGauto falling back on ghost " + ghost + "'=(" + constructedGhost + ")*" + ghost)
+      logger.debug("DGauto falling back on ghost $ghost'=($constructedGhost)*$ghost")
       // terrible hack that accesses constructGhost after LetInspect was almost successful except for the sadly failing usubst in the end.
       dG(
         AtomicODE(

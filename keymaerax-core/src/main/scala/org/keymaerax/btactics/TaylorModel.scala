@@ -34,7 +34,7 @@ object TaylorModelTactics extends Logging {
     def tic() = { time = System.nanoTime() }
     def toc(msg: String) = {
       val t = System.nanoTime()
-      logger.info("TIMING " + msg + ": " + (t - time) / 1000000000.0 + "s")
+      logger.debug(s"TIMING $msg: ${(t - time) / 1000000000.0} s")
       tic()
     }
     def tocTac(message: => String): StringInputTactic = new StringInputTactic("tocTac", message :: Nil) {

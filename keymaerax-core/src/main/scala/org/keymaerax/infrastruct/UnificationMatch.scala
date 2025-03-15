@@ -169,11 +169,11 @@ trait InsistentMatcher extends Matcher with Logging {
 
   override def unifiable(shape: Expression, input: Expression): Option[Subst] =
     try { Some(apply(shape, input)) }
-    catch { case e: UnificationException => logger.debug("Expression un-unifiable " + e); None }
+    catch { case e: UnificationException => logger.debug("Expression un-unifiable", e); None }
 
   override def unifiable(shape: Sequent, input: Sequent): Option[Subst] =
     try { Some(apply(shape, input)) }
-    catch { case e: UnificationException => logger.debug("Sequent un-unifiable " + e); None }
+    catch { case e: UnificationException => logger.debug("Sequent un-unifiable", e); None }
 }
 
 /**
@@ -268,11 +268,11 @@ trait BaseMatcher extends Matcher with Logging {
 
   override def unifiable(shape: Expression, input: Expression): Option[Subst] =
     try { Some(unifyExpr(shape, input)) }
-    catch { case e: UnificationException => logger.debug("Expression un-unifiable " + e); None }
+    catch { case e: UnificationException => logger.debug("Expression un-unifiable", e); None }
 
   override def unifiable(shape: Sequent, input: Sequent): Option[Subst] =
     try { Some(unifier(shape, input, unify(shape, input))) }
-    catch { case e: UnificationException => logger.debug("Sequent un-unifiable " + e); None }
+    catch { case e: UnificationException => logger.debug("Sequent un-unifiable", e); None }
 
   // @todo optimize: this may be slower than static type inference
   @nowarn("msg=match may not be exhaustive")
@@ -340,14 +340,22 @@ trait BaseMatcher extends Matcher with Logging {
   /** Create the unifier `us` (which was formed for e1 and e2, just for the record). */
   protected def unifier(e1: Expression, e2: Expression, us: List[SubstRepl]): Subst = {
     val s = Subst(us)
-    logger.debug("  unify: " + e1.prettyString + "\n  with:  " + e2.prettyString + "\n  via:   " + s)
+    logger.debug(
+      s"""  unify: ${e1.prettyString}
+         |  with:  ${e2.prettyString}
+         |  via:   $s""".stripMargin
+    )
     s
   }
 
   /** Create the unifier `us` (which was formed for e1 and e2, just for the record). */
   protected def unifier(e1: Sequent, e2: Sequent, us: List[SubstRepl]): Subst = {
     val s = Subst(us)
-    logger.debug("  unify: " + e1.prettyString + "\n  with:  " + e2.prettyString + "\n  via:   " + s)
+    logger.debug(
+      s"""  unify: ${e1.prettyString}
+         |  with:  ${e2.prettyString}
+         |  via:   $s""".stripMargin
+    )
     s
   }
 

@@ -5,13 +5,12 @@
 
 package org.keymaerax.tools
 
-import org.keymaerax.Configuration
 import org.keymaerax.btactics.TacticTestBase
 import org.keymaerax.btactics.helpers.QELogger
-import org.keymaerax.core._
+import org.keymaerax.core.*
 import org.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
 import org.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr}
-import org.keymaerax.parser.StringConverter._
+import org.keymaerax.parser.StringConverter.*
 import org.keymaerax.parser.{ArchiveParser, KeYmaeraXArchivePrinter, PrettierPrintFormatProvider}
 import org.keymaerax.tags.ExtremeTest
 import org.keymaerax.tools.ext.{
@@ -23,8 +22,9 @@ import org.keymaerax.tools.ext.{
   SmtLibReader,
 }
 import org.keymaerax.tools.qe.{DefaultSMTConverter, SMTConverter}
-import org.scalatest.prop.TableDrivenPropertyChecks._
-import org.slf4j.{LoggerFactory, MarkerFactory}
+import org.keymaerax.{Configuration, Logging}
+import org.scalatest.prop.TableDrivenPropertyChecks.*
+import org.slf4j.MarkerFactory
 import smtlib.trees.Commands.SetInfo
 import smtlib.trees.Terms.{Attribute, SKeyword, SSymbol}
 
@@ -33,14 +33,14 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Paths}
 import scala.annotation.nowarn
 import scala.collection.mutable.ListBuffer
+import scala.concurrent.*
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent._
 import scala.io.Source
-import scala.sys.process._
+import scala.sys.process.*
 import scala.util.Try
 
 @ExtremeTest @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
-class SmlQETests extends TacticTestBase {
+class SmlQETests extends TacticTestBase with Logging {
   object BenchmarkResult {
     val csvHeader: String = "Name,Index,Status,Timeout[ms],Duration[ms],Result,Logic,Expected,Input BV, Input FV"
   }
@@ -602,11 +602,9 @@ class SmlQETests extends TacticTestBase {
     val pwd = new File(System.getProperty("user.dir"))
     val categories = pwd.listFiles().filter(_.isDirectory)
 
-    LoggerFactory.getLogger(getClass).debug(MarkerFactory.getMarker("mathematica-qe-notebook"), "results = {")
+    logger.debug(MarkerFactory.getMarker("mathematica-qe-notebook"), "results = {")
     for (c <- categories) {
-      LoggerFactory
-        .getLogger(getClass)
-        .debug(MarkerFactory.getMarker("mathematica-qe-notebook"), "{ \"" + c.getName + "\", {")
+      logger.debug(MarkerFactory.getMarker("mathematica-qe-notebook"), "{ \"" + c.getName + "\", {")
       val smtFiles = listFiles(c, ending).sortBy(_.getName)
       tool.setOperationTimeout(TIMEOUT)
       val summaryName = "summary-Mathematica-" + c.getName + ".csv"
@@ -620,25 +618,21 @@ class SmlQETests extends TacticTestBase {
           "boundvars" -> StaticSemantics.boundVars(fml).toSet.size.toString,
           "freevars" -> StaticSemantics.freeVars(fml).toSet.size.toString,
         )
-        LoggerFactory
-          .getLogger(getClass)
-          .debug(
-            MarkerFactory.getMarker("mathematica-named-qe-cmd"),
-            "{\"" + c.getName + "/" + smtFile.getName + "\",AbsoluteTiming[",
-          )
-        LoggerFactory
-          .getLogger(getClass)
-          .debug(
-            MarkerFactory.getMarker("mathematica-qe-notebook"),
-            "Flatten[{\"" + c.getName + "/" + smtFile.getName + "\", AbsoluteTiming[",
-          )
+        logger.debug(
+          MarkerFactory.getMarker("mathematica-named-qe-cmd"),
+          "{\"" + c.getName + "/" + smtFile.getName + "\",AbsoluteTiming[",
+        )
+        logger.debug(
+          MarkerFactory.getMarker("mathematica-qe-notebook"),
+          "Flatten[{\"" + c.getName + "/" + smtFile.getName + "\", AbsoluteTiming[",
+        )
         println("Running " + smtFile.getName)
         val start = System.nanoTime()
         val out = Try(tool.qe(fml).fact).toEither
         val dur = System.nanoTime() - start
         println("Done running " + smtFile.getName + "(" + dur / 1000000 + "ms)")
-        LoggerFactory.getLogger(getClass).debug(MarkerFactory.getMarker("mathematica-named-qe-cmd"), "]}")
-        LoggerFactory.getLogger(getClass).debug(MarkerFactory.getMarker("mathematica-qe-notebook"), "]},2],")
+        logger.debug(MarkerFactory.getMarker("mathematica-named-qe-cmd"), "]}")
+        logger.debug(MarkerFactory.getMarker("mathematica-qe-notebook"), "]},2],")
         val result = out match {
           case Right(r) =>
             val (message, result) =
@@ -666,9 +660,9 @@ class SmlQETests extends TacticTestBase {
           finally { close() }
         }
       })
-      LoggerFactory.getLogger(getClass).debug(MarkerFactory.getMarker("mathematica-qe-notebook"), "}},")
+      logger.debug(MarkerFactory.getMarker("mathematica-qe-notebook"), "}},")
     }
-    LoggerFactory.getLogger(getClass).debug(MarkerFactory.getMarker("mathematica-qe-notebook"), "}")
+    logger.debug(MarkerFactory.getMarker("mathematica-qe-notebook"), "}")
   }
 
   it should "run all SMT examples with Mathematica CAD" in withTemporaryConfig(Map(

@@ -5,13 +5,14 @@
 
 package org.keymaerax.btactics
 
+import org.keymaerax.Logging
 import org.keymaerax.bellerophon.*
 import org.keymaerax.btactics.AnonymousLemmas.*
 import org.keymaerax.btactics.Ax.boxTrueAxiom
 import org.keymaerax.btactics.DifferentialEquationCalculus.*
 import org.keymaerax.btactics.HilbertCalculus.*
 import org.keymaerax.btactics.SequentCalculus.*
-import org.keymaerax.btactics.TacticFactory.{inputanon, TacticForNameFactory}
+import org.keymaerax.btactics.TacticFactory.{TacticForNameFactory, inputanon}
 import org.keymaerax.btactics.TactixLibrary.*
 import org.keymaerax.btactics.UnifyUSCalculus.*
 import org.keymaerax.btactics.macros.*
@@ -25,15 +26,13 @@ import org.keymaerax.lemma.Lemma
 import org.keymaerax.parser.StringConverter.*
 import org.keymaerax.parser.{Declaration, ODEToInterpreted}
 import org.keymaerax.pt.*
-import org.slf4j.LoggerFactory
 
 import scala.annotation.nowarn
 
 /** Derives axioms from implicit (differential) definitions */
 @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
-object ImplicitAx {
+object ImplicitAx extends Logging {
   private val namespace = "implicitax"
-  private val logger = LoggerFactory.getLogger(getClass) // @note instead of "with Logging" to avoid cyclic dependencies
 
   // Replace interpreted functions with uninterpreted ones for display purposes
   private def uninterpretFunctions(e: Expression): Expression = {
@@ -58,7 +57,7 @@ object ImplicitAx {
   private def registerDiffAx(f: Function, p: ProvableSig): Unit = {
     val (name, codename) = canonicalDiffAxName(f)
     // println("Registering derived differential axiom: ",name)
-    logger.debug("Registering derived differential axiom: " + name + "codename: " + codename + " provable: " + p)
+    logger.debug(s"Registering derived differential axiom: $name codename: $codename provable: $p")
 
     val fml = p.conclusion.succ(0) // ==> (f(x))' = ...
     val lhs = uninterpretFunctions(fml.sub(PosInExpr(0 :: Nil)).get).toString
@@ -122,7 +121,7 @@ object ImplicitAx {
     val (name, codename) = canonicalInitAxName(f)
 
     // println("Registering initial condition: ",name)
-    logger.debug("Registering initial condition: " + name + "codename: " + codename + " provable: " + p)
+    logger.debug(s"Registering initial condition: $name codename: $codename provable: $p")
 
     val fml = p.conclusion.succ(0) // ==> f(0) = ...
     val lhs = uninterpretFunctions(fml.sub(PosInExpr(0 :: Nil)).get).toString
@@ -182,7 +181,7 @@ object ImplicitAx {
 
     val (name, codename) = canonicalDefAxName(f)
     // println("Registering implicit definition: ",name)
-    logger.debug("Registering implicit definition: " + name + "codename: " + codename + " provable: " + p)
+    logger.debug(s"Registering implicit definition: $name codename: $codename provable: $p")
 
     val fml = p.conclusion.succ(0) // ==> ._0 = f(._1 <-> ...
     val lhs = uninterpretFunctions(fml.sub(PosInExpr(0 :: Nil)).get).toString

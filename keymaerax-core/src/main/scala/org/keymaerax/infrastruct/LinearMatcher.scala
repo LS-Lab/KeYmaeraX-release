@@ -33,13 +33,21 @@ import scala.collection.immutable._
 object LinearMatcher extends SchematicUnificationMatch {
   override protected def unifier(e1: Expression, e2: Expression, us: List[SubstRepl]): Subst = {
     val s = Subst(us.distinct)
-    logger.debug("  unify: " + e1.prettyString + "\n  with:  " + e2.prettyString + "\n  via:   " + s)
+    logger.debug(
+      s"""  unify: ${e1.prettyString}
+         |  with:  ${e2.prettyString}
+         |  via:   $s""".stripMargin
+    )
     s
   }
 
   override protected def unifier(e1: Sequent, e2: Sequent, us: List[SubstRepl]): Subst = {
     val s = Subst(us.distinct)
-    logger.debug("  unify: " + e1.prettyString + "\n  with:  " + e2.prettyString + "\n  via:   " + s)
+    logger.debug(
+      s"""  unify: ${e1.prettyString}
+         |  with:  ${e2.prettyString}
+         |  via:   $s""".stripMargin
+    )
     s
   }
 
