@@ -12,7 +12,7 @@ import org.keymaerax.btactics.macros.*
 import org.keymaerax.core.*
 import org.keymaerax.core.btactics.annotations.Derivation
 
-import java.lang.reflect.{Field, InvocationTargetException}
+import java.lang.reflect.{Field, InvocationTargetException, Method}
 import scala.annotation.{nowarn, tailrec}
 import scala.language.implicitConversions
 
@@ -64,20 +64,42 @@ object DerivationInfoRegistry extends Logging {
     case _ => None
   }
 
-  /** Evaluate the field of a Scala object and register it with the global [[DerivationInfo]] object. */
-  private def registerDerivationFromField(clazz: Class[_], instance: AnyRef, field: Field): Unit = {
-    // Val fields are private but have public getter functions of the same name.
-    val getter = clazz.getMethod(field.getName)
-
+  /** Evaluate the method of a Scala object and register it with the global [[DerivationInfo]] object. */
+  private def registerDerivationFromMethod(clazz: Class[_], instance: AnyRef, method: Method): Unit = {
     // Exceptions that occur during reflection are wrapped in an InvocationTargetException.
     // We unwrap and rethrow so from the outside it looks like we just evaluated the derivation normally.
     val valueAny =
-      try { getter.invoke(instance) }
+      try { method.invoke(instance) }
       catch { case e: InvocationTargetException => throw e.getCause }
 
     val value = valueAny.asInstanceOf[DerivationInfo]
     DerivationInfo.register(value)
   }
+
+  /** Evaluate the field of a Scala object and register it with the global [[DerivationInfo]] object. */
+  private def registerDerivationFromField(clazz: Class[_], instance: AnyRef, field: Field): Unit = {
+    // Lazy vals are named something$lzy1 or similar by the compiler.
+    // They have a getter function with the original name that is also annotated.
+    // We collect annotated methods separately, so we can just skip here.
+    if (field.getName.contains('$')) return
+
+    // Val fields are private but have public getter functions of the same name.
+    val getter = clazz.getMethod(field.getName)
+
+    registerDerivationFromMethod(clazz, instance, getter)
+  }
+
+  private def tryRegistering(clazz: Class[_], name: String, op: => Unit): Option[String] =
+    try {
+      op
+      None
+    } catch {
+      case t: Throwable =>
+        val className = clazz.getDeclaringClass.getName
+        // For debugging, the stack trace might be useful.
+        logger.debug(s"Error while registering (in $className) $name", t)
+        Some(s"Error while registering (in $className) $name")
+    }
 
   /**
    * Find and register all fields of a Scala object which are marked with the [[Derivation]] annotation.
@@ -91,9 +113,9 @@ object DerivationInfoRegistry extends Logging {
       try clazz.getField("MODULE$")
       catch {
         case _: NoSuchFieldException =>
-          val className = clazz.getName
-          val annotationName = classOf[Derivation].getSimpleName
-          return Seq(s"$className is not a Scala object, but it contains @$annotationName annotations")
+          // When annotating objects, the corresponding class fields are also annotated.
+          // So we just ignore anything that's not a Scala object.
+          return Seq()
       }
 
     // We pass null since the field is static.
@@ -103,32 +125,13 @@ object DerivationInfoRegistry extends Logging {
       .getDeclaredMethods
       .toSeq
       .filter(_.isAnnotationPresent(classOf[Derivation]))
-      .map { method =>
-        val className = method.getDeclaringClass.getName
-        val methodName = method.getName
-        val annotationName = classOf[Derivation].getSimpleName
-        s"Method (in $className) $methodName is annotated @$annotationName, but only fields are supported"
-      }
+      .flatMap(method => tryRegistering(clazz, method.getName, registerDerivationFromMethod(clazz, instance, method)))
 
     val fieldErrors = clazz
       .getDeclaredFields
       .toSeq
       .filter(_.isAnnotationPresent(classOf[Derivation]))
-      .flatMap(field =>
-        try {
-          registerDerivationFromField(clazz, instance, field)
-          None
-        } catch {
-          case t: Throwable =>
-            val className = field.getDeclaringClass.getName
-            val fieldName = field.getName
-
-            // For debugging, the stack trace might be useful.
-            logger.debug(s"Error while registering (in $className) $fieldName", t)
-
-            Some(s"Error while registering (in $className) $fieldName")
-        }
-      )
+      .flatMap(field => tryRegistering(clazz, field.getName, registerDerivationFromField(clazz, instance, field)))
 
     methodErrors ++ fieldErrors
   }
