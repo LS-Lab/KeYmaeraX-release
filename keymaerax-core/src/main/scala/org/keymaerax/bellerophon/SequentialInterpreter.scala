@@ -292,7 +292,7 @@ abstract class BelleBaseInterpreter(
       var result: BelleValue = v
 
       breakable {
-        do {
+        while {
           prev = result
           try {
             result = apply(child, result)
@@ -301,7 +301,8 @@ abstract class BelleBaseInterpreter(
               case _ => // continue
             }
           } catch { case _: BelleProofSearchControl => /*@note child no longer applicable */ result = prev }
-        } while (progress(prev, result))
+          progress(prev, result)
+        } do ()
       }
       result
 

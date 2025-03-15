@@ -501,7 +501,7 @@ private object DifferentialTactics extends Logging {
           DifferentialEquationCalculus
             .dIX(SuccPosition.base0(sequent.succ.size - 1, pos.inExpr)) & OnAll(QE & done) & done
         )
-        DifferentialEquationCalculus.dC(R)(pos) < (diffIndAllButFirst: _*)
+        DifferentialEquationCalculus.dC(R)(pos).<(diffIndAllButFirst: _*)
       }
   }
 

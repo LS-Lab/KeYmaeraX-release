@@ -1105,11 +1105,12 @@ class ScriptedRequestTests extends TacticTestBase {
             val nodeId = r3.getJson.asJsObject.fields("nodeId").asInstanceOf[JsString].value
             val taskId = r3.getJson.asJsObject.fields("taskId").asInstanceOf[JsString].value
             var status = "running"
-            do {
+            while {
               val r4 = new TaskStatusRequest(db.db, userName, proofId, nodeId, taskId).getResultingResponse(t)
               r4 shouldBe a[TaskStatusResponse] withClue r4.getJson.prettyPrint
               status = r4.getJson.asJsObject.fields("status").asInstanceOf[JsString].value
-            } while (status != "done")
+              status != "done"
+            } do ()
             new TaskResultRequest(db.db, userName, proofId, nodeId, taskId).getResultingResponse(t) match {
               case _: TaskResultResponse => // ok
               case e: ErrorResponse => fail(e.msg, e.exn)

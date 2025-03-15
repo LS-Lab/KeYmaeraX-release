@@ -168,7 +168,7 @@ class RingsLibrary(terms: Iterable[Term]) {
   def polynomialReduce(polynomial: Term, GB: List[Term]): (List[Term], Term) = {
     val ringpoly = toRing(polynomial)
     val ringGB = GB.map(toRing)
-    val res = (ringpoly /%/%* (ringGB: _*)).toList
+    val res = ringpoly./%/%*(ringGB: _*).toList
     (res.init.map(fromRing), fromRing(res.last))
   }
 

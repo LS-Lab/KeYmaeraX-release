@@ -23,10 +23,11 @@ object SignAnalysis {
   def computeSigns(s: Sequent): Signs = {
     var signs = seedSigns(s)
     var prev = signs
-    do {
+    while {
       prev = signs
       signs = pushDownSigns(aggregateSigns(signs))
-    } while (prev != signs)
+      prev != signs
+    } do ()
     prev
   }
 

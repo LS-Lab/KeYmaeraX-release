@@ -247,7 +247,7 @@ case class SpoonFeedingInterpreter(
             }
 
             var prevResult = result
-            do {
+            while {
               try {
                 prevResult = result
                 result = runTactic(
@@ -263,7 +263,8 @@ case class SpoonFeedingInterpreter(
                   case _ => prevResult
                 }
               } catch { case _: BelleProofSearchControl => }
-            } while (progress(prevResult._1, result._1))
+              progress(prevResult._1, result._1)
+            } do ()
             result
           case RepeatTactic(_, times) if times < 1 => (goal, ctx) // nothing to do
           case RepeatTactic(child, times) if times >= 1 =>

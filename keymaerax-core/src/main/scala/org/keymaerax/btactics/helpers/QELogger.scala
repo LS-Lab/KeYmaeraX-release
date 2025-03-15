@@ -224,7 +224,7 @@ object QELogger extends Logging {
         } catch { case ex: Throwable => logger.trace(s"failed: ${ex.getMessage}") }
       } else if (filterDuplicates) seqs += e._2
     }
-    processLog(parseStr2, export, logPath)
+    processLog(parseStr2, `export`, logPath)
   }
 
   /** Exports the formula `fml` in SMT-Lib format to `exportFile`. */
