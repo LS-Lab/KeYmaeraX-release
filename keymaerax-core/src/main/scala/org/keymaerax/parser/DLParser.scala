@@ -174,7 +174,7 @@ class DLParser extends Parser {
    * @ensures
    *   \forall e: apply(printer(e)) == e
    */
-  override lazy val printer: KeYmaeraXPrettyPrinter.type = KeYmaeraXPrettyPrinter
+  override val printer: KeYmaeraXPrettyPrinter.type = KeYmaeraXPrettyPrinter
 
   /**
    * Register a listener for @annotations during the parse.

@@ -665,10 +665,10 @@ case class TermProvable(provable: ProvableSig, pt: ProofTerm, defs: Declaration)
     TermProvable(provable.sub(subgoal), StartProof(provable.subgoals(subgoal)), defs)
 
   /** @inheritdoc */
-  lazy val axioms: immutable.Map[String, ProvableSig] = TermProvable.axioms
+  val axioms: immutable.Map[String, ProvableSig] = TermProvable.axioms
 
   /** @inheritdoc */
-  lazy val rules: immutable.Map[String, ProvableSig] = TermProvable.rules
+  val rules: immutable.Map[String, ProvableSig] = TermProvable.rules
 
   /** @inheritdoc */
   def startProof(goal: Sequent): ProvableSig = { TermProvable.startProof(goal, defs) }

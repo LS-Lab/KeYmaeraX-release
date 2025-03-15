@@ -222,7 +222,7 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
   lazy val strictParser: KeYmaeraXParser = new KeYmaeraXParser(LAX_MODE = false)
   lazy val laxParser: KeYmaeraXParser = new KeYmaeraXParser(LAX_MODE = true)
 
-  override lazy val printer: KeYmaeraXPrettyPrinter.type = KeYmaeraXPrettyPrinter
+  override val printer: KeYmaeraXPrettyPrinter.type = KeYmaeraXPrettyPrinter
 
   private val parseErrorsAsExceptions = true
 

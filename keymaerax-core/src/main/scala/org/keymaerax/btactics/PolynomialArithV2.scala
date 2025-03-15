@@ -1036,7 +1036,7 @@ case class TwoThreeTreePolynomialRing(
 
     def treeSketch: String
     lazy val (eq, lhs, rhs) = prv.conclusion.succ(0) match { case eq @ Equal(lhs, rhs) => (eq, lhs, rhs) }
-    lazy val term = lhs
+    val term = lhs
 
     def lookup(x: IndexedSeq[(Term, Int)]): Option[Monomial] = this match {
       case Empty(_) => None
