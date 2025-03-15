@@ -32,7 +32,7 @@ object DLAxiomParser extends (String => List[(String, Formula)]) {
   def apply(input: String): List[(String, Formula)] = axiomParser(input)
 
   private val axiomParser: String => List[(String, Formula)] = input => {
-    fastparse.parse(input, axiomList(_)) match {
+    fastparse.parse(input, implicit p => axiomList) match {
       case Parsed.Success(value, _) => value
       case f: Parsed.Failure => throw parseException(f).inContext("<AxiomBase>")
     }

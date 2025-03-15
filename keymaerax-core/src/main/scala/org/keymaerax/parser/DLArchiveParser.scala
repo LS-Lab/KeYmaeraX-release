@@ -58,20 +58,20 @@ class DLArchiveParser(val tacticParser: DLTacticParser) extends ArchiveParser {
   override def exprParser: Parser = expParser
 
   val archiveParser: String => List[ParsedArchiveEntry] = input =>
-    fastparse.parse(ParserHelper.checkUnicode(ParserHelper.removeBOM(input)), archiveEntries(_)) match {
+    fastparse.parse(ParserHelper.checkUnicode(ParserHelper.removeBOM(input)), implicit p => archiveEntries) match {
       case Parsed.Success(value: List[ParsedArchiveEntry], _) =>
         if (value.length == 1) List(value.head.withProblemContent(input.trim)) else value
       case f: Parsed.Failure => throw parseException(f) // @todo? .inContext(input)
     }
 
   val definitionsPackageParser: String => Declaration = input =>
-    fastparse.parse(ParserHelper.checkUnicode(ParserHelper.removeBOM(input)), definitionsPackage(_)) match {
+    fastparse.parse(ParserHelper.checkUnicode(ParserHelper.removeBOM(input)), implicit p => definitionsPackage) match {
       case Parsed.Success(value: Declaration, _) => value
       case f: Parsed.Failure => throw parseException(f) // @todo? .inContext(input)
     }
 
   private val problemOrFormulaParser: String => Formula = input =>
-    fastparse.parse(ParserHelper.checkUnicode(ParserHelper.removeBOM(input)), problemOrFormula(_)) match {
+    fastparse.parse(ParserHelper.checkUnicode(ParserHelper.removeBOM(input)), implicit p => problemOrFormula) match {
       case Parsed.Success(value: Formula, _) => value
       case f: Parsed.Failure => throw parseException(f) // @todo? .inContext(input)
     }

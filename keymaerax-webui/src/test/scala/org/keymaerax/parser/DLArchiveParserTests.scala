@@ -322,7 +322,7 @@ class DLArchiveParserTests extends TacticTestBase {
     DLParser.runParser(archiveParser.progDef(_))("HP a ::= { x:=x+1; };") shouldBe (
       Name("a", None), Signature(Some(Unit), Trafo, None, Right(Some("x:=x+1;".asProgram)), Region(1, 1, 1, 21))
     )
-    DLParser.runParser(archiveParser.definitions(Declaration(Map.empty))(_))(
+    DLParser.runParser(implicit p => archiveParser.definitions(Declaration(Map.empty)))(
       "Definitions HP a ::= { x:=x+1; }; End."
     ) shouldBe Declaration(
       Map(Name("a", None) -> Signature(Some(Unit), Trafo, None, Right(Some("x:=x+1;".asProgram)), Region(1, 12, 1, 34)))

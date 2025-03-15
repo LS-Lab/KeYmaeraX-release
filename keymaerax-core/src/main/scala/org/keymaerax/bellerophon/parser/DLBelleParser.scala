@@ -94,7 +94,7 @@ class DLBelleParser(
   /** Parse the input string in the concrete syntax as a differential dynamic logic expression */
   // @todo store the parser for speed
   val belleParser: String => BelleExpr = s =>
-    fastparse.parse(s, fullTactic(_)) match {
+    fastparse.parse(s, implicit p => fullTactic) match {
       case Parsed.Success(value: BelleExpr, _) => value
       case f: Parsed.Failure => throw parseException(f)
     }
@@ -289,7 +289,7 @@ class DLBelleParser(
         tactics += (s -> DefTactic(s, t))
         Pass(tactics(s))
       }
-    }) | "USMatch".!.map(_ => fastparse.parse("skip", atomicTactic(_)).get.value)
+    }) | "USMatch".!.map(_ => fastparse.parse("skip", implicit p => atomicTactic).get.value)
 
   def branchTac[$: P]: P[BelleExpr] = P(
     "<" ~/ "(" ~
@@ -324,7 +324,7 @@ class DLBelleParser(
   })
 
   def optionTac[$: P]: P[BelleExpr] = ("?".?.! ~~ usingTac).map({
-    case ("?", t) => EitherTactic(t, fastparse.parse("nil", atomicTactic(_)).get.value)
+    case ("?", t) => EitherTactic(t, fastparse.parse("nil", implicit p => atomicTactic).get.value)
     case (_, t) => t
   })
 
@@ -356,7 +356,7 @@ class DLBelleParser(
         // str contains no hashes, just return Here for PosIn.
         // str can be any expression, including a term (or a program), e.g. "x" in `2.1==x`.
         // Potentially unsafe for ambiguous "p()" with an archive without definition
-        return fastparse.parse(str, GlobalState.parser.fullExpression(_)) match {
+        return fastparse.parse(str, implicit p => GlobalState.parser.fullExpression) match {
           case Parsed.Success(value, _) => Pass((defs.elaborateFull(value), HereP))
           case _: Parsed.Failure => Fail
         }
@@ -376,7 +376,7 @@ class DLBelleParser(
 
       // subExpr need to have the correct sort without ambiguity between predicate and function
       // elaborateFull would also work (if used consistently) but more costly
-      val subExpr = fastparse.parse(betweenHashes, GlobalState.parser.fullExpression(_)) match {
+      val subExpr = fastparse.parse(betweenHashes, implicit p => GlobalState.parser.fullExpression) match {
         case Parsed.Success(e, _) => defs.elaborateToFunctions[Expression](e)
         case _: Parsed.Failure => return Fail
       }
@@ -388,7 +388,7 @@ class DLBelleParser(
       }
       val strWithoutHashes = beforeHashes + lp + betweenHashes + rp + afterHashes
 
-      val reparsedSubExpr = fastparse.parse(strWithoutHashes, GlobalState.parser.fullFormula(_)) match {
+      val reparsedSubExpr = fastparse.parse(strWithoutHashes, implicit p => GlobalState.parser.fullFormula) match {
         case Parsed.Success(expr, _) => expr
         case _: Parsed.Failure => return Fail
       }
@@ -399,7 +399,7 @@ class DLBelleParser(
           // mark with "hash" placeholder function/predicate/program depending on subExpr sort
           val (markedStr, placeholder) = PositionLocator
             .withMarkers(strWithoutHashes, subExpr, hashStart, hashEnd - hashStart + 1)
-          val markedExpr = fastparse.parse(markedStr, GlobalState.parser.fullFormula(_)).get.value
+          val markedExpr = fastparse.parse(markedStr, implicit p => GlobalState.parser.fullFormula).get.value
           FormulaTools.posOf(markedExpr, placeholder)
         } else {
           // reparsedSubExpr need to be elaborated consistently with subExpr

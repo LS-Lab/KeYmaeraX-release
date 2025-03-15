@@ -148,25 +148,25 @@ class DLParser extends Parser {
   override def apply(input: String): Expression = exprParser(ParserHelper.checkUnicode(ParserHelper.removeBOM(input)))
 
   /** Parse the input string in the concrete syntax as a differential dynamic logic expression */
-  val exprParser: String => Expression = DLParser.runParser(fullExpression(_))
+  val exprParser: String => Expression = DLParser.runParser(implicit p => fullExpression)
 
   /** Parse the input string in the concrete syntax as a differential dynamic logic term */
-  override val termParser: String => Term = DLParser.runParser(fullTerm(_))
+  override val termParser: String => Term = DLParser.runParser(implicit p => fullTerm)
 
   /** Parse the input string in the concrete syntax as a differential dynamic logic formula */
-  override val formulaParser: String => Formula = DLParser.runParser(fullFormula(_))
+  override val formulaParser: String => Formula = DLParser.runParser(implicit p => fullFormula)
 
   /** Parse the input string in the concrete syntax as a differential dynamic logic program */
-  override val programParser: String => Program = DLParser.runParser(fullProgram(_))
+  override val programParser: String => Program = DLParser.runParser(implicit p => fullProgram)
 
   /** Parse the input string in the concrete syntax as a differential dynamic logic differential program */
-  override val differentialProgramParser: String => DifferentialProgram = DLParser.runParser(fullDifferentialProgram(_))
+  override val differentialProgramParser: String => DifferentialProgram = DLParser.runParser(implicit p => fullDifferentialProgram)
 
   /** Parse the input string in the concrete syntax as a differential dynamic logic sequent. */
-  override val sequentParser: String => Sequent = DLParser.runParser(fullSequent(_))
+  override val sequentParser: String => Sequent = DLParser.runParser(implicit p => fullSequent)
 
   /** Parse the input string in the concrete syntax as a stored list of differential dynamic logic sequents. */
-  override val storedInferenceParser: String => List[Sequent] = DLParser.runParser(storedProvable(_))
+  override val storedInferenceParser: String => List[Sequent] = DLParser.runParser(implicit p => storedProvable)
 
   /**
    * A pretty-printer that can write the output that this parser reads

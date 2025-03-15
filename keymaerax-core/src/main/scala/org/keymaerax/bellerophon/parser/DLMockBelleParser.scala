@@ -45,7 +45,7 @@ class DLMockBelleParser(
   /** Parse the input string in the concrete syntax as a differential dynamic logic expression */
   // @todo store the parser for speed
   val belleParser: String => BelleExpr = s =>
-    fastparse.parse(s, tactic(_)) match {
+    fastparse.parse(s, implicit p => tactic) match {
       case Parsed.Success(value: BelleExpr, _) => value
       case f: Parsed.Failure => throw parseException(f)
     }
