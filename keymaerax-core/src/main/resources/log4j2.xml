@@ -1,37 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Configuration status="WARN">
+<Configuration>
     <Appenders>
-        <Console name="ConsoleError" target="SYSTEM_OUT">
-            <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg{nolookups}%n"/>
+        <Console name="CONSOLE" target="SYSTEM_OUT">
+            <PatternLayout pattern="[%highlight{%-5level}] %msg%n"/>
         </Console>
-        <Console name="ConsolePrint" target="SYSTEM_OUT">
-            <PatternLayout pattern="%-5level %msg{nolookups}%n"/>
-        </Console>
-        <RollingFile name="TraceFile"
-                     fileName="${sys:user.home}/.keymaerax/logs/keymaerax.log"
-                     filePattern="${sys:user.home}/.keymaerax/logs/keymaerax-%d{MM-dd-yyyy}.log.gz">
-            <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg{nolookups}%n"/>
-            <Policies>
-                <SizeBasedTriggeringPolicy size="20 MB"/>
-            </Policies>
-            <DefaultRolloverStrategy max="1"/>
-        </RollingFile>
     </Appenders>
     <Loggers>
-        <Logger name="org.keymaerax.hydra" level="info" additivity="false">
-            <AppenderRef ref="ConsolePrint"/>
-        </Logger>
-        <Logger name="org.keymaerax.launcher.Main" level="info" additivity="false">
-            <AppenderRef ref="ConsolePrint"/>
-        </Logger>
-        <Logger name="org.keymaerax.btactics.DebuggingTactics$" level="info" additivity="false">
-            <AppenderRef ref="ConsolePrint"/>
-        </Logger>
-        <Logger name="org.keymaerax.tools.ext.JLinkMathematicaLink" level="info" additivity="false">
-            <AppenderRef ref="ConsolePrint"/>
-        </Logger>
-        <Root level="error">
-            <AppenderRef level="error" ref="ConsoleError"/>
+        <Root level="INFO">
+            <AppenderRef ref="CONSOLE"/>
         </Root>
     </Loggers>
 </Configuration>
