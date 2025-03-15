@@ -193,7 +193,7 @@ class RingsLibrary(terms: Iterable[Term]) {
     case Plus(u, v) => lieDerivative(ode)(u) + lieDerivative(ode)(v)
     case Minus(u, v) => lieDerivative(ode)(u) - lieDerivative(ode)(v)
     case Times(u, v) => lieDerivative(ode)(u) * toRing(v) + toRing(u) * lieDerivative(ode)(v)
-    case Divide(u, Number(n)) if n.isValidInt => lieDerivative(ode)(u) / n.toIntExact
+    case Divide(u, Number(n)) if n.isValidInt => syntax.ringOps(lieDerivative(ode)(u)) / n.toIntExact
     case Power(u, Number(n)) if n.isValidInt => n.toIntExact * (toRing(u) ^ (n.toIntExact - 1)) * lieDerivative(ode)(u)
     case _ => throw ToolExecutionException("Operation not (yet) supported by RingsLibrary: " + t)
   }
@@ -264,7 +264,7 @@ class RingsLibrary(terms: Iterable[Term]) {
     case Plus(u, v) => substitutes(subst)(u) + substitutes(subst)(v)
     case Minus(u, v) => substitutes(subst)(u) - substitutes(subst)(v)
     case Times(u, v) => substitutes(subst)(u) * substitutes(subst)(v)
-    case Divide(u, Number(n)) if n.isValidInt => substitutes(subst)(u) / n.toIntExact
+    case Divide(u, Number(n)) if n.isValidInt => syntax.ringOps(substitutes(subst)(u)) / n.toIntExact
     case Power(u, Number(n)) if n.isValidInt => substitutes(subst)(u) ^ n.toIntExact
     case n: Number => toRing(n)
     case _ =>

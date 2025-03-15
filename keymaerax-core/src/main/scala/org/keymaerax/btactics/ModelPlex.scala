@@ -296,8 +296,8 @@ object ModelPlex extends ModelPlexTrait with Logging {
 
       @nowarn("msg=match may not be exhaustive")
       val preEstimator = unobservable
-        .filter(_._2.isDefined)
-        .map({ case (_, Some(e)) => e })
+        .values
+        .flatten
         .reduceRightOption(And.apply)
         .getOrElse(True)
 
