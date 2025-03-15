@@ -27,9 +27,8 @@ import org.keymaerax.pt.ProvableSig
 import org.keymaerax.tools.{ToolEvidence, ToolName}
 import org.keymaerax.{Configuration, FileConfiguration, GlobalState, Logging}
 
-import java.io.PrintWriter
+import java.io.{File, PrintWriter}
 import scala.collection.immutable.{List, Nil}
-import scala.reflect.io.File
 import scala.sys.ShutdownHookThread
 
 /** Command-line interface for the KeYmaera X webui jar. */
