@@ -3,23 +3,15 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Paths}
 import java.util.Properties
 
-ThisBuild / scalaVersion := "2.13.16"
+ThisBuild / scalaVersion := "3.6.4"
 ThisBuild / version := "5.1.2"
 
 ThisBuild / scalacOptions ++= Seq(
   // Always show all non-suppressed warnings. See `scalac -Wconf:help` for more info.
   // https://www.scala-lang.org/2021/01/12/configuring-and-suppressing-warnings.html
-  "-Wconf:any:w",
+  //"-Wconf:any:w",
 
-  // Scala 3 migration warnings and backported changes. See `scalac -Xsource:help` for more info.
-  // https://docs.scala-lang.org/scala3/guides/migration/tooling-scala2-xsource3.html
-  "-Xsource:3",
-  "-Xsource-features:case-apply-copy-access",
-  // According to the Scala 3 docs, scala.annotation.elidable is ignored in Scala 3.
-  // Instead, one should use `inline if` to produce the same behavior.
-  // https://scala-lang.org/api/3.x/scala/annotation/elidable.html
-  // TODO Fix this after migrating to Scala 3
-  "-Wconf:msg=scala.annotation.elidable is ignored:s",
+  "-nowarn", // For now, the warnings just get into the way.
 )
 
 ThisBuild / assemblyMergeStrategy := {
@@ -45,7 +37,7 @@ lazy val core = project
     name := "KeYmaeraX Core",
     mainClass := Some("org.keymaerax.cli.KeymaeraxCore"),
 
-    libraryDependencies += "cc.redberry" %% "rings.scaladsl" % "2.5.8",
+    libraryDependencies += ("cc.redberry" %% "rings.scaladsl" % "2.5.8").cross(CrossVersion.for3Use2_13),
     libraryDependencies += "com.github.scopt" %% "scopt" % "4.1.0",
     libraryDependencies += "com.lihaoyi" %% "fastparse" % "3.1.1",
     libraryDependencies += "io.github.classgraph" % "classgraph" % "4.8.179",
@@ -76,7 +68,7 @@ lazy val core = project
     // A published version of scala-smtlib that works with Scala 2.13
     // https://github.com/regb/scala-smtlib/issues/46#issuecomment-955691728
     // https://mvnrepository.com/artifact/com.regblanc/scala-smtlib_2.13/0.2.1-42-gc68dbaa
-    libraryDependencies += "com.regblanc" %% "scala-smtlib" % "0.2.1-42-gc68dbaa",
+    libraryDependencies += ("com.regblanc" %% "scala-smtlib" % "0.2.1-42-gc68dbaa").cross(CrossVersion.for3Use2_13),
 
     Compile / run / mainClass := mainClass.value,
     assembly / mainClass := mainClass.value,
