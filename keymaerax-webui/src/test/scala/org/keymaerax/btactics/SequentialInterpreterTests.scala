@@ -657,12 +657,13 @@ class SequentialInterpreterTests extends TacticTestBase {
   }
 
   "Lazy interpreter" should "fail on the first failing branch" in withMathematica { _ =>
-    val listener = new IOListener {
+    class Listener extends IOListener {
       val calls: mutable.Buffer[BelleExpr] = mutable.Buffer[BelleExpr]()
       override def begin(input: BelleValue, expr: BelleExpr): Unit = calls += expr
       override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, Throwable]): Unit = {}
       override def kill(): Unit = {}
     }
+    val listener = new Listener
     the[BelleThrowable] thrownBy LazySequentialInterpreter(listener :: Nil)(
       "andR(1); <(close, close)".asTactic,
       BelleProvable.plain(ProvableSig.startPlainProof("false & true".asFormula)),
@@ -683,12 +684,13 @@ class SequentialInterpreterTests extends TacticTestBase {
   }
 
   "Exhaustive interpreter" should "explore all branches regardless of failing ones" in withMathematica { _ =>
-    val listener = new IOListener {
+    class Listener extends IOListener {
       val calls: mutable.Buffer[BelleExpr] = mutable.Buffer[BelleExpr]()
       override def begin(input: BelleValue, expr: BelleExpr): Unit = calls += expr
       override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, Throwable]): Unit = {}
       override def kill(): Unit = {}
     }
+    val listener = new Listener
     the[BelleThrowable] thrownBy ExhaustiveSequentialInterpreter(listener :: Nil)(
       "andR(1); <(close, close)".asTactic,
       BelleProvable.plain(ProvableSig.startPlainProof("false & true".asFormula)),
@@ -745,7 +747,7 @@ class SequentialInterpreterTests extends TacticTestBase {
   }
 
   it should "stop saturation when proof is closed" in withMathematica { _ =>
-    val listener = new IOListener {
+    class Listener extends IOListener {
       val calls: mutable.Buffer[BelleExpr] = mutable.Buffer[BelleExpr]()
       override def begin(input: BelleValue, expr: BelleExpr): Unit = expr match {
         case NamedTactic(name, _) if name == "prop" => calls += expr
@@ -754,6 +756,7 @@ class SequentialInterpreterTests extends TacticTestBase {
       override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, Throwable]): Unit = {}
       override def kill(): Unit = {}
     }
+    val listener = new Listener
     ExhaustiveSequentialInterpreter(listener :: Nil)(
       SaturateTactic(prop),
       BelleProvable.plain(ProvableSig.startPlainProof("x>0 -> x>0".asFormula)),

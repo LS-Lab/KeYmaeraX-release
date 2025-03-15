@@ -418,8 +418,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
   }
 
   @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
-  private def proofListener(name: String, senseVars: Set[Variable], x0: Map[Variable, Term], defs: Declaration) =
-    new IOListener() {
+  private class ProofListener(name: String, senseVars: Set[Variable], x0: Map[Variable, Term], defs: Declaration) extends IOListener() {
       var invariant: Option[Invariant] = None
       // initial condition and differential invariants per ODE
       var diffInvariants: ListMap[DifferentialProgram, (Formula, Formula)] = ListMap()
@@ -615,7 +614,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
           .map({ case (v, g) => Assign(g, v) })
           .reduceRight(Compose.apply)
 
-        val pl = proofListener(name, plantVars.toSet, /*q, */ x0, defs)
+        val pl = new ProofListener(name, plantVars.toSet, /*q, */ x0, defs)
         LazySequentialInterpreter(pl :: /*qeDurationListener::*/ Nil)(
           tactic,
           BelleProvable.plain(ProvableSig.startProof(model.asInstanceOf[Formula], defs)),
@@ -766,7 +765,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
     val x0 = Map[Variable, Term]()
     val olds = senseVars.map(v => FuncOf(Function("old", None, Real, Real), postVar(v)) -> v).toMap
 
-    val pl = proofListener(name, senseVars.toSet, x0, defs)
+    val pl = new ProofListener(name, senseVars.toSet, x0, defs)
     LazySequentialInterpreter(pl :: Nil)(tactic, BelleProvable.plain(ProvableSig.startProof(formula, defs)))
 
     assert(

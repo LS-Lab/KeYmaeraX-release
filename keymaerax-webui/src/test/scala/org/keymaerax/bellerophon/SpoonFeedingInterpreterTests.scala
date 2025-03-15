@@ -1319,12 +1319,14 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   }
 
   "Listeners" should "not be informed when doing auxiliary inner proofs" in withMathematica { _ =>
-    val mockListener = new IOListener() {
+    class MockListener extends IOListener{
       var beginnings: List[(BelleValue, BelleExpr)] = Nil
       override def begin(input: BelleValue, expr: BelleExpr): Unit = beginnings = beginnings :+ (input -> expr)
       override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, Throwable]): Unit = {}
       override def kill(): Unit = {}
     }
+
+    val mockListener = new MockListener
     val mockListenerFactory: Int => (String, Int, Int) => scala.collection.immutable.Seq[IOListener] =
       (_: Int) => (_: String, _: Int, _: Int) => mockListener :: Nil
 

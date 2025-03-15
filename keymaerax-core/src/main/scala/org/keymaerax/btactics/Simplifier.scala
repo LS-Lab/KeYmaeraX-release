@@ -206,7 +206,7 @@ object Simplifier {
   val extendedSimps: List[Simplification] = defaultSimps ++
     List(assocPlus, assocTimes, pushConstPlus, flipConstPlus, pushConstTimes, flipConstTimes)
 
-  def trav(simps: List[Simplification]) = new ExpressionTraversalFunction {
+  private class Trav(simps: List[Simplification]) extends ExpressionTraversalFunction {
     var result: Option[(PosInExpr, Term, BelleExpr)] = None
     override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
       simps.find({ case simp => simp(e).isDefined }) match {
@@ -221,19 +221,19 @@ object Simplifier {
     }
   }
   def simp(simps: List[Simplification], e: Formula): Option[(PosInExpr, Term, BelleExpr)] = {
-    val t = trav(simps)
+    val t = new Trav(simps)
     ExpressionTraversal.traverse(t, e)
     t.result
   }
 
   def simp(simps: List[Simplification], e: Term): Option[(PosInExpr, Term, BelleExpr)] = {
-    val t = trav(simps)
+    val t = new Trav(simps)
     ExpressionTraversal.traverse(t, e)
     t.result
   }
 
   def simp(simps: List[Simplification], e: Program): Option[(PosInExpr, Term, BelleExpr)] = {
-    val t = trav(simps)
+    val t = new Trav(simps)
     ExpressionTraversal.traverse(t, e)
     t.result
   }
