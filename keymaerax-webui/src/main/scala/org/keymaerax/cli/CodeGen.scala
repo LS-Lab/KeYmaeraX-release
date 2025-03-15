@@ -14,10 +14,32 @@ import org.keymaerax.infrastruct.FormulaTools
 import org.keymaerax.parser.{ArchiveParser, ParsedArchiveEntry}
 
 import java.io.PrintWriter
-import scala.reflect.io.File
+import java.nio.file.Path
 
 /** Code generator command-line interface. */
 object CodeGen extends Logging {
+  def getExtension(path: Path): Option[String] = {
+    val name = path.getFileName.toString
+    val i = name.lastIndexOf('.')
+    if (i < 0) return None
+    Some(name.substring(i + 1))
+  }
+
+  def removeExtension(path: Path): Path = {
+    val name = path.getFileName.toString
+    val i = name.lastIndexOf('.')
+    if (i < 0) return path
+    val nameWithoutExt = name.substring(0, i)
+    path.resolveSibling(nameWithoutExt)
+  }
+
+  def addExtension(path: Path, ext: String): Path = {
+    val name = path.getFileName.toString
+    val nameWithExt = s"$name.$ext"
+    path.resolveSibling(nameWithExt)
+  }
+
+  def changeExtension(path: Path, ext: String): Path = addExtension(removeExtension(path), ext)
 
   /**
    * Code generator.
@@ -39,19 +61,21 @@ object CodeGen extends Logging {
       vars: Option[Set[BaseVariable]],
       args: Seq[String],
   ): Unit = {
-    val inputFile = if (in.contains("#")) File(in.substring(0, in.lastIndexOf("#"))) else File(in)
+    val inputFile = if (in.contains("#")) Path.of(in.substring(0, in.lastIndexOf("#"))) else Path.of(in)
 
     val inputFormulas = ArchiveParser.parseFromFile(in)
-    var outputFile = inputFile.changeExtension("c")
-    if (out.isDefined) outputFile = File(out.get)
+    var outputFile = changeExtension(inputFile, "c")
+    for (out <- out) outputFile = Path.of(out)
 
     val head = EvidencePrinter.stampHead(args)
     val written = inputFormulas.map(e => {
       val outputFileName =
-        if (inputFormulas.size <= 1) outputFile.toString()
+        if (inputFormulas.size <= 1) outputFile.toString
         else {
-          val ext = outputFile.extension
-          outputFile.addExtension(e.name.replaceAll("\\s", "_")).addExtension(ext).toString()
+          var result = outputFile
+          result = addExtension(result, e.name.replaceAll("\\s", "_"))
+          for (ext <- getExtension(outputFile)) result = addExtension(result, ext)
+          result.toString
         }
       if (quantitative) codegenQuantitative(e, outputFileName, head, vars)
       else codegen(e, interval, outputFileName, head, vars)
