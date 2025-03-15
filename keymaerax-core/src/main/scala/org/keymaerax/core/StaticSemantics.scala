@@ -101,8 +101,7 @@ object StaticSemantics {
     // base cases
     case x: Variable => SetLattice(x)
     case _: Number => bottom
-    // Type hierarchy makes the assert superfluous, which is intentional to protect against change.
-    case d: DotTerm => assert(!d.isInstanceOf[Variable], "DotTerm cannot be a variable (!)"); bottom
+    case d: DotTerm => bottom
     // @note except for Differential, the following cases are equivalent to f.reapply-style but are left explicit to enforce revisiting this case when data structure changes.
     // case f:BinaryCompositeTerm => freeVars(f.left) ++ freeVars(f.right)
     // homomorphic cases
