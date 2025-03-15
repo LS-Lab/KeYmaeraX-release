@@ -49,6 +49,7 @@ object KeymaeraxCore {
     if (!options.launch) Relauncher.relaunchOrExit(args.toSeq)
 
     Configuration.setConfiguration(FileConfiguration)
+    GlobalLoggingSetup.configureLogger(verbosity = options.verbose)
     GlobalLockChecks.acquireGlobalLockFileOrExit()
 
     // Try graceful shutdown if possible
@@ -105,7 +106,7 @@ object KeymaeraxCore {
 
     for (value <- options.lax) { Configuration.set(Configuration.Keys.LAX, value.toString, saveToFile = false) }
 
-    for (value <- options.debug) { Configuration.set(Configuration.Keys.DEBUG, value.toString, saveToFile = false) }
+    if (options.verbose > 0) { Configuration.set(Configuration.Keys.DEBUG, true.toString, saveToFile = false) }
   }
 
   /** Runs the command 'mode in `options` with command options from `options`, prints `usage` on usage error. */

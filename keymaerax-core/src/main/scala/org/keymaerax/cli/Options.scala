@@ -102,9 +102,9 @@ case class Options(
     license: Boolean = false,
     thirdPartyLicenses: Boolean = false,
     launch: Boolean = false,
+    verbose: Int = 0,
     command: Option[Command] = None,
     // Options specified using flags
-    debug: Option[Boolean] = None,
     jlink: Option[String] = None,
     jlinkinterface: Option[JlinkInterface.Value] = None,
     jlinktcpip: Option[Boolean] = None,
@@ -168,7 +168,7 @@ object Options {
 
   private def parser(name: String, webui: Boolean): OParser[Unit, Options] = {
     val builder = OParser.builder[Options]
-    import builder._
+    import builder.*
 
     implicit val conversionRead: scopt.Read[Conversion.Value] = scopt.Read.reads(Conversion.withName)
 
@@ -199,12 +199,13 @@ object Options {
       opt[Unit](LaunchFlagName)
         .action((_, o) => o.copy(launch = true))
         .text(wrap("Use present JVM instead of launching one with a bigger stack.")),
+      opt[Unit]('v', "verbose")
+        .unbounded()
+        .action((_, o) => o.copy(verbose = o.verbose + 1))
+        .text(wrap("Make the output more verbose. Repeat to increase verbosity further.")),
     )
 
     val flagOptions = Seq[OParser[_, Options]](
-      opt[Boolean]("debug")
-        .action((x, o) => o.copy(debug = Some(x)))
-        .text(wrap("Enable/disable debug mode with exhaustive messages.")),
       opt[String]("jlink")
         .action((x, o) => o.copy(jlink = Some(x)))
         .valueName("path/to/jlinkNativeLib")

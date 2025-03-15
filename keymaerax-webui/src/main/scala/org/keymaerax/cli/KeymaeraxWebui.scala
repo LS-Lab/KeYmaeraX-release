@@ -6,11 +6,11 @@
 package org.keymaerax.cli
 
 import org.apache.commons.lang3.StringUtils
+import org.keymaerax.bellerophon.*
 import org.keymaerax.bellerophon.IOListeners.PrintProgressListener
-import org.keymaerax.bellerophon._
 import org.keymaerax.bellerophon.parser.BellePrettyPrinter
-import org.keymaerax.btactics._
-import org.keymaerax.core._
+import org.keymaerax.btactics.*
+import org.keymaerax.core.*
 import org.keymaerax.hydra.{
   DBTools,
   DbProofTree,
@@ -21,8 +21,8 @@ import org.keymaerax.hydra.{
 }
 import org.keymaerax.info.TechnicalName
 import org.keymaerax.lemma.{Lemma, LemmaDBFactory}
-import org.keymaerax.parser.StringConverter._
-import org.keymaerax.parser._
+import org.keymaerax.parser.*
+import org.keymaerax.parser.StringConverter.*
 import org.keymaerax.pt.ProvableSig
 import org.keymaerax.tools.{ToolEvidence, ToolName}
 import org.keymaerax.{Configuration, FileConfiguration, GlobalState}
@@ -39,6 +39,7 @@ object KeymaeraxWebui {
     if (!options.launch) Relauncher.relaunchOrExit(args.toSeq)
 
     Configuration.setConfiguration(FileConfiguration)
+    GlobalLoggingSetup.configureLogger(verbosity = options.verbose)
     GlobalLockChecks.acquireGlobalLockFileOrExit(graphical = true)
 
     // Try graceful shutdown if possible
