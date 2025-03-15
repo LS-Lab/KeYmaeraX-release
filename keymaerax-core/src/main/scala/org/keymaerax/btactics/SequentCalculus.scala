@@ -263,7 +263,7 @@ object SequentCalculus {
    * AndRight]])
    */
   val andR: DependentPositionTactic = "andR".by { (pos: Position, seq: Sequent) =>
-    corelabelledby("andR", Right(andRRule), And.unapply, pos, seq)
+    corelabelledby("andR", Right(andRRule), { case And(l, r) => Some((l, r)) }, pos, seq)
   }
 
   @Derivation
@@ -295,7 +295,7 @@ object SequentCalculus {
    * ([[org.keymaerax.core.OrLeft OrLeft]])
    */
   val orL: DependentPositionTactic = "orL".by { (pos: Position, seq: Sequent) =>
-    corelabelledby("orL", Left(orLRule), Or.unapply, pos, seq)
+    corelabelledby("orL", Left(orLRule), { case Or(l, r) => Some((l, r)) }, pos, seq)
   }
 
   @Derivation
@@ -352,7 +352,7 @@ object SequentCalculus {
    * right-hand side on the other branch ([[org.keymaerax.core.ImplyLeft ImplyLeft]])
    */
   val implyL: DependentPositionTactic = "implyL".by { (pos: Position, seq: Sequent) =>
-    corelabelledby("implyL", Left(implyLRule), Imply.unapply, pos, seq)
+    corelabelledby("implyL", Left(implyLRule), { case Imply(l, r) => Some((l, r)) }, pos, seq)
   }
 
   @Derivation
@@ -423,7 +423,7 @@ object SequentCalculus {
     corelabelledby(
       "equivL",
       Left(equivLRule),
-      Equiv.unapply,
+      { case Equiv(l, r) => Some((l, r)) },
       pos,
       seq,
       (l: Formula, r: Formula) => (And(l, r).prettyString, And(Not(l), Not(r)).prettyString),
@@ -461,7 +461,7 @@ object SequentCalculus {
     corelabelledby(
       "equivR",
       Right(equivRRule),
-      Equiv.unapply,
+      { case Equiv(l, r) => Some((l, r)) },
       pos,
       seq,
       (l: Formula, r: Formula) => (And(l, r).prettyString, And(Not(l), Not(r)).prettyString),
