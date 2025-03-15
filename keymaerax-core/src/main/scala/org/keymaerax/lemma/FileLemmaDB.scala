@@ -14,8 +14,9 @@ package org.keymaerax.lemma
 import org.keymaerax.info.{Version, VersionNumber}
 import org.keymaerax.{Configuration, Logging}
 
-import java.io.{File, IOException, PrintWriter}
-import scala.reflect.io.Directory
+import java.io.{File, IOException}
+import java.nio.file.attribute.BasicFileAttributes
+import java.nio.file.{FileVisitResult, Files, NoSuchFileException, Path, SimpleFileVisitor}
 import scala.util.matching.Regex
 
 /**
@@ -35,7 +36,7 @@ import scala.util.matching.Regex
 class FileLemmaDB extends LemmaDBBase with Logging {
 
   /** The configured cache path (@todo needs to by lazy? or could be made class val?) */
-  private lazy val cachePath = Configuration.path(Configuration.Keys.LEMMA_CACHE_PATH)
+  private lazy val cachePath = Path.of(Configuration.path(Configuration.Keys.LEMMA_CACHE_PATH))
 
   /**
    * Matches special characters in lemma names that might be problematic in file names (typically: whitespace, :, .).
@@ -43,9 +44,9 @@ class FileLemmaDB extends LemmaDBBase with Logging {
   private val SANITIZE_REGEX = "[^\\w\\-" + Regex.quote(File.separator) + "]"
 
   /** File handle to lemma database (creates parent directories if non-existent). */
-  private lazy val lemmadbpath: File = {
-    val file = new File(cachePath + File.separator + "lemmadb")
-    if (!file.exists() && !file.mkdirs()) logger.warn(s"FileLemmaDB cache did not get created: ${file.getAbsolutePath}")
+  private lazy val lemmadbpath: Path = {
+    val file = cachePath.resolve("lemmadb")
+    Files.createDirectories(file)
     file
   }
 
@@ -53,75 +54,78 @@ class FileLemmaDB extends LemmaDBBase with Logging {
   private def sanitize(id: LemmaID): LemmaID = id.replaceAll(SANITIZE_REGEX, "_")
 
   /** Returns the File representing lemma `id`. */
-  private def file(id: LemmaID): File = new File(lemmadbpath, sanitize(id) + ".alp")
+  private def file(id: LemmaID): Path = lemmadbpath.resolve(sanitize(id) + ".alp")
 
   /** Returns the File representing the folder `id`. */
-  private def folder(id: LemmaID): Directory = new Directory(new File(lemmadbpath, sanitize(id)))
-
-  /** Reads the file `f` into a string. */
-  private def read(f: File): String = {
-    val src = scala.io.Source.fromFile(f, org.keymaerax.core.ENCODING)
-    try { src.mkString }
-    finally { src.close() }
-  }
-
-  /** Writes `text` to the file `f`. */
-  private def write(f: File, text: String): Unit = {
-    val w = new PrintWriter(f, org.keymaerax.core.ENCODING)
-    try { w.write(text) }
-    finally { w.close() }
-  }
+  private def folder(id: LemmaID): Path = lemmadbpath.resolve(sanitize(id))
 
   /** @inheritdoc */
-  final override def contains(lemmaID: LemmaID): Boolean = file(lemmaID).exists
+  final override def contains(lemmaID: LemmaID): Boolean = Files.exists(file(lemmaID))
 
   /** @inheritdoc */
   final override def createLemma(): LemmaID = {
-    val f = File.createTempFile("lemma", ".alp", lemmadbpath)
-    f.getName.substring(0, f.getName.length - ".alp".length)
+    val f = Files.createTempFile(lemmadbpath, "lemma", ".alp")
+    f.getFileName.toString.stripSuffix(".alp")
   }
 
   /** @inheritdoc */
   final override def readLemmas(ids: List[LemmaID]): Option[List[String]] = flatOpt(ids.map({ lemmaID =>
     val f = file(lemmaID)
-    if (f.exists()) Some(read(f)) else None
+    if (Files.exists(f)) Some(Files.readString(f)) else None
   }))
 
   /** @inheritdoc */
   final override def writeLemma(id: LemmaID, lemma: String): Unit = synchronized {
     val f = file(id)
-    if (!f.getParentFile.exists() && !f.getParentFile.mkdirs())
-      throw new IllegalStateException("Unable to create lemma " + id)
-    write(f, lemma)
+    Files.createDirectories(f.getParent)
+    Files.writeString(f, lemma)
   }
 
   /** @inheritdoc */
   final override def remove(id: String): Unit = {
     val f = file(id)
-    if (f.exists && !f.delete()) throw new IOException("File deletion for " + file(id) + " was not successful")
+    Files.deleteIfExists(f)
   }
 
   /** @inheritdoc */
   final override def removeAll(folderName: String): Unit = {
     val f = folder(folderName)
-    if (f.exists && !f.deleteRecursively())
-      throw new IOException("File deletion for " + file(folderName) + " was not successful")
+    deleteDirectory(f)
   }
 
   /** @inheritdoc */
   final override def deleteDatabase(): Unit = {
-    lemmadbpath.listFiles().foreach(_.delete())
-    lemmadbpath.delete()
+    deleteDirectory(lemmadbpath)
     // @note make paths again to make sure subsequent additions to database work
-    lemmadbpath.mkdirs()
-    write(new File(cachePath + File.separator + "VERSION"), Version.toString)
+    Files.createDirectories(lemmadbpath)
+    Files.writeString(cachePath.resolve("VERSION"), Version.toString)
   }
 
   /** @inheritdoc */
   final override def version(): VersionNumber = {
-    val file = new File(cachePath + File.separator + "VERSION")
-    if (!file.exists()) return VersionNumber(0, 0, 0)
-    assert(file.canRead, s"Cache VERSION file exists but is not readable: ${file.getAbsolutePath}")
-    VersionNumber.parse(read(file))
+    val file = cachePath.resolve("VERSION")
+    if (!Files.exists(file)) return VersionNumber(0, 0, 0)
+    VersionNumber.parse(Files.readString(file))
+  }
+
+  /** Recursively delete a directory. */
+  private def deleteDirectory(dir: Path) = {
+    try Files.walkFileTree(
+        dir,
+        new SimpleFileVisitor[Path] {
+          override def visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult = {
+            Files.deleteIfExists(file)
+            FileVisitResult.CONTINUE
+          }
+          override def postVisitDirectory(dir: Path, exc: IOException): FileVisitResult = {
+            Files.deleteIfExists(dir)
+            FileVisitResult.CONTINUE
+          }
+        },
+      )
+    catch {
+      case _: NoSuchFileException => // Nothing to do, the directory does not exist
+      case e: Exception => throw new Exception(s"Failed to delete directory ${dir.toAbsolutePath}: $e")
+    }
   }
 }
