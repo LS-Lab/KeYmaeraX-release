@@ -52,7 +52,6 @@ lazy val core = project
     libraryDependencies += "io.spray" %% "spray-json" % "1.3.6",
     libraryDependencies += "org.apache.commons" % "commons-configuration2" % "2.11.0",
     libraryDependencies += "org.apache.commons" % "commons-lang3" % "3.17.0",
-    libraryDependencies += "org.reflections" % "reflections" % "0.10.2",
     libraryDependencies += "org.typelevel" %% "paiges-core" % "0.4.4",
     libraryDependencies += "org.typelevel" %% "spire" % "0.18.0",
 
