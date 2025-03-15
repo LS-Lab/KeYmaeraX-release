@@ -25,7 +25,7 @@ import org.keymaerax.tools.ToolEvidence
 import org.keymaerax.{GlobalState, Logging}
 import org.slf4j.MarkerFactory
 
-import java.io.PrintWriter
+import java.io.File
 import java.net.URLEncoder
 import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.{FileSystems, FileVisitResult, Files, Path, Paths, SimpleFileVisitor}
@@ -35,7 +35,6 @@ import scala.collection.immutable.{List, Nil}
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future, TimeoutException}
-import scala.reflect.io.File
 
 /** Proof checker command-line interface implementation. */
 object KeYmaeraXProofChecker extends Logging {
@@ -61,10 +60,8 @@ object KeYmaeraXProofChecker extends Logging {
   ): ProofStatistics = {
     val inputSequent = Sequent(immutable.IndexedSeq[Formula](), immutable.IndexedSeq(input))
 
-    // @note open print writer to create empty file (i.e., delete previous evidence if this proof fails).
-    val sanitized = outputFileName.map(sanitize)
-    sanitized.map(File(_)).foreach(_.parent.createDirectory())
-    val pw = sanitized.map(new PrintWriter(_))
+    val sanitized = outputFileName.map(sanitize).map(Path.of(_))
+    for (path <- sanitized) Files.deleteIfExists(path)
 
     val rcfDurationListener = new IOListeners.StopwatchListener((_, t) =>
       t match {
@@ -136,15 +133,13 @@ object KeYmaeraXProofChecker extends Logging {
             case None => None
           }
 
-          pw match {
-            case Some(w) =>
-              assert(lemma.isDefined, "Lemma undefined even though writer is present")
-              w.write(EvidencePrinter.stampHead(args))
-              w.write("/* @evidence: parse of print of result of a proof */\n\n")
-              w.write(lemma.get.toString)
-              w.close()
-            case None =>
-            // don't save proof as lemma since no outputFileName
+          for (path <- sanitized) {
+            assert(lemma.isDefined, "Lemma undefined even though writer is present")
+            Files.writeString(
+              path,
+              EvidencePrinter.stampHead(args) + "/* @evidence: parse of print of result of a proof */\n\n" +
+                lemma.get.toString,
+            )
           }
 
           ProofStatistics(
@@ -163,7 +158,7 @@ object KeYmaeraXProofChecker extends Logging {
           // prove did not work
           assert(!witness.isProved)
           assert(witness.subgoals.nonEmpty)
-          deleteOutput(pw, outputFileName)
+          deleteOutput(sanitized)
 
           if (witness.subgoals.exists(s => s.ante.isEmpty && s.succ.head == False)) {
             ProofStatistics(
@@ -196,12 +191,12 @@ object KeYmaeraXProofChecker extends Logging {
       } catch {
         case _: TimeoutException =>
           BelleInterpreter.kill()
-          deleteOutput(pw, outputFileName)
+          deleteOutput(sanitized)
           // prover shutdown cleanup is done when KeYmaeraX exits
           ProofStatistics(name, tacticName, "timeout", None, timeout, -1, -1, -1, -1, -1)
         case ex: Throwable =>
           BelleInterpreter.kill()
-          deleteOutput(pw, outputFileName)
+          deleteOutput(sanitized)
           // prover shutdown cleanup is done when KeYmaeraX exits
           ex.printStackTrace()
           ProofStatistics(name, tacticName, "failed", None, timeout, -1, -1, -1, -1, -1)
@@ -358,9 +353,7 @@ object KeYmaeraXProofChecker extends Logging {
   ): List[ProofStatistics] = {
     val tacticString = tactic.map(readTactic(_, entry.defs))
 
-    // @note open print writer to create empty file (i.e., delete previous evidence if this proof fails).
-    val proofEvidence = File(sanitize(outputFileName))
-    if (proofEvidence.exists) proofEvidence.delete()
+    Files.deleteIfExists(Path.of(sanitize(outputFileName)))
 
     val t = (tacticString, tacticName) match {
       case (Some(tac), None) => ("user", "user", tac) :: Nil
@@ -457,15 +450,7 @@ object KeYmaeraXProofChecker extends Logging {
   }
 
   /** Deletes the output file and closes the printwriter. */
-  private def deleteOutput(pw: Option[PrintWriter], outputFileName: Option[String]): Unit = {
-    // @note instantiating PrintWriter above has already emptied the output file
-    (pw, outputFileName) match {
-      case (Some(w), Some(outName)) =>
-        w.close()
-        File(outName).delete()
-      case _ =>
-    }
-  }
+  private def deleteOutput(sanitized: Option[Path]): Unit = for (path <- sanitized) Files.deleteIfExists(path)
 }
 
 /** Checks proofs (aborting after timeout) and returns the [[ProvableSig]] as a witness. */
