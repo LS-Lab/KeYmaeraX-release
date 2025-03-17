@@ -124,7 +124,7 @@ class PolynomialArithV2Tests extends TacticTestBase {
   }
 
   // expose implementation details
-  lazy val ring23 = PolynomialArithV2.asInstanceOf[TwoThreeTreePolynomialRing]
+  val ring23 = PolynomialArithV2.asInstanceOf[TwoThreeTreePolynomialRing]
 
   lazy val pa4Vars = "x,y,f(),g()".split(',').map(_.asTerm).toIndexedSeq
   object PA4 {

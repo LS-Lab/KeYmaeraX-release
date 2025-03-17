@@ -33,21 +33,19 @@ class TaylorModelArithTests extends TacticTestBase {
   implicit val defaultTimeStepOptions: TimeStepOptions = new TimeStepOptions {
     def remainderEstimation(i: Integer) = (0.0001, 0.0001)
   }
-  lazy val lazyVals = new {
-    import PolynomialArithV2._
-    val x0 = ofTerm("x0()".asTerm)
-    val y0 = ofTerm("y0()".asTerm)
-    val tm1 = TaylorModelArith.TM("x".asTerm, x0 + y0, "-0.01".asTerm, "0.02".asTerm, context3, QE)
-    val tm2 = TaylorModelArith
-      .TM("y".asTerm, Const(BigDecimal("0.5")) * x0 - y0, "0".asTerm, "0.1".asTerm, context3, QE)
-    val third = TaylorModelArith.Exact(ofTerm("1/3".asTerm), context3)
-    val tm3 = third *! tm1
-    val tm100000 = TaylorModelArith.Exact(ofTerm("0.000001".asTerm), context3) *! tm1
-    val tm1234 = TaylorModelArith.Exact(ofTerm("12.34".asTerm), context3) *! tm2
-  }
-  import lazyVals._
 
-  "Taylor models" should "initialize lazy values" in withMathematica { _ => lazyVals }
+  import PolynomialArithV2._
+  val x0 = ofTerm("x0()".asTerm)
+  val y0 = ofTerm("y0()".asTerm)
+  val tm1 = TaylorModelArith.TM("x".asTerm, x0 + y0, "-0.01".asTerm, "0.02".asTerm, context3, QE)
+  val tm2 = TaylorModelArith
+    .TM("y".asTerm, Const(BigDecimal("0.5")) * x0 - y0, "0".asTerm, "0.1".asTerm, context3, QE)
+  val third = TaylorModelArith.Exact(ofTerm("1/3".asTerm), context3)
+  val tm3 = third *! tm1
+  val tm100000 = TaylorModelArith.Exact(ofTerm("0.000001".asTerm), context3) *! tm1
+  val tm1234 = TaylorModelArith.Exact(ofTerm("12.34".asTerm), context3) *! tm2
+
+  behavior of "Taylor models"
 
   it should "add exactly" in withMathematica { qeTool =>
     (tm1 +! tm2).prettyPrv.conclusion.succ(0) shouldBe
@@ -232,7 +230,6 @@ class TaylorModelArithTests extends TacticTestBase {
   }
 
   it should "evalFormula" in withMathematica { _ =>
-    import lazyVals._
     val ctx = context3
     val args = Map(("x".asTerm -> tm1), ("y".asTerm -> tm2))
     val gtFml = "x > y - 10".asFormula
