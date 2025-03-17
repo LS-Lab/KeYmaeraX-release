@@ -9,9 +9,7 @@ ThisBuild / version := "5.1.2"
 ThisBuild / scalacOptions ++= Seq(
   // Always show all non-suppressed warnings. See `scalac -Wconf:help` for more info.
   // https://www.scala-lang.org/2021/01/12/configuring-and-suppressing-warnings.html
-  //"-Wconf:any:w",
-
-  "-nowarn", // For now, the warnings just get into the way.
+  "-Wconf:any:w",
 )
 
 ThisBuild / assemblyMergeStrategy := {
