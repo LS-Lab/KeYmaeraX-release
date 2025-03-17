@@ -54,7 +54,10 @@ class FileLemmaDB extends LemmaDBBase with Logging {
   private def sanitize(id: LemmaID): LemmaID = id.replaceAll(SANITIZE_REGEX, "_")
 
   /** Returns the File representing lemma `id`. */
-  private def file(id: LemmaID): Path = lemmadbpath.resolve(sanitize(id) + ".alp")
+  private def file(id: LemmaID): Path = {
+    require(!id.startsWith("/"), "lemma id must not start with a /")
+    lemmadbpath.resolve(sanitize(id) + ".alp")
+  }
 
   /** Returns the File representing the folder `id`. */
   private def folder(id: LemmaID): Path = lemmadbpath.resolve(sanitize(id))

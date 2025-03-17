@@ -78,7 +78,9 @@ object AnonymousLemmas {
 
   /** Generates a name for a lemma. */
   private def generateName(s: Sequent, namespace: String): String = {
-    namespace + File.separator + UUID.nameUUIDFromBytes(s.prettyString.getBytes)
+    val uuid = UUID.nameUUIDFromBytes(s.prettyString.getBytes).toString
+    if (namespace.isEmpty) return uuid
+    namespace + File.separator + uuid
   }
 
   /** Looks up and anonymizes a lemma. */
