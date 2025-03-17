@@ -238,20 +238,14 @@ class DependencyAnalysisTests extends TacticTestBase {
       val t0 = timeQE(problems) // Apparently, this also warms up the QE connection
       // Ignore any problems that took < 2s
       val red_probs = problems.zip(t0).collect { case p if p._2 >= 2.0 => p._1 }
-      println(problems.length, red_probs.length)
 
       for (p <- red_probs) println(p)
 
       // println(t0,t0.sum)
       val t1 = timeQE(red_probs)
-      println(t1, t1.sum)
       val t2 = timeheuQE(red_probs)
-      println(t2, t2.sum)
       val t3 = timeheuPOQE(red_probs, false)
-      println(t3, t3.sum)
       val t4 = timeheuPOQE(red_probs, true)
-      println(t4, t4.sum)
-
   }
 
   "DependencyAnalysis" should "record time to re-prove the ETCS logs" taggedAs IgnoreInBuildTest in withMathematica {
@@ -266,20 +260,14 @@ class DependencyAnalysisTests extends TacticTestBase {
       val t0 = timeQE(problems) // Apparently, this also warms up the QE connection
       // Ignore any problems that took < 2s
       val red_probs = problems.zip(t0).collect { case p if p._2 >= 2.0 => p._1 }
-      println(problems.length, red_probs.length)
 
       for (p <- red_probs) println(p)
 
       // println(t0,t0.sum)
       val t1 = timeQE(red_probs)
-      println(t1, t1.sum)
       val t2 = timeheuQE(red_probs)
-      println(t2, t2.sum)
       val t3 = timeheuPOQE(red_probs, false)
-      println(t3, t3.sum)
       val t4 = timeheuPOQE(red_probs, true)
-      println(t4, t4.sum)
-
   }
 
   "DependencyAnalysis" should "record time to re-prove the STTT logs" taggedAs IgnoreInBuildTest in withMathematica {
@@ -294,20 +282,14 @@ class DependencyAnalysisTests extends TacticTestBase {
       val t0 = timeQE(problems) // Apparently, this also warms up the QE connection
       // Ignore any problems that took < 2s
       val red_probs = problems.zip(t0).collect { case p if p._2 >= 2.0 => p._1 }
-      println(problems.length, red_probs.length)
 
       for (p <- red_probs) println(p)
 
       // println(t0,t0.sum)
       val t1 = timeQE(red_probs)
-      println(t1, t1.sum)
       val t2 = timeheuQE(red_probs)
-      println(t2, t2.sum)
       val t3 = timeheuPOQE(red_probs, false)
-      println(t3, t3.sum)
       val t4 = timeheuPOQE(red_probs, true)
-      println(t4, t4.sum)
-
   }
 
   "DependencyAnalysis" should "record time to re-prove the chilled water logs" taggedAs IgnoreInBuildTest in
@@ -322,20 +304,14 @@ class DependencyAnalysisTests extends TacticTestBase {
       val t0 = timeQE(problems) // Apparently, this also warms up the QE connection
       // Ignore any problems that took < 2s
       val red_probs = problems.zip(t0).collect { case p if p._2 >= 2.0 => p._1 }
-      println(problems.length, red_probs.length)
 
       for (p <- red_probs) println(p)
 
       // println(t0,t0.sum)
       val t1 = timeQE(red_probs)
-      println(t1, t1.sum)
       val t2 = timeheuQE(red_probs)
-      println(t2, t2.sum)
       val t3 = timeheuPOQE(red_probs, false)
-      println(t3, t3.sum)
       val t4 = timeheuPOQE(red_probs, true)
-      println(t4, t4.sum)
-
     }
 
   // NOTE: Avoid committing the solutions to the repo
@@ -380,19 +356,14 @@ class DependencyAnalysisTests extends TacticTestBase {
     val t0 = timeQE(problems) // Apparently, this also warms up the QE connection
     // Ignore any problems that took < 2s
     val red_probs = problems.zip(t0).collect { case p if p._2 >= 2.0 => p._1 }
-    println(problems.length, red_probs.length)
 
     for (p <- red_probs) println(p)
 
     // println(t0,t0.sum)
     val t1 = timeQE(red_probs)
-    println(t1, t1.sum)
     val t2 = timeheuQE(red_probs)
-    println(t2, t2.sum)
     val t3 = timeheufixedPOQE(red_probs, pof)
-    println(t3, t3.sum)
     val t4 = timeheufixedPOQE(red_probs, pot)
-    println(t4, t4.sum)
   }
 
   "DependencyAnalysis" should "record time to re-prove lab 3" taggedAs IgnoreInBuildTest in withMathematica { qeTool =>
@@ -417,18 +388,13 @@ class DependencyAnalysisTests extends TacticTestBase {
     val t0 = timeQE(problems) // Apparently, this also warms up the QE connection
     // Ignore any problems that took < 2s
     val red_probs = problems.zip(t0).collect { case p if p._2 >= 2.0 => p._1 }
-    println(problems.length, red_probs.length)
 
     for (p <- red_probs) println(p)
 
     // println(t0,t0.sum)
     val t1 = timeQE(red_probs)
-    println(t1, t1.sum)
     val t2 = timeheuQE(red_probs)
-    println(t2, t2.sum)
     val t3 = timeheufixedPOQE(red_probs, pof)
-    println(t3, t3.sum)
     val t4 = timeheufixedPOQE(red_probs, pot)
-    println(t4, t4.sum)
   }
 }

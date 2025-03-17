@@ -75,7 +75,6 @@ class PolynomialArithTests extends TacticTestBase {
     val (p5, r5) = addPoly(p4, p3)
     val (p6, r6) = addPoly(p5, p5)
 
-    println(p4, p5, p6)
     (checkPoly(p4), checkPoly(p5), checkPoly(p6)) shouldBe (true, true, true)
     // (r4.isProved,r5.isProved,r6.isProved) shouldBe (true,true,true)
   }
@@ -200,7 +199,6 @@ class PolynomialArithTests extends TacticTestBase {
     val (t5, r5) = normalise(p5)
     val (t6, r6) = normalise(p6)
 
-    println(t1, t2, t3, t4, t5, t6)
     (checkPoly(t1), checkPoly(t2), checkPoly(t3), checkPoly(t4), checkPoly(t5), checkPoly(t6)) shouldBe
       (true, true, true, true, true, true)
     r1 shouldBe Symbol("proved")

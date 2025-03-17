@@ -52,7 +52,6 @@ class QELoggerTests extends TacticTestBase {
   "QE logger" should "keep only records with required shape" taggedAs IgnoreInBuildTest in withMathematica { qeTool =>
     val ls = parseLog()
     for ((k, vs) <- ls) {
-      println(k, vs.size)
       var ctr = 0
       for ((pr, seq) <- vs) {
         if (pr.succ.length > 0) {
@@ -77,7 +76,6 @@ class QELoggerTests extends TacticTestBase {
 
     val (l2f, l2t) = (archiveL2.model.asInstanceOf[Formula], archiveL2.tactics.head._3)
 
-    println("Proving", l2f, l2t)
     println(proveBy(l2f, l2t))
 
   }
@@ -90,7 +88,6 @@ class QELoggerTests extends TacticTestBase {
 
     val (l3f, l3t) = (archiveL3.model.asInstanceOf[Formula], archiveL3.tactics.head._3)
 
-    println("Proving", l3f, l3t)
     proveBy(l3f, l3t)
   }
 }
