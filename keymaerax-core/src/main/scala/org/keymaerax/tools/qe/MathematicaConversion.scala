@@ -28,13 +28,10 @@ import scala.annotation.tailrec
 /**
  * Mathematica conversion support to check results for having failed/being aborted, and safely importing Mathematica
  * expressions into KeYmaera X.
- * @see
- *   [[M2KConverter]] for converting Mathematica -> KeYmaera X
- * @see
- *   [[K2MConverter]] for converting KeYmaera X -> Mathematica
+ * @see [[M2KConverter]] for converting Mathematica -> KeYmaera X
+ * @see [[K2MConverter]] for converting KeYmaera X -> Mathematica
  *
- * @author
- *   Stefan Mitsch
+ * @author Stefan Mitsch
  */
 object MathematicaConversion {
   type MExpr = com.wolfram.jlink.Expr
@@ -42,46 +39,38 @@ object MathematicaConversion {
 
   /**
    * Reads a result from a mathematica expression `e` using the specified conversion, and safely disposes `e`.
-   * @ensures
-   *   e has been freed and should not ever be used again.
+   * @ensures e has been freed and should not ever be used again.
    */
-  def disposeAfter[T](e: MExpr, conversion: MExpr => T): T =
-    try { conversion(e) }
-    finally { e.dispose() }
+  def disposeAfter[T](e: MExpr, conversion: MExpr => T): T = try { conversion(e) } finally { e.dispose() }
 
   /**
    * Check if a Mathematica expression has been aborted.
-   * @param e
-   *   The expression to test.
+   * @param e The expression to test.
    */
   def isAborted(e: MExpr): Boolean = (e == MathematicaOpSpec.abort.op) || (e == MathematicaOpSpec.aborted.op)
 
   /**
    * Check if a Mathematica expression failed.
-   * @param e
-   *   The expression to test.
+   * @param e The expression to test.
    */
   def isFailed(e: MExpr): Boolean = (e == MathematicaOpSpec.failed.op)
 
   /**
    * Check if a Mathematica expression timed out.
-   * @param e
-   *   The expression to test.
+   * @param e The expression to test.
    */
   def isTimedOut(e: MExpr): Boolean = (e == MathematicaOpSpec.timedOut.op)
 
   /**
    * Check if a Mathematica expression is an exception.
-   * @param e
-   *   The expression to test.
+   * @param e The expression to test.
    */
   def isException(e: MExpr): Boolean = (e == MathematicaOpSpec.exception.op)
 }
 
 /**
  * Converts Mathematica -> KeYmaera X.
- * @tparam T
- *   usually Expression, but also other target types for non-soundness-critical conversions.
+ * @tparam T usually Expression, but also other target types for non-soundness-critical conversions.
  */
 trait M2KConverter[T] extends (MExpr => T) {
 
@@ -97,8 +86,7 @@ trait M2KConverter[T] extends (MExpr => T) {
 
   /**
    * Converse conversion for contracts
-   * @ensures
-   *   k2m(this(e)) == e
+   * @ensures k2m(this(e)) == e
    */
   def k2m: K2MConverter[T]
 
@@ -109,8 +97,7 @@ trait M2KConverter[T] extends (MExpr => T) {
 
 /**
  * Converts KeYmaera X -> Mathematica.
- * @tparam T
- *   usually Expression, but also other source types for non-soundness-critical conversions.
+ * @tparam T usually Expression, but also other source types for non-soundness-critical conversions.
  */
 trait K2MConverter[T] extends (T => MExpr) {
 
@@ -125,8 +112,7 @@ trait K2MConverter[T] extends (T => MExpr) {
 
   /**
    * Converse conversion for contractcs
-   * @ensures
-   *   m2k(this(e)) == e
+   * @ensures m2k(this(e)) == e
    */
   def m2k: M2KConverter[T]
 
@@ -139,8 +125,7 @@ object KMComparator {
 
   /**
    * Whether e is thing or starts with head thing.
-   * @return
-   *   true if ``e" and ``thing" are .equals-related.
+   * @return true if ``e" and ``thing" are .equals-related.
    */
   def hasHead(e: MExpr, thing: MExpr): Boolean = e == thing || e.head == thing
 

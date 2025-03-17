@@ -14,17 +14,13 @@ import scala.reflect.{classTag, ClassTag}
 
 /**
  * Central repository providing access to arithmetic tools.
- * @note
- *   Never keep references to the tools, the tool provider may decide to shutdown/switch out tools and thereby render
- *   all tool references invalid.
- * @note
- *   Do especially not keep references in singletons, the tool provider will hand out nulls until properly initialized.
- * @author
- *   Stefan Mitsch
- * @see
- *   [[org.keymaerax.tools]]
- * @see
- *   [[org.keymaerax.tools.ToolInterface]]
+ * @note Never keep references to the tools, the tool provider may decide to shutdown/switch out tools and thereby
+ *   render all tool references invalid.
+ * @note Do especially not keep references in singletons, the tool provider will hand out nulls until properly
+ *   initialized.
+ * @author Stefan Mitsch
+ * @see [[org.keymaerax.tools]]
+ * @see [[org.keymaerax.tools.ToolInterface]]
  */
 object ToolProvider extends ToolProvider with Logging {
 
@@ -36,8 +32,7 @@ object ToolProvider extends ToolProvider with Logging {
 
   /**
    * Set a new tool provider to be used from now on.
-   * @param provider
-   *   the tool provider to use in KeYmaera X from now on.
+   * @param provider the tool provider to use in KeYmaera X from now on.
    */
   def setProvider(provider: ToolProvider): Unit = {
     if (provider != this) {
@@ -111,10 +106,8 @@ object ToolProvider extends ToolProvider with Logging {
 
 /**
  * A tool factory creates various arithmetic and simulation tools.
- * @author
- *   Stefan Mitsch
- * @see
- *   [[org.keymaerax.tools.ToolInterface]]
+ * @author Stefan Mitsch
+ * @see [[org.keymaerax.tools.ToolInterface]]
  */
 trait ToolProvider {
 
@@ -172,8 +165,7 @@ trait ToolProvider {
 /**
  * A tool provider that picks appropriate special tools from the list of preferences, i.e., if multiple tools with the
  * same trait appear in `toolPreferences`, the first will be picked for that trait.
- * @author
- *   Stefan Mitsch
+ * @author Stefan Mitsch
  */
 class PreferredToolProvider[T <: Tool](val toolPreferences: List[T]) extends ToolProvider {
   require(toolPreferences != null && toolPreferences.nonEmpty, "Non-empty list of tools expected")
@@ -256,8 +248,7 @@ class PreferredToolProvider[T <: Tool](val toolPreferences: List[T]) extends Too
 
 /**
  * A tool provider without tools.
- * @author
- *   Stefan Mitsch
+ * @author Stefan Mitsch
  */
 class NoneToolProvider extends ToolProvider {
   override def tools(): List[Tool] = Nil
@@ -317,10 +308,8 @@ abstract class WolframToolProvider(val tool: Mathematica, config: ToolConfigurat
 
 /**
  * A tool provider that initializes tools to Mathematica.
- * @param config
- *   The Mathematica configuration (linkName, libDir).
- * @author
- *   Stefan Mitsch
+ * @param config The Mathematica configuration (linkName, libDir).
+ * @author Stefan Mitsch
  */
 case class MathematicaToolProvider(config: ToolConfiguration)
     extends WolframToolProvider(
@@ -331,8 +320,7 @@ case class MathematicaToolProvider(config: ToolConfiguration)
 
 /**
  * A tool provider that initializes tools to Wolfram Engine.
- * @author
- *   Stefan Mitsch
+ * @author Stefan Mitsch
  */
 case class WolframEngineToolProvider(config: ToolConfiguration)
     extends WolframToolProvider(
@@ -343,8 +331,7 @@ case class WolframEngineToolProvider(config: ToolConfiguration)
 
 /**
  * A tool provider that initializes tools to Wolfram Script backend.
- * @author
- *   Stefan Mitsch
+ * @author Stefan Mitsch
  */
 case class WolframScriptToolProvider(config: ToolConfiguration)
     extends WolframToolProvider(
@@ -356,8 +343,7 @@ case class WolframScriptToolProvider(config: ToolConfiguration)
 /**
  * A tool provider that provides Z3 as QE tool and our own bundled algebra tool and diff. solution tool, everything else
  * is None. Initializes the Z3 installation and updates the Z3 binary on version updates.
- * @author
- *   Stefan Mitsch
+ * @author Stefan Mitsch
  */
 case class Z3ToolProvider(config: ToolConfiguration = ToolConfiguration(z3Path = Some(Z3Installer.z3Path)))
     extends PreferredToolProvider[Tool](new Z3 :: new RingsAlgebraTool() :: new IntegratorODESolverTool :: Nil) {

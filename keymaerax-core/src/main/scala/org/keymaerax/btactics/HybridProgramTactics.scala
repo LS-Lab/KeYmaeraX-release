@@ -16,8 +16,7 @@ import scala.annotation.nowarn
 /**
  * Implementation: Tactics for manipulating box/diamond properties about hybrid programs.
  *
- * @author
- *   Nathan Fulton
+ * @author Nathan Fulton
  */
 private object HybridProgramTactics {
   import TacticFactory.*

@@ -15,8 +15,7 @@ import scala.collection.immutable._
 
 /**
  * Tests the parser on manually lexed inputs
- * @author
- *   Andre Platzer
+ * @author Andre Platzer
  */
 @UsualTest
 class PrelexedParserTests extends AnyFlatSpec with Matchers with PrivateMethodTester {
@@ -157,10 +156,7 @@ class PrelexedParserTests extends AnyFlatSpec with Matchers with PrivateMethodTe
     val lex = KeYmaeraXLexer("-2 * y")
     val theStream = toStream(MINUS, NUMBER("2"), STAR, IDENT("y"))
     lex.map(_.tok) shouldBe (theStream.map(_.tok))
-    parser.parse(lex) shouldBe (
-      Times(Neg(Number(2)), Variable("y")),
-      Times(Number(-2), Variable("y"))
-    )
+    parser.parse(lex) shouldBe (Times(Neg(Number(2)), Variable("y")), Times(Number(-2), Variable("y")))
   }
 
   ignore should "could lexed parse -2*y" in {
@@ -178,10 +174,7 @@ class PrelexedParserTests extends AnyFlatSpec with Matchers with PrivateMethodTe
     val theStream = toStream(MINUS, LPAREN, NUMBER("2"), RPAREN, STAR, IDENT("y"))
     lex.map(_.tok) shouldBe (theStream.map(_.tok))
     parser.parse(toStream(MINUS, NUMBER("2"), STAR, IDENT("y"))) shouldBe
-      (
-        Times(Number(-2), Variable("y")),
-        Times(Neg(Number(2)), Variable("y"))
-      )
+      (Times(Number(-2), Variable("y")), Times(Neg(Number(2)), Variable("y")))
   }
 
   it should "parse x*-y" in {
@@ -1416,11 +1409,9 @@ class PrelexedParserTests extends AnyFlatSpec with Matchers with PrivateMethodTe
     val fml1 = parser("x>0 -> [x:=x+1;]x>1")
     val fml2 = parser("x>=0 -> [{x'=2}]x>=0")
     // terms will cause exceptions
-    try { parser("x+5") }
-    catch { case e: ParseException => () }
+    try { parser("x+5") } catch { case e: ParseException => () }
     // programs will cause exceptions
-    try { parser("x:=1;") }
-    catch { case e: ParseException => () }
+    try { parser("x:=1;") } catch { case e: ParseException => () }
   }
 
   it should "compile and run parse of print 1" in {

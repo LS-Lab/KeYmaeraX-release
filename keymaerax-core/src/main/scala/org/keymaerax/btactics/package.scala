@@ -17,7 +17,6 @@ package org.keymaerax
  *     - `[[org.keymaerax.btactics.DifferentialEquationCalculus DifferentialEquationCalculus]]` Differential Equation
  *       Calculus for differential dynamic logic
  *     - `[[org.keymaerax.btactics.UnifyUSCalculus UnifyUSCalculus]]` Unification-based Uniform Substitution Calculus
- *
  *   - Tactic tools
  *     - [[org.keymaerax.btactics.AxIndex] AxIndex]: Axiom Indexing data structures for canonical proof strategies. - [[org.keymaerax.btactics.DerivationInfoRegistry DerivationInfo]]:
  *       Meta-information for derivation steps such as axioms for user interface etc.
@@ -287,21 +286,14 @@ package org.keymaerax
  *       `Position=>(Provable=>Provable)`
  *     - [[org.keymaerax.btactics.UnifyUSCalculus]]: Forward Hilbert-style tactic combinators.
  *
- * @todo
- *   Expand descriptions
+ * @todo Expand descriptions
  * @see
  *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
- * @see
- *   [[org.keymaerax.btactics.TactixLibrary]]
- * @see
- *   [[org.keymaerax.btactics.HilbertCalculus]]
- * @see
- *   [[org.keymaerax.btactics.SequentCalculus]]
- * @see
- *   [[org.keymaerax.btactics.HybridProgramCalculus]]
- * @see
- *   [[org.keymaerax.btactics.DifferentialEquationCalculus]]
- * @see
- *   [[org.keymaerax.btactics.UnifyUSCalculus]]
+ * @see [[org.keymaerax.btactics.TactixLibrary]]
+ * @see [[org.keymaerax.btactics.HilbertCalculus]]
+ * @see [[org.keymaerax.btactics.SequentCalculus]]
+ * @see [[org.keymaerax.btactics.HybridProgramCalculus]]
+ * @see [[org.keymaerax.btactics.DifferentialEquationCalculus]]
+ * @see [[org.keymaerax.btactics.UnifyUSCalculus]]
  */
 package object btactics {}

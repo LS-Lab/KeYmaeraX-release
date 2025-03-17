@@ -26,8 +26,7 @@ import scala.util.matching.Regex
 
 /**
  * Tutorial and case study test cases.
- * @author
- *   Stefan Mitsch
+ * @author Stefan Mitsch
  */
 abstract class RegressionTesterBase(val tutorialName: String, val url: String)
     extends TacticTestBase with AppendedClues {
@@ -93,8 +92,7 @@ abstract class RegressionTesterBase(val tutorialName: String, val url: String)
             fail("Now works with Z3: " + tutorialName + "/" + name + "/" + tactic.head._1)
           } catch {
             case _: BelleThrowable => // test "succeeds" (Z3 still fails), so QE("Mathematica") is still required
-            case e: TestFailedException
-                if e.getMessage.contains("was not proved") => // master/ODE etc. stopped before proof was done
+            case e: TestFailedException if e.getMessage.contains("was not proved") => // master/ODE etc. stopped before proof was done
           }
         }
       }

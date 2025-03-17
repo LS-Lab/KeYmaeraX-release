@@ -161,9 +161,8 @@ object RestApi extends Logging {
   /**
    * Requests that need a session token parameter.
    *
-   * @see
-   *   [[sessionRoutes]] is built by wrapping all of these sessions in a cookieOptional("session") {...} that extrtacts
-   *   the cookie name.
+   * @see [[sessionRoutes]] is built by wrapping all of these sessions in a cookieOptional("session") {...} that
+   *   extrtacts the cookie name.
    */
   private val partialSessionRoutes: List[SessionToken => Route] = List(
     downloadAllModels, // @note before userModel2 to match correctly

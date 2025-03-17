@@ -6,26 +6,18 @@
 /**
  * Axioms of KeYmaera X and axiomatic proof rules of KeYmaera X. resulting from differential dynamic logic.
  *
- * @note
- *   Soundness-critical: Only adopt sound axioms and sound axiomatic rules.
- * @author
- *   Andre Platzer
+ * @note Soundness-critical: Only adopt sound axioms and sound axiomatic rules.
+ * @author Andre Platzer
  * @see
  *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
- * @see
- *   [[org.keymaerax.Bibliography.JacmPlatzerT20 Differential equation invariance axiomatization]]
+ * @see [[org.keymaerax.Bibliography.JacmPlatzerT20 Differential equation invariance axiomatization]]
  * @see
  *   [[org.keymaerax.Bibliography.LicsPlatzerT18 Differential equation axiomatization: The impressive power of differential ghosts]]
- * @see
- *   [[org.keymaerax.Bibliography.CadePlatzer18 Uniform substitution for differential game logic]]
- * @see
- *   [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
- * @see
- *   [[org.keymaerax.Bibliography.ToclPlatzer15 Differential game logic]]
- * @see
- *   [[org.keymaerax.Bibliography.LicsPlatzer12b The complete proof theory of hybrid systems]]
- * @note
- *   Code Review: 2020-02-17
+ * @see [[org.keymaerax.Bibliography.CadePlatzer18 Uniform substitution for differential game logic]]
+ * @see [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
+ * @see [[org.keymaerax.Bibliography.ToclPlatzer15 Differential game logic]]
+ * @see [[org.keymaerax.Bibliography.LicsPlatzer12b The complete proof theory of hybrid systems]]
+ * @note Code Review: 2020-02-17
  */
 package org.keymaerax.core
 
@@ -43,48 +35,32 @@ import org.keymaerax.parser.DLAxiomParser
  *
  * @see
  *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
- * @see
- *   [[org.keymaerax.Bibliography.JacmPlatzerT20 Differential equation invariance axiomatization]]
+ * @see [[org.keymaerax.Bibliography.JacmPlatzerT20 Differential equation invariance axiomatization]]
  * @see
  *   [[org.keymaerax.Bibliography.LicsPlatzerT18 Differential equation axiomatization: The impressive power of differential ghosts]]
- * @see
- *   [[org.keymaerax.Bibliography.CadePlatzer18 Uniform substitution for differential game logic]]
- * @see
- *   [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
- * @see
- *   [[org.keymaerax.Bibliography.ToclPlatzer15 Differential game logic]]
- * @see
- *   [[org.keymaerax.Bibliography.LicsPlatzer12b The complete proof theory of hybrid systems]]
- * @author
- *   Andre Platzer
- * @author
- *   Yong Kiam Tan
- * @see
- *   [[org.keymaerax.btactics.Ax]]
- * @see
- *   [[org.keymaerax.btactics.AxIndex]]
+ * @see [[org.keymaerax.Bibliography.CadePlatzer18 Uniform substitution for differential game logic]]
+ * @see [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
+ * @see [[org.keymaerax.Bibliography.ToclPlatzer15 Differential game logic]]
+ * @see [[org.keymaerax.Bibliography.LicsPlatzer12b The complete proof theory of hybrid systems]]
+ * @author Andre Platzer
+ * @author Yong Kiam Tan
+ * @see [[org.keymaerax.btactics.Ax]]
+ * @see [[org.keymaerax.btactics.AxIndex]]
  */
 private[core] object AxiomBase extends Logging {
 
   /**
    * KeYmaera X Axiomatic Proof Rules.
    *
-   * @note
-   *   Soundness-critical: Only return locally sound proof rules.
-   * @return
-   *   immutable list of locally sound axiomatic proof rules (premise, conclusion)
+   * @note Soundness-critical: Only return locally sound proof rules.
+   * @return immutable list of locally sound axiomatic proof rules (premise, conclusion)
    * @see
    *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
-   * @see
-   *   [[org.keymaerax.Bibliography.CadePlatzer18 Uniform substitution for differential game logic]]
-   * @see
-   *   [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
-   * @see
-   *   [[org.keymaerax.Bibliography.ToclPlatzer15 Differential game logic]]
-   * @see
-   *   [[org.keymaerax.Bibliography.LicsPlatzer12b The complete proof theory of hybrid systems]]
-   * @author
-   *   Andre Platzer
+   * @see [[org.keymaerax.Bibliography.CadePlatzer18 Uniform substitution for differential game logic]]
+   * @see [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
+   * @see [[org.keymaerax.Bibliography.ToclPlatzer15 Differential game logic]]
+   * @see [[org.keymaerax.Bibliography.LicsPlatzer12b The complete proof theory of hybrid systems]]
+   * @author Andre Platzer
    */
   private[core] def loadAxiomaticRules: immutable.Map[String, (immutable.IndexedSeq[Sequent], Sequent)] = {
     val pany = UnitPredicational("p_", AnyArg)
@@ -111,8 +87,7 @@ private[core] object AxiomBase extends Logging {
        *    c(f(x)) <-> c(g(x))
        * }}}
        *
-       * @see
-       *   Figure 2 in
+       * @see Figure 2 in
        *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
        */
       (
@@ -135,8 +110,7 @@ private[core] object AxiomBase extends Logging {
        *    C{p(x)} <-> C{q(x)}
        * }}}
        *
-       * @see
-       *   Figure 2 in
+       * @see Figure 2 in
        *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
        */
       (
@@ -156,8 +130,7 @@ private[core] object AxiomBase extends Logging {
        * Conclusion <a;>p(||) ==> <a;>q(||)
        * End.
        * }}}
-       * @see
-       *   [[org.keymaerax.Bibliography.ToclPlatzer15 Differential game logic]]
+       * @see [[org.keymaerax.Bibliography.ToclPlatzer15 Differential game logic]]
        */
       (
         "<> monotone",
@@ -197,10 +170,8 @@ private[core] object AxiomBase extends Logging {
        * Justification: loops have a least-fixpoint semantics, so imply any other fixpoint q(x). Interderives with ind
        * induction rule. FP is used as basis, because deriving FP from ind leads to a duplicate premise, needing list to
        * set contraction.
-       * @see
-       *   [[org.keymaerax.Bibliography.ToclPlatzer15 Differential game logic]]
-       * @see
-       *   Lemma 16.11 and Corollary 16.1 in
+       * @see [[org.keymaerax.Bibliography.ToclPlatzer15 Differential game logic]]
+       * @see Lemma 16.11 and Corollary 16.1 in
        *   [[org.keymaerax.Bibliography.Platzer18 Logical Foundations of Cyber-Physical Systems]]
        */
       (
@@ -221,18 +192,17 @@ private[core] object AxiomBase extends Logging {
        *    ---------------------------------------------------- con
        *     \exists x J(x) |- <a{|x|}*>\exists x (x<=0 & J(x))
        * }}}
-       * @see
-       *   [[org.keymaerax.Bibliography.LicsPlatzer12b The complete proof theory of hybrid systems]]
-       * @see
-       *   Section 17.4 in [[org.keymaerax.Bibliography.Platzer18 Logical Foundations of Cyber-Physical Systems]]
+       * @see [[org.keymaerax.Bibliography.LicsPlatzer12b The complete proof theory of hybrid systems]]
+       * @see Section 17.4 in [[org.keymaerax.Bibliography.Platzer18 Logical Foundations of Cyber-Physical Systems]]
        */
       (
         "con convergence",
         (
           immutable.IndexedSeq(Sequent(
             immutable.IndexedSeq(Greater(x, Number(0)), Jany),
-            immutable
-              .IndexedSeq(Diamond(ProgramConst("a_", Except(x :: Nil)), Diamond(Assign(x, Minus(x, Number(1))), Jany))),
+            immutable.IndexedSeq(
+              Diamond(ProgramConst("a_", Except(x :: Nil)), Diamond(Assign(x, Minus(x, Number(1))), Jany))
+            ),
           )),
           Sequent(
             immutable.IndexedSeq(Exists(immutable.IndexedSeq(x), Jany)),
@@ -249,10 +219,8 @@ private[core] object AxiomBase extends Logging {
   /**
    * Look up the axioms of KeYmaera X, i.e. sound axioms are valid formulas of differential dynamic logic / differential
    * game logic. Parse the axiom file and add all loaded knowledge to the axioms map.
-   * @note
-   *   Result of axiom parse is asserted for a decent set of axioms to remove from soundness-critical core.
-   * @see
-   *   [[loadAxiomString()]]
+   * @note Result of axiom parse is asserted for a decent set of axioms to remove from soundness-critical core.
+   * @see [[loadAxiomString()]]
    */
   private[core] def loadAxioms: immutable.Map[String, Formula] = {
     try {
@@ -480,30 +448,21 @@ private[core] object AxiomBase extends Logging {
   /**
    * KeYmaera X axioms, i.e. sound axioms are valid formulas of differential dynamic logic / differential game logic.
    *
-   * @note
-   *   Soundness-critical: Only adopt valid formulas as axioms.
-   * @author
-   *   Nathan Fulton
-   * @author
-   *   Stefan Mitsch
-   * @author
-   *   Jan-David Quesel
-   * @author
-   *   Andre Platzer
-   * @author
-   *   Yong Kiam Tan
-   * @author
-   *   Fabian Immler
+   * @note Soundness-critical: Only adopt valid formulas as axioms.
+   * @author Nathan Fulton
+   * @author Stefan Mitsch
+   * @author Jan-David Quesel
+   * @author Andre Platzer
+   * @author Yong Kiam Tan
+   * @author Fabian Immler
    * @see
    *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
-   * @see
-   *   [[org.keymaerax.Bibliography.JacmPlatzerT20 Differential equation invariance axiomatization]]
-   * @see
-   *   [[org.keymaerax.Bibliography.CadePlatzer18 Uniform substitution for differential game logic]]
-   * @see
-   *   [[org.keymaerax.Bibliography.ToclPlatzer15 Differential game logic]]
+   * @see [[org.keymaerax.Bibliography.JacmPlatzerT20 Differential equation invariance axiomatization]]
+   * @see [[org.keymaerax.Bibliography.CadePlatzer18 Uniform substitution for differential game logic]]
+   * @see [[org.keymaerax.Bibliography.ToclPlatzer15 Differential game logic]]
    */
-  private[this] def loadAxiomString(): String = """
+  private[this] def loadAxiomString(): String =
+    """
 Axiom "<> diamond"
   ![a;]!p(||) <-> <a;>p(||)
 End.

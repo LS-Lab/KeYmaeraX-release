@@ -15,10 +15,8 @@ import scala.annotation.nowarn
 
 /**
  * Implicit conversions from strings into core data structures. Created by smitsch on 1/8/15.
- * @author
- *   Stefan Mitsch
- * @author
- *   Andre Platzer
+ * @author Stefan Mitsch
+ * @author Andre Platzer
  */
 object StringConverter {
   import scala.language.implicitConversions

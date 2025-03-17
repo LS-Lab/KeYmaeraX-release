@@ -62,7 +62,9 @@ class TacticTestBase(registerAxTactics: Option[String] = None)
   Configuration.setConfiguration(FileConfiguration)
 
   /** Default signaler for failAfter in tests without tools. */
-  protected implicit val signaler: Signaler = { (t: Thread) => theInterpreter.kill(); t.interrupt() }
+  protected implicit val signaler: Signaler = { (t: Thread) =>
+    theInterpreter.kill(); t.interrupt()
+  }
 
   @nowarn("msg=match may not be exhaustive")
   override def timeLimit: Span = {
@@ -156,8 +158,10 @@ class TacticTestBase(registerAxTactics: Option[String] = None)
         case Some(m: Mathematica) => m
         case _ => fail("Illegal Wolfram tool, please use one of 'Mathematica' or 'Wolfram Engine' in test setup")
       }
-      KeYmaeraXTool
-        .init(interpreter = KeYmaeraXTool.InterpreterChoice.LazySequential, initDerivationInfoRegistry = true)
+      KeYmaeraXTool.init(
+        interpreter = KeYmaeraXTool.InterpreterChoice.LazySequential,
+        initDerivationInfoRegistry = true,
+      )
       tool.cancel()
       tool.shutdown() // let testcode know it should stop (forEvery catches all exceptions)
       mathematicaProvider.synchronized {
@@ -174,9 +178,8 @@ class TacticTestBase(registerAxTactics: Option[String] = None)
   /**
    * Creates and initializes Mathematica for tests that want to use QE. Also necessary for tests that use derived axioms
    * that are proved by QE.
-   * @example
-   *   {{{ "My test" should "prove something with Mathematica" in withMathematica { qeTool => // ... your test code here
-   *   } }}}
+   * @example {{{ "My test" should "prove something with Mathematica" in withMathematica { qeTool => // ... your test
+   *   code here } }}}
    */
   def withMathematica(testcode: Mathematica => Any, timeout: Int = -1, initLibrary: Boolean = true): Unit =
     mathematicaProvider.synchronized {
@@ -198,8 +201,10 @@ class TacticTestBase(registerAxTactics: Option[String] = None)
         }
         // @note KeYmaeraXTool.init overwrites the interpreter that we set up in beforeEach!
         val i = theInterpreter
-        KeYmaeraXTool
-          .init(interpreter = KeYmaeraXTool.InterpreterChoice.LazySequential, initDerivationInfoRegistry = initLibrary)
+        KeYmaeraXTool.init(
+          interpreter = KeYmaeraXTool.InterpreterChoice.LazySequential,
+          initDerivationInfoRegistry = initLibrary,
+        )
         BelleInterpreter.setInterpreter(i)
         withTemporaryConfig(uninterp) {
           val to = if (timeout == -1) timeLimit else Span(timeout, Seconds)
@@ -222,8 +227,7 @@ class TacticTestBase(registerAxTactics: Option[String] = None)
   /**
    * Creates and initializes Z3 for tests that want to use QE. Also necessary for tests that use derived axioms that are
    * proved by QE. Note that Mathematica should also ne initialized in order to perform DiffSolution and CounterExample
-   * @example
-   *   {{{"My test" should "prove something with Z3" in withZ3 { qeTool => // ... your test code here }}}}
+   * @example {{{"My test" should "prove something with Z3" in withZ3 { qeTool => // ... your test code here }}}}
    */
   def withZ3(testcode: Z3 => Any, timeout: Int = -1, initLibrary: Boolean = true): Unit = {
     val common = Map(Configuration.Keys.QE_TOOL -> "z3")
@@ -234,8 +238,10 @@ class TacticTestBase(registerAxTactics: Option[String] = None)
       ToolProvider.init()
       provider.tool().setOperationTimeout(timeout)
       val tool = provider.tool()
-      KeYmaeraXTool
-        .init(interpreter = KeYmaeraXTool.InterpreterChoice.LazySequential, initDerivationInfoRegistry = initLibrary)
+      KeYmaeraXTool.init(
+        interpreter = KeYmaeraXTool.InterpreterChoice.LazySequential,
+        initDerivationInfoRegistry = initLibrary,
+      )
       withTemporaryConfig(uninterp) {
         val to = if (timeout == -1) timeLimit else Span(timeout, Seconds)
         implicit val signaler: Signaler = { (t: Thread) =>
@@ -293,8 +299,8 @@ class TacticTestBase(registerAxTactics: Option[String] = None)
   }
 
   /** Executes `testcode` with a temporary configuration that gets reset after execution. */
-  def withTemporaryConfig[T](tempConfig: Map[String, String])(testcode: => T): T = Configuration
-    .withTemporaryConfig(tempConfig)(testcode)
+  def withTemporaryConfig[T](tempConfig: Map[String, String])(testcode: => T): T =
+    Configuration.withTemporaryConfig(tempConfig)(testcode)
 
   /** Test setup */
   override def beforeEach(): Unit = {
@@ -331,10 +337,7 @@ class TacticTestBase(registerAxTactics: Option[String] = None)
     LemmaDBFactory.lemmaDB.removeAll("user/tests")
     LemmaDBFactory.lemmaDB.removeAll("qecache")
     try {
-      interpreters.foreach(i =>
-        try { i.kill() }
-        catch { case ex: Throwable => ex.printStackTrace() }
-      )
+      interpreters.foreach(i => try { i.kill() } catch { case ex: Throwable => ex.printStackTrace() })
       interpreters = Nil
     } finally {
       PrettyPrinter.setPrinter(e => e.getClass.getName)
@@ -366,8 +369,10 @@ class TacticTestBase(registerAxTactics: Option[String] = None)
     registerAxTactics match {
       case Some("mathematica") => withMathematica(initLibrary = true, testcode = { _ => })
       case Some("z3") => withZ3(initLibrary = true, testcode = { _ => })
-      case None => KeYmaeraXTool
-          .init(interpreter = KeYmaeraXTool.InterpreterChoice.LazySequential, initDerivationInfoRegistry = false)
+      case None => KeYmaeraXTool.init(
+          interpreter = KeYmaeraXTool.InterpreterChoice.LazySequential,
+          initDerivationInfoRegistry = false,
+        )
     }
   }
 
@@ -388,9 +393,8 @@ class TacticTestBase(registerAxTactics: Option[String] = None)
 
   /**
    * Proves a formula using the specified tactic. Fails the test when tactic fails.
-   * @todo
-   *   remove proveBy in favor of [[TactixLibrary.proveBy]] to avoid incompatibilities or meaingless tests if they do
-   *   something else
+   * @todo remove proveBy in favor of [[TactixLibrary.proveBy]] to avoid incompatibilities or meaingless tests if they
+   *   do something else
    */
   // @deprecated("TactixLibrary.proveBy should probably be used instead of TacticTestBase")
   def proveByS(
@@ -455,13 +459,13 @@ class TacticTestBase(registerAxTactics: Option[String] = None)
 
   /**
    * Execute a task with tactic progress.
-   * @example
-   *   {{{ withTacticProgress("implyR(1)".asTactic) { proveBy("x>0 -> x>=0".asFormula, _) }
+   * @example {{{ withTacticProgress("implyR(1)".asTactic) { proveBy("x>0 -> x>=0".asFormula, _) }
    *   withTacticProgress("auto".asTactic, "auto"::"step"::"stepAt"::Nil) { proveBy("x>0 -> x>=0".asFormula, _) } }}}
    */
-  def withTacticProgress(tactic: BelleExpr, stepInto: List[String] = Nil)(
-      task: BelleExpr => ProvableSig
-  ): ProvableSig = {
+  def withTacticProgress(
+      tactic: BelleExpr,
+      stepInto: List[String] = Nil,
+  )(task: BelleExpr => ProvableSig): ProvableSig = {
     val orig = theInterpreter
     val progressInterpreter = LazySequentialInterpreter(
       orig.listeners :+ new PrintProgressListener(tactic, stepInto),
@@ -469,8 +473,7 @@ class TacticTestBase(registerAxTactics: Option[String] = None)
     )
     registerInterpreter(progressInterpreter)
     BelleInterpreter.setInterpreter(progressInterpreter)
-    try { task(tactic) }
-    finally { BelleInterpreter.setInterpreter(orig) }
+    try { task(tactic) } finally { BelleInterpreter.setInterpreter(orig) }
   }
 
   /** Filters the archive entries that should be provable with the `tool`. */
@@ -584,8 +587,8 @@ class TacticTestBase(registerAxTactics: Option[String] = None)
   /** A listener that stores proof steps in the database `db` for proof `proofId`. */
   def listener(db: DBAbstraction, constructGlobalProvable: Boolean = false)(
       proofId: Int
-  )(tacticName: String, parentInTrace: Int, branch: Int): Seq[IOListener] = DBTools
-    .listener(db, constructGlobalProvable)(proofId)(tacticName, parentInTrace, branch)
+  )(tacticName: String, parentInTrace: Int, branch: Int): Seq[IOListener] =
+    DBTools.listener(db, constructGlobalProvable)(proofId)(tacticName, parentInTrace, branch)
 
   /**
    * Removes all whitespace for string comparisons in tests.

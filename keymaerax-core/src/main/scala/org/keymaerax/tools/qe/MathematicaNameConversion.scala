@@ -24,10 +24,8 @@ import org.keymaerax.tools.ConversionException
  * Name conversion to/from Mathematica. Prefixes all names with a namespace prefix. Refuses to convert interpreted
  * symbols.
  *
- * @author
- *   Nathan Fulton
- * @author
- *   Stefan Mitsch
+ * @author Nathan Fulton
+ * @author Stefan Mitsch
  */
 private[tools] object MathematicaNameConversion {
   // a prefix that Mathematica accepts but NamedSymbol would refuse to make disjoint by construction
@@ -45,12 +43,9 @@ private[tools] object MathematicaNameConversion {
    * base + index     ---> NAMESPACE_PREFIX + base + INDEX_SEP + index
    * base only        ---> NAMESPACE_PREFIX + base
    * }}}
-   * @param ns
-   *   The KeYmaera name to convert.
-   * @return
-   *   The Mathematica symbol.
-   * @note
-   *   Interpreted function symbols are not allowed.
+   * @param ns The KeYmaera name to convert.
+   * @return The Mathematica symbol.
+   * @note Interpreted function symbols are not allowed.
    */
   def toMathematica(ns: NamedSymbol): MExpr = {
     val name: String = ns match {
@@ -71,12 +66,9 @@ private[tools] object MathematicaNameConversion {
    * NAMESPACE_PREFIX + base + INDEX_SEP + index ---> name + index
    * NAMESPACE_PREFIX + base               ---> name only
    * }}}
-   * @param e
-   *   The Mathematica 'name'
-   * @return
-   *   The named symbol.
-   * @note
-   *   Refuses to convert interpreted function symbols (i.e., any name not prefixed with kyx)
+   * @param e The Mathematica 'name'
+   * @return The named symbol.
+   * @note Refuses to convert interpreted function symbols (i.e., any name not prefixed with kyx)
    */
   def toKeYmaera(e: MExpr): NamedSymbol = {
     if (e.symbolQ) {

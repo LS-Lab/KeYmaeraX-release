@@ -20,10 +20,8 @@ import scala.collection.immutable.{Map, Nil}
 import scala.util.Try
 
 /**
- * @todo
- *   move to formula tools? Or make this ProgramTools?
- * @author
- *   Nathan Fulton
+ * @todo move to formula tools? Or make this ProgramTools?
+ * @author Nathan Fulton
  */
 object DifferentialHelper {
 
@@ -68,18 +66,16 @@ object DifferentialHelper {
   }
 
   /** Indicates whether the variables `vs` is primed in the ODE `system`. */
-  def containsPrimedVariables(vs: Set[Variable], system: ODESystem): Boolean = vs
-    .exists(v => isPrimedVariable(v, Some(system.ode)))
+  def containsPrimedVariables(vs: Set[Variable], system: ODESystem): Boolean =
+    vs.exists(v => isPrimedVariable(v, Some(system.ode)))
 
   /**
    * Extracts all comparisons that look like initial conditions from the formula f.
    *
-   * @param ode
-   *   Optionally an ODE; if None, then all comparisons are extracted from f. This may include non-initial-conds.
-   * @param f
-   *   A formula containing conjunctions.
-   * @return
-   *   A list of comparison formulas after deconstructing Ands. E.g., A&B&C -> A::B::C::Nil
+   * @param ode Optionally an ODE; if None, then all comparisons are extracted from f. This may include
+   *   non-initial-conds.
+   * @param f A formula containing conjunctions.
+   * @return A list of comparison formulas after deconstructing Ands. E.g., A&B&C -> A::B::C::Nil
    */
   def extractInitialConditions(ode: Option[Program])(f: Formula): List[Formula] = FormulaTools.conjuncts(f match {
     case And(l, r) => extractInitialConditions(ode)(l) ++ extractInitialConditions(ode)(r)
@@ -371,10 +367,8 @@ object DifferentialHelper {
 
   /**
    * @param iniitalConstraints
-   * @param x
-   *   The variable whose initial value is requested.
-   * @return
-   *   The initial value of x.
+   * @param x The variable whose initial value is requested.
+   * @return The initial value of x.
    */
   def initValue(iniitalConstraints: List[Formula], x: Variable): Option[Term] = {
     val initialConditions = conditionsToValues(iniitalConstraints)
@@ -384,10 +378,8 @@ object DifferentialHelper {
   /**
    * Converts formulas of the form x = term into a map x -> term, and ignores all formulas of other forms.
    *
-   * @param fs
-   *   A list of formulas.
-   * @return
-   *   A map (f -> term) which maps each f in fs of the foram f=term to term.
+   * @param fs A list of formulas.
+   * @return A map (f -> term) which maps each f in fs of the foram f=term to term.
    */
   def conditionsToValues(fs: List[Formula]): Map[Variable, Term] = {
     val flattened = FormulaTools.conjuncts(fs)
@@ -544,10 +536,8 @@ object DifferentialHelper {
 
   /**
    * Find an ODE of the form {x'=x}
-   * @param dp
-   *   The differential program to search.
-   * @return
-   *   The variable x or else nothing.
+   * @param dp The differential program to search.
+   * @return The variable x or else nothing.
    */
   def hasExp(dp: DifferentialProgram): Option[Variable] = {
     val expODE = DifferentialHelper
@@ -565,10 +555,8 @@ object DifferentialHelper {
 
   /**
    * Finds an ODE of the form {s'=c,c'=-s}.
-   * @param dp
-   *   The differential program.
-   * @return
-   *   ("cos" , "sin") where {sin'=cos, cos=-sin}, or else nothing.
+   * @param dp The differential program.
+   * @return ("cos" , "sin") where {sin'=cos, cos=-sin}, or else nothing.
    */
   def hasSinCos(dp: DifferentialProgram): Option[(Variable, Variable)] = {
     val eqns = DifferentialHelper.atomicOdes(dp)

@@ -290,8 +290,10 @@ object RequestHelper {
       case ts: ConfigurableGenerator => if (ts.products.nonEmpty) ts else proofSession.invSupplier
       case ts => ts
     }
-    proofSession
-      .copy(defs = proofSession.defs.copy(proofSession.defs.decls ++ newDefs), invSupplier = mergedInvSupplier)
+    proofSession.copy(
+      defs = proofSession.defs.copy(proofSession.defs.decls ++ newDefs),
+      invSupplier = mergedInvSupplier,
+    )
   }
 
   def tacticString(proofInfo: ProofPOJO): String = tacticString(proofInfo.tactic.getOrElse("/* no tactic recorded */"))

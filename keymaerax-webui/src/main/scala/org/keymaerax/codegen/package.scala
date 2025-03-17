@@ -7,9 +7,7 @@ package org.keymaerax
 
 /**
  * Code-generation tools to generate C-Code etc. from expressions.
- * @author
- *   Andre Platzer
- * @todo
- *   Stub. Describe for real.
+ * @author Andre Platzer
+ * @todo Stub. Describe for real.
  */
 package object codegen {}

@@ -15,8 +15,7 @@ import scala.collection.immutable._
 /**
  * Tests basic expression data structures
  *
- * @author
- *   Andre Platzer
+ * @author Andre Platzer
  */
 @CheckinTest
 class ExpressionTests extends AnyFlatSpec with Matchers {
@@ -106,8 +105,9 @@ class ExpressionTests extends AnyFlatSpec with Matchers {
   }
 
   "Kinds" should "have expected strings" taggedAs CoverageTest in {
-    (ExpressionKind :: TermKind :: FormulaKind :: ProgramKind :: DifferentialProgramKind :: FunctionKind :: Nil)
-      .forall(k => k.toString + "Kind$" == k.getClass.getSimpleName) shouldBe true
+    (ExpressionKind :: TermKind :: FormulaKind :: ProgramKind :: DifferentialProgramKind :: FunctionKind :: Nil).forall(
+      k => k.toString + "Kind$" == k.getClass.getSimpleName
+    ) shouldBe true
   }
 
   "Sorts" should "have expected strings" taggedAs CoverageTest in {

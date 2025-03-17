@@ -21,8 +21,7 @@ import scala.language.postfixOps
  * Creates a HyDRA server listening on a host and port specified in the database's config file under the configurations
  * serverconfig.host and serverconfig.port. Uses localhost and 8090 by default.
  *
- * @author
- *   Nathan Fulton
+ * @author Nathan Fulton
  */
 object NonSSLBoot extends Logging {
   def run(options: Options) = {
@@ -54,8 +53,7 @@ object NonSSLBoot extends Logging {
 
 /**
  * Initializes the HyDRA server.
- * @author
- *   Nathan Fulton
+ * @author Nathan Fulton
  */
 object HyDRAInitializer extends Logging {
 

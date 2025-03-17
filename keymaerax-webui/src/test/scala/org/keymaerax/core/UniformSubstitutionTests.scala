@@ -17,10 +17,8 @@ import scala.util.Random
 
 /**
  * Created by rjcn on 01/09/15.
- * @author
- *   Ran Ji
- * @note
- *   Test needs KeYmaereaXParser.LAX==true
+ * @author Ran Ji
+ * @note Test needs KeYmaereaXParser.LAX==true
  */
 @UsualTest @USubstTest
 class UniformSubstitutionTests extends TacticTestBase with PrivateMethodTester {
@@ -1033,8 +1031,9 @@ class UniformSubstitutionTests extends TacticTestBase with PrivateMethodTester {
 //      (sToT("x", "a"), "[{x:=x+1;}*; x:=x+1]1>0".asFormula) ::            // subst(x:=x+1): x (maybe) bound by {x:=x+1}*
         Nil
 
-    cases
-      .foreach(c => withSafeClue(s"${c._1} on ${c._2}") { a[SubstitutionClashException] should be thrownBy c._1(c._2) })
+    cases.foreach(c =>
+      withSafeClue(s"${c._1} on ${c._2}") { a[SubstitutionClashException] should be thrownBy c._1(c._2) }
+    )
 
     cases
       .map(c => (rndExtensionOf(c._1), c._2))

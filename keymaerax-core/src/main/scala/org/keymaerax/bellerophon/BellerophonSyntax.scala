@@ -75,27 +75,19 @@ object BelleExpr {
  *   - `<(e1,...,en)` [[org.keymaerax.bellerophon.BranchTactic branching]] to run tactic `ei` on branch `i`, failing if
  *     any of them fail or if there are not exactly `n` branches.
  *
- * @todo
- *   Consolidate the members of BelleExpr and finalize an abstract syntax.
- * @see
- *   Table 1 of [[org.keymaerax.Bibliography.ItpFultonMBP17 Bellerophon: Tactical theorem proving for hybrid systems]]
- * @author
- *   Nathan Fulton
- * @author
- *   Stefan Mitsch
- * @author
- *   Andre Platzer
- * @see
- *   [[org.keymaerax.bellerophon.Interpreter]]
- * @see
- *   [[org.keymaerax.bellerophon.SequentialInterpreter]]
+ * @todo Consolidate the members of BelleExpr and finalize an abstract syntax.
+ * @see Table 1 of
+ *   [[org.keymaerax.Bibliography.ItpFultonMBP17 Bellerophon: Tactical theorem proving for hybrid systems]]
+ * @author Nathan Fulton
+ * @author Stefan Mitsch
+ * @author Andre Platzer
+ * @see [[org.keymaerax.bellerophon.Interpreter]]
+ * @see [[org.keymaerax.bellerophon.SequentialInterpreter]]
  */
 sealed abstract class BelleExpr {
   // tactic combinators
 
-  /**
-   * `this & other`: sequential composition this ; other executes other on the output of this, failing if either fail.
-   */
+  /** `this & other`: sequential composition this ; other executes other on the output of this, failing if either fail. */
   def &(other: BelleExpr): BelleExpr = SeqTactic(this, other)
 
   /** `this | other`: alternative composition executes other if applying this fails, failing if both fail. */
@@ -124,8 +116,7 @@ sealed abstract class BelleExpr {
   /**
    * `<(e1,...,en)`: branching to run tactic `ei` on branch `i`, failing if any of them fail or if there are not exactly
    * `n` branches.
-   * @note
-   *   Equivalent to `a & Idioms.<(b,c)`
+   * @note Equivalent to `a & Idioms.<(b,c)`
    */
   // @deprecated("Use & with explicit Idioms.< instead; import Idioms.<, so a & <(b,c)", since="4.2")
   def <(children: BelleExpr*): BelleExpr = SeqTactic(Seq(this, BranchTactic(children)))
@@ -286,8 +277,7 @@ trait NoOpTactic {}
 
 /**
  * Mixing in NoOpTactic with existing tactic instances (e.g., obtained through TacticFactory methods)
- * @see
- *   https://stackoverflow.com/a/3896244
+ * @see https://stackoverflow.com/a/3896244
  */
 object NoOpTactic {
   import scala.language.implicitConversions
@@ -355,10 +345,8 @@ object BelleDot extends BelleDot
  *   - `t('_, fml)` applied at the suitable position (uniquely determined by type of tactic) where the expected formula
  *     `fml` can be found (on the top level).
  *
- * @author
- *   Stefan Mitsch
- * @author
- *   Andre Platzer
+ * @author Stefan Mitsch
+ * @author Andre Platzer
  */
 trait AtPosition[T <: BelleExpr] extends BelleExpr with (PositionLocator => T) with Logging {
   import Find._
@@ -366,29 +354,21 @@ trait AtPosition[T <: BelleExpr] extends BelleExpr with (PositionLocator => T) w
   /**
    * Returns the tactic that can be applied at the position identified by `locator`.
    *
-   * @param locator
-   *   The locator: Fixed, Find, LastAnte, or LastSucc
-   * @return
-   *   The tactic of type `T` that can be readily applied at the position identified by `locator` to any given
+   * @param locator The locator: Fixed, Find, LastAnte, or LastSucc
+   * @return The tactic of type `T` that can be readily applied at the position identified by `locator` to any given
    *   BelleExpr.
-   * @see
-   *   [[PositionLocator]]
+   * @see [[PositionLocator]]
    */
   def apply(locator: PositionLocator): T
 
   /**
    * Applied at a fixed position.
    *
-   * @param position
-   *   The position where this tactic will be applied at.
-   * @return
-   *   The tactic of type `T` that can be readily applied at the specified position to any given BelleExpr.
-   * @note
-   *   Convenience wrapper
-   * @see
-   *   [[apply(locator: PositionLocator)]]
-   * @see
-   *   [[Fixed]]
+   * @param position The position where this tactic will be applied at.
+   * @return The tactic of type `T` that can be readily applied at the specified position to any given BelleExpr.
+   * @note Convenience wrapper
+   * @see [[apply(locator: PositionLocator)]]
+   * @see [[Fixed]]
    */
   /*private[keymaerax]*/
   final def apply(position: Position): T = apply(Fixed(position))
@@ -396,18 +376,12 @@ trait AtPosition[T <: BelleExpr] extends BelleExpr with (PositionLocator => T) w
   /**
    * Applied at a fixed position, ensuring that the formula `expected` will be found at that position, verbatim.
    *
-   * @param position
-   *   The position where this tactic will be applied at.
-   * @param expected
-   *   the formula expected at `position`. Contract fails if that expectation is not met.
-   * @return
-   *   The tactic of type `T` that can be readily applied at the specified position to any given BelleExpr.
-   * @note
-   *   Convenience wrapper
-   * @see
-   *   [[apply(locator: PositionLocator)]]
-   * @see
-   *   [[Fixed]]
+   * @param position The position where this tactic will be applied at.
+   * @param expected the formula expected at `position`. Contract fails if that expectation is not met.
+   * @return The tactic of type `T` that can be readily applied at the specified position to any given BelleExpr.
+   * @note Convenience wrapper
+   * @see [[apply(locator: PositionLocator)]]
+   * @see [[Fixed]]
    */
   /*private[keymaerax]*/
   final def apply(position: Position, expected: Formula): T = apply(Fixed(position, Some(expected)))
@@ -415,36 +389,24 @@ trait AtPosition[T <: BelleExpr] extends BelleExpr with (PositionLocator => T) w
   /**
    * Applied at a fixed position, ensuring that the formula `expected` will be found at that position, verbatim.
    *
-   * @param seqIdx
-   *   The position where this tactic will be applied at (-1 based for antecedent, 1 based for succedent).
-   * @param expected
-   *   the formula expected at `position`. Contract fails if that expectation is not met.
-   * @return
-   *   The tactic of type `T` that can be readily applied at the specified position to any given BelleExpr.
-   * @note
-   *   Convenience wrapper
-   * @see
-   *   [[apply(locator: PositionLocator)]]
-   * @see
-   *   [[Fixed]]
+   * @param seqIdx The position where this tactic will be applied at (-1 based for antecedent, 1 based for succedent).
+   * @param expected the formula expected at `position`. Contract fails if that expectation is not met.
+   * @return The tactic of type `T` that can be readily applied at the specified position to any given BelleExpr.
+   * @note Convenience wrapper
+   * @see [[apply(locator: PositionLocator)]]
+   * @see [[Fixed]]
    */
   final def apply(seqIdx: Int, expected: Formula): T = apply(Fixed(Position(seqIdx), Some(expected)))
 
   /**
    * Applied at a fixed position, ensuring that the formula `expected` will be found at that position, verbatim.
    *
-   * @param seqIdx
-   *   The position where this tactic will be applied at (-1 based for antecedent, 1 based for succedent).
-   * @param expected
-   *   the formula expected at `position`. Contract fails if that expectation is not met.
-   * @return
-   *   The tactic of type `T` that can be readily applied at the specified position to any given BelleExpr.
-   * @note
-   *   Convenience wrapper
-   * @see
-   *   [[apply(locator: PositionLocator)]]
-   * @see
-   *   [[Fixed]]
+   * @param seqIdx The position where this tactic will be applied at (-1 based for antecedent, 1 based for succedent).
+   * @param expected the formula expected at `position`. Contract fails if that expectation is not met.
+   * @return The tactic of type `T` that can be readily applied at the specified position to any given BelleExpr.
+   * @note Convenience wrapper
+   * @see [[apply(locator: PositionLocator)]]
+   * @see [[Fixed]]
    */
   final def apply(seqIdx: Int, inExpr: List[Int], expected: Formula): T =
     apply(Fixed(Position(seqIdx, inExpr), Some(expected)))
@@ -454,20 +416,14 @@ trait AtPosition[T <: BelleExpr] extends BelleExpr with (PositionLocator => T) w
   /**
    * Applied at a fixed position in (signed) sequent position `seqIdx` at subexpression `inExpr`.
    *
-   * @param seqIdx
-   *   The signed index in the sequent (strictly negative index for antecedent, strictly positive for succedent).
-   * @param inExpr
-   *   Where to apply inside the formula at index seqIdx interpreted as a [[PosInExpr]].
-   * @return
-   *   The tactic of type `T` that can be readily applied at the specified position to any given BelleExpr.
-   * @note
-   *   Convenience wrapper
-   * @see
-   *   [[PosInExpr]]
-   * @see
-   *   [[apply(position: Position)]]
-   * @see
-   *   [[Fixed]]
+   * @param seqIdx The signed index in the sequent (strictly negative index for antecedent, strictly positive for
+   *   succedent).
+   * @param inExpr Where to apply inside the formula at index seqIdx interpreted as a [[PosInExpr]].
+   * @return The tactic of type `T` that can be readily applied at the specified position to any given BelleExpr.
+   * @note Convenience wrapper
+   * @see [[PosInExpr]]
+   * @see [[apply(position: Position)]]
+   * @see [[Fixed]]
    */
   final def apply(seqIdx: Int, inExpr: List[Int] = Nil): T = apply(Fixed(Position(seqIdx, inExpr)))
   final def apply(seqIdx: Int, inExpr: PosInExpr): T = apply(Fixed(Position(seqIdx, inExpr.pos)))
@@ -475,15 +431,12 @@ trait AtPosition[T <: BelleExpr] extends BelleExpr with (PositionLocator => T) w
   /**
    * Returns the tactic at the position identified by `locator`.
    *
-   * @param locator
-   *   The locator symbol at which to apply this AtPosition: 'L (find left), 'R (find right), '_ (find left/right
-   *   appropriately for tactic), 'Llast (at last position in antecedent), or 'Rlast (at last position in succedent).
-   * @note
-   *   Convenience wrapper
-   * @see
-   *   [[org.keymaerax.bellerophon.AtPosition]]
-   * @see
-   *   [[apply(locator: PositionLocator)]]
+   * @param locator The locator symbol at which to apply this AtPosition: 'L (find left), 'R (find right), '_ (find
+   *   left/right appropriately for tactic), 'Llast (at last position in antecedent), or 'Rlast (at last position in
+   *   succedent).
+   * @note Convenience wrapper
+   * @see [[org.keymaerax.bellerophon.AtPosition]]
+   * @see [[apply(locator: PositionLocator)]]
    */
   // @todo turn into properly type-checkable locator arguments without going crazy long.
   final def apply(locator: Symbol, inExpr: PosInExpr): T = locator match {
@@ -505,17 +458,14 @@ trait AtPosition[T <: BelleExpr] extends BelleExpr with (PositionLocator => T) w
    * Returns the tactic at the position identified by `locator`, ensuring that `locator` will yield the formula
    * `expected` verbatim.
    *
-   * @param locator
-   *   The locator symbol at which to apply this AtPosition: 'L (find left), 'R (find right), '_ (find left/right
-   *   appropriately for tactic), 'Llast (at last position in antecedent), or 'Rlast (at last position in succedent).
-   * @param expected
-   *   the formula expected at the position that `locator` identifies. Contract fails if that expectation is not met.
-   * @note
-   *   Convenience wrapper
-   * @see
-   *   [[org.keymaerax.bellerophon.AtPosition]]
-   * @see
-   *   [[apply()]]
+   * @param locator The locator symbol at which to apply this AtPosition: 'L (find left), 'R (find right), '_ (find
+   *   left/right appropriately for tactic), 'Llast (at last position in antecedent), or 'Rlast (at last position in
+   *   succedent).
+   * @param expected the formula expected at the position that `locator` identifies. Contract fails if that expectation
+   *   is not met.
+   * @note Convenience wrapper
+   * @see [[org.keymaerax.bellerophon.AtPosition]]
+   * @see [[apply()]]
    */
   final def apply(locator: Symbol, expected: Expression, defs: Declaration): T = locator match {
     case Symbol("L") => apply(FindL(0, Some(expected), HereP, exact = true, defs))
@@ -544,21 +494,19 @@ trait AtPosition[T <: BelleExpr] extends BelleExpr with (PositionLocator => T) w
 /**
  * PositionTactics are tactics that can be [[AtPosition applied at positions]] giving ordinary tactics.
  *
- * @see
- *   [[AtPosition]]
+ * @see [[AtPosition]]
  */
 trait PositionalTactic extends BelleExpr with AtPosition[AppliedPositionTactic] {
 
   /** @note this should be called from within interpreters, but not by end-users */
   def computeResult(provable: ProvableSig, position: Position): ProvableSig
-  final override def apply(locator: PositionLocator): AppliedPositionTactic = AppliedPositionTactic(this, locator)
+  override final def apply(locator: PositionLocator): AppliedPositionTactic = AppliedPositionTactic(this, locator)
 }
 
 /**
  * Tactics that can only be applied in the antecedent on the left.
  *
- * @see
- *   [[LeftRule]]
+ * @see [[LeftRule]]
  */
 trait LeftTactic extends PositionalTactic {
 
@@ -566,7 +514,7 @@ trait LeftTactic extends PositionalTactic {
   def computeResult(provable: ProvableSig, position: AntePosition): ProvableSig
 
   @throws[IllFormedTacticApplicationException]("if rule applied on the (incorrect) right side")
-  final override def computeResult(provable: ProvableSig, position: Position): ProvableSig = position match {
+  override final def computeResult(provable: ProvableSig, position: Position): ProvableSig = position match {
     case p: AntePosition => computeResult(provable, p)
     case _ => throw new IllFormedTacticApplicationException(
         "LeftTactics can only be applied at a left position not at " + position
@@ -577,8 +525,7 @@ trait LeftTactic extends PositionalTactic {
 /**
  * Tactics that can only be applied in the succedent on the right.
  *
- * @see
- *   [[RightRule]]
+ * @see [[RightRule]]
  */
 trait RightTactic extends PositionalTactic {
 
@@ -586,7 +533,7 @@ trait RightTactic extends PositionalTactic {
   def computeResult(provable: ProvableSig, position: SuccPosition): ProvableSig
 
   @throws[IllFormedTacticApplicationException]("if rule applied on the (incorrect) left side")
-  final override def computeResult(provable: ProvableSig, position: Position): ProvableSig = position match {
+  override final def computeResult(provable: ProvableSig, position: Position): ProvableSig = position match {
     case p: SuccPosition => computeResult(provable, p)
     case _ => throw new IllFormedTacticApplicationException(
         "RightTactics can only be applied at a right position not at " + position
@@ -608,12 +555,11 @@ abstract case class BuiltInPositionTactic(name: String) extends PositionalTactic
  * Built-in position tactics coming from the core that are to be applied on the left. Unlike [[BuiltInLeftTactic]],
  * wraps [[MatchError]] from the core in readable errors.
  *
- * @see
- *   [[TacticInapplicableFailure]]
+ * @see [[TacticInapplicableFailure]]
  */
 abstract case class CoreLeftTactic(name: String) extends LeftTactic with NamedBelleExpr {
   @throws[TacticInapplicableFailure]("if formula has the wrong shape for this rule")
-  final override def computeResult(provable: ProvableSig, position: AntePosition): ProvableSig =
+  override final def computeResult(provable: ProvableSig, position: AntePosition): ProvableSig =
     try { computeCoreResult(provable, position) }
     catch {
       case ex: MatchError => throw new TacticInapplicableFailure(
@@ -629,12 +575,11 @@ abstract case class CoreLeftTactic(name: String) extends LeftTactic with NamedBe
  * Built-in position tactics coming from the core that are to be applied on the right Unlike [[BuiltInRightTactic]],
  * wraps [[MatchError]] from the core in readable errors.
  *
- * @see
- *   [[TacticInapplicableFailure]]
+ * @see [[TacticInapplicableFailure]]
  */
 abstract case class CoreRightTactic(name: String) extends RightTactic with NamedBelleExpr {
   @throws[TacticInapplicableFailure]("if formula has the wrong shape for this rule")
-  final override def computeResult(provable: ProvableSig, position: SuccPosition): ProvableSig =
+  override final def computeResult(provable: ProvableSig, position: SuccPosition): ProvableSig =
     try { computeCoreResult(provable, position) }
     catch {
       case ex: MatchError => throw new TacticInapplicableFailure(
@@ -721,10 +666,10 @@ case class AppliedPositionTactic(positionTactic: PositionalTactic, locator: Posi
                 provable.prettyString
             ),
           )
-        case LastAnte(goal, sub) => positionTactic
-            .computeResult(provable, AntePosition.base0(provable.subgoals(goal).ante.size - 1, sub))
-        case LastSucc(goal, sub) => positionTactic
-            .computeResult(provable, SuccPosition.base0(provable.subgoals(goal).succ.size - 1, sub))
+        case LastAnte(goal, sub) =>
+          positionTactic.computeResult(provable, AntePosition.base0(provable.subgoals(goal).ante.size - 1, sub))
+        case LastSucc(goal, sub) =>
+          positionTactic.computeResult(provable, SuccPosition.base0(provable.subgoals(goal).succ.size - 1, sub))
       }
     } catch {
       case be: BelleThrowable => throw be
@@ -741,14 +686,13 @@ case class AppliedPositionTactic(positionTactic: PositionalTactic, locator: Posi
   /** Recursively tries the position tactic at positions at or after the locator's start in the specified provable. */
   @tailrec
   private def tryAllAfter(provable: ProvableSig, locator: Find, cause: => BelleThrowable): ProvableSig = {
-    if (provable.subgoals.isEmpty) throw new TacticInapplicableFailure(
-      s"Dependent position tactic $prettyString is not applicable at ${locator.start.prettyString} since provable has no subgoals"
-    )
+    if (provable.subgoals.isEmpty)
+      throw new TacticInapplicableFailure(s"Dependent position tactic $prettyString is not applicable at ${locator
+          .start
+          .prettyString} since provable has no subgoals")
     if (locator.start.isIndexDefined(provable.subgoals(locator.goal))) {
 
-      /**
-       * Left: definitely known to be applicable, Right: unknown to be applicable but worth a try; None: inapplicable.
-       */
+      /** Left: definitely known to be applicable, Right: unknown to be applicable but worth a try; None: inapplicable. */
       @tailrec
       def toPos(locator: Find): Option[Either[Position, Position]] = {
         if (locator.start.isIndexDefined(provable.subgoals(locator.goal))) {
@@ -799,8 +743,7 @@ abstract case class BuiltInTwoPositionTactic(name: String) extends NamedBelleExp
   /**
    * Returns an explicit representation of the application of this tactic to the provided positions.
    *
-   * @note
-   *   Convenience wrapper
+   * @note Convenience wrapper
    */
   final def apply(posOne: Int, posTwo: Int): AppliedBuiltinTwoPositionTactic = apply(Position(posOne), Position(posTwo))
 }
@@ -819,13 +762,10 @@ case class AppliedBuiltinTwoPositionTactic(positionTactic: BuiltInTwoPositionTac
  * Dependent tactics compute a tactic to apply based on their input. These tactics are probably not necessary very
  * often, but are useful for idiomatic shortcuts. See e.g., AtSubgoal.
  *
- * @note
- *   similar to the ConstructionTactics in the old framework, except they should not be necessary nearly as often
+ * @note similar to the ConstructionTactics in the old framework, except they should not be necessary nearly as often
  *   because BuiltIns have direct access to a Provable.
- * @param name
- *   The name of the tactic.
- * @todo
- *   is there a short lambda abstraction notation as syntactic sugar?
+ * @param name The name of the tactic.
+ * @todo is there a short lambda abstraction notation as syntactic sugar?
  */
 abstract case class DependentTactic(name: String) extends NamedBelleExpr {
 
@@ -847,10 +787,10 @@ abstract class SingleGoalDependentTactic(override val name: String) extends Depe
   def computeExpr(sequent: Sequent, defs: Declaration): BelleExpr = computeExpr(sequent)
 
   /** @inheritdoc */
-  final override def computeExpr(provable: ProvableSig): BelleExpr = computeExpr(provable, None)
+  override final def computeExpr(provable: ProvableSig): BelleExpr = computeExpr(provable, None)
 
   /** @inheritdoc */
-  final override def computeExpr(provable: ProvableSig, labels: Option[List[BelleLabel]]): BelleExpr = {
+  override final def computeExpr(provable: ProvableSig, labels: Option[List[BelleLabel]]): BelleExpr = {
     require(
       provable.subgoals.size <= 1,
       "1 subgoal expected, but got " + provable.subgoals.size + "\n" + provable.prettyString,
@@ -863,8 +803,7 @@ abstract class SingleGoalDependentTactic(override val name: String) extends Depe
 /**
  * DependentPositionTactics are tactics that can be [[AtPosition applied at positions]] giving dependent tactics.
  *
- * @see
- *   [[AtPosition]]
+ * @see [[AtPosition]]
  */
 abstract case class DependentPositionTactic(name: String) extends NamedBelleExpr with AtPosition[DependentTactic] {
   override def apply(locator: PositionLocator): AppliedDependentPositionTactic =
@@ -951,7 +890,7 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
   }
 
   @nowarn("msg=match may not be exhaustive")
-  final override def computeExpr(provable: ProvableSig, labels: Option[List[BelleLabel]]): BelleExpr =
+  override final def computeExpr(provable: ProvableSig, labels: Option[List[BelleLabel]]): BelleExpr =
     /*final override def computeExpr(v: BelleValue): BelleExpr =*/ try {
       locator match {
         // @note interprets PositionLocator
@@ -1029,10 +968,9 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
   private def tryAllAfter(locator: Find, cause: => BelleThrowable): DependentTactic = new DependentTactic(name) {
 
     /** @inheritdoc */
-    final override def computeExpr(provable: ProvableSig, labels: Option[List[BelleLabel]]): BelleExpr = {
-      if (provable.subgoals.isEmpty) throw new TacticInapplicableFailure(
-        s"Dependent position tactic ${this.prettyString} is not applicable at ${locator.start.prettyString} since provable has no subgoals"
-      )
+    override final def computeExpr(provable: ProvableSig, labels: Option[List[BelleLabel]]): BelleExpr = {
+      if (provable.subgoals.isEmpty) throw new TacticInapplicableFailure(s"Dependent position tactic ${this
+          .prettyString} is not applicable at ${locator.start.prettyString} since provable has no subgoals")
       if (locator.start.isIndexDefined(provable.subgoals(locator.goal))) {
         @tailrec
         def toPos(locator: Find): Option[Either[Position, Position]] = {
@@ -1057,15 +995,15 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
           case _ => throw cause
         }
       } else if (cause == null) {
-        throw new TacticInapplicableFailure(
-          s"Dependent position tactic ${this
-              .prettyString} is not applicable at ${locator.start.prettyString} in ${provable.subgoals(locator.goal).prettyString}"
-        )
+        throw new TacticInapplicableFailure(s"Dependent position tactic ${this
+            .prettyString} is not applicable at ${locator.start.prettyString} in ${provable
+            .subgoals(locator.goal)
+            .prettyString}")
       } else throw cause
     }
 
     /** @inheritdoc */
-    final override def computeExpr(e: BelleValue with BelleThrowable): BelleExpr = pt
+    override final def computeExpr(e: BelleValue with BelleThrowable): BelleExpr = pt
       .factory(locator.start)
       .computeExpr(e) | tryAllAfter(locator.copy(start = locator.start.advanceIndex(1)), cause)
   }
@@ -1093,8 +1031,7 @@ case class PartialTactic(child: BelleExpr, label: Option[BelleLabel] = None) ext
  * `OnAll(e)(BelleProvable(p)) == <(e, ..., e)` does the same tactic on all branches where e occurs the appropriate
  * number of times, which is `p.subgoals.length` times.
  *
- * @todo
- *   eisegesis
+ * @todo eisegesis
  */
 case class OnAll(e: BelleExpr) extends BelleExpr {
   override def prettyString: String = "doall(" + e.prettyString + ")"
@@ -1105,15 +1042,11 @@ case class OnAll(e: BelleExpr) extends BelleExpr {
  * `e` succeeds after supplying argument `o` to `e`. It's usually one of the first options `o` for which `e(o)(pr)` does
  * not fail. Fails if no choice from `options` made `e(o)(pr)` succeed.
  *
- * @param options
- *   The (lazy) iterator or stream from which subsequent options `o` will be tried.
- * @param e
- *   The tactic generator `e` that will be tried with input `o` on the Provable subsequently for each of the options `o`
- *   in `options` until one is found for which `e(o)` does not fail.
- * @author
- *   Andre Platzer
- * @see
- *   [[EitherTactic]]
+ * @param options The (lazy) iterator or stream from which subsequent options `o` will be tried.
+ * @param e The tactic generator `e` that will be tried with input `o` on the Provable subsequently for each of the
+ *   options `o` in `options` until one is found for which `e(o)` does not fail.
+ * @author Andre Platzer
+ * @see [[EitherTactic]]
  */
 case class ChooseSome[A](options: () => Iterator[A], e: A => BelleExpr) extends BelleExpr {
   override def prettyString: String = "dosome(" + e + ")"
@@ -1124,10 +1057,8 @@ case class ChooseSome[A](options: () => Iterator[A], e: A => BelleExpr) extends 
  * with an internal proof by tactic `inner`, resuming to the outer proof by a uniform substitution of `value` for `abbr`
  * of the resulting provable.
  *
- * @see
- *   [[ProvableSig.apply(USubst)]]
- * @todo
- *   generalize inner to also AtPosition[E]
+ * @see [[ProvableSig.apply(USubst)]]
+ * @todo generalize inner to also AtPosition[E]
  */
 case class Let(abbr: Expression, value: Expression, inner: BelleExpr) extends BelleExpr {
   require(
@@ -1143,12 +1074,9 @@ case class Let(abbr: Expression, value: Expression, inner: BelleExpr) extends Be
  * `abbr` based on that Provable at the end of `inner`. Resumes to the outer proof by a uniform substitution of
  * `instantiator(result)` for `abbr` of the resulting provable.
  *
- * @see
- *   [[ProvableSig.apply(USubst)]]
- * @todo
- *   generalize inner to also AtPosition[E]
- * @note
- *   abbr should be fresh in the Provable
+ * @see [[ProvableSig.apply(USubst)]]
+ * @todo generalize inner to also AtPosition[E]
+ * @note abbr should be fresh in the Provable
  */
 case class LetInspect(abbr: Expression, instantiator: ProvableSig => Expression, inner: BelleExpr) extends BelleExpr {
   override def prettyString: String = "let(" + abbr + ":= inspect " + instantiator + " in " + inner + ")"
@@ -1166,15 +1094,11 @@ case class LetInspect(abbr: Expression, instantiator: ProvableSig => Expression,
  * continuation` but the operational effect differs by the above search to find the instantiation `inst` in the first
  * place.
  *
- * @see
- *   [[ProvableSig.apply(USubst)]]
- * @param abbr
- *   the abbreviation to instantiate, which should be fresh in the Provable
- * @see
- *   Example 32 in
+ * @see [[ProvableSig.apply(USubst)]]
+ * @param abbr the abbreviation to instantiate, which should be fresh in the Provable
+ * @see Example 32 in
  *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
- * @see
- *   [[NoProverException]]
+ * @see [[NoProverException]]
  */
 case class SearchAndRescueAgain(
     abbr: scala.collection.immutable.Seq[Expression],

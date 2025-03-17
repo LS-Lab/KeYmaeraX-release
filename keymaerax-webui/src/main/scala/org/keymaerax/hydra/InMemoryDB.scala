@@ -14,8 +14,7 @@ import org.keymaerax.pt.ProvableSig
 
 /**
  * In-memory database, e.g., for stepping into tactics.
- * @author
- *   Stefan Mitsch
+ * @author Stefan Mitsch
  */
 class InMemoryDB extends DBAbstraction {
 
@@ -69,8 +68,8 @@ class InMemoryDB extends DBAbstraction {
     proofs.values.map({ case (_, p) => (p, models(p.modelId.get).name) }).toList
   }
 
-  override def userOwnsProof(userId: String, proofId: String): Boolean = getProofsForUser(userId)
-    .exists(_._1.proofId == proofId.toInt)
+  override def userOwnsProof(userId: String, proofId: String): Boolean =
+    getProofsForUser(userId).exists(_._1.proofId == proofId.toInt)
 
   override def checkPassword(username: String, password: String): Boolean = true
 
@@ -231,8 +230,7 @@ class InMemoryDB extends DBAbstraction {
   /**
    * Adds an execution step to an existing execution
    *
-   * @note
-   *   Implementations should enforce additional invarants -- never insert when branches or alt orderings overlap.
+   * @note Implementations should enforce additional invarants -- never insert when branches or alt orderings overlap.
    */
   override def addExecutionStep(step: ExecutionStepPOJO): Int = synchronized {
     val stepId = executionSteps.keys.size

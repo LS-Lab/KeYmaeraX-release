@@ -316,10 +316,12 @@ class TaylorModelTests extends TacticTestBase {
           "(-1 <= r0() & r0() <= 1) & (-1 <= r1() & r1() <= 1) & (-1 <= r2() & r2() <= 1)").asFormula
       val seq = Sequent(IndexedSeq(assms), IndexedSeq(box))
       val bgtool = new BigDecimalTool()
-      val res1 = IntervalArithmeticV2Tests
-        .timing("BigDecimalQETool")(() => proveBy(seq, tm.cutTM(10, AntePosition(1), bgtool)(1)))
-      val res2 = IntervalArithmeticV2Tests
-        .timing("Mathematica     ")(() => proveBy(seq, tm.cutTM(10, AntePosition(1), qeTool)(1)))
+      val res1 = IntervalArithmeticV2Tests.timing("BigDecimalQETool")(() =>
+        proveBy(seq, tm.cutTM(10, AntePosition(1), bgtool)(1))
+      )
+      val res2 = IntervalArithmeticV2Tests.timing("Mathematica     ")(() =>
+        proveBy(seq, tm.cutTM(10, AntePosition(1), qeTool)(1))
+      )
       res1 shouldEqual res2
       val res = proveBy(res1, SimplifierV3.simpTac()(1, 0 :: 1 :: Nil))
       // println(new KeYmaeraXPrettierPrinter(80).stringify(res.subgoals.loneElement))
@@ -395,10 +397,12 @@ class TaylorModelTests extends TacticTestBase {
           "(-1 <= r0() & r0() <= 1) & (-1 <= r1() & r1() <= 1)").asFormula
       val seq = Sequent(IndexedSeq(assms), IndexedSeq(box))
       val bgtool = new BigDecimalTool()
-      val res1 = IntervalArithmeticV2Tests
-        .timing("BigDecimalQETool")(() => proveBy(seq, tm.cutTM(10, AntePosition(1), bgtool)(1)))
-      val res2 = IntervalArithmeticV2Tests
-        .timing("Mathematica     ")(() => proveBy(seq, tm.cutTM(10, AntePosition(1), qeTool)(1)))
+      val res1 = IntervalArithmeticV2Tests.timing("BigDecimalQETool")(() =>
+        proveBy(seq, tm.cutTM(10, AntePosition(1), bgtool)(1))
+      )
+      val res2 = IntervalArithmeticV2Tests.timing("Mathematica     ")(() =>
+        proveBy(seq, tm.cutTM(10, AntePosition(1), qeTool)(1))
+      )
       res1 shouldEqual res2
       val res = res1
       // println(new KeYmaeraXPrettierPrinter(80).stringify(res.subgoals.loneElement))

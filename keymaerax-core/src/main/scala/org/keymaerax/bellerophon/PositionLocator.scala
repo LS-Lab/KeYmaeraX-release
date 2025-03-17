@@ -20,8 +20,7 @@ import scala.util.matching.Regex
 
 /**
  * Position locators identify a position directly or indirectly in a sequent.
- * @see
- *   [[AtPosition.apply()]]
+ * @see [[AtPosition.apply()]]
  */
 sealed trait PositionLocator {
 
@@ -181,8 +180,8 @@ case class Find(goal: Int, shape: Option[Expression], start: Position, exact: Bo
           if (nextPos.isIndexDefined(s)) findPosition(s, nextPos) else None
         }
       case Some(t: Term) =>
-        val tPos = FormulaTools
-          .posOf(s(pos.top), e => if (exact) e == t else UnificationMatch.unifiable(e, t).isDefined)
+        val tPos =
+          FormulaTools.posOf(s(pos.top), e => if (exact) e == t else UnificationMatch.unifiable(e, t).isDefined)
         if (tPos.isEmpty) findPosition(s, pos.advanceIndex(1)) else Some(pos.topLevel ++ tPos.head)
       case None => Some(pos)
     }

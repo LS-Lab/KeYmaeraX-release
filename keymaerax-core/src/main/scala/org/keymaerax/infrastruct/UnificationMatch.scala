@@ -45,14 +45,10 @@ import scala.collection.immutable.{List, Nil}
  *   // will throw UnificationException
  *   val s = Matcher("[a;++b;]p(||)".asFormula, "[x:=x+1;{x'=-x}]x>=0".asFormula)
  *   }}}
- * @author
- *   Andre Platzer
- * @see
- *   [[UnificationException]]
- * @see
- *   [[UnificationMatch]]
- * @see
- *   [[SchematicUnificationMatch]]
+ * @author Andre Platzer
+ * @see [[UnificationException]]
+ * @see [[UnificationMatch]]
+ * @see [[SchematicUnificationMatch]]
  */
 trait Matcher extends ((Expression, Expression) => RenUSubst) {
 
@@ -61,8 +57,7 @@ trait Matcher extends ((Expression, Expression) => RenUSubst) {
 
   /**
    * The (generalized) substitutions used for unification purposes
-   * @see
-   *   [[RenUSubst]]
+   * @see [[RenUSubst]]
    */
   type Subst = RenUSubst
 
@@ -73,29 +68,23 @@ trait Matcher extends ((Expression, Expression) => RenUSubst) {
   /**
    * A (generalized) substitution pair, which is either like a [[SubstitutionPair]] for uniform substitution or a pair
    * of [[Variable]] for uniform renaming.
-   * @see
-   *   [[SubstitutionPair]]
+   * @see [[SubstitutionPair]]
    */
   type SubstRepl = Tuple2[Expression, Expression]
 
   /**
    * Create a (generalized) substitution pair.
-   * @see
-   *   [[SubstitutionPair]]
+   * @see [[SubstitutionPair]]
    */
   protected def SubstRepl(what: Expression, repl: Expression): SubstRepl = (what, repl)
 
   /** Identity substitution `{}` that does not change anything. */
   protected val id: List[SubstRepl] = Nil
 
-  /**
-   * unifiable(shape, input) Compute some unifier matching `input` against the pattern `shape` if unifiable else None
-   */
+  /** unifiable(shape, input) Compute some unifier matching `input` against the pattern `shape` if unifiable else None */
   def unifiable(shape: Expression, input: Expression): Option[Subst]
 
-  /**
-   * unifiable(shape, input) Compute some unifier matching `input` against the pattern `shape` if unifiable else None
-   */
+  /** unifiable(shape, input) Compute some unifier matching `input` against the pattern `shape` if unifiable else None */
   def unifiable(shape: Sequent, input: Sequent): Option[Subst]
 
   /**
@@ -107,40 +96,35 @@ trait Matcher extends ((Expression, Expression) => RenUSubst) {
   /**
    * apply(shape, input) matches `input` against the pattern `shape` to find a uniform substitution `\result` such that
    * `\result(shape)==input`.
-   * @throws UnificationException
-   *   if `input` cannot be matched against the pattern `shape`.
+   * @throws UnificationException if `input` cannot be matched against the pattern `shape`.
    */
   def apply(shape: Term, input: Term): Subst
 
   /**
    * apply(shape, input) matches `input` against the pattern `shape` to find a uniform substitution `\result` such that
    * `\result(shape)==input`.
-   * @throws UnificationException
-   *   if `input` cannot be matched against the pattern `shape`.
+   * @throws UnificationException if `input` cannot be matched against the pattern `shape`.
    */
   def apply(shape: Formula, input: Formula): Subst
 
   /**
    * apply(shape, input) matches `input` against the pattern `shape` to find a uniform substitution `\result` such that
    * `\result(shape)==input`.
-   * @throws UnificationException
-   *   if `input` cannot be matched against the pattern `shape`.
+   * @throws UnificationException if `input` cannot be matched against the pattern `shape`.
    */
   def apply(shape: Program, input: Program): Subst
 
   /**
    * apply(shape, input) matches `input` against the pattern `shape` to find a uniform substitution `\result` such that
    * `\result(shape)==input`.
-   * @throws UnificationException
-   *   if `input` cannot be matched against the pattern `shape`.
+   * @throws UnificationException if `input` cannot be matched against the pattern `shape`.
    */
   def apply(shape: DifferentialProgram, input: DifferentialProgram): Subst
 
   /**
    * apply(shape, input) matches `input` against the pattern `shape` to find a uniform substitution `\result` such that
    * `\result(shape)==input`.
-   * @throws UnificationException
-   *   if `input` cannot be matched against the pattern `shape`.
+   * @throws UnificationException if `input` cannot be matched against the pattern `shape`.
    */
   def apply(shape: Sequent, input: Sequent): Subst
 }
@@ -154,8 +138,7 @@ object Matcher {
 /**
  * A matcher that insists on always matching as if there were arbitrary expressions as opposed to specializing to Term
  * versus Formula etc.
- * @author
- *   Andre Platzer
+ * @author Andre Platzer
  */
 trait InsistentMatcher extends Matcher with Logging {
   override def apply(shape: Term, input: Term): Subst =
@@ -179,8 +162,7 @@ trait InsistentMatcher extends Matcher with Logging {
 /**
  * Basic matcher infrastructure that simply forwards all unification functionality to [[BaseMatcher.unify()]]. Only
  * apply() functions wrap exceptions in context while unify() functions simply pass it upwards.
- * @author
- *   Andre Platzer
+ * @author Andre Platzer
  */
 trait BaseMatcher extends Matcher with Logging {
   @nowarn("msg=match may not be exhaustive")
@@ -288,40 +270,35 @@ trait BaseMatcher extends Matcher with Logging {
   /**
    * unify(shape, input) matches `input` against the pattern `shape` to find a uniform substitution `\result` such that
    * `\result(shape)==input`.
-   * @throws UnificationException
-   *   if `input` cannot be matched against the pattern `shape`.
+   * @throws UnificationException if `input` cannot be matched against the pattern `shape`.
    */
   protected def unify(shape: Term, input: Term): List[SubstRepl]
 
   /**
    * unify(shape, input) matches `input` against the pattern `shape` to find a uniform substitution `\result` such that
    * `\result(shape)==input`.
-   * @throws UnificationException
-   *   if `input` cannot be matched against the pattern `shape`.
+   * @throws UnificationException if `input` cannot be matched against the pattern `shape`.
    */
   protected def unify(shape: Formula, input: Formula): List[SubstRepl]
 
   /**
    * unify(shape, input) matches `input` against the pattern `shape` to find a uniform substitution `\result` such that
    * `\result(shape)==input`.
-   * @throws UnificationException
-   *   if `input` cannot be matched against the pattern `shape`.
+   * @throws UnificationException if `input` cannot be matched against the pattern `shape`.
    */
   protected def unify(shape: Program, input: Program): List[SubstRepl]
 
   /**
    * unify(shape, input) matches `input` against the pattern `shape` to find a uniform substitution `\result` such that
    * `\result(shape)==input`.
-   * @throws UnificationException
-   *   if `input` cannot be matched against the pattern `shape`.
+   * @throws UnificationException if `input` cannot be matched against the pattern `shape`.
    */
   protected def unifyODE(shape: DifferentialProgram, input: DifferentialProgram): List[SubstRepl]
 
   /**
    * unify(shape, input) matches `input` against the pattern `shape` to find a uniform substitution `\result` such that
    * `\result(shape)==input`.
-   * @throws UnificationException
-   *   if `input` cannot be matched against the pattern `shape`.
+   * @throws UnificationException if `input` cannot be matched against the pattern `shape`.
    */
   protected def unify(shape: Sequent, input: Sequent): List[SubstRepl]
 
@@ -329,10 +306,8 @@ trait BaseMatcher extends Matcher with Logging {
 
   /**
    * Construct the base unifier that forces `shape` and `input` to unify unless equal already
-   * @requires
-   *   shape is a substitutable expression (unchecked now as checked later).
-   * @return
-   *   {shape~>input} unless shape=input in which case it's {}.
+   * @requires shape is a substitutable expression (unchecked now as checked later).
+   * @return {shape~>input} unless shape=input in which case it's {}.
    */
   protected def unifier(shape: Expression, input: Expression): List[SubstRepl] =
     if (shape == input) id else SubstRepl(shape, input) :: Nil
@@ -361,8 +336,7 @@ trait BaseMatcher extends Matcher with Logging {
 
   /**
    * Indicates that `input` cannot be matched against the pattern `shape` by raising a [[UnificationException]].
-   * @throws UnificationException
-   *   always.
+   * @throws UnificationException always.
    */
   protected def ununifiable(shape: Expression, input: Expression): Nothing = {
     throw new UnificationException(shape, input)
@@ -370,8 +344,7 @@ trait BaseMatcher extends Matcher with Logging {
 
   /**
    * Indicates that `input` cannot be matched against the pattern `shape` by raising a [[UnificationException]].
-   * @throws UnificationException
-   *   always.
+   * @throws UnificationException always.
    */
   protected def ununifiable(shape: Sequent, input: Sequent): Nothing = {
     throw new SeqUnificationException(shape, input)
@@ -384,13 +357,10 @@ trait BaseMatcher extends Matcher with Logging {
    *   s \cup t = {p(.)~>F | (p(.)~>F) \in s}  ++  {(p(.)~>F) | (p(.)~>F) \in t}
    *   if s and t are compatible, so do not map the same p(.) or f(.) or a to different replacements
    * }}}
-   * @return
-   *   a substitution that has the same effect as applying both substitutions `s` and `t` simultaneously. Similar to
-   *   returning `s++t` but skipping duplicates and checking compatibility in passing.
-   * @ensures
-   *   s==s.distinct && t==t.distinct => \result==\result.distinct
-   * @time
-   *   O(s.size*t.size)
+   * @return a substitution that has the same effect as applying both substitutions `s` and `t` simultaneously. Similar
+   *   to returning `s++t` but skipping duplicates and checking compatibility in passing.
+   * @ensures s==s.distinct && t==t.distinct => \result==\result.distinct
+   * @time O(s.size*t.size)
    */
   // @todo optimizable: fast but tree maps would be a faster data structure than lists for this frequent operation
   protected def join(s: List[SubstRepl], t: List[SubstRepl]): List[SubstRepl] = {
@@ -422,12 +392,9 @@ trait BaseMatcher extends Matcher with Logging {
  * argument `input` against the pattern `shape` of the first argument, but not vice versa. Thus, the matcher leaves
  * `input` alone and only substitutes into `shape`. Reasonably fast single-pass matcher that is defined by recursive
  * unification from compositions.
- * @note
- *   Central recursive unification implementation.
- * @author
- *   Andre Platzer
- * @see
- *   [[UniformMatching]]
+ * @note Central recursive unification implementation.
+ * @author Andre Platzer
+ * @see [[UniformMatching]]
  */
 abstract class SchematicUnificationMatch extends BaseMatcher {
 
@@ -437,8 +404,8 @@ abstract class SchematicUnificationMatch extends BaseMatcher {
    * {{{
    *   s after t = {p(.)~>s(F) | (p(.)~>F) \in t}  ++  {(p(.)~>F) \in s | (p(.)~>G) \notin t for all G}
    * }}}
-   * @return
-   *   a substitution that has the same effect as applying substitution `after` after applying substitution `before`.
+   * @return a substitution that has the same effect as applying substitution `after` after applying substitution
+   *   `before`.
    */
   protected def compose(after: List[SubstRepl], before: List[SubstRepl]): List[SubstRepl]
 
@@ -450,8 +417,7 @@ abstract class SchematicUnificationMatch extends BaseMatcher {
    *   ----------------------------------
    *   (s1,s2) = (t1,t2)  | u2 after u1
    * }}}
-   * @note
-   *   For single-sided matching the unifier u1 is not applied to t2 on the right premise.
+   * @note For single-sided matching the unifier u1 is not applied to t2 on the right premise.
    */
   // @note optimized: repeated implementation per type to enable the static type inference that Scala generics won't give.
   protected def unifies2(s1: Expression, s2: Expression, t1: Expression, t2: Expression): List[SubstRepl]
@@ -694,10 +660,8 @@ abstract class SchematicUnificationMatch extends BaseMatcher {
 
   /**
    * unifyVar(x1,e2) gives a unifier making x1 equal to e2 unless it already is.
-   * @return
-   *   unifyVar(x1,x2)={x1~>x2} if x2 is a variable other than x1. unifyVar(x1,x1)={}
-   * @throws UnificationException
-   *   if e2 is not a variable
+   * @return unifyVar(x1,x2)={x1~>x2} if x2 is a variable other than x1. unifyVar(x1,x1)={}
+   * @throws UnificationException if e2 is not a variable
    */
   protected def unifyVar(x1: Variable, e2: Expression): List[SubstRepl] =
     if (x1 == e2) id
@@ -708,10 +672,8 @@ abstract class SchematicUnificationMatch extends BaseMatcher {
 
   /**
    * unifyVar(x1',e2) gives a unifier making x1' equal to e2 unless it already is.
-   * @return
-   *   unifyVar(x1',x2')={x1~>x2} if x2' is a differential variable other than x1' unifyVar(x1',x1')={}
-   * @throws UnificationException
-   *   if e2 is not a differential variable
+   * @return unifyVar(x1',x2')={x1~>x2} if x2' is a differential variable other than x1' unifyVar(x1',x1')={}
+   * @throws UnificationException if e2 is not a differential variable
    */
   protected def unifyVar(xp1: DifferentialSymbol, e2: Expression): List[SubstRepl] =
     if (xp1 == e2) id

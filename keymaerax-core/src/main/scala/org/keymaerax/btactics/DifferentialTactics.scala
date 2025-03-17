@@ -48,10 +48,8 @@ import scala.util.Try
 /**
  * Implementation: provides tactics for differential equations.
  *
- * @note
- *   Container for "complicated" tactics. Single-line implementations are in [[TactixLibrary]].
- * @see
- *   [[TactixLibrary.DW]], [[TactixLibrary.DC]]
+ * @note Container for "complicated" tactics. Single-line implementations are in [[TactixLibrary]].
+ * @see [[TactixLibrary.DW]], [[TactixLibrary.DC]]
  */
 private object DifferentialTactics extends Logging {
   private val namespace = "differentialtactics"
@@ -121,8 +119,10 @@ private object DifferentialTactics extends Logging {
             /* use */ skip,
             // @todo conditional commuting (if (pos.isSucc) commuteEquivR(1) else Idioms.ident) instead?
             /* show */ cohide(Symbol("Rlast")) & equivifyR(1) & commuteEquivR(1) &
-              UnifyUSCalculus
-                .US(subst, UnifyUSCalculus.uniformRenameF(aX, x)(AxiomInfo("DE differential effect (system)").provable))
+              UnifyUSCalculus.US(
+                subst,
+                UnifyUSCalculus.uniformRenameF(aX, x)(AxiomInfo("DE differential effect (system)").provable),
+              ),
           )
         // TactixLibrary.US(subst, "DE differential effect (system)"))
         case Some(e) =>
@@ -222,9 +222,9 @@ private object DifferentialTactics extends Logging {
           val t = expand.getOrElse(skip) & DI(pos) &
             // @note implyR moves RHS to end of succedent
             implyR(pos) & andR(Symbol("Rlast")) & Idioms.<(
-              if (auto == Symbol("full"))
-                ToolTactics.hideNonFOL & (abbrvPrimes(Symbol("Rlast")) & QE & done | DebuggingTactics
-                  .done("Differential invariant must hold in the beginning"))
+              if (auto == Symbol("full")) ToolTactics.hideNonFOL & (abbrvPrimes(
+                Symbol("Rlast")
+              ) & QE & done | DebuggingTactics.done("Differential invariant must hold in the beginning"))
               else if (auto == Symbol("cex"))
                 ToolTactics.hideNonFOL & ?(abbrvPrimes(Symbol("Rlast")) & QE) & label(replaceTxWith(BelleLabels.dIInit))
               else label(replaceTxWith(BelleLabels.dIInit)),
@@ -246,8 +246,9 @@ private object DifferentialTactics extends Logging {
                         (if (hasODEDomain(sequent, pos)) DW(Symbol("Rlast")) else skip) & abstractionb(
                           Symbol("Rlast")
                         ) & ToolTactics.hideNonFOL &
-                        (if (auto == Symbol("full")) abbrvPrimes(Symbol("Rlast")) & QE & done | DebuggingTactics
-                           .done("Differential invariant must be preserved")
+                        (if (auto == Symbol("full")) abbrvPrimes(Symbol("Rlast")) & QE & done | DebuggingTactics.done(
+                           "Differential invariant must be preserved"
+                         )
                          else ?(abbrvPrimes(Symbol("Rlast")) & QE) & (if (auto != Symbol("full"))
                                                                         label(replaceTxWith(BelleLabels.dIStep))
                                                                       else skip))
@@ -332,12 +333,11 @@ private object DifferentialTactics extends Logging {
                            else derive(pos ++ PosInExpr(1 :: 1 :: 0 :: Nil)) & derive(
                              pos ++ PosInExpr(1 :: 1 :: 1 :: Nil)
                            )) &
-
               DE(pos) &
               (Dassignb(pos ++ PosInExpr(1 :: Nil)) * getODEDim(sequent, pos) &
                 // @note DW after DE to keep positions easier
                 (if (hasODEDomain(sequent, pos)) DW(pos) else skip) & abstractionb(pos) & ToolTactics
-                  .hideNonFOL & QE & done)
+                  .hideNonFOL & QE & done),
           )
           Dconstify(t)(pos)
         } else {
@@ -350,10 +350,7 @@ private object DifferentialTactics extends Logging {
                   override def computeExpr(sequent: Sequent): BelleExpr = {
                     // @note derive before DE to keep positions easier
                     // todo: needs fixing
-                    (
-                      if (der) shift(PosInExpr(1 :: Nil), derive)(pos)
-                      else ident
-                    ) &
+                    (if (der) shift(PosInExpr(1 :: Nil), derive)(pos) else ident) &
                       DE(pos) &
                       shift(PosInExpr(1 :: Nil), Dassignb)(pos) * getODEDim(sequent, pos) &
                       // @note DW after DE to keep positions easier
@@ -377,8 +374,8 @@ private object DifferentialTactics extends Logging {
   /** @see [[TactixLibrary.dC()]] */
   // @todo performance faster implementation for very common single invariant Formula, e.g. DifferentialEquationCalculus.dC(Formula)
   private[btactics] def diffCut(formula: Formula): DependentPositionWithAppliedInputTactic = diffCut(List(formula))
-  private[btactics] def diffCut(formulas: List[Formula]): DependentPositionWithAppliedInputTactic =
-    inputanon { (pos: Position, sequent: Sequent) =>
+  private[btactics] def diffCut(formulas: List[Formula]): DependentPositionWithAppliedInputTactic = inputanon {
+    (pos: Position, sequent: Sequent) =>
       {
         formulas
           .map(ghostDC(_, sequent)(pos))
@@ -387,7 +384,7 @@ private object DifferentialTactics extends Logging {
               Idioms.doIf(_.subgoals.size == 2)(<(all, skip))
           )
       }
-    }
+  }
 
   /** Looks for special 'old' function symbol in f and creates DC (possibly with ghost) */
   private def ghostDC(f: Formula, origSeq: Sequent): DependentPositionTactic = anon((pos: Position, seq: Sequent) => {
@@ -444,12 +441,9 @@ private object DifferentialTactics extends Logging {
    * --- dR
    * G|- [x'=f(x)&Q]P, D
    * }}}
-   * @param f
-   *   formula to refine domain constraint
-   * @param hide
-   *   whether to hide D in the right premise
-   * @return
-   *   tactic
+   * @param f formula to refine domain constraint
+   * @param hide whether to hide D in the right premise
+   * @return tactic
    */
   private def diffRefineInternal(f: Formula, hide: Boolean)(pos: Position, sequent: Sequent) = {
     require(pos.isTopLevel, "dR only at top-level succedents/antecedents")
@@ -473,8 +467,8 @@ private object DifferentialTactics extends Logging {
     anon((pos: Position, sequent: Sequent) => { diffRefineInternal(f, hide)(pos, sequent) })
 
   // todo: rename the tactic directly
-  def diffRefine(R: Formula): DependentPositionWithAppliedInputTactic = "dR"
-    .byWithInputs(List(R), (pos: Position, sequent: Sequent) => diffRefineInternal(R, hide = true)(pos, sequent))
+  def diffRefine(R: Formula): DependentPositionWithAppliedInputTactic =
+    "dR".byWithInputs(List(R), (pos: Position, sequent: Sequent) => diffRefineInternal(R, hide = true)(pos, sequent))
 
   @Derivation
   val diffRefineInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
@@ -493,13 +487,16 @@ private object DifferentialTactics extends Logging {
       // @note UnifyUSCalculus leaves prereq open at last succedent position
       if (R.size == 1) {
         DifferentialEquationCalculus.dC(R.head)(pos) < (
-          skip, DifferentialEquationCalculus
-            .dIX(SuccPosition.base0(sequent.succ.size - 1, pos.inExpr)) & OnAll(QE & done) & done
+          skip,
+          DifferentialEquationCalculus.dIX(SuccPosition.base0(sequent.succ.size - 1, pos.inExpr)) & OnAll(
+            QE & done
+          ) & done,
         )
       } else {
         val diffIndAllButFirst = skip +: Seq.tabulate(R.length)(_ =>
-          DifferentialEquationCalculus
-            .dIX(SuccPosition.base0(sequent.succ.size - 1, pos.inExpr)) & OnAll(QE & done) & done
+          DifferentialEquationCalculus.dIX(SuccPosition.base0(sequent.succ.size - 1, pos.inExpr)) & OnAll(
+            QE & done
+          ) & done
         )
         DifferentialEquationCalculus.dC(R)(pos).<(diffIndAllButFirst: _*)
       }
@@ -507,8 +504,7 @@ private object DifferentialTactics extends Logging {
 
   /**
    * Inverse differential cut, removes the last conjunct from the evolution domain constraint.
-   * @see
-   *   AxiomaticODESolver.inverseDiffCut
+   * @see AxiomaticODESolver.inverseDiffCut
    */
   // todo: rename the tactic directly
   val inverseDiffCut: DependentPositionTactic = "dCi".by { (pos: Position, s: Sequent) =>
@@ -528,7 +524,7 @@ private object DifferentialTactics extends Logging {
           factFml,
           implyR(1) * 2 & diffCut(last)(if (polarity > 0) -2 else 1) < (
             Idioms.?(useAt(Ax.trueAnd)(-2, PosInExpr(0 :: 1 :: Nil))) & close,
-            cohideOnlyR(Symbol("Rlast")) & diffInd()(1) & DebuggingTactics.done
+            cohideOnlyR(Symbol("Rlast")) & diffInd()(1) & DebuggingTactics.done,
           ),
         )
       case (_, e) => throw new TacticInapplicableFailure(
@@ -551,10 +547,8 @@ private object DifferentialTactics extends Logging {
   /**
    * Turns things that are constant in ODEs into function symbols.
    *
-   * @example
-   *   Turns `v>0, a>0 |- [v'=a;]v>0, a>0` into `v>0, a()>0 |- [v'=a();]v>0, a()>0`
-   * @return
-   *   The tactic.
+   * @example Turns `v>0, a>0 |- [v'=a;]v>0, a>0` into `v>0, a()>0 |- [v'=a();]v>0, a()>0`
+   * @return The tactic.
    */
   def Dconstify(inner: BelleExpr): DependentPositionTactic = TacticFactory.anon((pos: Position, seq: Sequent) => {
     val (ctx, expr) = seq.at(pos)
@@ -596,8 +590,7 @@ private object DifferentialTactics extends Logging {
 
   /**
    * Add constant context into the domain constraint at a given (top-level) position by V
-   * @example
-   *   Turns `v>0, a>0 |- [v'=a]v>0` into `v>0, a>0 |- [v'=a & a>0]v>0`
+   * @example Turns `v>0, a>0 |- [v'=a]v>0` into `v>0, a>0 |- [v'=a & a>0]v>0`
    */
   def DconstV: DependentPositionTactic = anon((pos: Position, seq: Sequent) => {
     require(pos.isTopLevel, "DconstV only at top-level positions")
@@ -620,15 +613,14 @@ private object DifferentialTactics extends Logging {
         skip,
         // propositional proof should be sufficient here
         (boxAnd(1) & andR(1) < (V(1) & id, skip)) * constCtxt.length &
-          diffWeakenG(1) & implyR(1) & id
+          diffWeakenG(1) & implyR(1) & id,
       )
     }
   })
 
   /**
    * Simplify a top-level succedent box ODE with the domain constraint This uses the default simplifier configuration
-   * @example
-   *   Turns `|- [v'=a & a>0](a>0&v>0)` into `|- [v'=a & a>0]v>0`
+   * @example Turns `|- [v'=a & a>0](a>0&v>0)` into `|- [v'=a & a>0]v>0`
    */
   @nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
   def domSimplify: DependentPositionTactic = anon((pos: Position, seq: Sequent) => {
@@ -657,7 +649,7 @@ private object DifferentialTactics extends Logging {
           cohideR(pos) & implyR(1) & DW(1) & monb & implyR(1) & implyRi & SaturateTactic(andL(Symbol("L"))) & equivifyR(
             1
           ) &
-            commuteEquivR(1) & by(pr)
+            commuteEquivR(1) & by(pr),
         )
     }
   })
@@ -678,12 +670,9 @@ private object DifferentialTactics extends Logging {
    *   --------------------------------------------- DG("{y'=f()*y+g()}".asDifferentialProgram)(1)
    *   |- [{x'=2 & x>=0}]x>0
    *   }}}
-   * @param ghost
-   *   A differential program of the form y'=a*y+b or y'=a*y or y'=b.
-   * @see
-   *   [[dG()]]
-   * @todo
-   *   generalize to diamond ODEs since it's an equivalence
+   * @param ghost A differential program of the form y'=a*y+b or y'=a*y or y'=b.
+   * @see [[dG()]]
+   * @todo generalize to diamond ODEs since it's an equivalence
    */
   private def DG(ghost: DifferentialProgram): DependentPositionTactic =
     anon((pos: Position, sequent: Sequent, defs: Declaration) => {
@@ -831,7 +820,7 @@ private object DifferentialTactics extends Logging {
                 cutAt(rr)(pos ++ PosInExpr(1 :: Nil)) < (
                   skip,
                   cohideR(Symbol("Rlast")) & CMon(pos.inExpr) & implyR(1) * 2 &
-                    SequentCalculus.modusPonens(AntePos(1), AntePos(0)) & (smartHide & timeoutQE & done | timeoutQE)
+                    SequentCalculus.modusPonens(AntePos(1), AntePos(0)) & (smartHide & timeoutQE & done | timeoutQE),
                 )
               )
               DG(ghost)(pos) & DW(pos ++ PosInExpr(0 :: Nil)) & trafo(pos ++ PosInExpr(0 :: 1 :: Nil)) &
@@ -871,7 +860,7 @@ private object DifferentialTactics extends Logging {
           UnifyUSCalculus.useExpansionAt(Ax.DGi)(pos),
           (if (pos.isSucc) SequentCalculus.cohideR(pos.top) else SequentCalculus.cohideR(Symbol("Rlast"))) &
             UnifyUSCalculus.useAt(Ax.alle)(1, PosInExpr((if (pos.isSucc) 0 else 1) +: pos.inExpr.pos)) &
-            UnifyUSCalculus.useAt(Ax.implySelf)(1) & SequentCalculus.closeT & DebuggingTactics.done
+            UnifyUSCalculus.useAt(Ax.implySelf)(1) & SequentCalculus.closeT & DebuggingTactics.done,
         )
       case Some(Box(ODESystem(DifferentialProduct(y_DE: AtomicODE, c), q), p)) if polarity < 0 =>
         // @note must substitute manually since DifferentialProduct reassociates (see cutAt) and therefore unification won't match
@@ -891,7 +880,7 @@ private object DifferentialTactics extends Logging {
             UnifyUSCalculus.useAt(Ax.DGC, PosInExpr(1 :: Nil), subst)(pos),
             (if (pos.isSucc) SequentCalculus.cohideR(pos.top) else SequentCalculus.cohideR(Symbol("Rlast"))) &
               UnifyUSCalculus.CMon(pos.inExpr) & SequentCalculus.implyR(1) &
-              SequentCalculus.existsR(y_DE.xp.x)(1) & SequentCalculus.id
+              SequentCalculus.existsR(y_DE.xp.x)(1) & SequentCalculus.id,
           )
       case Some(e) =>
         if (polarity == 0)
@@ -917,7 +906,7 @@ private object DifferentialTactics extends Logging {
   // @todo could probably simplify implementation by picking atomic formula, using "x' derive var" and then embedding this equivalence into context by CE.
   // @todo Or, rather, by using CE directly on a "x' derive var" provable fact (z)'=1 <-> z'=1.
   // @Tactic in HilbertCalculus.Derive.Dvar same
-  lazy private[btactics] val Dvariable: BuiltInPositionTactic = "Dvariable".by { (pr: ProvableSig, pos: Position) =>
+  private[btactics] lazy val Dvariable: BuiltInPositionTactic = "Dvariable".by { (pr: ProvableSig, pos: Position) =>
     ProofRuleTactics.requireOneSubgoal(pr, "Dvariable")
     val OPTIMIZED = true
     val axiom: AxiomInfo = Ax.DvariableCommutedAxiom
@@ -982,16 +971,13 @@ private object DifferentialTactics extends Logging {
    *       x<0 |- [x'=3,y'=2 & x>=0]y>0
    * }}}
    */
-  lazy val diffUnpackEvolutionDomainInitially: DependentPositionTactic = "diffUnpackEvolDomain"
-    .by { (pos: Position, sequent: Sequent) =>
+  lazy val diffUnpackEvolutionDomainInitially: DependentPositionTactic = "diffUnpackEvolDomain".by {
+    (pos: Position, sequent: Sequent) =>
       sequent.sub(pos) match {
         case Some(Box(ODESystem(_, q), _)) =>
           require(pos.isSucc && pos.isTopLevel, "diffUnpackEvolDomain only at top-level in succedent")
           // @note cut to keep positioning stable (implyR modifies positions)
-          cut(q) < (
-            skip,
-            useAt(Ax.DWQinitial, PosInExpr(1 :: Nil))(pos) & implyR(pos) & close
-          )
+          cut(q) < (skip, useAt(Ax.DWQinitial, PosInExpr(1 :: Nil))(pos) & implyR(pos) & close)
         case Some(e) => throw new TacticInapplicableFailure(
             "diffUnpackEvolDomain only applicable to box ODEs, but got " + e.prettyString
           )
@@ -999,7 +985,7 @@ private object DifferentialTactics extends Logging {
             "Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString
           )
       }
-    }
+  }
 
   @Derivation
   val diffUnpackEvolutionDomainInitiallyInfo: PositionTacticInfo = PositionTacticInfo.create(
@@ -1013,7 +999,7 @@ private object DifferentialTactics extends Logging {
 
   /** [[DifferentialEquationCalculus.dW]]. diffWeaken by diffCut(consts) <(diffWeakenG, V&close) */
   // todo: rename the tactic directly
-  lazy private[btactics] val diffWeaken: DependentPositionTactic = "dW".by { (pos: Position, sequent: Sequent) =>
+  private[btactics] lazy val diffWeaken: DependentPositionTactic = "dW".by { (pos: Position, sequent: Sequent) =>
     if (pos.isAnte) { throw new TacticInapplicableFailure("dW only in succedent") }
     else if (!pos.isTopLevel) { DW(pos) & abstractionb(pos) }
     else sequent.sub(pos) match {
@@ -1066,8 +1052,8 @@ private object DifferentialTactics extends Logging {
    * shape.
    */
   // todo: rename the tactic directly
-  lazy private[btactics] val diffWeakenPlus: DependentPositionTactic = "dWplus"
-    .by { (pos: Position, sequent: Sequent) =>
+  private[btactics] lazy val diffWeakenPlus: DependentPositionTactic = "dWplus".by {
+    (pos: Position, sequent: Sequent) =>
       if (pos.isAnte) { throw new TacticInapplicableFailure("dW+ only in succedent") }
       else if (!pos.isTopLevel) { DW(pos) & abstractionb(pos) }
       else sequent.sub(pos) match {
@@ -1126,8 +1112,9 @@ private object DifferentialTactics extends Logging {
             val odeAfterCut =
               if (cuts.isEmpty) box else Box(ODESystem(a.ode, And(a.constraint, cuts.reduceRight(And.apply))), p)
             // @note implyRi+implyR to move Q last in succedent
-            val dw = diffWeakenG(Symbol("R"), odeAfterCut) & implyR(1) & andL(Symbol("Llast")) * cuts
-              .size & notL(Symbol("Llast")) * succCuts.size &
+            val dw = diffWeakenG(Symbol("R"), odeAfterCut) & implyR(1) & andL(Symbol("Llast")) * cuts.size & notL(
+              Symbol("Llast")
+            ) * succCuts.size &
               implyRiX(AntePos(0), SuccPos(0)) & implyR(1)
             if (cuts.isEmpty) dw
             else diffCut(cuts.reduceRight(And.apply))(Symbol("R"), box) < (
@@ -1143,7 +1130,7 @@ private object DifferentialTactics extends Logging {
                      andR(Symbol("Rlast")) < (notR(Symbol("Rlast")) & closeIdWith(Symbol("Llast")) & done, skip)
                    ) * (succCuts.size - 1) &
                      notR(Symbol("Rlast")) & closeIdWith(Symbol("Llast"))
-                 else skip) & done
+                 else skip) & done,
             ) & dw
           })
 
@@ -1154,7 +1141,7 @@ private object DifferentialTactics extends Logging {
             "Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString
           )
       }
-    }
+  }
 
   @Derivation
   private[btactics] val diffWeakenPlusInfo: PositionTacticInfo = PositionTacticInfo.create(
@@ -1173,10 +1160,8 @@ private object DifferentialTactics extends Logging {
 
   /**
    * diffWeaken by DW & G
-   * @see
-   *   [[TactixLibrary.DW]]
-   * @see
-   *   [[TactixLibrary.G]]
+   * @see [[TactixLibrary.DW]]
+   * @see [[TactixLibrary.G]]
    */
   lazy val diffWeakenG: DependentPositionTactic = anon((pos: Position, sequent: Sequent) =>
     sequent.sub(pos) match {
@@ -1232,11 +1217,10 @@ private object DifferentialTactics extends Logging {
 
   /**
    * Invariance check
-   * @return
-   *   Returns True if it determines that the only possibilty is for postcondition to be invariant at the position it is
-   *   called (either a loop invariant or ODE invariant) This can be used to prevent (unnecessary) invariant generation
-   *   for loops or ODEs from happening Return False in all other cases (including when the sequent or position are not
-   *   of the expected shape)
+   * @return Returns True if it determines that the only possibilty is for postcondition to be invariant at the position
+   *   it is called (either a loop invariant or ODE invariant) This can be used to prevent (unnecessary) invariant
+   *   generation for loops or ODEs from happening Return False in all other cases (including when the sequent or
+   *   position are not of the expected shape)
    */
   private def isInvariantQuestion(pos: Position, seq: Sequent): Boolean = {
     def isInvQuestion(a: Program, p: Formula, prgAssumptions: Formula): Boolean = {
@@ -1258,8 +1242,7 @@ private object DifferentialTactics extends Logging {
 
   /**
    * Invariance check
-   * @return
-   *   Executes t if it detects a purely invariance question (for all subgoals) otherwise execute f
+   * @return Executes t if it detects a purely invariance question (for all subgoals) otherwise execute f
    */
   def invCheck(t: BelleExpr, f: BelleExpr): DependentPositionTactic = anon((pos: Position) => {
     doIfElse(pr => pr.subgoals.forall(s => isInvariantQuestion(pos, s)))(t, f)
@@ -1267,9 +1250,8 @@ private object DifferentialTactics extends Logging {
 
   /**
    * ODE counterexample finder
-   * @return
-   *   Leaves False as the only subgoal if it finds a counterexample to the ODE question at the position it is called
-   *   Succeeds in all other cases (including when the sequent or position are not of the expected shape)
+   * @return Leaves False as the only subgoal if it finds a counterexample to the ODE question at the position it is
+   *   called Succeeds in all other cases (including when the sequent or position are not of the expected shape)
    */
   val cexODE: DependentPositionTactic = "cexODE".by { (pos: Position, seq: Sequent) =>
     if (!(pos.isSucc && pos.isTopLevel && pos.checkSucc.index0 == 0 && seq.succ.length == 1)) {
@@ -1409,8 +1391,9 @@ private object DifferentialTactics extends Logging {
         try { InvariantGenerator.differentialInvariantGenerator.generate(seq, pos, defs) }
         catch {
           case err: Exception =>
-            logger
-              .warn(s"Failed to produce a proof for this ODE. Underlying cause: ChooseSome: error listing options $err")
+            logger.warn(
+              s"Failed to produce a proof for this ODE. Underlying cause: ChooseSome: error listing options $err"
+            )
             LazyList[Invariant]()
         }
 
@@ -1426,7 +1409,8 @@ private object DifferentialTactics extends Logging {
 
       // If lateSolve is true then diffSolve will be run last, if at all.
       val insistOnProof =
-        pos.isTopLevel // @todo come up wtih better heuristic for determining when to insist on a proof being completed. Solvability is a pretty decent heuristic.
+        pos
+          .isTopLevel // @todo come up wtih better heuristic for determining when to insist on a proof being completed. Solvability is a pretty decent heuristic.
 
       /** Introduces stuttering assignments for each BV of the ODE */
       val stutter = anon((pos: Position, seq: Sequent) =>
@@ -1461,11 +1445,8 @@ private object DifferentialTactics extends Logging {
       if (insistOnProof) proveWithoutCuts(useOdeInvariant)(pos) |
         (addInvariant & ODE(useOdeInvariant = true, introduceStuttering, finish)(pos)) |
         splitWeakInequality(pos) < (
-          ODE(useOdeInvariant = true, introduceStuttering, finish)(pos), ODE(
-            useOdeInvariant = true,
-            introduceStuttering,
-            finish,
-          )(pos)
+          ODE(useOdeInvariant = true, introduceStuttering, finish)(pos),
+          ODE(useOdeInvariant = true, introduceStuttering, finish)(pos),
         ) |
         (if (introduceStuttering)
            stutter(pos) & ODE(useOdeInvariant = true, introduceStuttering = false, finish)(pos) & unstutter(pos)
@@ -1474,7 +1455,7 @@ private object DifferentialTactics extends Logging {
         (addInvariant & ODE(useOdeInvariant = true, introduceStuttering, finish)(pos) & done) |
         (splitWeakInequality(pos) < (
           ODE(useOdeInvariant = true, introduceStuttering, finish)(pos),
-          ODE(useOdeInvariant = true, introduceStuttering, finish)(pos)
+          ODE(useOdeInvariant = true, introduceStuttering, finish)(pos),
         ) & done) |
         (if (introduceStuttering)
            stutter(pos) & ODE(useOdeInvariant = true, introduceStuttering = false, finish)(pos) & unstutter(pos) & done
@@ -1545,14 +1526,10 @@ private object DifferentialTactics extends Logging {
     })
 
   /**
-   * @see
-   *   [[TactixLibrary.ODE]]
-   * @author
-   *   Andre Platzer
-   * @author
-   *   Nathan Fulton
-   * @author
-   *   Stefan Mitsch
+   * @see [[TactixLibrary.ODE]]
+   * @author Andre Platzer
+   * @author Nathan Fulton
+   * @author Stefan Mitsch
    */
   lazy val mathematicaSplittingODE: DependentPositionTactic = anon((pos: Position, seq: Sequent) => {
     seq.sub(pos) match {
@@ -1577,8 +1554,9 @@ private object DifferentialTactics extends Logging {
         sys: ODESystem,
         generator: InvariantGenerator,
         onGeneratorError: Throwable => LazyList[Invariant],
-    ): DependentPositionTactic = fastODE(try { generator.generate(seq, pos, defs).iterator }
-    catch {
+    ): DependentPositionTactic = fastODE(try {
+      generator.generate(seq, pos, defs).iterator
+    } catch {
       case ex: Exception =>
         logger.warn(s"Failed to produce a proof for this ODE. Underlying cause: generator error listing options $ex")
         onGeneratorError(ex).iterator
@@ -1669,10 +1647,8 @@ private object DifferentialTactics extends Logging {
   /**
    * Splits a post-condition containing a weak inequality into an open set case and an equillibrium point case. Given a
    * formula of the form `[ode]p<=q`, produces two new subgoals of the forms `[ode]p < q` and `[ode]p=q`.
-   * @see
-   *   http://nfulton.org/2017/01/14/Ghosts/#ghosts-for-closedclopen-sets
-   * @author
-   *   Nathan Fulton
+   * @see http://nfulton.org/2017/01/14/Ghosts/#ghosts-for-closedclopen-sets
+   * @author Nathan Fulton
    */
   val splitWeakInequality: DependentPositionTactic = "splitWeakInequality".by { (pos: Position, seq: Sequent) =>
     val postcondition = seq.at(pos)._2 match {
@@ -1694,10 +1670,10 @@ private object DifferentialTactics extends Logging {
     cut(caseDistinction) < (
       orL(Symbol("Llast")) < (
         HybridProgramCalculus.generalize(openSetConstructor(lhs, rhs))(1) < (skip, QE & done),
-        HybridProgramCalculus.generalize(Equal(lhs, rhs))(1) < (skip, QE & done)
+        HybridProgramCalculus.generalize(Equal(lhs, rhs))(1) < (skip, QE & done),
       ),
       (hide(pos.topLevel) & QE & done) | // @todo write a hideNonArithmetic tactic.
-        DebuggingTactics.error(s"splitWeakInequality failed because $caseDistinction does not hold initially.")
+        DebuggingTactics.error(s"splitWeakInequality failed because $caseDistinction does not hold initially."),
     )
   }
 
@@ -1762,9 +1738,8 @@ private object DifferentialTactics extends Logging {
     val (p, pop) = property match {
       case bop: ComparisonFormula if bop.right.isInstanceOf[Number] && bop.right.asInstanceOf[Number].value == 0 =>
         (bop.left, bop)
-      case e => throw new TacticInapplicableFailure(
-          s"Not sure what to do with shape ${e.prettyString}, dgDbx requires 0 on RHS"
-        )
+      case e => throw new TacticInapplicableFailure(s"Not sure what to do with shape ${e
+            .prettyString}, dgDbx requires 0 on RHS")
     }
 
     val qcoRepl = ODEInvariance.replaceODEfree(p, qco, ode.ode)
@@ -1798,12 +1773,13 @@ private object DifferentialTactics extends Logging {
               Dassignb(Symbol("Rlast"), PosInExpr(1 :: Nil)) * getODEDim(seq, pos),
               classOf[SubstitutionClashException],
               (_: SubstitutionClashException) =>
-                DebuggingTactics
-                  .error("After deriving, the right-hand sides of ODEs cannot be substituted into the postcondition"),
+                DebuggingTactics.error(
+                  "After deriving, the right-hand sides of ODEs cannot be substituted into the postcondition"
+                ),
             ) &
             // @note DW after DE to keep positions easier
             (if (hasODEDomain(seq, pos)) DW(Symbol("Rlast")) else skip) & abstractionb(Symbol("Rlast")) &
-            ?(ToolTactics.hideNonFOL & timeoutQE & done)
+            ?(ToolTactics.hideNonFOL & timeoutQE & done),
         )
       )(pos)
     }
@@ -1891,7 +1867,7 @@ private object DifferentialTactics extends Logging {
       ) & timeoutQE & DebuggingTactics.done(
         "Attempted to prove generated Barrier " + barrierFml
           .prettyString + " without any assumptions, but failed to prove; try to use dC to preserve additional facts from your assumptions"
-      )
+      ),
     ) &
       starter
 
@@ -1939,19 +1915,16 @@ private object DifferentialTactics extends Logging {
               implyRi()(AntePos(1), SuccPos(0)) &
               hideUntil(-1) &
               // This implyRi is specific to the shape of the above diffInd, diffCut dG steps
-              implyRi()(AntePos(0), SuccPos(0)) & inspectAndCut < (
-                QE,
-                byUS(barrierCond2)
-              )
-          )
+              implyRi()(AntePos(0), SuccPos(0)) & inspectAndCut < (QE, byUS(barrierCond2)),
+          ),
         ),
         DifferentialTactics.dG(dez, Some(pcz))(pos) & // Introduce the dbx ghost
           existsR(one)(pos) & // The sqrt inverse of y, 1 is convenient
           // Closes z > 0 invariant with another diff ghost
           diffInd(Symbol("diffInd"))(pos) < (
             hideL(Symbol("Llast")) & exhaustiveEqL2R(hide = true)(Symbol("Llast")) * 2 & useAt(dbxEqOne)(pos) & closeT,
-            cohideR(Symbol("Rlast")) & SaturateTactic(Dassignb(1)) & byUS(dbxCond) & done
-          )
+            cohideR(Symbol("Rlast")) & SaturateTactic(Dassignb(1)) & byUS(dbxCond) & done,
+          ),
       )
   })
 
@@ -2092,10 +2065,8 @@ private object DifferentialTactics extends Logging {
   })
 
   /**
-   * @see
-   *   [[TactixLibrary.DGauto]]
-   * @author
-   *   Andre Platzer
+   * @see [[TactixLibrary.DGauto]]
+   * @author Andre Platzer
    */
   def DGauto: DependentPositionTactic = anon((pos: Position, seq: Sequent) => {
     val algebraTool = ToolProvider.algebraTool() match {
@@ -2170,8 +2141,7 @@ private object DifferentialTactics extends Logging {
 
   /**
    * Search-and-rescue style DGauto.
-   * @author
-   *   Andre Platzer
+   * @author Andre Platzer
    */
   // was named "DGauto"
   def DGautoSandR: DependentPositionTactic = anon((pos: Position, seq: Sequent) => {
@@ -2262,7 +2232,7 @@ private object DifferentialTactics extends Logging {
         QE & done,
         // @todo could optimize for RCF cache when doing the same decomposition as during SandR
         // diffInd()(pos ++ PosInExpr(1::Nil)) & QE
-        implyR(pos) & diffInd()(pos) & QE & done
+        implyR(pos) & diffInd()(pos) & QE & done,
       )
     })
     SandR | fallback(pos)
@@ -2277,10 +2247,9 @@ private object DifferentialTactics extends Logging {
    * G |- [x'=f(x)&Q]P
    * }}}
    *
-   * @param tryHard
-   *   configures how hard the tactic tries to prove invariance in particular use tryHard = true when speed is secondary
-   *   & certain that P is invariant use tryHard = false when speed is of interest e.g., within automated invariant
-   *   search
+   * @param tryHard configures how hard the tactic tries to prove invariance in particular use tryHard = true when speed
+   *   is secondary & certain that P is invariant use tryHard = false when speed is of interest e.g., within automated
+   *   invariant search
    */
   def odeInvariant(tryHard: Boolean = false, useDw: Boolean = true): DependentPositionTactic = anon((pos: Position) => {
     require(pos.isSucc && pos.isTopLevel, "ODE invariant only applicable in top-level succedent")
@@ -2403,7 +2372,7 @@ private object DifferentialTactics extends Logging {
               // (DifferentialTactics.diffWeakenG(pos) & QE & done) |
               ODEInvariance.sAIclosedPlus(bound = 1)(pos) |
                 ODEInvariance.sAIRankOne(doReorder = false, skipClosed = true)(pos)
-            ) & done
+            ) & done,
           )
         )
     }
@@ -2413,14 +2382,10 @@ private object DifferentialTactics extends Logging {
 
   /**
    * Computes quotient remainder resulting from (RATIONAL) polynomial division wrt equalities in domain
-   * @param poly
-   *   polynomial to divide
-   * @param div
-   *   divisor
-   * @param dom
-   *   domain constraint
-   * @return
-   *   (q,r) where Q |- poly = q*div + r , q,r are polynomials
+   * @param poly polynomial to divide
+   * @param div divisor
+   * @param dom domain constraint
+   * @return (q,r) where Q |- poly = q*div + r , q,r are polynomials
    */
   def domQuoRem(poly: Term, div: Term, dom: Formula): (Term, Term) = {
     val algTool = ToolProvider.algebraTool() match {
@@ -2565,8 +2530,8 @@ private object DifferentialTactics extends Logging {
     require(seq.succ.length == 1)
     require(seq.ante.length == 1)
     (seq.ante(0), seq.succ(0)) match {
-      case (_: And, _: And) => andL(-1) & andR(1) & Idioms
-          .<(hideL(-2) & interiorImplication, hideL(-1) & interiorImplication)
+      case (_: And, _: And) =>
+        andL(-1) & andR(1) & Idioms.<(hideL(-2) & interiorImplication, hideL(-1) & interiorImplication)
       case (_: Or, _: Or) => orR(1) & orL(-1) & Idioms.<(hideR(2) & interiorImplication, hideR(1) & interiorImplication)
       case (Less(a, b), LessEqual(c, d)) if a == c && b == d => useAt(Ax.lessEqual)(1) & orR(1) & id
       case (Greater(a, b), GreaterEqual(c, d)) if a == c && b == d => useAt(Ax.greaterEqual)(1) & orR(1) & id
@@ -2589,10 +2554,8 @@ private object DifferentialTactics extends Logging {
    *
    * Cuts interior(q) true initially by default (but this can be set to closure(q) instead) interior(q) and closure(q)
    * are wrt. to the negation normal form (NNF) of q
-   * @see
-   *   [[FormulaTools.interior]]
-   * @see
-   *   [[FormulaTools.closure]]
+   * @see [[FormulaTools.interior]]
+   * @see [[FormulaTools.closure]]
    */
   def dCClosure(cutInterior: Boolean): DependentPositionTactic = anon((pos: Position, seq: Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "dCClosure expects to be called on top-level succedent")
@@ -2654,20 +2617,21 @@ private object DifferentialTactics extends Logging {
         // Turn postcondition into interior
         implyR(pos) & HybridProgramCalculus.generalize(interior)(pos) < (
           // @todo check always with doIfElse or use TryCatch exception?
-          maxminGt & Idioms
-            .doIfElse(_.subgoals.forall(s => !StaticSemantics.symbols(s(pos.top)).contains("t_".asVariable)))(
-              useAt(Ax.openInvariantClosure)(pos) & Idioms.doIf(_.subgoals.length == 2)(
-                // @todo may no longer be necessary at all, useAt seems to close precondition automatically now
-                Idioms.<(
-                  backGt & backGe1 & hideL(Symbol("Llast")) & label(BelleLabels.cutUse),
-                  backGe2 &
-                    (if (cutInterior) cohide2(AntePosition(seq.ante.length + 1), pos) & interiorImplication else id),
-                )
-              ),
-              DebuggingTactics.error("Inapplicable: t_ occurs"),
+          maxminGt & Idioms.doIfElse(
+            _.subgoals.forall(s => !StaticSemantics.symbols(s(pos.top)).contains("t_".asVariable))
+          )(
+            useAt(Ax.openInvariantClosure)(pos) & Idioms.doIf(_.subgoals.length == 2)(
+              // @todo may no longer be necessary at all, useAt seems to close precondition automatically now
+              Idioms.<(
+                backGt & backGe1 & hideL(Symbol("Llast")) & label(BelleLabels.cutUse),
+                backGe2 &
+                  (if (cutInterior) cohide2(AntePosition(seq.ante.length + 1), pos) & interiorImplication else id),
+              )
             ),
-          cohideOnlyL(Symbol("Llast")) & interiorImplication
-        )
+            DebuggingTactics.error("Inapplicable: t_ occurs"),
+          ),
+          cohideOnlyL(Symbol("Llast")) & interiorImplication,
+        ),
       )
   })
 
@@ -2753,10 +2717,7 @@ private object DifferentialTactics extends Logging {
         ) { dIRule(pos) < (QE, SaturateTactic(Dassignb(pos)) & QE) }
         // General case: cut next order derivative. For use branch apply dI. For show, recurse.
         else Dconstify(
-          diffCut(postDerivative)(pos) < (
-            dIRule(pos) < (QE, SaturateTactic(Dassignb(pos)) & QE),
-            fullSimplify
-          )
+          diffCut(postDerivative)(pos) < (dIRule(pos) < (QE, SaturateTactic(Dassignb(pos)) & QE), fullSimplify)
         )(pos)
       }
       case Some(e) =>
@@ -2840,8 +2801,9 @@ private object DifferentialTactics extends Logging {
             prop &
             done,
         ) &
-        HybridProgramCalculus.generalize(nonneg(p(vars)))(1) & Idioms
-          .<(skip, andL(-1) & FOQuantifierTactics.allLs(vars)(Symbol("Llast")) & prop & done) &
+        HybridProgramCalculus.generalize(nonneg(
+          p(vars)
+        ))(1) & Idioms.<(skip, andL(-1) & FOQuantifierTactics.allLs(vars)(Symbol("Llast")) & prop & done) &
         // @todo always check with doIfElse or TryCatch instead?
         Idioms.doIfElse(_.subgoals.forall(s => !StaticSemantics.symbols(s(SuccPos(0))).contains("t_".asVariable)))(
           useAt(Ax.RIclosedgeq)(1) &
@@ -2865,8 +2827,10 @@ private object DifferentialTactics extends Logging {
                         useAt(Ax.UniqIff, PosInExpr(1 :: Nil))(1) &
                           andR(1) & Idioms.<(id, useAt(ODEInvariance.contAx, PosInExpr(1 :: Nil))(1) & id),
                         andL(Symbol("L")) &
-                          HybridProgramCalculus.generalize(P(vars))(1) & Idioms
-                            .<(skip, andL(-1) & FOQuantifierTactics.allLs(vars)(Symbol("Llast")) & prop & done) &
+                          HybridProgramCalculus.generalize(P(vars))(1) & Idioms.<(
+                            skip,
+                            andL(-1) & FOQuantifierTactics.allLs(vars)(Symbol("Llast")) & prop & done,
+                          ) &
                           DI(1) & implyR(1) & andR(1) & Idioms.<(
                             FOQuantifierTactics.allLs(vars)(-7) & prop & done,
                             cohideOnlyL(-6) &
@@ -2875,7 +2839,7 @@ private object DifferentialTactics extends Logging {
                               derive(1, 1 :: Nil) &
                               id,
                           ),
-                      )
+                      ),
                     ),
                 ),
             ),

@@ -19,20 +19,16 @@ import scala.annotation.nowarn
 /**
  * Solves the initial value problem for systems of differential equations.
  *
- * @author
- *   Nathan Fulton
+ * @author Nathan Fulton
  */
 object Integrator extends Logging {
 
   /**
    * Integrates the differential equation and returns the solution as a list of equalities for each of the primed
    * variables occuring in the system.
-   * @param initialValues
-   *   Initial conditions for each of the variables that occur primed in the ODE.
-   * @param system
-   *   The ODE system. @todo this could be a DifferentialProgram instead because we never use the contraint.
-   * @return
-   *   The solution as a list of equalities, one for each of the primed variables.
+   * @param initialValues Initial conditions for each of the variables that occur primed in the ODE.
+   * @param system The ODE system. @todo this could be a DifferentialProgram instead because we never use the contraint.
+   * @return The solution as a list of equalities, one for each of the primed variables.
    */
   def apply(initialValues: Map[Variable, Term], diffArg: Term, system: ODESystem): List[Equal] = {
     val sortedOdes = sortAtomicOdes(atomicOdes(system), Variable("kyxtime"))
@@ -69,8 +65,7 @@ object Integrator extends Logging {
   /**
    * Glue code that implements the [[org.keymaerax.tools.ext.ODESolverTool]] interface using the Integrator.
    *
-   * @todo
-   *   untested
+   * @todo untested
    */
   @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def diffSol(diffSys: DifferentialProgram, diffArg: Variable, iv: Map[Variable, Variable]): Option[Formula] = {
@@ -85,10 +80,8 @@ object Integrator extends Logging {
 
   /**
    * Returns true if `t` contains variables that have solutions in `solvedComponents`
-   * @param t
-   *   The term to analyze.
-   * @param solvedComponents
-   *   Should be a list of equalities with Variables on the LHS.
+   * @param t The term to analyze.
+   * @param solvedComponents Should be a list of equalities with Variables on the LHS.
    */
   private def containsSolvedComponents(t: Term, solvedComponents: List[Equal]) = {
     assert(solvedComponents.forall(eq => eq.left.isInstanceOf[Variable]))
@@ -110,16 +103,11 @@ object Integrator extends Logging {
   /**
    * A syntactic integrator for @todo something like sums of terms over polynomials univariable in t.
    *
-   * @todo
-   *   rename
-   * @param term
-   *   The term
-   * @param time
-   *   Time variable, simplified time variable, and free variables of time
-   * @param primedVars
-   *   Primed variables of the ODE system
-   * @return
-   *   Integral term dt
+   * @todo rename
+   * @param term The term
+   * @param time Time variable, simplified time variable, and free variables of time
+   * @param primedVars Primed variables of the ODE system
+   * @return Integral term dt
    */
   @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   private def integrator(term: Term, time: (Term, Term, Set[Variable]), primedVars: Set[Variable]): Term = {
@@ -166,14 +154,10 @@ class IntegratorODESolverTool extends Tool with ODESolverTool {
   /**
    * Computes the symbolic solution of a differential equation in normal form.
    *
-   * @param diffSys
-   *   The system of differential equations of the form x' = theta & H.
-   * @param diffArg
-   *   The name of the differential argument (dx/d diffArg = theta).
-   * @param iv
-   *   The initial values per derivative.
-   * @return
-   *   The solution if found; None otherwise
+   * @param diffSys The system of differential equations of the form x' = theta & H.
+   * @param diffArg The name of the differential argument (dx/d diffArg = theta).
+   * @param iv The initial values per derivative.
+   * @return The solution if found; None otherwise
    */
   override def odeSolve(
       diffSys: DifferentialProgram,

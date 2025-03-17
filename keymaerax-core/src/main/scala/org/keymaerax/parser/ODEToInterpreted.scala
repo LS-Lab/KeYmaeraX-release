@@ -96,17 +96,12 @@ object ODEToInterpreted {
    * (cos, -sin, 1)
    * }}}
    *
-   * @note
-   *   Differential expressions `( )'` cannot appear in the input differentials.
+   * @note Differential expressions `( )'` cannot appear in the input differentials.
    *
-   * @param system
-   *   seq of (function, differential, initial value)
-   * @param tVar
-   *   the time variable used in input differentials
-   * @param t0
-   *   initial time
-   * @return
-   *   List of implicitly defined functions by the system of ODEs from the given initial time
+   * @param system seq of (function, differential, initial value)
+   * @param tVar the time variable used in input differentials
+   * @param t0 initial time
+   * @return List of implicitly defined functions by the system of ODEs from the given initial time
    */
   def fromSystem(system: Seq[(Variable, Term, Term)], tVar: Variable, t0: Term): Seq[Function] = {
     require(system.nonEmpty, "Must define at least one function.")

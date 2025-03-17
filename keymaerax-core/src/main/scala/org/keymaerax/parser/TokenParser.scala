@@ -14,10 +14,8 @@ import org.keymaerax.core._
  * {{{
  * TokenParser: TokenStream => Expression
  * }}}
- * @author
- *   Stefan Mitsch
- * @see
- *   [[Parser]]
+ * @author Stefan Mitsch
+ * @see [[Parser]]
  */
 trait TokenParser {
 
@@ -26,10 +24,9 @@ trait TokenParser {
 
   /**
    * Parse the input tokens in the concrete syntax as a differential dynamic logic expression
-   * @param input
-   *   the token stream to parse as a dL formula, dL term, or dL program.
-   * @throws ParseException
-   *   if `input` is not a well-formed expression of differential dynamic logic or differential game logic.
+   * @param input the token stream to parse as a dL formula, dL term, or dL program.
+   * @throws ParseException if `input` is not a well-formed expression of differential dynamic logic or differential
+   *   game logic.
    */
   def parse(input: TokenStream): Expression
 

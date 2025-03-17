@@ -11,21 +11,17 @@ import scala.collection.immutable.Seq
 
 /**
  * Continuous invariant generation tool.
- * @see
- *   [[org.keymaerax.btactics.ToolProvider]]
+ * @see [[org.keymaerax.btactics.ToolProvider]]
  */
 trait InvGenTool {
 
   /**
    * Returns a continuous invariant for a safety problem sent to the tool.
-   * @param ode
-   *   The differential equation for which to generate a continuous invariants.
-   * @param assumptions
-   *   Assumptions on the initial state of the ODE.
-   * @param postCond
-   *   What to prove from the invariants.
-   * @return
-   *   A sequence of continuous invariants, each to be proved with a diffcut chain (left=invariant, right=candidate).
+   * @param ode The differential equation for which to generate a continuous invariants.
+   * @param assumptions Assumptions on the initial state of the ODE.
+   * @param postCond What to prove from the invariants.
+   * @return A sequence of continuous invariants, each to be proved with a diffcut chain (left=invariant,
+   *   right=candidate).
    */
   def invgen(
       ode: ODESystem,

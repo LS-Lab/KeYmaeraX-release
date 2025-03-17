@@ -4,10 +4,8 @@
  */
 
 /**
- * @author
- *   Stefan Mitsch
- * @note
- *   Code Review: 2016-08-17
+ * @author Stefan Mitsch
+ * @note Code Review: 2016-08-17
  */
 package org.keymaerax.lemma
 
@@ -31,18 +29,13 @@ object Lemma {
 
   /**
    * Parses a lemma from its string representation.
-   * @param lemma
-   *   The lemma in string form.
-   * @return
-   *   The lemma.
-   * @note
-   *   soundness-critical, only call with true facts that come from serialized lemmas.
-   * @see
-   *   [[Lemma.toString]]
+   * @param lemma The lemma in string form.
+   * @return The lemma.
+   * @note soundness-critical, only call with true facts that come from serialized lemmas.
+   * @see [[Lemma.toString]]
    */
-  def fromString(lemma: String): Lemma = {
-    fromStringInternal(lemma)
-  } ensures (r => matchesInput(r, lemma), "Reparse of printed parse result should be original parse result")
+  def fromString(lemma: String): Lemma = { fromStringInternal(lemma) } ensures
+    (r => matchesInput(r, lemma), "Reparse of printed parse result should be original parse result")
 
   /**
    * This contract turns out to be a huge bottleneck when loading proofs on the UI, so it worth checking the contract as
@@ -50,10 +43,8 @@ object Lemma {
    * then we know it was parsed correctly. If not, proceed to check that the lemma, when printed and then parsed a
    * second time*, produces the same lemma. We consider this second condition sufficient because for lemmas that contain
    * comments, the first check needs not succeed.
-   * @note
-   *   not soundness-critical, because only used for checking whether a re-read gives the same result.
-   * @note
-   *   performance bottleneck for loading
+   * @note not soundness-critical, because only used for checking whether a re-read gives the same result.
+   * @note performance bottleneck for loading
    */
   private def matchesInput(result: Lemma, input: String): Boolean = {
     // @note performance is optimized since contract-free stringify calls are used here for rechecking purposes
@@ -119,17 +110,12 @@ object Lemma {
  *   // use a uniform substitution instance of a lemma
  *   TactixLibrary.byUS(lemmaFact)
  *   }}}
- * @author
- *   Stefan Mitsch
- * @see
- *   [[ProvableSig.proveArithmeticLemma]]
- * @see
- *   [[org.keymaerax.lemma.LemmaDB]]
- * @see
- *   [[lemma.Lemma.fromString]]
- * @note
- *   Construction is not soundness-critical so constructor is not private, because Provables can only be constructed by
- *   prover core.
+ * @author Stefan Mitsch
+ * @see [[ProvableSig.proveArithmeticLemma]]
+ * @see [[org.keymaerax.lemma.LemmaDB]]
+ * @see [[lemma.Lemma.fromString]]
+ * @note Construction is not soundness-critical so constructor is not private, because Provables can only be constructed
+ *   by prover core.
  */
 final case class Lemma(fact: ProvableSig, evidence: immutable.List[Evidence], name: Option[String] = None) {
   insist(name.getOrElse("").forall(c => c != '\"'), "no escape characters in names: " + name)
@@ -142,8 +128,7 @@ final case class Lemma(fact: ProvableSig, evidence: immutable.List[Evidence], na
 
   /**
    * A string representation of this lemma that will reparse as this lemma.
-   * @see
-   *   [[Lemma.fromString()]]
+   * @see [[Lemma.fromString()]]
    */
   override def toString: String = {
     toStringInternal

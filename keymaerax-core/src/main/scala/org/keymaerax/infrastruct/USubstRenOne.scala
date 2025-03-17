@@ -18,12 +18,9 @@ import scala.collection.immutable._
  *
  * @param what
  * @param repl
- * @author
- *   Andre Platzer
- * @see
- *   [[org.keymaerax.core.SubstitutionPair]]
- * @see
- *   [[USubstRenOne]]
+ * @author Andre Platzer
+ * @see [[org.keymaerax.core.SubstitutionPair]]
+ * @see [[USubstRenOne]]
  */
 final case class URenSubstitutionPair(what: Expression, repl: Expression) {
 
@@ -31,13 +28,10 @@ final case class URenSubstitutionPair(what: Expression, repl: Expression) {
    * The (new) free variables that this substitution introduces (without DotTerm/DotFormula arguments). That is the
    * (new) free variables introduced by this substitution, i.e. free variables of repl that are not bound as arguments
    * in what.
-   * @return
-   *   essentially freeVars(repl) except for special handling of UnitFunctional and UnitPredicational arguments.
-   * @see
-   *   Definition 19 in
+   * @return essentially freeVars(repl) except for special handling of UnitFunctional and UnitPredicational arguments.
+   * @see Definition 19 in
    *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
-   * @see
-   *   [[SubstitutionPair.freeVars]]
+   * @see [[SubstitutionPair.freeVars]]
    */
   lazy val freeVars: SetLattice[Variable] = what match {
     // @note semantic state-dependent symbols have no free variables.
@@ -97,18 +91,12 @@ final case class URenSubstitutionPair(what: Expression, repl: Expression) {
  * SubstitutionPair represented as merely a list of Pair, where the Variable~>Variable replacements are by uniform
  * renaming, and the other replacements are by uniform substitution, simultaneously.
  *
- * @note
- *   This implementation performs semantic renaming.
- * @author
- *   Andre Platzer
- * @see
- *   [[org.keymaerax.core.URename]]
- * @see
- *   [[org.keymaerax.core.USubstOne]]
- * @see
- *   [[MultiRename]]
- * @see
- *   [[USubstRenChurch]]
+ * @note This implementation performs semantic renaming.
+ * @author Andre Platzer
+ * @see [[org.keymaerax.core.URename]]
+ * @see [[org.keymaerax.core.USubstOne]]
+ * @see [[MultiRename]]
+ * @see [[USubstRenChurch]]
  */
 //@todo admissibility needs to be augmented with renamed variables too for soundness.
 //@todo does not check soundness-critical occurrence constraints for Taboos, but the core ultimately will.
@@ -176,8 +164,7 @@ final case class USubstRenOne(private[infrastruct] val subsDefsInput: immutable.
    * The (new) free variables that this substitution introduces (without DotTerm/DotFormula arguments). That is the
    * (new) free variables introduced by this substitution, i.e. free variables of all repl that are not bound as
    * arguments in what.
-   * @return
-   *   union of the freeVars of all our substitution pairs.
+   * @return union of the freeVars of all our substitution pairs.
    */
   def freeVars: SetLattice[Variable] = matchHeads.foldLeft(bottom[Variable])((a, b) => a ++ b._2.freeVars)
 
@@ -430,8 +417,7 @@ final case class USubstRenOne(private[infrastruct] val subsDefsInput: immutable.
   /**
    * Predict bound variables of this(program), whether substitution clashes or not. The result predicts changes due to
    * renaming of variables.
-   * @note
-   *   Not soundness-critical as result can be checked by inclusion for other usubst round
+   * @note Not soundness-critical as result can be checked by inclusion for other usubst round
    */
   @nowarn("msg=match may not be exhaustive")
   private def substBoundVars(program: Program): SetLattice[Variable] = {

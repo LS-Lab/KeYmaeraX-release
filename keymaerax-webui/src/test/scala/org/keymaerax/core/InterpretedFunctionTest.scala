@@ -15,8 +15,7 @@ import scala.collection.immutable._
 
 /**
  * Interpreted functions / defined functions substitution tests.
- * @author
- *   Andre Platzer
+ * @author Andre Platzer
  */
 @AdvocatusTest
 class InterpretedFunctionTest extends TacticTestBase {

@@ -14,10 +14,8 @@ import scala.annotation.{nowarn, tailrec}
 
 /**
  * Tactic tools for formula manipulation and extraction.
- * @author
- *   Andre Platzer
- * @author
- *   Nathan Fulton
+ * @author Andre Platzer
+ * @author Nathan Fulton
  */
 object FormulaTools extends Logging {
 
@@ -142,9 +140,7 @@ object FormulaTools extends Logging {
     case _ => throw new IllegalArgumentException("negationNormalForm of formula " + formula + " not implemented")
   }
 
-  /**
-   * The element-wise combinations in `l`, e.g., [ [a,b,c], [p,q] ] ==> [ [a,p], [a,q], [b,p], [b,q], [c,p], [c,q] ].
-   */
+  /** The element-wise combinations in `l`, e.g., [ [a,b,c], [p,q] ] ==> [ [a,p], [a,q], [b,p], [b,q], [c,p], [c,q] ]. */
   def combinations(l: List[List[Formula]]): List[List[Formula]] = l match {
     case Nil => List(Nil)
     case head :: tail => for {
@@ -172,8 +168,7 @@ object FormulaTools extends Logging {
   /**
    * Read off all atomic subformulas of `formula`. Will not descend into programs to find even further atomic formulas
    * since they are not directly subformulas.
-   * @see
-   *   [[negationNormalForm()]]
+   * @see [[negationNormalForm()]]
    */
   def atomicFormulas(formula: Formula): List[AtomicFormula] = formula match {
     case formula: AtomicFormula => List(formula)
@@ -186,12 +181,9 @@ object FormulaTools extends Logging {
 
   /**
    * Returns the polarity of the subformula at position pos in formula.
-   * @param formula
-   *   The formula.
-   * @param pos
-   *   The position within formula for which the polarity is searched.
-   * @return
-   *   -1 for negative polarity, 1 for positive polarity, 0 for unknown polarity.
+   * @param formula The formula.
+   * @param pos The position within formula for which the polarity is searched.
+   * @return -1 for negative polarity, 1 for positive polarity, 0 for unknown polarity.
    */
   @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def polarityAt(formula: Formula, pos: PosInExpr): Int =
@@ -219,14 +211,10 @@ object FormulaTools extends Logging {
    * Returns a formula with equivalences turned into implications such that the polarity of the subformula at position
    * pos has the specified polarity. Creates a variation of this formula which has equivalences reoriented such that the
    * polarity of the subformula at position pos in the resulting formula will be the desired polarity.
-   * @param formula
-   *   The formula.
-   * @param pos
-   *   The position within formula for which the polarity is supposed to be changed to the desired polarity.
-   * @param polarity
-   *   The desired polarity, must be either 1 (positive polarity) or -1 (negative polarity).
-   * @return
-   *   The formula with equivalences turned into implications.
+   * @param formula The formula.
+   * @param pos The position within formula for which the polarity is supposed to be changed to the desired polarity.
+   * @param polarity The desired polarity, must be either 1 (positive polarity) or -1 (negative polarity).
+   * @return The formula with equivalences turned into implications.
    */
   @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def makePolarityAt(formula: Formula, pos: PosInExpr, polarity: Int): Formula = {
@@ -258,12 +246,9 @@ object FormulaTools extends Logging {
 
   /**
    * Returns the first (i.e., left-most) position of `sub` within `expr`, if any.
-   * @param expr
-   *   The expression to search for containment of `sub`.
-   * @param sub
-   *   The sub-expression.
-   * @return
-   *   The first position, or None if `sub` is not contained in `expr`.
+   * @param expr The expression to search for containment of `sub`.
+   * @param sub The sub-expression.
+   * @return The first position, or None if `sub` is not contained in `expr`.
    */
   @nowarn("msg=match may not be exhaustive")
   def posOf(expr: Expression, sub: Expression): Option[PosInExpr] = {
@@ -272,24 +257,21 @@ object FormulaTools extends Logging {
       case _: Formula => ExpressionTraversal.traverseExpr(
           new ExpressionTraversalFunction() {
             override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] =
-              if (e == sub) { pos = Some(p); Left(Some(ExpressionTraversal.stop)) }
-              else Left(None)
+              if (e == sub) { pos = Some(p); Left(Some(ExpressionTraversal.stop)) } else Left(None)
           },
           expr,
         )
       case _: Term => ExpressionTraversal.traverseExpr(
           new ExpressionTraversalFunction() {
             override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] =
-              if (e == sub) { pos = Some(p); Left(Some(ExpressionTraversal.stop)) }
-              else Left(None)
+              if (e == sub) { pos = Some(p); Left(Some(ExpressionTraversal.stop)) } else Left(None)
           },
           expr,
         )
       case _: Program => ExpressionTraversal.traverseExpr(
           new ExpressionTraversalFunction() {
             override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] =
-              if (e == sub) { pos = Some(p); Left(Some(ExpressionTraversal.stop)) }
-              else Left(None)
+              if (e == sub) { pos = Some(p); Left(Some(ExpressionTraversal.stop)) } else Left(None)
           },
           expr,
         )
@@ -303,11 +285,9 @@ object FormulaTools extends Logging {
     ExpressionTraversal.traverse(
       new ExpressionTraversalFunction() {
         override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] =
-          if (cond(e)) { positions = p :: positions; Left(None) }
-          else Left(None)
+          if (cond(e)) { positions = p :: positions; Left(None) } else Left(None)
         override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] =
-          if (cond(t)) { positions = p :: positions; Left(None) }
-          else Left(None)
+          if (cond(t)) { positions = p :: positions; Left(None) } else Left(None)
       },
       formula,
     )
@@ -319,8 +299,7 @@ object FormulaTools extends Logging {
     ExpressionTraversal.traverse(
       new ExpressionTraversalFunction() {
         override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] =
-          if (cond(t)) { positions = p :: positions; Left(None) }
-          else Left(None)
+          if (cond(t)) { positions = p :: positions; Left(None) } else Left(None)
       },
       term,
     )
@@ -336,8 +315,7 @@ object FormulaTools extends Logging {
           if (p.isPrefixOf(pos)) {
             result = p
             Left(None)
-          } else if (pos.isPrefixOf(p)) { Left(Some(stop)) }
-          else { Left(None) }
+          } else if (pos.isPrefixOf(p)) { Left(Some(stop)) } else { Left(None) }
         }
       },
       fml,
@@ -411,8 +389,7 @@ object FormulaTools extends Logging {
 
   /**
    * Check whether given program is dual-free, so a hybrid system and not a proper hybrid game.
-   * @see
-   *   [[SubstitutionPair.dualFree]]
+   * @see [[SubstitutionPair.dualFree]]
    */
   @nowarn("msg=match may not be exhaustive")
   def dualFree(program: Program): Boolean = program match {
@@ -463,10 +440,8 @@ object FormulaTools extends Logging {
 
   /**
    * Returns all terms `b^e` such that e is not a natural number occurring in given formula .
-   * @note
-   *   This is soundness-critical.
-   * @author
-   *   Nathan Fulton
+   * @note This is soundness-critical.
+   * @author Nathan Fulton
    */
   def unnaturalPowers(f: Formula): List[(Term, PosInExpr)] = {
     val problematicExponents = scala.collection.mutable.ListBuffer[(Term, PosInExpr)]()

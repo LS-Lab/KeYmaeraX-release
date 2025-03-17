@@ -21,8 +21,7 @@ import scala.language.postfixOps
 
 /**
  * Loop invariant checking and generation tests etc.
- * @author
- *   Andre Platzer
+ * @author Andre Platzer
  */
 class LoopInvTests extends TacticTestBase {
   "loopPostMaster" should "find an invariant for x=5-> [{x:=x+2;{x'=1}}*]x>=0" in withMathematica { _ =>
@@ -132,8 +131,8 @@ class LoopInvTests extends TacticTestBase {
 
   it should "find an invariant for x=0&v=0-> [{{v:=-1; ++ v:=1;};{x'=v&v>=0}}*]x>=0" in withMathematica { _ =>
     val fml = "x=0&v=0-> [{{v:=-1; ++ v:=1;};{x'=v&v>=0}}*]x>=0".asFormula
-    val invs = LazyList("x>=-1", "v>=1", "x>=0&v>1", "v>=-1", "v>=0", "x>=0&v>=0", "x=7")
-      .map(i => Invariant(i.asFormula))
+    val invs =
+      LazyList("x>=-1", "v>=1", "x>=0&v>1", "v>=-1", "v>=0", "x>=0&v>=0", "x=7").map(i => Invariant(i.asFormula))
     proveBy(fml, implyR(1) & loopPostMaster((_, _, _) => invs)(1)) shouldBe Symbol("proved")
     // @note postcondition is invariant, loopPostMaster won't ask invariant generator
     proveBy(fml, implyR(1) & loopPostMaster((_, _, _) => Nil.to(LazyList))(1)) shouldBe Symbol("proved")
@@ -413,8 +412,9 @@ class LoopInvTests extends TacticTestBase {
     val fml =
       "x=0&v=0&a=0 -> [{{?10-x>=2+(4+v)*v; a:=1; ++ v:=0;a:=0; ++ a:=-1;};t:=0;{x'=v,v'=a,t'=1&t<=1&v>=0}}*]x<=10"
         .asFormula
-    val invs = LazyList("10-x>=2*(1-t)^2+(4*(1-t)+v)*v&t>=0", "v*v<=10-x", "v=0&x<=10", "x<=10", "x=0")
-      .map(i => Invariant(i.asFormula))
+    val invs = LazyList("10-x>=2*(1-t)^2+(4*(1-t)+v)*v&t>=0", "v*v<=10-x", "v=0&x<=10", "x<=10", "x=0").map(i =>
+      Invariant(i.asFormula)
+    )
     // todo: this fails with the default (fast) odeInvariance setting because of DC chain v=0 & x<=10
     proveBy(fml, implyR(1) & loopPostMaster((_, _, _) => invs)(1)) shouldBe Symbol("proved")
   }
@@ -424,8 +424,9 @@ class LoopInvTests extends TacticTestBase {
       val fml =
         "x=0&v=0&a=0 -> [{{?10-x>=2+(4+v)*v; a:=1; ++ v:=0;a:=0; ++ a:=-1;};t:=0;{x'=v,v'=a,t'=1,z'=z&t<=1&v>=0}}*]x<=10"
           .asFormula
-      val invs = LazyList("10-x>=2*(1-t)^2+(4*(1-t)+v)*v&t>=0", "v*v<=10-x", "v=0&x<=10", "x<=10", "x=0")
-        .map(i => Invariant(i.asFormula))
+      val invs = LazyList("10-x>=2*(1-t)^2+(4*(1-t)+v)*v&t>=0", "v*v<=10-x", "v=0&x<=10", "x<=10", "x=0").map(i =>
+        Invariant(i.asFormula)
+      )
       proveBy(fml, implyR(1) & loopPostMaster((_, _, _) => invs)(1)) shouldBe Symbol("proved")
     }
 
@@ -501,14 +502,15 @@ class LoopInvTests extends TacticTestBase {
 
   it should "FEATURE_REQUEST: find an invariant for a simple time-triggered example" taggedAs TodoTest in
     withMathematica { _ =>
-      val fml = """v=0 & A>=0 & b>0 & x<=m & ep>=0
-                  | -> [
-                  |      {
-                  |        {?(2*b*(m-x) >= v^2+(A+b)*(A*ep^2+2*ep*v)); a:=A; ++ a:=-b; }
-                  |        t := 0;
-                  |        {x'=v, v'=a, t'=1 & v>=0 & t<=ep}
-                  |      }*
-                  |    ] x <= m
+      val fml =
+        """v=0 & A>=0 & b>0 & x<=m & ep>=0
+          | -> [
+          |      {
+          |        {?(2*b*(m-x) >= v^2+(A+b)*(A*ep^2+2*ep*v)); a:=A; ++ a:=-b; }
+          |        t := 0;
+          |        {x'=v, v'=a, t'=1 & v>=0 & t<=ep}
+          |      }*
+          |    ] x <= m
       """.stripMargin.asFormula
       val invs = LazyList("v<=0", "v^2<=2*b*(m-x)").map(i => Invariant(i.asFormula))
       proveBy(fml, implyR(1) & loopPostMaster((_, _, _) => invs)(1)) shouldBe Symbol("proved")
@@ -549,8 +551,8 @@ class LoopInvTests extends TacticTestBase {
   it should "find an invariant for x>=5 & y>=1 -> [{x:=x+y;y:=y+1;{x'=x^2+2*y+x,y'=y^2+y}}*]x>=1" taggedAs SlowTest in
     withMathematica { _ =>
       val fml = "x>=5 & y>=1 -> [{x:=x+y;y:=y+1;{x'=x^2+2*y+x,y'=y^2+y}}*]x>=1".asFormula
-      val invs = LazyList("x>=-1", "y>=1", "x>=0&y>=0", "x>=1&y>=1", "x>=1&y>=0", "x=7")
-        .map(i => Invariant(i.asFormula))
+      val invs =
+        LazyList("x>=-1", "y>=1", "x>=0&y>=0", "x>=1&y>=1", "x>=1&y>=0", "x=7").map(i => Invariant(i.asFormula))
       proveBy(fml, implyR(1) & loopPostMaster((_, _, _) => invs)(1)) shouldBe Symbol("proved")
     }
 
@@ -597,8 +599,9 @@ class LoopInvTests extends TacticTestBase {
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
     proof shouldBe Symbol("proved")
     // Note: dependency analysis generates (x,y) instead of just x
-    val invs2 =
-      invs.map(f => Invariant(USubst(Seq(SubstitutionPair(DotTerm(), DotTerm(Real, Some(0)))))(f))).to(LazyList)
+    val invs2 = invs
+      .map(f => Invariant(USubst(Seq(SubstitutionPair(DotTerm(), DotTerm(Real, Some(0)))))(f)))
+      .to(LazyList)
     proveBy(fml, implyR(1) & loopSR((_, _, _) => invs2)(1)) shouldBe Symbol("proved")
   }
 
@@ -637,8 +640,9 @@ class LoopInvTests extends TacticTestBase {
     )
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
     proof shouldBe Symbol("proved")
-    val invs2 =
-      invs.map(f => Invariant(USubst(Seq(SubstitutionPair(DotTerm(), DotTerm(Real, Some(0)))))(f))).to(LazyList)
+    val invs2 = invs
+      .map(f => Invariant(USubst(Seq(SubstitutionPair(DotTerm(), DotTerm(Real, Some(0)))))(f)))
+      .to(LazyList)
     proveBy(fml, implyR(1) & loopSR((_, _, _) => invs2)(1)) shouldBe Symbol("proved")
   }
 

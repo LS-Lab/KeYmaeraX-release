@@ -18,8 +18,10 @@ object KeYmaeraXStartup extends Logging {
       // Delete the lemma database if KeYmaera X has been updated since the last time the database was populated.
       val cacheVersion = LemmaDBFactory.lemmaDB.version()
       if (cacheVersion < Version) LemmaDBFactory.lemmaDB.deleteDatabase()
-      KeYmaeraXTool
-        .init(interpreter = KeYmaeraXTool.InterpreterChoice.ExhaustiveSequential, initDerivationInfoRegistry = true)
+      KeYmaeraXTool.init(
+        interpreter = KeYmaeraXTool.InterpreterChoice.ExhaustiveSequential,
+        initDerivationInfoRegistry = true,
+      )
     } catch {
       case e: Exception => logger.error(
           """Could not prepopulate the derived lemma database.

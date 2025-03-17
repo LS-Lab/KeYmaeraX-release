@@ -25,10 +25,8 @@ case class ModelPlexConjecture(init: Formula, conjecture: Formula, constAssumpti
 
 /**
  * ModelPlex: Verified runtime validation of verified cyber-physical system models.
- * @author
- *   Stefan Mitsch
- * @author
- *   Andre Platzer
+ * @author Stefan Mitsch
+ * @author Andre Platzer
  * @see
  *   [[org.keymaerax.Bibliography.FmsdMitschP16 ModelPlex: Verified runtime validation of verified cyber-physical system models (FMSD)]]
  * @see

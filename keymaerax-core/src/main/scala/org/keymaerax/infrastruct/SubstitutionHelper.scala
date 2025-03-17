@@ -11,10 +11,8 @@ import scala.annotation.nowarn
 
 /**
  * Created by smitsch on 2/19/15.
- * @author
- *   Stefan Mitsch
- * @todo
- *   generalize to replacing formula by formula, too.
+ * @author Stefan Mitsch
+ * @todo generalize to replacing formula by formula, too.
  */
 object SubstitutionHelper {
 
@@ -22,15 +20,15 @@ object SubstitutionHelper {
    * Return the result of replacing all free occurrences of `what` in term `t` by `repl` whenever `replaces(what) =
    * Some(repl)`.
    */
-  def replacesFree(f: Formula)(replaces: Term => Option[Term]): Formula = new SubstitutionHelper(replaces)
-    .usubst(SetLattice.bottom[Variable], SetLattice.bottom[Variable], f)
+  def replacesFree(f: Formula)(replaces: Term => Option[Term]): Formula =
+    new SubstitutionHelper(replaces).usubst(SetLattice.bottom[Variable], SetLattice.bottom[Variable], f)
 
   /**
    * Return the result of replacing all free occurrences of `what` in formula `f` by `repl` whenever `replaces(what) =
    * Some(repl)`.
    */
-  def replacesFree(t: Term)(replaces: Term => Option[Term]): Term = new SubstitutionHelper(replaces)
-    .usubst(SetLattice.bottom[Variable], SetLattice.bottom[Variable], t)
+  def replacesFree(t: Term)(replaces: Term => Option[Term]): Term =
+    new SubstitutionHelper(replaces).usubst(SetLattice.bottom[Variable], SetLattice.bottom[Variable], t)
 
   /**
    * Return the result of replacing all free occurrences of `what` in sequent `seq` by `repl` whenever `replaces(what) =
@@ -96,18 +94,15 @@ class SubstitutionHelper(replace: Term => Option[Term]) {
 
   /**
    * Records the result of uniform substitution in a program.
-   * @param o
-   *   The ignore set.
-   * @param u
-   *   The taboo set.
-   * @param p
-   *   The program.
+   * @param o The ignore set.
+   * @param u The taboo set.
+   * @param p The program.
    */
   private sealed case class USR(o: SetLattice[Variable], u: SetLattice[Variable], p: Program)
 
   /**
-   * @param u
-   *   the set of taboo symbols that would clash substitutions if they occurred since they have been bound outside.
+   * @param u the set of taboo symbols that would clash substitutions if they occurred since they have been bound
+   *   outside.
    */
   private def usubst(o: SetLattice[Variable], u: SetLattice[Variable], t: Term): Term = {
     (t, replace(t)) match {
@@ -205,16 +200,11 @@ class SubstitutionHelper(replace: Term => Option[Term]) {
 
   /**
    * Substitution in (systems of) differential equations.
-   * @param o
-   *   The ignore list.
-   * @param u
-   *   The taboo list.
-   * @param primed
-   *   The primed names (all primed names in the ODE system).
-   * @param p
-   *   The ODE.
-   * @return
-   *   The substitution result.
+   * @param o The ignore list.
+   * @param u The taboo list.
+   * @param primed The primed names (all primed names in the ODE system).
+   * @param p The ODE.
+   * @return The substitution result.
    */
   @nowarn("msg=match may not be exhaustive")
   private def usubst(

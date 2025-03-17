@@ -19,8 +19,7 @@ import scala.collection.immutable._
 /**
  * Tests static semantics.
  *
- * @author
- *   Andre Platzer
+ * @author Andre Platzer
  */
 @CheckinTest
 class StaticSemanticsTests extends AnyFlatSpec with Matchers {

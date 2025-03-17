@@ -19,16 +19,12 @@ object DefaultSMTConverter extends SMTConverter {}
  * Base class for SMT converters with conversion per SMTLib specification.
  *
  * Created by ran on 8/24/15.
- * @author
- *   Ran Ji
- * @author
- *   Stefan Mitsch
+ * @author Ran Ji
+ * @author Stefan Mitsch
  */
 abstract class SMTConverter extends (Formula => String) {
 
-  /**
-   * Convert given formula to an SMTLib specification that, if SMT(\result) returns `unsat` says that `expr` is valid.
-   */
+  /** Convert given formula to an SMTLib specification that, if SMT(\result) returns `unsat` says that `expr` is valid. */
   def apply(expr: Formula): String = generateAssertNegation(expr)
 
   // Prefixes that SMT accepts but NamedSymbol would refuse to make disjoint by construction
@@ -62,9 +58,7 @@ abstract class SMTConverter extends (Formula => String) {
     varDec + "(assert (not " + smtFormula + "))" + "\n(check-sat)\n"
   }
 
-  /**
-   * Convert KeYmaera X expression to SMT form which contains: variable/function declaration and converted SMT formula
-   */
+  /** Convert KeYmaera X expression to SMT form which contains: variable/function declaration and converted SMT formula */
   @nowarn("msg=match may not be exhaustive")
   def generateSMT(expr: Expression): (String, String) = {
     val allSymbols = StaticSemantics.symbols(expr).toList.sorted
@@ -183,9 +177,8 @@ abstract class SMTConverter extends (Formula => String) {
         // Z3 interprets them as mathematical Integers and mathematical Reals
 
         /**
-         * @note
-         *   decimalDouble is 64 bit IEEE 754 double-precision float, long is 64 bit signed value. -9223372036854775808
-         *   to 9223372036854775807 both have the maximal range in their category
+         * @note decimalDouble is 64 bit IEEE 754 double-precision float, long is 64 bit signed value.
+         *   -9223372036854775808 to 9223372036854775807 both have the maximal range in their category
          */
         // @note n.signum < 0 is equivalent to n < BigDecimal(0)
         if (n.signum < 0) {

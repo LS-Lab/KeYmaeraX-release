@@ -37,10 +37,8 @@ import scala.language.reflectiveCalls
 /**
  * ModelPlex: Verified runtime validation of verified cyber-physical system models.
  *
- * @author
- *   Stefan Mitsch
- * @author
- *   Andre Platzer
+ * @author Stefan Mitsch
+ * @author Andre Platzer
  * @see
  *   [[org.keymaerax.Bibliography.FmsdMitschP16 ModelPlex: Verified runtime validation of verified cyber-physical system models (FMSD)]]
  * @see
@@ -80,8 +78,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
   /**
    * Synthesize the ModelPlex (Controller) Monitor for the given formula for monitoring the given variable.
    *
-   * @param kind
-   *   The kind of monitor, either 'ctrl or 'model.
+   * @param kind The kind of monitor, either 'ctrl or 'model.
    */
   override def apply(vars: List[Variable], kind: ModelPlexKind.Value): Formula => Formula = formula => {
     val ModelPlexConjecture(_, mxInputFml, assumptions) =
@@ -134,15 +131,18 @@ object ModelPlex extends ModelPlexTrait with Logging {
     constructor = TacticConstructor1.create(StringArg("kind"))((kind: String) => mxSynthesize(kind)),
   )
 
-  def mxAutoInstantiate(assumptions: List[Formula]): InputTactic = "mxAutoInstantiate"
-    .byWithInputs(List(assumptions), mxAutoInstantiate(assumptions, List.empty, Some(ModelPlex.mxSimplify)))
+  def mxAutoInstantiate(assumptions: List[Formula]): InputTactic = "mxAutoInstantiate".byWithInputs(
+    List(assumptions),
+    mxAutoInstantiate(assumptions, List.empty, Some(ModelPlex.mxSimplify)),
+  )
 
   @Derivation
   val mxAutoInstantiateInfo: InputTacticInfo = InputTacticInfo.create(
     name = "mxAutoInstantiate",
     displayNameLong = Some("ModelPlex Auto-Instantiation"),
-    constructor = TacticConstructor1
-      .create(ListArg(FormulaArg("assumptions")))((assumptions: List[Formula]) => mxAutoInstantiate(assumptions)),
+    constructor = TacticConstructor1.create(ListArg(FormulaArg("assumptions")))((assumptions: List[Formula]) =>
+      mxAutoInstantiate(assumptions)
+    ),
   )
 
   def mxAutoInstantiate(
@@ -164,8 +164,8 @@ object ModelPlex extends ModelPlexTrait with Logging {
     { (seq: Sequent) =>
       shape match {
         case "boolean" => PropositionalTactics.rightAssociate(SuccPos(0))
-        case "metricprg" => PropositionalTactics.rightAssociate(SuccPos(0)) & ModelPlex
-            .chaseToTests(combineTests = false)(1) * 2
+        case "metricprg" =>
+          PropositionalTactics.rightAssociate(SuccPos(0)) & ModelPlex.chaseToTests(combineTests = false)(1) * 2
         case "metricfml" => toMetricT(seq.succ.head)
       }
     },
@@ -223,17 +223,12 @@ object ModelPlex extends ModelPlexTrait with Logging {
   /**
    * Construct ModelPlex monitor specification conjecture corresponding to given formula.
    *
-   * @param fml
-   *   A formula of the form p -> [a]q, which was proven correct.
-   * @param vars
-   *   A list of variables V, superset of BV(a).
-   * @param unobservable
-   *   Unobservable variables/parameters and their optional estimation (e.g., from a sensor), keys subset of vars ++ any
-   *   fns.
-   * @return
-   *   A tuple of monitor conjecture and assumptions
-   * @see
-   *   Mitsch, Platzer: ModelPlex (Definition 3, Lemma 4, Corollary 1).
+   * @param fml A formula of the form p -> [a]q, which was proven correct.
+   * @param vars A list of variables V, superset of BV(a).
+   * @param unobservable Unobservable variables/parameters and their optional estimation (e.g., from a sensor), keys
+   *   subset of vars ++ any fns.
+   * @return A tuple of monitor conjecture and assumptions
+   * @see Mitsch, Platzer: ModelPlex (Definition 3, Lemma 4, Corollary 1).
    */
   override def createMonitorSpecificationConjecture(
       fml: Formula,
@@ -295,11 +290,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
         })
 
       @nowarn("msg=match may not be exhaustive")
-      val preEstimator = unobservable
-        .values
-        .flatten
-        .reduceRightOption(And.apply)
-        .getOrElse(True)
+      val preEstimator = unobservable.values.flatten.reduceRightOption(And.apply).getOrElse(True)
 
       val postEqs = unobservableStateVars
         .keys
@@ -343,17 +334,12 @@ object ModelPlex extends ModelPlexTrait with Logging {
    * Construct ModelPlex monitor specification conjecture corresponding to given formula for parameter estimation over a
    * sliding window.
    *
-   * @param fml
-   *   A formula of the form p -> [a]q, which was proven correct.
-   * @param vars
-   *   A list of variables V, superset of BV(a).
-   * @param unobservable
-   *   Unobservable variables/parameters and their optional estimation (e.g., from a sensor), keys subset of vars, any
-   *   fns.
-   * @param windowSize
-   *   Size of sliding window for parameter estimation.
-   * @return
-   *   A tuple of monitor conjecture and assumptions
+   * @param fml A formula of the form p -> [a]q, which was proven correct.
+   * @param vars A list of variables V, superset of BV(a).
+   * @param unobservable Unobservable variables/parameters and their optional estimation (e.g., from a sensor), keys
+   *   subset of vars, any fns.
+   * @param windowSize Size of sliding window for parameter estimation.
+   * @return A tuple of monitor conjecture and assumptions
    */
   def createSlidingMonitorSpec(
       fml: Formula,
@@ -418,121 +404,117 @@ object ModelPlex extends ModelPlexTrait with Logging {
   }
 
   @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
-  private class ProofListener(name: String, senseVars: Set[Variable], x0: Map[Variable, Term], defs: Declaration) extends IOListener() {
-      var invariant: Option[Invariant] = None
-      // initial condition and differential invariants per ODE
-      var diffInvariants: ListMap[DifferentialProgram, (Formula, Formula)] = ListMap()
-      var inDW = false
-      var dWResult: Option[IndexedSeq[Sequent]] = None
-      var odeLemmas: List[(String, Formula, BelleExpr)] = Nil
-      var throughoutLemmas: List[(String, Formula, BelleExpr)] = Nil
-      var loopBranch: Option[BelleExpr] = None
-      override def begin(input: BelleValue, expr: BelleExpr): Unit = expr match {
-        case SeqTactic((t: AppliedDependentPositionTacticWithAppliedInput) :: (b: BranchTactic) :: Nil)
-            if t.pt.name == "throughout" => loopBranch = Some(b)
-        case SeqTactic((t: AppliedDependentPositionTacticWithAppliedInput) :: (b: BranchTactic) :: Nil)
-            if t.pt.name == "loop" && loopBranch.isEmpty => loopBranch = Some(b)
-        case SeqTactic((t: AppliedDependentPositionTacticWithAppliedInput) :: (b: BranchTactic) :: Nil)
-            if t.pt.name == "loopAuto" && loopBranch.isEmpty => loopBranch = Some(b)
-        case t: AppliedDependentPositionTactic if t.name == "dW" =>
-          input match {
-            case BelleProvable(p, _) =>
-              val dwr = proveBy(p.subgoals.head, t)
-              assert(dwr.subgoals.size == 1, "dW expected to result in a single subgoal")
-              dWResult = Some(dwr.subgoals)
-              inDW = true
-          }
-        case t: AppliedDependentPositionTacticWithAppliedInput if t.pt.name == "throughout" =>
-          invariant = Some(Invariant(t.pt.inputs.head.asInstanceOf[Formula]))
-        case t: AppliedDependentPositionTacticWithAppliedInput if t.pt.name == "loop" && invariant.isEmpty =>
-          invariant = Some(Invariant(t.pt.inputs.head.asInstanceOf[Formula]))
-        case t: AppliedDependentPositionTactic if t.pt.name == "loopAuto" && invariant.isEmpty =>
-          input match {
-            case BelleProvable(p, _) => invariant = TactixLibrary
-                .invGenerator
-                .generate(p.subgoals(0), t.locator.toPosition(p).get, defs)
-                .toList
-                .headOption
-          }
-        case t: AppliedDependentPositionTacticWithAppliedInput if t.pt.name == "dC" && !inDW =>
-          input match {
-            case BelleProvable(p, _) =>
-              val di = ExpressionTraversal
-                .traverse(
-                  new ExpressionTraversalFunction() {
-                    override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
-                      case Equal(t, FuncOf(TacticReservedSymbols.const, Nothing)) =>
-                        val oldified = x0.foldLeft(t)({ case (t, (v, v0)) => t.replaceFree(v, v0) })
-                        Right(Equal(t, oldified))
-                      case _ => Left(None)
-                    }
-                  },
-                  t.pt.inputs.head.asInstanceOf[List[Formula]].head,
-                )
-                .get
-              p.subgoals.head.sub(t.locator.toPosition(p).get) match {
-                case Some(Box(ODESystem(ode, _), _)) if !diffInvariants.contains(ode) =>
-                  diffInvariants += (ode -> (
-                    DifferentialHelper
-                      .extractInitialConditions(Some(ode))(p.subgoals.head.ante.reduceOption(And.apply).getOrElse(True))
-                      .reduceRightOption(And.apply)
-                      .getOrElse(True),
-                    di
-                  ))
-                case Some(Box(ODESystem(ode, _), _)) if diffInvariants.contains(ode) =>
-                  if (StaticSemantics.freeVars(di).intersect(senseVars).toSet.nonEmpty) {
-                    val (init, prevDi) = diffInvariants(ode)
-                    val newDi = FormulaTools.conjuncts(di).diff(FormulaTools.conjuncts(prevDi))
-                    if (newDi.nonEmpty) diffInvariants += (ode -> (init, And(prevDi, newDi.reduceRight(And.apply))))
+  private class ProofListener(name: String, senseVars: Set[Variable], x0: Map[Variable, Term], defs: Declaration)
+      extends IOListener() {
+    var invariant: Option[Invariant] = None
+    // initial condition and differential invariants per ODE
+    var diffInvariants: ListMap[DifferentialProgram, (Formula, Formula)] = ListMap()
+    var inDW = false
+    var dWResult: Option[IndexedSeq[Sequent]] = None
+    var odeLemmas: List[(String, Formula, BelleExpr)] = Nil
+    var throughoutLemmas: List[(String, Formula, BelleExpr)] = Nil
+    var loopBranch: Option[BelleExpr] = None
+    override def begin(input: BelleValue, expr: BelleExpr): Unit = expr match {
+      case SeqTactic((t: AppliedDependentPositionTacticWithAppliedInput) :: (b: BranchTactic) :: Nil)
+          if t.pt.name == "throughout" => loopBranch = Some(b)
+      case SeqTactic((t: AppliedDependentPositionTacticWithAppliedInput) :: (b: BranchTactic) :: Nil)
+          if t.pt.name == "loop" && loopBranch.isEmpty => loopBranch = Some(b)
+      case SeqTactic((t: AppliedDependentPositionTacticWithAppliedInput) :: (b: BranchTactic) :: Nil)
+          if t.pt.name == "loopAuto" && loopBranch.isEmpty => loopBranch = Some(b)
+      case t: AppliedDependentPositionTactic if t.name == "dW" =>
+        input match {
+          case BelleProvable(p, _) =>
+            val dwr = proveBy(p.subgoals.head, t)
+            assert(dwr.subgoals.size == 1, "dW expected to result in a single subgoal")
+            dWResult = Some(dwr.subgoals)
+            inDW = true
+        }
+      case t: AppliedDependentPositionTacticWithAppliedInput if t.pt.name == "throughout" =>
+        invariant = Some(Invariant(t.pt.inputs.head.asInstanceOf[Formula]))
+      case t: AppliedDependentPositionTacticWithAppliedInput if t.pt.name == "loop" && invariant.isEmpty =>
+        invariant = Some(Invariant(t.pt.inputs.head.asInstanceOf[Formula]))
+      case t: AppliedDependentPositionTactic if t.pt.name == "loopAuto" && invariant.isEmpty =>
+        input match {
+          case BelleProvable(p, _) => invariant = TactixLibrary
+              .invGenerator
+              .generate(p.subgoals(0), t.locator.toPosition(p).get, defs)
+              .toList
+              .headOption
+        }
+      case t: AppliedDependentPositionTacticWithAppliedInput if t.pt.name == "dC" && !inDW =>
+        input match {
+          case BelleProvable(p, _) =>
+            val di = ExpressionTraversal
+              .traverse(
+                new ExpressionTraversalFunction() {
+                  override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
+                    case Equal(t, FuncOf(TacticReservedSymbols.const, Nothing)) =>
+                      val oldified = x0.foldLeft(t)({ case (t, (v, v0)) => t.replaceFree(v, v0) })
+                      Right(Equal(t, oldified))
+                    case _ => Left(None)
                   }
-              }
-          }
-        case b @ BranchTactic(children) if loopBranch.contains(b) =>
-          input match {
-            case BelleProvable(p, _) =>
-              // @todo make sandbox tactic synthesis more flexible for shapes other than ctrl;plant
-              assert(
-                3 <= children.size && children.size <= 4 && children.size == p.subgoals.size,
-                "3 open goals expected after loop, 4 open goals expected after throughout",
+                },
+                t.pt.inputs.head.asInstanceOf[List[Formula]].head,
               )
-              throughoutLemmas = p
-                .subgoals
-                .zip(children)
-                .zipWithIndex
-                .map({ case ((s, t), i) => (name + "_" + i, s.toFormula, implyR(1) & t) })
-                .toList
-            case _ =>
-          }
-        case t => input match {
-            case BelleProvable(p, _) if dWResult.contains(p.subgoals) =>
-              // close after dW
-              assert(p.subgoals.size == 1, "dW expected on a single subgoal")
-              def unsequentTac(a: Int, s: Int): BelleExpr = {
-                val aTac =
-                  if (a > 1) { andL(Symbol("Llast")) * (a - 1) }
-                  else nil
-                val sTac =
-                  if (s > 1) { orR(Symbol("Rlast")) * (s - 1) }
-                  else nil
-                implyR(1) & aTac & sTac
-              }
-              odeLemmas = odeLemmas :+ (
-                name + "_dW_" + odeLemmas.size, p.subgoals.head.toFormula, unsequentTac(
-                  p.subgoals.head.ante.length,
-                  p.subgoals.head.succ.length,
-                ) & t
-              )
-              dWResult = None
-            case _ => // nothing to do
-          }
-      }
-      override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, Throwable]): Unit = expr match {
-        case b: BranchTactic if loopBranch.contains(b) => loopBranch = None
-        case t: AppliedDependentPositionTactic if t.name == "dW" => (inDW = false)
-        case _ =>
-      }
-      override def kill(): Unit = {}
+              .get
+            p.subgoals.head.sub(t.locator.toPosition(p).get) match {
+              case Some(Box(ODESystem(ode, _), _)) if !diffInvariants.contains(ode) =>
+                diffInvariants += (ode -> (
+                  DifferentialHelper
+                    .extractInitialConditions(Some(ode))(p.subgoals.head.ante.reduceOption(And.apply).getOrElse(True))
+                    .reduceRightOption(And.apply)
+                    .getOrElse(True),
+                  di,
+                ))
+              case Some(Box(ODESystem(ode, _), _)) if diffInvariants.contains(ode) =>
+                if (StaticSemantics.freeVars(di).intersect(senseVars).toSet.nonEmpty) {
+                  val (init, prevDi) = diffInvariants(ode)
+                  val newDi = FormulaTools.conjuncts(di).diff(FormulaTools.conjuncts(prevDi))
+                  if (newDi.nonEmpty) diffInvariants += (ode -> (init, And(prevDi, newDi.reduceRight(And.apply))))
+                }
+            }
+        }
+      case b @ BranchTactic(children) if loopBranch.contains(b) =>
+        input match {
+          case BelleProvable(p, _) =>
+            // @todo make sandbox tactic synthesis more flexible for shapes other than ctrl;plant
+            assert(
+              3 <= children.size && children.size <= 4 && children.size == p.subgoals.size,
+              "3 open goals expected after loop, 4 open goals expected after throughout",
+            )
+            throughoutLemmas = p
+              .subgoals
+              .zip(children)
+              .zipWithIndex
+              .map({ case ((s, t), i) => (name + "_" + i, s.toFormula, implyR(1) & t) })
+              .toList
+          case _ =>
+        }
+      case t => input match {
+          case BelleProvable(p, _) if dWResult.contains(p.subgoals) =>
+            // close after dW
+            assert(p.subgoals.size == 1, "dW expected on a single subgoal")
+            def unsequentTac(a: Int, s: Int): BelleExpr = {
+              val aTac = if (a > 1) { andL(Symbol("Llast")) * (a - 1) } else nil
+              val sTac = if (s > 1) { orR(Symbol("Rlast")) * (s - 1) } else nil
+              implyR(1) & aTac & sTac
+            }
+            odeLemmas = odeLemmas :+ (
+              name + "_dW_" + odeLemmas.size,
+              p.subgoals.head.toFormula,
+              unsequentTac(p.subgoals.head.ante.length, p.subgoals.head.succ.length) & t,
+            )
+            dWResult = None
+          case _ => // nothing to do
+        }
     }
+    override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, Throwable]): Unit = expr match {
+      case b: BranchTactic if loopBranch.contains(b) => loopBranch = None
+      case t: AppliedDependentPositionTactic if t.name == "dW" => (inDW = false)
+      case _ =>
+    }
+    override def kill(): Unit = {}
+  }
 
   /** Combines the differential invariants picked up on multiple branches into a single conjunction of implications. */
   private def combineDiffInvariants(
@@ -666,14 +648,10 @@ object ModelPlex extends ModelPlexTrait with Logging {
    * satisfying the evolution domain constraints and invariants of the plant. If the monitor is satisfied, the external
    * controller's decision are actuated. Otherwise (monitor unsatisfied) `fallback` (if specified, ctrl by default) is
    * executed.
-   * @param tactic
-   *   The tactic used to prove safety of the original model.
-   * @param fallback
-   *   The fallback controller to embed in the sandbox, `ctrl` by default.
-   * @param kind
-   *   The kind of monitor to derive (controller or model monitor).
-   * @return
-   *   The sandbox formula with a tactic to prove it, and a list of lemmas used in the proof.
+   * @param tactic The tactic used to prove safety of the original model.
+   * @param fallback The fallback controller to embed in the sandbox, `ctrl` by default.
+   * @param kind The kind of monitor to derive (controller or model monitor).
+   * @return The sandbox formula with a tactic to prove it, and a list of lemmas used in the proof.
    */
   def createSandbox(
       name: String,
@@ -805,8 +783,8 @@ object ModelPlex extends ModelPlexTrait with Logging {
 
     val monitor0 = replace(monitor, vars.map(v => postVar(v) -> v).toMap)
 
-    def skipPostfixedAssignments(assignments: Seq[Program]): Program = (assignments :+ Test(True))
-      .reduceRight(Compose.apply)
+    def skipPostfixedAssignments(assignments: Seq[Program]): Program =
+      (assignments :+ Test(True)).reduceRight(Compose.apply)
     def skipPostfixFallback(fb: Program): Program = {
       def decompose(prg: Program): Seq[Program] = prg match {
         case Compose(l, r) => decompose(l) ++ decompose(r)
@@ -865,22 +843,14 @@ object ModelPlex extends ModelPlexTrait with Logging {
 
   /**
    * Synthesizes a tactic to derive a sandbox safety proof from the safety proof of the original model.
-   * @param name
-   *   The name of the sandbox (used to prefix lemma lookup).
-   * @param inv
-   *   The throughout invariant used in the original safety proof.
-   * @param monitor
-   *   Monitor derived from the model.
-   * @param ctrl
-   *   Verified control program.
-   * @param fallbackCtrl
-   *   Fallback control with control effect set to post-vars, of the shape fallback;xp:=x;
-   * @param upsilon
-   *   The ModelPlex conjecture post-condition of the shape xp=x
-   * @param senseVars
-   *   The variables bound in the plant.
-   * @return
-   *   The tactic to derive a sandbox safety proof from the original safety proof.
+   * @param name The name of the sandbox (used to prefix lemma lookup).
+   * @param inv The throughout invariant used in the original safety proof.
+   * @param monitor Monitor derived from the model.
+   * @param ctrl Verified control program.
+   * @param fallbackCtrl Fallback control with control effect set to post-vars, of the shape fallback;xp:=x;
+   * @param upsilon The ModelPlex conjecture post-condition of the shape xp=x
+   * @param senseVars The variables bound in the plant.
+   * @return The tactic to derive a sandbox safety proof from the original safety proof.
    */
   @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   private def sandboxTacticPlantFirst(
@@ -911,10 +881,12 @@ object ModelPlex extends ModelPlexTrait with Logging {
     val fallbackUpsilonConjuncts = FormulaTools.conjuncts(fallbackUpsilon)
 
     implyR(1) & SaturateTactic(andL(Symbol("L"))) & composeb(1) & testb(1) & implyR(1) & throughout(inv)(1) & Idioms.<(
-      DebuggingTactics.print("Proving base case") & useLemma(name + "_0", Some(prop)) & DebuggingTactics
-        .done("Base case"),
-      DebuggingTactics.print("Proving use case") & useLemma(name + "_1", Some(prop)) & DebuggingTactics
-        .done("Use case"),
+      DebuggingTactics.print("Proving base case") & useLemma(name + "_0", Some(prop)) & DebuggingTactics.done(
+        "Base case"
+      ),
+      DebuggingTactics.print("Proving use case") & useLemma(name + "_1", Some(prop)) & DebuggingTactics.done(
+        "Use case"
+      ),
       DebuggingTactics.print("Proving plant") & chase(1) & allR(1) * senseVars.size &
         DebuggingTactics.print("Applying " + name + "_dW lemma") &
         useLemma(name + "_dW", Some(prop)) & DebuggingTactics.done(name + "_dW lemma"),
@@ -963,15 +935,16 @@ object ModelPlex extends ModelPlexTrait with Logging {
                       .reduce[BelleExpr](_ & _) &
                     prop & DebuggingTactics.done("Fallback 1"),
                   useAt(Ax.Kd2, PosInExpr(1 :: 1 :: Nil))(Symbol("Rlast")) & onAll(prop) &
-                    DebuggingTactics.done("Fallback 2")
+                    DebuggingTactics.done("Fallback 2"),
                 ),
                 DebuggingTactics.print("Applying " + name + "_2 lemma") &
                   useLemma(name + "_2", Some(prop)) &
-                  DebuggingTactics.done("Applying " + name + "_2 lemma")
+                  DebuggingTactics.done("Applying " + name + "_2 lemma"),
               ),
             DebuggingTactics.print("Applying " + name + "_FallbackCheck lemma") &
-              useLemma(name + "_FallbackCheck", Some(prop)) & DebuggingTactics
-                .done("Applying " + name + "_FallbackCheck lemma")
+              useLemma(name + "_FallbackCheck", Some(prop)) & DebuggingTactics.done(
+                "Applying " + name + "_FallbackCheck lemma"
+              ),
           ) & DebuggingTactics.done("Proving fallback"),
       ),
     )
@@ -979,22 +952,14 @@ object ModelPlex extends ModelPlexTrait with Logging {
 
   /**
    * Synthesizes a tactic to derive a sandbox safety proof from the safety proof of the original model.
-   * @param name
-   *   The name of the sandbox (used to prefix lemma lookup).
-   * @param inv
-   *   The throughout invariant used in the original safety proof.
-   * @param monitor
-   *   Monitor derived from the model.
-   * @param ctrl
-   *   Verified control program.
-   * @param fallbackCtrl
-   *   Fallback control with control effect set to post-vars, of the shape fallback;xp:=x;
-   * @param upsilon
-   *   The ModelPlex conjecture post-condition of the shape xp=x
-   * @param senseVars
-   *   The variables bound in the plant.
-   * @return
-   *   The tactic to derive a sandbox safety proof from the original safety proof.
+   * @param name The name of the sandbox (used to prefix lemma lookup).
+   * @param inv The throughout invariant used in the original safety proof.
+   * @param monitor Monitor derived from the model.
+   * @param ctrl Verified control program.
+   * @param fallbackCtrl Fallback control with control effect set to post-vars, of the shape fallback;xp:=x;
+   * @param upsilon The ModelPlex conjecture post-condition of the shape xp=x
+   * @param senseVars The variables bound in the plant.
+   * @return The tactic to derive a sandbox safety proof from the original safety proof.
    */
   @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   private def sandboxTactic(
@@ -1025,8 +990,8 @@ object ModelPlex extends ModelPlexTrait with Logging {
 
     val fallbackUpsilonConjuncts = FormulaTools.conjuncts(fallbackUpsilon)
 
-    def constify(tactic: BelleExpr): BelleExpr = consts
-      .foldLeft[BelleExpr](tactic)((tactic, c) => let(c._1, c._2, tactic))
+    def constify(tactic: BelleExpr): BelleExpr =
+      consts.foldLeft[BelleExpr](tactic)((tactic, c) => let(c._1, c._2, tactic))
 
     DebuggingTactics.print("Proving sandbox safety") &
       chase(1) & SaturateTactic((allR(1) | implyR(1))) & HybridProgramCalculus.loop(inv)(1) < (
@@ -1059,10 +1024,10 @@ object ModelPlex extends ModelPlexTrait with Logging {
                       prop & DebuggingTactics.done("Using external control actuation cuts"),
                     DebuggingTactics.print("Proving <ctrl;>(inv&upsilon&q)") &
                       useAt(Ax.Kd2, PosInExpr(1 :: 1 :: Nil))(2) & onAll(prop) &
-                      DebuggingTactics.done("Proving <ctrl;>(inv&upsilon&q)")
+                      DebuggingTactics.done("Proving <ctrl;>(inv&upsilon&q)"),
                   ),
                   DebuggingTactics.print("Proving [ctrl;]inv") &
-                    constify(useLemma(name + "_2", Some(prop))) & DebuggingTactics.done("Proving [ctrl;]inv")
+                    constify(useLemma(name + "_2", Some(prop))) & DebuggingTactics.done("Proving [ctrl;]inv"),
                 ) &
                 DebuggingTactics.done("Proving external control actuation"),
               DebuggingTactics.print("Proving fallback") & composeb(1) & testb(1) & implyR(1) & hideL(Symbol("Llast")) &
@@ -1091,24 +1056,24 @@ object ModelPlex extends ModelPlexTrait with Logging {
                           prop & DebuggingTactics.done("Using fallback cuts"),
                         DebuggingTactics.print("Proving <ctrl;>(inv&upsilon&q)") &
                           useAt(Ax.Kd2, PosInExpr(1 :: 1 :: Nil))(Symbol("Rlast")) & onAll(prop) &
-                          DebuggingTactics.done("Proving <ctrl;>(inv&upsilon&q)")
+                          DebuggingTactics.done("Proving <ctrl;>(inv&upsilon&q)"),
                       ),
                       DebuggingTactics.print("Applying " + name + "_2 lemma") &
                         constify(useLemma(name + "_2", Some(prop))) &
-                        DebuggingTactics.done("Applying " + name + "_2 lemma")
+                        DebuggingTactics.done("Applying " + name + "_2 lemma"),
                     ),
                   DebuggingTactics.print("Applying " + name + "_FallbackCheck lemma") &
                     useLemma(name + "_FallbackCheck", Some(prop)) &
-                    DebuggingTactics.done("Applying " + name + "_FallbackCheck lemma")
+                    DebuggingTactics.done("Applying " + name + "_FallbackCheck lemma"),
                 ) &
-                DebuggingTactics.done("Proving fallback")
+                DebuggingTactics.done("Proving fallback"),
             ),
             DebuggingTactics.print("Proving plant") & chase(1) & allR(1) * senseVars.size &
               DebuggingTactics.print("Applying " + name + "_dW lemma") &
               constify(useLemma(name + "_dW", Some(prop))) &
-              DebuggingTactics.done(name + "_dW lemma")
+              DebuggingTactics.done(name + "_dW lemma"),
           ) &
-          DebuggingTactics.done("Proving induction step")
+          DebuggingTactics.done("Proving induction step"),
       ) &
       DebuggingTactics.done("Proving sandbox safety")
   }
@@ -1117,8 +1082,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
    * Returns a tactic to derive a controller monitor in axiomatic style using forward chase. The tactic is designed to
    * operate on input produced by createMonitorSpecificationConjecture.
    *
-   * @see
-   *   [[createMonitorSpecificationConjecture]]
+   * @see [[createMonitorSpecificationConjecture]]
    * @example
    *   {{{
    *   |- xpost=1
@@ -1137,8 +1101,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
    *   ------------------------------<*> approx
    *   |- <{x:=1; {x'=2}}*>xpost=x
    *   }}}
-   * @return
-   *   The tactic.
+   * @return The tactic.
    */
   override def controllerMonitorByChase: BuiltInPositionTactic = chase(
     3,
@@ -1213,8 +1176,8 @@ object ModelPlex extends ModelPlexTrait with Logging {
   /** Solves ODEs for model monitors, chases in ODE postcondition after solving. */
   private lazy val modelMonitorSolveChaseODE = anon((pos: Position, seq: Sequent) =>
     seq.sub(pos) match {
-      case Some(Diamond(_: ODESystem, _)) => AxiomaticODESolver
-          .axiomaticSolve()(pos) & chase(3, 3, skipODEIndex)(pos ++ PosInExpr(0 :: 1 :: Nil)) &
+      case Some(Diamond(_: ODESystem, _)) =>
+        AxiomaticODESolver.axiomaticSolve()(pos) & chase(3, 3, skipODEIndex)(pos ++ PosInExpr(0 :: 1 :: Nil)) &
           SimplifierV3.simpTac()(pos ++ PosInExpr(0 :: 1 :: Nil))
       case e => throw new TacticInapplicableFailure(
           "Expected an ODE at position " + pos + ", but got " +
@@ -1227,10 +1190,8 @@ object ModelPlex extends ModelPlexTrait with Logging {
    * Returns a tactic to derive a model monitor in axiomatic style using forward chase + diffSolve. The tactic is
    * designed to operate on input produced by createMonitorSpecificationConjecture.
    *
-   * @see
-   *   [[createMonitorSpecificationConjecture]]
-   * @return
-   *   The tactic.
+   * @see [[createMonitorSpecificationConjecture]]
+   * @return The tactic.
    */
   lazy val modelMonitorByChase: DependentPositionTactic = modelMonitorByChase(modelMonitorSolveChaseODE)
   def modelMonitorByChase(ode: DependentPositionTactic): DependentPositionTactic = anon((pos: Position, _: Sequent) =>
@@ -1242,8 +1203,8 @@ object ModelPlex extends ModelPlexTrait with Logging {
   )
 
   /** Applies tatic `t` at all ODEs underneath this tactic's position. */
-  def applyAtAllODEs(t: DependentPositionTactic): DependentPositionTactic = TacticFactory
-    .anon((pos: Position, sequent: Sequent) => {
+  def applyAtAllODEs(t: DependentPositionTactic): DependentPositionTactic = TacticFactory.anon(
+    (pos: Position, sequent: Sequent) => {
       val positions: List[BelleExpr] = mapSubpositions(
         pos,
         sequent,
@@ -1253,7 +1214,8 @@ object ModelPlex extends ModelPlexTrait with Logging {
         },
       )
       positions.reduceRightOption[BelleExpr](_ & _).getOrElse(skip)
-    })
+    }
+  )
 
   /** Euler-approximates all atomic ODEs somewhere underneath pos */
   def eulerAllIn: DependentPositionTactic = anon((pos: Position, sequent: Sequent) => {
@@ -1372,8 +1334,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
    * operators. Operates on monitor specification conjectures.
    *
    * @see[[createMonitorSpecificationConjecture]]
-   * @return
-   *   The tactic.
+   * @return The tactic.
    */
   override def modelplexSequentStyle: DependentPositionTactic = ???
 
@@ -1382,16 +1343,11 @@ object ModelPlex extends ModelPlexTrait with Logging {
    * the sequent-style synthesis technique. The tactic 'unprog' determines what kind of monitor (controller monitor,
    * model monitor) to synthesize. Operates on monitor specification conjectures.
    *
-   * @param useOptOne
-   *   Indicates whether or not to use Opt. 1 at intermediate steps.
-   * @param unprog
-   *   A tactic for a specific monitor type (either controller monitor or model monitor).
-   * @see
-   *   [[createMonitorSpecificationConjecture]]
-   * @see
-   *   [[controllerMonitorT]]
-   * @see
-   *   [[modelMonitorT]]
+   * @param useOptOne Indicates whether or not to use Opt. 1 at intermediate steps.
+   * @param unprog A tactic for a specific monitor type (either controller monitor or model monitor).
+   * @see [[createMonitorSpecificationConjecture]]
+   * @see [[controllerMonitorT]]
+   * @see [[modelMonitorT]]
    */
   override def modelplexAxiomaticStyle(unprog: DependentPositionTactic): DependentPositionTactic =
     anon((pos: Position, sequent: Sequent) => {
@@ -1434,8 +1390,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
    * Returns a tactic to solve two-dimensional differential equations. Introduces constant function symbols for
    * variables that do not change in the ODE, before it hands over to the actual diff. solution tactic.
    *
-   * @return
-   *   The tactic.
+   * @return The tactic.
    */
   // was "<','> differential solution"
   override def diamondDiffSolve2DT: DependentPositionTactic = anon((pos: Position, sequent: Sequent) => {
@@ -1451,10 +1406,8 @@ object ModelPlex extends ModelPlexTrait with Logging {
    *   ---------------------------diamondTestRetainCondition
    *   |- <?x>0>[x'=x]x>0
    *   }}}
-   * @return
-   *   The tactic.
-   * @note
-   *   Unused so far, for deriving prediction monitors where DI is going to rely on knowledge from prior tests.
+   * @return The tactic.
+   * @note Unused so far, for deriving prediction monitors where DI is going to rely on knowledge from prior tests.
    */
   override def diamondTestRetainConditionT: DependentPositionTactic = ???
 
@@ -1468,13 +1421,11 @@ object ModelPlex extends ModelPlexTrait with Logging {
    *   ---------------------------------------locateT(diamondSeqT :: diamondChoiceT :: Nil)(1)
    *   |- a=1 & <x:=2; ++ y:=3;>x+y>0
    *   }}}
-   * @param tactics
-   *   The list of tactics.
-   * @return
-   *   The tactic.
+   * @param tactics The list of tactics.
+   * @return The tactic.
    */
-  override def locateT(tactics: List[AtPosition[_ <: BelleExpr]]): DependentPositionTactic =
-    anon((pos: Position, sequent: Sequent) => {
+  override def locateT(tactics: List[AtPosition[_ <: BelleExpr]]): DependentPositionTactic = anon(
+    (pos: Position, sequent: Sequent) => {
       require(tactics.nonEmpty, "At least 1 tactic required")
       val here = tactics.map(_(pos)).reduceRight[BelleExpr](_ | _)
 
@@ -1487,7 +1438,8 @@ object ModelPlex extends ModelPlexTrait with Logging {
       val right: BelleExpr = recurseOnFormula(pos ++ PosInExpr(1 :: Nil))
 
       here | left | right
-    })
+    }
+  )
 
   /**
    * Abbreviates functions to nullary function symbols if all their arguments are free in `fml`, expand according to
@@ -1667,9 +1619,8 @@ object ModelPlex extends ModelPlexTrait with Logging {
             .toList
           val varified = consts.foldLeft(f)({ case (fml, (fn, v)) => fml.replaceAll(fn, v) })
           // @note first exhaustive subst, then varify, because exhaustive subst elaborates to functions and so would undo varification
-          val varifiedExpanded = consts.foldLeft(defs.exhaustiveSubst(f))({ case (fml, (fn, v)) =>
-            fml.replaceAll(fn, v)
-          })
+          val varifiedExpanded =
+            consts.foldLeft(defs.exhaustiveSubst(f))({ case (fml, (fn, v)) => fml.replaceAll(fn, v) })
           assert(StaticSemantics.symbols(varified).intersect(consts.map(_._1.func).toSet).isEmpty)
           assert(StaticSemantics.symbols(varifiedExpanded).intersect(consts.map(_._1.func).toSet).isEmpty)
 
@@ -1867,8 +1818,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
    *   ------------------------------optimizationOneWithSearch
    *   |- \exists x x>0 & xpost=x
    *   }}}
-   * @see
-   *   [[optimizationOneWithSearchAt]]
+   * @see [[optimizationOneWithSearchAt]]
    */
   @nowarn("msg=match may not be exhaustive")
   override def optimizationOneWithSearch(
@@ -1923,12 +1873,14 @@ object ModelPlex extends ModelPlexTrait with Logging {
       val simplified = t.simplify(qeFml, assumptions)
       val backSubst = And(
         assumptions.reduceOption(And.apply).getOrElse(True),
-        signature
-          .foldLeft[Formula](simplified)((fml, t) => fml.replaceAll(Variable(t.name, t.index), FuncOf(t, Nothing))),
+        signature.foldLeft[Formula](simplified)((fml, t) =>
+          fml.replaceAll(Variable(t.name, t.index), FuncOf(t, Nothing))
+        ),
       )
       val pqe = proveBy(Imply(backSubst, existsFml), QE & done)
       cutAt(backSubst)(pp) < (
-        skip, (if (pp.isSucc) cohideR(pp.topLevel) else cohideR(Symbol("Rlast"))) & CMon(pp.inExpr) & by(pqe)
+        skip,
+        (if (pp.isSucc) cohideR(pp.topLevel) else cohideR(Symbol("Rlast"))) & CMon(pp.inExpr) & by(pqe),
       )
   }
 
@@ -1947,8 +1899,8 @@ object ModelPlex extends ModelPlexTrait with Logging {
           case _ => false
         })
         .map(_.asInstanceOf[Function])
-      val edo = signature
-        .foldLeft[Formula](odeShape)((fml, t) => fml.replaceAll(FuncOf(t, Nothing), Variable(t.name, t.index)))
+      val edo =
+        signature.foldLeft[Formula](odeShape)((fml, t) => fml.replaceAll(FuncOf(t, Nothing), Variable(t.name, t.index)))
       val transformed = proveBy(edo, partialQE)
       solutionQE(odeShape, transformed.subgoals.head.succ.head, signature, assumptions, tool)(pos) & simplifier
         .map(_(pos))
@@ -1964,21 +1916,25 @@ object ModelPlex extends ModelPlexTrait with Logging {
       case Some(Exists(xs, p)) if StaticSemantics.freeVars(p).intersect(xs.toSet).isEmpty => existsV(pos)
       case Some(Forall(xs, Imply(Equal(x, y), q))) =>
         if (
-          polarityInSeq(sequent, pos) > 0 && xs
-            .contains(x) && StaticSemantics.boundVars(q).intersect(StaticSemantics.freeVars(y)).isEmpty
+          polarityInSeq(sequent, pos) > 0 && xs.contains(x) && StaticSemantics
+            .boundVars(q)
+            .intersect(StaticSemantics.freeVars(y))
+            .isEmpty
         ) { useAt(simplForall1, PosInExpr(1 :: Nil))(pos) & simplifier.map(_(pos)).getOrElse(skip) }
         else if (
-          polarityInSeq(sequent, pos) > 0 && xs
-            .contains(y) && StaticSemantics.boundVars(q).intersect(StaticSemantics.freeVars(x)).isEmpty
-        ) { useAt(simplForall2, PosInExpr(1 :: Nil))(pos) & simplifier.map(_(pos)).getOrElse(skip) }
-        else skip
+          polarityInSeq(sequent, pos) > 0 && xs.contains(y) && StaticSemantics
+            .boundVars(q)
+            .intersect(StaticSemantics.freeVars(x))
+            .isEmpty
+        ) { useAt(simplForall2, PosInExpr(1 :: Nil))(pos) & simplifier.map(_(pos)).getOrElse(skip) } else skip
       // @note shapes of ode solution
       case Some(ode @ Exists(t :: Nil, And(GreaterEqual(_, _), And(Forall(s :: Nil, Imply(And(_, _), _)), q))))
           if tool.isDefined && polarityInSeq(sequent, pos) > 0 && t == "t_".asVariable && s == "s_"
             .asVariable && StaticSemantics.boundVars(q).isEmpty => instantiateODESolution(ode)
       case Some(ode @ Exists(t :: Nil, And(GreaterEqual(_, _), q)))
-          if tool.isDefined && polarityInSeq(sequent, pos) > 0 && t == "t_"
-            .asVariable && StaticSemantics.boundVars(q).isEmpty => instantiateODESolution(ode)
+          if tool.isDefined && polarityInSeq(sequent, pos) > 0 && t == "t_".asVariable && StaticSemantics
+            .boundVars(q)
+            .isEmpty => instantiateODESolution(ode)
       case Some(e: Exists) if polarityInSeq(sequent, pos) > 0 /*&& StaticSemantics.boundVars(q).isEmpty*/ =>
         val unobservableVars = unobservable.map({
           case v: Variable => v
@@ -2068,8 +2024,8 @@ object ModelPlex extends ModelPlexTrait with Logging {
               .filter(_.isInstanceOf[BaseVariable])
               .map(_.asInstanceOf[BaseVariable])
               .flatMap(synonyms.getOrElse(_, Set()))
-            val transitive2 = direct
-              .flatMap(s => synonyms.view.filterKeys(k => synonyms.getOrElse(k, Set()).contains(s)).keySet)
+            val transitive2 =
+              direct.flatMap(s => synonyms.view.filterKeys(k => synonyms.getOrElse(k, Set()).contains(s)).keySet)
             (direct ++ transitive1 ++ transitive2) - of
           }
         }
@@ -2117,8 +2073,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
             .boundVars(phi)
             .intersect(equality.map(StaticSemantics.freeVars).getOrElse(SetLattice.bottom))
             .isEmpty
-        ) { equality.map(v -> _) }
-        else None
+        ) { equality.map(v -> _) } else None
       case e => throw new TacticInapplicableFailure(
           "Finding witnesses only supported for existential quantifiers, but got " + e.prettyString
         )

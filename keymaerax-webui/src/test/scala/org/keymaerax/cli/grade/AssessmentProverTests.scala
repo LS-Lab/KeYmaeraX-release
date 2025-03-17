@@ -468,12 +468,16 @@ class AssessmentProverTests extends TacticTestBase {
     AssessmentProver.polynomialEquality("e^2^t".asTerm, "e^(3-1)^t".asTerm) shouldBe Symbol("proved")
     AssessmentProver.polynomialEquality("(e^2)^(t^1)".asTerm, "(e^(3-1))^t".asTerm) shouldBe Symbol("proved")
     AssessmentProver.polynomialEquality("e^x+e^y".asTerm, "e^(2*x/2)+e^(1*y*(1^2))".asTerm) shouldBe Symbol("proved")
-    the[IllegalArgumentException] thrownBy AssessmentProver
-      .polynomialEquality("e^(6*t)".asTerm, "f^(6*t)".asTerm) should
+    the[IllegalArgumentException] thrownBy AssessmentProver.polynomialEquality(
+      "e^(6*t)".asTerm,
+      "f^(6*t)".asTerm,
+    ) should
       have message "requirement failed: Expected all function symbols to match, but found non-matching symbols (pow,Set(e, t)) vs. (pow,Set(f, t))"
     // true but doesn't work
-    the[IllegalArgumentException] thrownBy AssessmentProver
-      .polynomialEquality("e^x*e^y".asTerm, "e^(x+y)".asTerm) should
+    the[IllegalArgumentException] thrownBy AssessmentProver.polynomialEquality(
+      "e^x*e^y".asTerm,
+      "e^(x+y)".asTerm,
+    ) should
       have message "requirement failed: Expected all function symbols to match, but found non-matching symbols (pow,Set(e, x)),(pow,Set(e, y)) vs. (pow,Set(e, x, y))"
   }
 
@@ -483,14 +487,19 @@ class AssessmentProverTests extends TacticTestBase {
 
   it should "prove functions" in withZ3 { _ =>
     AssessmentProver.polynomialEquality("sin(x)".asTerm, "sin(0+x/1)".asTerm) shouldBe Symbol("proved")
-    AssessmentProver
-      .polynomialEquality("sin(x)*cos(y)".asTerm, "cos(2*y/2)*sin(0+x/1)".asTerm) shouldBe Symbol("proved")
+    AssessmentProver.polynomialEquality("sin(x)*cos(y)".asTerm, "cos(2*y/2)*sin(0+x/1)".asTerm) shouldBe Symbol(
+      "proved"
+    )
     AssessmentProver.polynomialEquality("sin(x)*sin(y)".asTerm, "sin(x*1)*sin(y*1)".asTerm) shouldBe Symbol("proved")
-    the[IllegalArgumentException] thrownBy AssessmentProver
-      .polynomialEquality("sin(x)*sin(y)".asTerm, "sin(x)*sin(z)".asTerm) should
+    the[IllegalArgumentException] thrownBy AssessmentProver.polynomialEquality(
+      "sin(x)*sin(y)".asTerm,
+      "sin(x)*sin(z)".asTerm,
+    ) should
       have message "requirement failed: Expected all function symbols to match, but found non-matching symbols (sin,Set(x)),(sin,Set(y)) vs. (sin,Set(x)),(sin,Set(z))"
-    the[IllegalArgumentException] thrownBy AssessmentProver
-      .polynomialEquality("sin(x)*sin(y)".asTerm, "sin(z)*sin(y)".asTerm) should
+    the[IllegalArgumentException] thrownBy AssessmentProver.polynomialEquality(
+      "sin(x)*sin(y)".asTerm,
+      "sin(z)*sin(y)".asTerm,
+    ) should
       have message "requirement failed: Expected all function symbols to match, but found non-matching symbols (sin,Set(x)),(sin,Set(y)) vs. (sin,Set(z)),(sin,Set(y))"
     the[IllegalArgumentException] thrownBy AssessmentProver.polynomialEquality("cos(x)".asTerm, "sin(x)".asTerm) should
       have message "requirement failed: Expected all function symbols to match, but found non-matching symbols (cos,Set(x)) vs. (sin,Set(x))"
@@ -498,10 +507,16 @@ class AssessmentProverTests extends TacticTestBase {
 
   it should "prove simple formula examples" in withZ3 { _ =>
     AssessmentProver.polynomialEquality("true".asFormula, "true".asFormula, normalize = false) shouldBe Symbol("proved")
-    AssessmentProver
-      .polynomialEquality("[ctrl;]true".asFormula, "[ctrl;]true".asFormula, normalize = false) shouldBe Symbol("proved")
-    AssessmentProver
-      .polynomialEquality("[ctrl;]P()".asFormula, "[ctrl;]P()".asFormula, normalize = false) shouldBe Symbol("proved")
+    AssessmentProver.polynomialEquality(
+      "[ctrl;]true".asFormula,
+      "[ctrl;]true".asFormula,
+      normalize = false,
+    ) shouldBe Symbol("proved")
+    AssessmentProver.polynomialEquality(
+      "[ctrl;]P()".asFormula,
+      "[ctrl;]P()".asFormula,
+      normalize = false,
+    ) shouldBe Symbol("proved")
     inside(AssessmentProver.polynomialEquality("x>=0".asFormula, "x+0*5>=2-4*1/2".asFormula, normalize = false)) {
       case p =>
         p.conclusion shouldBe "==> x=x+0*5 & 0=2-4*1/2".asSequent
@@ -521,8 +536,11 @@ class AssessmentProverTests extends TacticTestBase {
       p.conclusion shouldBe "==> x'=x' & 2=3-1 & x=x & 0=0".asSequent
       p shouldBe Symbol("proved")
     }
-    the[IllegalArgumentException] thrownBy AssessmentProver
-      .polynomialEquality("x>=0".asFormula, "x+0*5>2-4*1/2".asFormula, normalize = false) should have message
+    the[IllegalArgumentException] thrownBy AssessmentProver.polynomialEquality(
+      "x>=0".asFormula,
+      "x+0*5>2-4*1/2".asFormula,
+      normalize = false,
+    ) should have message
       "requirement failed: Formula operators do not match at position '.'; expected x>=0 (GreaterEqual) but got x+0*5>2-4*1/2 (Greater)"
     the[IllegalArgumentException] thrownBy AssessmentProver.polynomialEquality(
       "[x:=2;]x>=0".asFormula,
@@ -530,8 +548,11 @@ class AssessmentProverTests extends TacticTestBase {
       normalize = false,
     ) should have message
       "requirement failed: Program operators do not match at position '.0'; expected x:=2; (Assign) but got ?x=2; (Test)"
-    the[IllFormedTacticApplicationException] thrownBy AssessmentProver
-      .polynomialEquality("[x:=2;]x>=0".asFormula, "[x':=2;]x>=0".asFormula, normalize = false) should have message
+    the[IllFormedTacticApplicationException] thrownBy AssessmentProver.polynomialEquality(
+      "[x:=2;]x>=0".asFormula,
+      "[x':=2;]x>=0".asFormula,
+      normalize = false,
+    ) should have message
       "1*x^1 and 1*x'^1 do not fit"
   }
 
@@ -546,15 +567,19 @@ class AssessmentProverTests extends TacticTestBase {
         p.conclusion shouldBe "==> x=-(2-4*1/2)--(x+0*5) & 0=0".asSequent
         p shouldBe Symbol("proved")
     }
-    inside(
-      AssessmentProver
-        .polynomialEquality("x>=0 & y=2".asFormula, "!(!-(x+0*5)<=-(2-4*1/2) | y!=2)".asFormula, normalize = true)
-    ) { case p =>
+    inside(AssessmentProver.polynomialEquality(
+      "x>=0 & y=2".asFormula,
+      "!(!-(x+0*5)<=-(2-4*1/2) | y!=2)".asFormula,
+      normalize = true,
+    )) { case p =>
       p.conclusion shouldBe "==> x=-(2-4*1/2)--(x+0*5) & 0=0 & y-2=y-2 & 0=0".asSequent
       p shouldBe Symbol("proved")
     }
-    the[IllegalArgumentException] thrownBy AssessmentProver
-      .polynomialEquality("x>=0".asFormula, "-(x+0*5) < -(2-4*1/2)".asFormula, normalize = true) should have message
+    the[IllegalArgumentException] thrownBy AssessmentProver.polynomialEquality(
+      "x>=0".asFormula,
+      "-(x+0*5) < -(2-4*1/2)".asFormula,
+      normalize = true,
+    ) should have message
       "requirement failed: Formula operators do not match at position '.'; expected x>=0 (GreaterEqual) but got -(2-4*1/2)--(x+0*5)>0 (Greater)"
   }
 
@@ -565,8 +590,9 @@ class AssessmentProverTests extends TacticTestBase {
       .left
       .value shouldBe Symbol("proved")
     // expected single expression, not ok to answer with a list
-    AskGrader(Some(Modes.POLY_EQ), Map.empty, ExpressionArtifact("-3"))
-      .check(ListExpressionArtifact(List("-1".asTerm, "-3".asTerm))) shouldBe Right(
+    AskGrader(Some(Modes.POLY_EQ), Map.empty, ExpressionArtifact("-3")).check(ListExpressionArtifact(
+      List("-1".asTerm, "-3".asTerm)
+    )) shouldBe Right(
       """Expected a Term but got Term,Term:
         |  (-1): Term
         |  (-3): Term""".stripMargin
@@ -586,8 +612,10 @@ class AssessmentProverTests extends TacticTestBase {
 
   "Value equality" should "prove simple examples" in withZ3 { _ =>
     AssessmentProver.valueEquality("1".asTerm, "1".asTerm) shouldBe Symbol("proved")
-    AssessmentProver
-      .valueEquality("1".asTerm :: "2".asTerm :: Nil, "1+0".asTerm :: "4-2".asTerm :: Nil) shouldBe Symbol("proved")
+    AssessmentProver.valueEquality(
+      "1".asTerm :: "2".asTerm :: Nil,
+      "1+0".asTerm :: "4-2".asTerm :: Nil,
+    ) shouldBe Symbol("proved")
     AssessmentProver.valueEquality("1".asTerm, "2".asTerm) shouldNot be(Symbol("proved"))
     AssessmentProver.valueEquality("1".asTerm :: "1".asTerm :: Nil, "2-1".asTerm :: "2-2".asTerm :: Nil) shouldNot be(
       Symbol("proved")
@@ -699,22 +727,24 @@ class AssessmentProverTests extends TacticTestBase {
     withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
       AssessmentProver.qe("x>=4".asFormula, "abs(x)>=4 & abs(x)<=x".asFormula, Equiv.apply) shouldBe Symbol("proved")
     }
-    AssessmentProver
-      .qe("x>=4".asFormula, "\\forall y (0<=y&y<=4 -> x>=y)".asFormula, Equiv.apply) shouldBe Symbol("proved")
+    AssessmentProver.qe("x>=4".asFormula, "\\forall y (0<=y&y<=4 -> x>=y)".asFormula, Equiv.apply) shouldBe Symbol(
+      "proved"
+    )
     AssessmentProver.qe("x>=4".asFormula, "\\exists y (y>=2 & x>=y^2)".asFormula, Equiv.apply) shouldBe Symbol("proved")
   }
 
   "Syntactic sequent equality" should "prove simple examples" in {
-    AssessmentProver
-      .syntacticEquality(List("x>0 ==> x>=0".asSequent), List("x>0 ==> x>=0".asSequent)) shouldBe Symbol("proved")
-    AssessmentProver
-      .syntacticEquality(List("x>0,y>0 ==> x>=0".asSequent), List("y>0,x>0 ==> x>=0".asSequent)) shouldBe Symbol(
+    AssessmentProver.syntacticEquality(List("x>0 ==> x>=0".asSequent), List("x>0 ==> x>=0".asSequent)) shouldBe Symbol(
       "proved"
     )
-    AssessmentProver
-      .syntacticEquality(List("x>0 ==> x>=0,y>0".asSequent), List("x>0 ==> y>0,x>=0".asSequent)) shouldBe Symbol(
-      "proved"
-    )
+    AssessmentProver.syntacticEquality(
+      List("x>0,y>0 ==> x>=0".asSequent),
+      List("y>0,x>0 ==> x>=0".asSequent),
+    ) shouldBe Symbol("proved")
+    AssessmentProver.syntacticEquality(
+      List("x>0 ==> x>=0,y>0".asSequent),
+      List("x>0 ==> y>0,x>=0".asSequent),
+    ) shouldBe Symbol("proved")
     AssessmentProver.syntacticEquality(
       List("x>0 ==> x>=0".asSequent, "y>0 ==> y>=0".asSequent),
       List("x>0 ==> x>=0".asSequent, "y>0 ==> y>=0".asSequent),
@@ -738,22 +768,27 @@ class AssessmentProverTests extends TacticTestBase {
   }
 
   it should "not reply with a syntax error on n/a" in withZ3 { _ =>
-    AskGrader(Some(Modes.SYN_EQ), Map.empty, SequentArtifact(List("x>0 ==> [x:=x+1;]x>1".asSequent)))
-      .check(ExpressionArtifact("n/a")) shouldBe Right("Incorrect n/a")
+    AskGrader(Some(Modes.SYN_EQ), Map.empty, SequentArtifact(List("x>0 ==> [x:=x+1;]x>1".asSequent))).check(
+      ExpressionArtifact("n/a")
+    ) shouldBe Right("Incorrect n/a")
   }
 
   it should "not reply with a syntax error on expected n/a" in withZ3 { _ =>
-    AskGrader(Some(Modes.SYN_EQ), Map.empty, ExpressionArtifact("n/a"))
-      .check(SubstitutionArtifact(List("f() ~> 5".asSubstitutionPair))) shouldBe Right("Incorrect (f()~>5)")
+    AskGrader(Some(Modes.SYN_EQ), Map.empty, ExpressionArtifact("n/a")).check(SubstitutionArtifact(
+      List("f() ~> 5".asSubstitutionPair)
+    )) shouldBe Right("Incorrect (f()~>5)")
   }
 
   "Differential invariant checker" should "prove simple examples" in withZ3 { _ =>
-    AssessmentProver
-      .dICheck(ODESystem("{x'=1,y'=2}".asDifferentialProgram), "2*x=y".asFormula) shouldBe Symbol("proved")
-    AssessmentProver
-      .dICheck(ODESystem("{x'=x,y'=-y}".asDifferentialProgram), "x*y=1".asFormula) shouldBe Symbol("proved")
-    AssessmentProver
-      .dICheck(ODESystem("{x'=-y,y'=x}".asDifferentialProgram), "x^2+y^2=1".asFormula) shouldBe Symbol("proved")
+    AssessmentProver.dICheck(ODESystem("{x'=1,y'=2}".asDifferentialProgram), "2*x=y".asFormula) shouldBe Symbol(
+      "proved"
+    )
+    AssessmentProver.dICheck(ODESystem("{x'=x,y'=-y}".asDifferentialProgram), "x*y=1".asFormula) shouldBe Symbol(
+      "proved"
+    )
+    AssessmentProver.dICheck(ODESystem("{x'=-y,y'=x}".asDifferentialProgram), "x^2+y^2=1".asFormula) shouldBe Symbol(
+      "proved"
+    )
     AssessmentProver
       .dICheck(ODESystem("{x'=1,y'=2}".asDifferentialProgram), "3*x=y".asFormula)
       .subgoals
@@ -839,8 +874,10 @@ class AssessmentProverTests extends TacticTestBase {
   "Program equivalence" should "prove simple examples" in withZ3 { _ =>
     AssessmentProver.prgEquivalence("a;b;c;".asProgram, "{a;b;};c;".asProgram) shouldBe Symbol("proved")
     AssessmentProver.prgEquivalence("a;++b;++c;".asProgram, "{a;++b;}++c;".asProgram) shouldBe Symbol("proved")
-    AssessmentProver
-      .prgEquivalence("{a;++b;}{c;++d;++e;}".asProgram, "{a;++b;}{{c;++d;}++e;}".asProgram) shouldBe Symbol("proved")
+    AssessmentProver.prgEquivalence(
+      "{a;++b;}{c;++d;++e;}".asProgram,
+      "{a;++b;}{{c;++d;}++e;}".asProgram,
+    ) shouldBe Symbol("proved")
     AssessmentProver.prgEquivalence("x:=2;++y:=3;".asProgram, "y:=4-1;++z:=2;x:=z;".asProgram) shouldBe Symbol("proved")
   }
 
@@ -855,8 +892,10 @@ class AssessmentProverTests extends TacticTestBase {
 //  }
 
   it should "prove simple system loops" in withZ3 { _ =>
-    AssessmentProver
-      .prgEquivalence("{a{|^@|};++b{|^@|};}*".asProgram, "{b{|^@|};++a{|^@|};}*".asProgram) shouldBe Symbol("proved")
+    AssessmentProver.prgEquivalence(
+      "{a{|^@|};++b{|^@|};}*".asProgram,
+      "{b{|^@|};++a{|^@|};}*".asProgram,
+    ) shouldBe Symbol("proved")
   }
 
   it should "elaborate to system loops when dual does not occur literally" in withZ3 { _ =>
@@ -906,14 +945,16 @@ class AssessmentProverTests extends TacticTestBase {
         |Found:    * at 1:19
         |Expected: <BeginningOfExpression>""".stripMargin
 
-    the[ParseException] thrownBy SubstitutionParser
-      .parseSubstitutionPairs("c() ~> 5, d() ~> 4    ,   e() ~> *3") should have message
+    the[ParseException] thrownBy SubstitutionParser.parseSubstitutionPairs(
+      "c() ~> 5, d() ~> 4    ,   e() ~> *3"
+    ) should have message
       """1:34 Unexpected token cannot be parsed
         |Found:    * at 1:34
         |Expected: <BeginningOfExpression>""".stripMargin
 
-    the[ParseException] thrownBy SubstitutionParser
-      .parseSubstitutionPairs(" ( c() ~> 5, (d() ~> 4  )  ,   e() ~> *3)") should have message
+    the[ParseException] thrownBy SubstitutionParser.parseSubstitutionPairs(
+      " ( c() ~> 5, (d() ~> 4  )  ,   e() ~> *3)"
+    ) should have message
       """1:39 Unexpected token cannot be parsed
         |Found:    * at 1:39
         |Expected: <BeginningOfExpression>""".stripMargin
@@ -923,8 +964,9 @@ class AssessmentProverTests extends TacticTestBase {
         |Found:    x+y  at 1:1
         |Expected: substitutable expression (e.g., predicate, function, program constant)""".stripMargin
 
-    the[ParseException] thrownBy SubstitutionParser
-      .parseSubstitutionPairs("c() ~> x^2, x+y ~> 5+4, p(||) ~> x=y") should have message
+    the[ParseException] thrownBy SubstitutionParser.parseSubstitutionPairs(
+      "c() ~> x^2, x+y ~> 5+4, p(||) ~> x=y"
+    ) should have message
       """1:13 Non-substitutable expression on left-hand side of ~>
         |Found:    x+y  at 1:13
         |Expected: substitutable expression (e.g., predicate, function, program constant)""".stripMargin
@@ -937,9 +979,9 @@ class AssessmentProverTests extends TacticTestBase {
         SubstitutionPair(ProgramConst("b"), Assign(Variable("v"), Neg(Times(Variable("c"), Variable("v"))))),
         SubstitutionPair(UnitPredicational("p", AnyArg), "2*g*x<=2*g*H-v^2".asFormula),
       )
-    SubstitutionParser
-      .parseSubstitutionPairs("(a~>{x'=v}, b~>{v:=-c*v;}, p(||)~>2*g*x<=2*g*H-v^2)") shouldBe SubstitutionParser
-      .parseSubstitutionPairs("a~>{x'=v}, b~>{v:=-c*v;}, p(||)~>2*g*x<=2*g*H-v^2")
+    SubstitutionParser.parseSubstitutionPairs(
+      "(a~>{x'=v}, b~>{v:=-c*v;}, p(||)~>2*g*x<=2*g*H-v^2)"
+    ) shouldBe SubstitutionParser.parseSubstitutionPairs("a~>{x'=v}, b~>{v:=-c*v;}, p(||)~>2*g*x<=2*g*H-v^2")
     SubstitutionParser.parseSubstitutionPairs("p~>v^2<=2*x, a~>{x'=v}") should
       contain theSameElementsAs List(
         SubstitutionPair(PredOf(Function("p", None, Unit, Bool), Nothing), "v^2<=2*x".asFormula),
@@ -1550,17 +1592,16 @@ class AssessmentProverTests extends TacticTestBase {
     val graded = """.*?\((?<id>\d+)\)\.\.\.(?:(?:PASS)|(?:FAILED)|(?:BLANK)|(?:INSPECT)|(?:SKIPPED))""".r
 
     def checkGradedLines(gradedLines: List[String], expectPass: Boolean) = {
-      gradedLines.loneElement.split("""\.\.\.""")(1) should (if (expectPass)
-                                                               startWith(AssessmentProver.Messages.PASS) or
-                                                                 startWith(AssessmentProver.Messages.SKIPPED) or
-                                                                 startWith(AssessmentProver.Messages.INSPECT)
-                                                             else startWith(AssessmentProver.Messages.FAILED) or
-                                                               startWith(AssessmentProver.Messages.BLANK) or
-                                                               startWith(AssessmentProver.Messages.INSPECT) or
-                                                               startWith(AssessmentProver.Messages.SKIPPED) or
-                                                               startWith(
-                                                                 AssessmentProver.Messages.PASS + ":Partial"
-                                                               )) withClue randClue
+      gradedLines.loneElement.split("""\.\.\.""")(1) should (
+        if (expectPass) startWith(AssessmentProver.Messages.PASS) or
+          startWith(AssessmentProver.Messages.SKIPPED) or
+          startWith(AssessmentProver.Messages.INSPECT)
+        else startWith(AssessmentProver.Messages.FAILED) or
+          startWith(AssessmentProver.Messages.BLANK) or
+          startWith(AssessmentProver.Messages.INSPECT) or
+          startWith(AssessmentProver.Messages.SKIPPED) or
+          startWith(AssessmentProver.Messages.PASS + ":Partial")
+      ) withClue randClue
     }
 
     val gradedLinesById = msgLines
@@ -1591,8 +1632,9 @@ class AssessmentProverTests extends TacticTestBase {
                         if (expected.trim.startsWith("{")) expected.stripPrefix("{").stripSuffix("}").trim
                         else expected.trim
                       if (
-                        trimmed.startsWith(QuizExtractor.AskQuestion.KYXLINE) || trimmed
-                          .startsWith(QuizExtractor.AskQuestion.MATH_DELIM)
+                        trimmed.startsWith(QuizExtractor.AskQuestion.KYXLINE) || trimmed.startsWith(
+                          QuizExtractor.AskQuestion.MATH_DELIM
+                        )
                       ) {
                         // parsed answer
                         gradedLines shouldBe Symbol("empty")
@@ -1628,7 +1670,8 @@ class AssessmentProverTests extends TacticTestBase {
           .prompts
           .map(prompt =>
             expected.find(_._1.id == prompt.id) match {
-              case Some((p, answeredCorrectly)) => p.name match {
+              case Some((p, answeredCorrectly)) =>
+                p.name match {
                   case "\\ask" | "\\anychoice" =>
                     val skipped = gradedLinesById.contains(p.id) && gradedLinesById(p.id)
                       .map(_.split("""\.\.\.""")(1))
@@ -1809,10 +1852,12 @@ class AssessmentProverTests extends TacticTestBase {
               val expectedTicked = es.intersect(selected)
               val expectedNotick = es.toSet -- selected.toSet
               val unexpectedTick = selected.toSet -- es.toSet
-              expectedTicked
-                .map(s => Submission.ChoiceAnswer(1, "", "\\choice*", graderCookie, s, isSelected = true)) ++
-                expectedNotick
-                  .map(s => Submission.ChoiceAnswer(1, "", "\\choice*", graderCookie, s, isSelected = false)) ++
+              expectedTicked.map(s =>
+                Submission.ChoiceAnswer(1, "", "\\choice*", graderCookie, s, isSelected = true)
+              ) ++
+                expectedNotick.map(s =>
+                  Submission.ChoiceAnswer(1, "", "\\choice*", graderCookie, s, isSelected = false)
+                ) ++
                 unexpectedTick.map(s => Submission.ChoiceAnswer(1, "", "\\choice", graderCookie, s, isSelected = true))
           }
         case BoolArtifact(value) =>

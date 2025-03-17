@@ -13,91 +13,92 @@ import org.keymaerax.tags.SlowTest
 @SlowTest
 class SCUBATests extends TacticTestBase {
   "tApprox" should "prove with statistics" in withMathematica(_ => {
-    val modelString = """ProgramVariables.
-                        |  R a.
-                        |  R b.
-                        |  R x.
-                        |  R xinit.
-                        |  R tau.
-                        |  R t.
-                        |  R tApprox.
-                        |
-                        |  R d.
-                        |  R v.
-                        |  R vAsc.
-                        |  R vDesc.
-                        |
-                        |  R c.
-                        |  R C.
-                        |
-                        |  R x0.
-                        |  R d0.
-                        |  R t0.
-                        |
-                        |  R HRmin.
-                        |  R HRmax.
-                        |End.
-                        |Problem.
-                        |(
-                        |  0 < HRmin & HRmin < HRmax &
-                        |  HRmin <= a & a <= HRmax &
-                        |  HRmin <= x & x <= HRmax &
-                        |  b>0 & tau>0 & t>=0 & vAsc < 0 & vDesc > 0 & d >= 0 & d0 = d & c=0 & C>0 &
-                        |  t > tau * HRmax * -d/vAsc &
-                        |  tApprox = t
-                        |)
-                        |->
-                        |[
-                        |{
-                        |  /* Reset discrete ghosts aka take sensor measurements. */
-                        |  x0 := x;
-                        |  d0 := d;
-                        |  t0 := t;
-                        |  {
-                        |    /* Case 1: Descend. */
-                        |    {
-                        |      ?tApprox > tau*HRmax*-(d + vDesc*C)/vAsc + tau*HRmax*C;
-                        |      a := *;
-                        |      ?(HRmin <= a & a <= HRmax);
-                        |      v := vDesc;
-                        |    }
-                        |    ++
-                        |    /* Case 2: Horizontal movement at varying intensity. */
-                        |    {
-                        |      a := *;
-                        |      ?(HRmin <= a & a <= HRmax);
-                        |      ?tApprox > tau*HRmax*-d/vAsc + tau*HRmax*C;
-                        |      v := 0;
-                        |    }
-                        |    ++
-                        |    /* Case 3: Ascend (emergency action) */
-                        |    {
-                        |      a := *;
-                        |      ?(HRmin <= a & a <= HRmax);
-                        |      /* note: at this point in the code we need that x<=a via a loop invariant */
-                        |      v := vAsc;
-                        |    }
-                        |  }
-                        |  c := 0;
-                        |  {
-                        |    x' = -(x-a)*b,
-                        |    t' = -tau*x,
-                        |    d' = v,
-                        |    c' = 1
-                        |    & d >= 0
-                        |    & c <= C
-                        |  };
-                        |  tApprox := tApprox - tau*HRmax*c;
-                        |}*@invariant(
-                        |  (0 < HRmin & HRmin < HRmax &
-                        |   HRmin <= a & a <= HRmax &
-                        |   b>0 & tau>0 & vAsc < 0 & vDesc > 0 & d = d0 + v*c & c>=0 & C>0
-                        |  ) &
-                        |  (d >= 0 & HRmin <= x & x <= HRmax) &
-                        |  tau*HRmax*-d/vAsc < t &
-                        |  tApprox <= t
-                        |)]t>0
-                        |End.""".stripMargin
+    val modelString =
+      """ProgramVariables.
+        |  R a.
+        |  R b.
+        |  R x.
+        |  R xinit.
+        |  R tau.
+        |  R t.
+        |  R tApprox.
+        |
+        |  R d.
+        |  R v.
+        |  R vAsc.
+        |  R vDesc.
+        |
+        |  R c.
+        |  R C.
+        |
+        |  R x0.
+        |  R d0.
+        |  R t0.
+        |
+        |  R HRmin.
+        |  R HRmax.
+        |End.
+        |Problem.
+        |(
+        |  0 < HRmin & HRmin < HRmax &
+        |  HRmin <= a & a <= HRmax &
+        |  HRmin <= x & x <= HRmax &
+        |  b>0 & tau>0 & t>=0 & vAsc < 0 & vDesc > 0 & d >= 0 & d0 = d & c=0 & C>0 &
+        |  t > tau * HRmax * -d/vAsc &
+        |  tApprox = t
+        |)
+        |->
+        |[
+        |{
+        |  /* Reset discrete ghosts aka take sensor measurements. */
+        |  x0 := x;
+        |  d0 := d;
+        |  t0 := t;
+        |  {
+        |    /* Case 1: Descend. */
+        |    {
+        |      ?tApprox > tau*HRmax*-(d + vDesc*C)/vAsc + tau*HRmax*C;
+        |      a := *;
+        |      ?(HRmin <= a & a <= HRmax);
+        |      v := vDesc;
+        |    }
+        |    ++
+        |    /* Case 2: Horizontal movement at varying intensity. */
+        |    {
+        |      a := *;
+        |      ?(HRmin <= a & a <= HRmax);
+        |      ?tApprox > tau*HRmax*-d/vAsc + tau*HRmax*C;
+        |      v := 0;
+        |    }
+        |    ++
+        |    /* Case 3: Ascend (emergency action) */
+        |    {
+        |      a := *;
+        |      ?(HRmin <= a & a <= HRmax);
+        |      /* note: at this point in the code we need that x<=a via a loop invariant */
+        |      v := vAsc;
+        |    }
+        |  }
+        |  c := 0;
+        |  {
+        |    x' = -(x-a)*b,
+        |    t' = -tau*x,
+        |    d' = v,
+        |    c' = 1
+        |    & d >= 0
+        |    & c <= C
+        |  };
+        |  tApprox := tApprox - tau*HRmax*c;
+        |}*@invariant(
+        |  (0 < HRmin & HRmin < HRmax &
+        |   HRmin <= a & a <= HRmax &
+        |   b>0 & tau>0 & vAsc < 0 & vDesc > 0 & d = d0 + v*c & c>=0 & C>0
+        |  ) &
+        |  (d >= 0 & HRmin <= x & x <= HRmax) &
+        |  tau*HRmax*-d/vAsc < t &
+        |  tApprox <= t
+        |)]t>0
+        |End.""".stripMargin
 
     val model = ArchiveParser.parseAsFormula(modelString)
 

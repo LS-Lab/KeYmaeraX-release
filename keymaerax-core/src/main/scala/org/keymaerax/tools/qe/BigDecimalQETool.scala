@@ -5,10 +5,8 @@
 
 /**
  * Concrete number arithmetic.
- * @author
- *   Fabian Immler
- * @note
- *   Code Review: 2020-02-14
+ * @author Fabian Immler
+ * @note Code Review: 2020-02-14
  */
 package org.keymaerax.tools.qe
 
@@ -19,10 +17,8 @@ import org.keymaerax.tools.Tool
 /**
  * Proves quantifier- and variable-free arithmetic formulas by exact arithmetic evaluation using
  * [[java.math.BigDecimal]]. Ground term evaluation for formulas with concrete number arithmetic.
- * @author
- *   Fabian Immler
- * @note
- *   Java's BigDecimal is clearer and has less indirection than Scala's BigDecimal.
+ * @author Fabian Immler
+ * @note Java's BigDecimal is clearer and has less indirection than Scala's BigDecimal.
  */
 object BigDecimalQETool extends Tool with QETool {
 
@@ -36,26 +32,22 @@ object BigDecimalQETool extends Tool with QETool {
    * otherwise
    */
   private def getIntOption(d: java.math.BigDecimal): Option[Int] =
-    try { Some(d.intValueExact) }
-    catch { case _: ArithmeticException => None }
+    try { Some(d.intValueExact) } catch { case _: ArithmeticException => None }
 
   /**
    * Evaluate a [[Term]] in exact [[java.math.BigDecimal]] arithmetic.
    *
-   * @return
-   *   the [[java.math.BigDecimal]] equal to the input term
-   * @throws IllegalArgumentException
-   *   if exact evaluation is not possible, e.g., for Variables or non-exact division
+   * @return the [[java.math.BigDecimal]] equal to the input term
+   * @throws IllegalArgumentException if exact evaluation is not possible, e.g., for Variables or non-exact division
    * @see
    *   the documentation of [[java.math.BigDecimal]], in particular the paragraph mentioning
    *   [[java.math.MathContext.UNLIMITED]]:
    *   - Arithmetic methods which take a [[java.math.MathContext.UNLIMITED]] or no [[java.math.MathContext]] object are
    *     exact.
    *   - If the result of division cannot be represented exactly, an [[ArithmeticException]] is thrown.
-   * @note
-   *   We use [[java.math.BigDecimal]] instead of [[scala.math.BigDecimal]] in order to avoid one layer of indirection
-   *   and therefore reduce the trusted code base. Moreover [[java.math.BigDecimal]] is more explicit about rounding
-   *   modes and precision.
+   * @note We use [[java.math.BigDecimal]] instead of [[scala.math.BigDecimal]] in order to avoid one layer of
+   *   indirection and therefore reduce the trusted code base. Moreover [[java.math.BigDecimal]] is more explicit about
+   *   rounding modes and precision.
    */
   def eval(t: Term): java.math.BigDecimal = t match {
     case Number(a) => a.bigDecimal
@@ -88,8 +80,7 @@ object BigDecimalQETool extends Tool with QETool {
       try {
 
         /**
-         * @note
-         *   divide throws an [[ArithmeticException]] if the exact quotient does not have a terminating decimal
+         * @note divide throws an [[ArithmeticException]] if the exact quotient does not have a terminating decimal
          *   expansion
          */
         val quotient = dividend.divide(divisor)
@@ -103,11 +94,9 @@ object BigDecimalQETool extends Tool with QETool {
   /**
    * Evaluate a [[Formula]] by evaluating its terms in exact [[java.math.BigDecimal]] arithmetic.
    *
-   * @return
-   *   the truth value of the input formula or
-   * @throws [[IllegalArgumentException]]
-   *   if terms cannot be evaluated in exact arithmetic or if Formula is not a Boolean combination of numeric
-   *   comparisons.
+   * @return the truth value of the input formula or
+   * @throws [[IllegalArgumentException]] if terms cannot be evaluated in exact arithmetic or if Formula is not a
+   *   Boolean combination of numeric comparisons.
    */
   def eval(fml: Formula): Boolean = fml match {
     case LessEqual(s, t) => eval(s).compareTo(eval(t)) <= 0
@@ -142,10 +131,10 @@ object BigDecimalQETool extends Tool with QETool {
   override def quantifierElimination(formula: Formula): Formula = if (eval(formula)) True else False
 
   /** @inheritdoc */
-  final override def restart(): Unit = {}
+  override final def restart(): Unit = {}
 
   /** @inheritdoc */
-  final override def shutdown(): Unit = {}
+  override final def shutdown(): Unit = {}
 
   /** @inheritdoc */
   override def cancel(): Boolean = true

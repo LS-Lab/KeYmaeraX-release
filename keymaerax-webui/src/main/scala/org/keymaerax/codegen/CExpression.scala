@@ -10,8 +10,7 @@ import org.keymaerax.core.{NamedSymbol, Sort}
 /**
  * C expressions.
  *
- * @author
- *   Stefan Mitsch
+ * @author Stefan Mitsch
  */
 trait CExpression {}
 
@@ -201,6 +200,7 @@ class CExpressionPlainPrettyPrinter(printDebugOut: Boolean) extends (CExpression
     case CTimes(l, r) => "(" + print(l) + ")*(" + print(r) + ")"
     case CDivide(l, r) => "(" + print(l) + ")/(" + print(r) + ")"
     case CPower(l, r) => "pow(" + print(l) + "," + print(r) + ")"
+
     /**
      * Convert interpreted functions to corresponding C functions.
      *
@@ -439,6 +439,7 @@ class CExpressionLogPrettyPrinter extends (CExpression => (String, String)) {
     case CTimes(l, r) => "times(" + print(l) + ", " + print(r) + ")"
     case CDivide(l, r) => "divide(" + print(l) + ", " + print(r) + ")"
     case CPower(l, r) => "power(" + print(l) + ", " + print(r) + ")"
+
     /**
      * Convert interpreted functions to corresponding C functions.
      *
@@ -652,6 +653,7 @@ class CExpressionIntervalLaTeXLogPrettyPrinter extends (CExpression => String) {
     case CTimes(l, r) => "times(" + print(l) + ", " + print(r) + ")"
     case CDivide(l, r) => "divide(" + print(l) + ", " + print(r) + ")"
     case CPower(l, r) => "power(" + print(l) + ", " + print(r) + ")"
+
     /**
      * Convert interpreted functions to corresponding C functions.
      *
@@ -910,7 +912,9 @@ class CMpfrPrettyPrinter(precision: Int = 200, roundingMode: String = "MPFR_RNDD
         )}", rightDist);
          |return fminl(leftDist, rightDist);""".stripMargin
     case t: CTerm =>
-      s"mpfr_get_ld(${mpfrVars(t)}, $roundingMode);" // @note terms cannot be evaluated inline -> are computed in the definitions block
+      s"mpfr_get_ld(${mpfrVars(
+          t
+        )}, $roundingMode);" // @note terms cannot be evaluated inline -> are computed in the definitions block
   }
 
 }

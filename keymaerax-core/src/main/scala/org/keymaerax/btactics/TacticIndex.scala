@@ -16,10 +16,8 @@ import scala.annotation.nowarn
 
 /**
  * Tactic indexing data structures for canonical proof strategies.
- * @author
- *   Stefan Mitsch
- * @see
- *   [[org.keymaerax.btactics.AxiomInfo]]
+ * @author Stefan Mitsch
+ * @see [[org.keymaerax.btactics.AxiomInfo]]
  */
 object TacticIndex {
 
@@ -168,8 +166,7 @@ class DefaultTacticIndex extends TacticIndex {
     case TactixLibrary.ODE => (_: Sequent, p: Position) => Left(one(new Fixed(p)))
     case DifferentialEquationCalculus.solve => (_: Sequent, p: Position) => Left(one(new Fixed(p)))
     case PropositionalTactics.autoMP => (s: Sequent, p: Position) =>
-        if (p.isTopLevel) Left(one(new Fixed(p.checkAnte.checkTop)))
-        else Right(one(left(s, p) :: right(s, p) :: Nil))
+        if (p.isTopLevel) Left(one(new Fixed(p.checkAnte.checkTop))) else Right(one(left(s, p) :: right(s, p) :: Nil))
     // default position: stop searching
     case _ => (_: Sequent, _: Position) => Left(stop)
   }

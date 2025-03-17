@@ -18,10 +18,8 @@ import scala.annotation.tailrec
 /**
  * User-Interface Axiom/Tactic Index: Indexing data structure for all canonically applicable (derived)
  * axioms/rules/tactics in User-Interface.
- * @author
- *   aplatzer
- * @see
- *   [[org.keymaerax.btactics.AxIndex]]
+ * @author aplatzer
+ * @see [[org.keymaerax.btactics.AxIndex]]
  */
 object UIIndex extends Logging {
 
@@ -66,9 +64,9 @@ object UIIndex extends Logging {
       val isSucc = pos.nonEmpty && pos.get.isSucc
 
       val alwaysApplicable = "chaseAt" :: Nil
-      logger
-        .debug(s"allStepsAt($expr) at $pos which ${if (isTop) "is top" else "is not top"} and ${if (isAnte) "is ante"
-          else "is succ"}")
+      logger.debug(s"allStepsAt($expr) at $pos which ${if (isTop) "is top" else "is not top"} and ${
+          if (isAnte) "is ante" else "is succ"
+        }")
       expr match {
         case Differential(t) =>
           val tactics = t match {

@@ -6,16 +6,12 @@
 /**
  * Differential Dynamic Logic prover Microkernel.
  *
- * @author
- *   Andre Platzer
+ * @author Andre Platzer
  * @see
  *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
- * @see
- *   [[org.keymaerax.Bibliography.ToclPlatzer15 Differential game logic]]
- * @see
- *   [[org.keymaerax.Bibliography.LicsPlatzer12b The complete proof theory of hybrid systems]]
- * @note
- *   Code Review: 2020-02-17
+ * @see [[org.keymaerax.Bibliography.ToclPlatzer15 Differential game logic]]
+ * @see [[org.keymaerax.Bibliography.LicsPlatzer12b The complete proof theory of hybrid systems]]
+ * @note Code Review: 2020-02-17
  */
 package org.keymaerax
 
@@ -33,13 +29,11 @@ import scala.collection.immutable
  * [[http://lfcps.org/logic/dL.html differential dynamic logic]]:
  *   - [[org.keymaerax.core.Expression Syntax of dL Expressions]]
  *   - [[org.keymaerax.core.StaticSemantics Static Semantics]]
- *
  *   - Proof Construction of [[org.keymaerax.core.Provable proof certificates]] from
  *     - [[org.keymaerax.core.Provable.axioms axioms]]
  *     - [[org.keymaerax.core.USubst Uniform substitutions]]
  *     - [[org.keymaerax.core.URename Uniform renamings]]
  *     - [[org.keymaerax.core.Rule Proof rules]]
- *
  *   - Provides basic
  *     [[org.keymaerax.core.Provable.fromStorageString(storedProvable:String):edu\.cmu\.cs\.ls\.keymaerax\.core\.Provable* Stored Provables as Strings]],
  *     [[org.keymaerax.core.QETool real arithmetic interfaces]], [[org.keymaerax.core.CoreException error reporting]],
@@ -179,40 +173,25 @@ import scala.collection.immutable
  * highest complexity is for the [[USubstOne uniform substitution application mechanism]]. The highest information
  * density is in the [[AxiomBase axiom list]].
  *
- * @author
- *   Andre Platzer
+ * @author Andre Platzer
  * @see
  *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
- * @see
- *   [[org.keymaerax.Bibliography.CadePlatzer19 Uniform substitution at one fell swoop]]
- * @see
- *   [[org.keymaerax.Bibliography.JacmPlatzerT20 Differential equation invariance axiomatization]]
- * @see
- *   [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
- * @see
- *   [[org.keymaerax.Bibliography.CadePlatzer18 Uniform substitution for differential game logic]]
- * @see
- *   [[org.keymaerax.Bibliography.Platzer18 Logical Foundations of Cyber-Physical Systems]]
+ * @see [[org.keymaerax.Bibliography.CadePlatzer19 Uniform substitution at one fell swoop]]
+ * @see [[org.keymaerax.Bibliography.JacmPlatzerT20 Differential equation invariance axiomatization]]
+ * @see [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
+ * @see [[org.keymaerax.Bibliography.CadePlatzer18 Uniform substitution for differential game logic]]
+ * @see [[org.keymaerax.Bibliography.Platzer18 Logical Foundations of Cyber-Physical Systems]]
  * @see
  *   [[org.keymaerax.Bibliography.CadeFultonMQVP15 KeYmaera X: An aXiomatic tactical theorem prover for hybrid systems]]
- * @see
- *   [[org.keymaerax.Bibliography.ToclPlatzer15 Differential game logic]]
- * @see
- *   [[org.keymaerax.Bibliography.LicsPlatzer12a Logics of dynamical systems]]
- * @see
- *   [[org.keymaerax.Bibliography.LicsPlatzer12b The complete proof theory of hybrid systems]]
- * @see
- *   [[org.keymaerax.Bibliography.JarPlatzer08 Differential dynamic logic for hybrid systems]]
- * @see
- *   [[org.keymaerax.core.Provable]]
- * @see
- *   [[org.keymaerax.core.Expression]]
- * @see
- *   [[org.keymaerax.core.StaticSemantics]]
- * @see
- *   [[org.keymaerax.core.USubstOne]]
- * @note
- *   Code Review 2020-02-17
+ * @see [[org.keymaerax.Bibliography.ToclPlatzer15 Differential game logic]]
+ * @see [[org.keymaerax.Bibliography.LicsPlatzer12a Logics of dynamical systems]]
+ * @see [[org.keymaerax.Bibliography.LicsPlatzer12b The complete proof theory of hybrid systems]]
+ * @see [[org.keymaerax.Bibliography.JarPlatzer08 Differential dynamic logic for hybrid systems]]
+ * @see [[org.keymaerax.core.Provable]]
+ * @see [[org.keymaerax.core.Expression]]
+ * @see [[org.keymaerax.core.StaticSemantics]]
+ * @see [[org.keymaerax.core.USubstOne]]
+ * @note Code Review 2020-02-17
  */
 package object core {
 
@@ -232,12 +211,9 @@ package object core {
    * Insist on `requirement` being true, throwing a [[CoreException]] if false. This method is a `require` coming from
    * the prover core that cannot be disabled. Blame is on the caller of the method for violating the contract.
    *
-   * @param requirement
-   *   the expression to test for being true
-   * @param message
-   *   a String explaining what is expected.
-   * @see
-   *   [[scala.Predef.require()]]
+   * @param requirement the expression to test for being true
+   * @param message a String explaining what is expected.
+   * @see [[scala.Predef.require()]]
    */
   @inline
   final def insist(requirement: Boolean, message: => Any): Unit = {
@@ -255,26 +231,23 @@ package object core {
    *   }}}
    */
   @inline
-  final def noException[T](e: => T): Boolean =
-    try { e; true }
-    catch { case _: Throwable => false }
+  final def noException[T](e: => T): Boolean = try { e; true } catch { case _: Throwable => false }
 
   /**
    * Java-style assertions, disabled by default, enabled with `java -ea`, disable with `java -da`. Scala-style elidable
    * at compile-time with `-Xdisable-assertions`
    *
    * Lazy evaluation of `condition` on `argument`, lazy evaluation of message.
-   * @author
-   *   Fabian Immler
+   * @author Fabian Immler
    */
   @elidable(elidable.ASSERTION) @inline
-  def assertion[A](condition: A => Boolean, argument: A, message: => Any): A = Assertion
-    .assertion((x: A) => condition(x): java.lang.Boolean, argument, () => message.asInstanceOf[AnyRef])
+  def assertion[A](condition: A => Boolean, argument: A, message: => Any): A =
+    Assertion.assertion((x: A) => condition(x): java.lang.Boolean, argument, () => message.asInstanceOf[AnyRef])
 
   /** see [[assertion]] */
   @elidable(elidable.ASSERTION) @inline
-  def assertion[A](condition: A => Boolean, argument: A): A = Assertion
-    .assertion((x: A) => condition(x): java.lang.Boolean, argument)
+  def assertion[A](condition: A => Boolean, argument: A): A =
+    Assertion.assertion((x: A) => condition(x): java.lang.Boolean, argument)
 
   /** see [[assertion]] */
   @elidable(elidable.ASSERTION) @inline
@@ -282,34 +255,25 @@ package object core {
 
   /** see [[assertion]] */
   @elidable(elidable.ASSERTION) @inline
-  def assertion(condition: => Boolean, message: => Any): Unit = Assertion
-    .assertion(() => condition: java.lang.Boolean, () => message.asInstanceOf[AnyRef])
+  def assertion(condition: => Boolean, message: => Any): Unit =
+    Assertion.assertion(() => condition: java.lang.Boolean, () => message.asInstanceOf[AnyRef])
 
   /**
    * Contracts (like [[scala.Predef.Ensuring]]) implemented with Java-style assertions (see [[assertion]])
-   * @author
-   *   Fabian Immler
+   * @author Fabian Immler
    */
   implicit final class Ensures[A](private val self: A) extends AnyVal {
 
-    /**
-     * Java-style lazy-evaluation postcondition assertion that can be enabled with `java -ea`, disabled with `java -da`.
-     */
+    /** Java-style lazy-evaluation postcondition assertion that can be enabled with `java -ea`, disabled with `java -da`. */
     def ensures(cond: => Boolean): A = { assertion(cond); self }
 
-    /**
-     * Java-style lazy-evaluation postcondition assertion that can be enabled with `java -ea`, disabled with `java -da`.
-     */
+    /** Java-style lazy-evaluation postcondition assertion that can be enabled with `java -ea`, disabled with `java -da`. */
     def ensures(cond: => Boolean, msg: => Any): A = { assertion(cond, msg); self }
 
-    /**
-     * Java-style lazy-evaluation postcondition assertion that can be enabled with `java -ea`, disabled with `java -da`.
-     */
+    /** Java-style lazy-evaluation postcondition assertion that can be enabled with `java -ea`, disabled with `java -da`. */
     def ensures(cond: A => Boolean): A = { assertion(cond, self); self }
 
-    /**
-     * Java-style lazy-evaluation postcondition assertion that can be enabled with `java -ea`, disabled with `java -da`.
-     */
+    /** Java-style lazy-evaluation postcondition assertion that can be enabled with `java -ea`, disabled with `java -da`. */
     def ensures(cond: A => Boolean, msg: => Any): A = { assertion(cond, self, msg); self }
 
   }

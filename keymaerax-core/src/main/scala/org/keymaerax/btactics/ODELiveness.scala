@@ -57,12 +57,9 @@ object ODELiveness {
 
   /**
    * Computes the affine form for ODEs
-   * @todo:
-   *   this may also be extended to work with domain constraints
-   * @param odes
-   *   the ODEs to put into affine form
-   * @return
-   *   A (matrix of terms), b (list of terms), x (list of variables) such that x'=Ax+b
+   * @todo: this may also be extended to work with domain constraints
+   * @param odes the ODEs to put into affine form
+   * @return A (matrix of terms), b (list of terms), x (list of variables) such that x'=Ax+b
    */
   def affine_form(odes: DifferentialProgram): (List[List[Term]], List[Term], List[Term]) = {
 
@@ -114,7 +111,7 @@ object ODELiveness {
         useAt(Ax.commaCommute)(-1, 0 :: Nil) & implyRi &
         byUS(Ax.ally),
       useAt(Ax.DGa, PosInExpr(0 :: Nil))(1) &
-        useAt(Ax.existsey, PosInExpr(1 :: Nil))(1) & id
+        useAt(Ax.existsey, PosInExpr(1 :: Nil))(1) & id,
     ),
     namespace,
   )
@@ -125,7 +122,7 @@ object ODELiveness {
       useAt(Ax.diamond, PosInExpr(1 :: Nil))(1) &
         useAt(Ax.diamond, PosInExpr(1 :: Nil))(-1) & prop & implyRi & equivifyR(1) & commuteEquivR(1) & byUS(dgb),
       useAt(Ax.diamond, PosInExpr(1 :: Nil))(1) &
-        useAt(Ax.diamond, PosInExpr(1 :: Nil))(-1) & prop & implyRi & equivifyR(1) & byUS(dgb)
+        useAt(Ax.diamond, PosInExpr(1 :: Nil))(-1) & prop & implyRi & equivifyR(1) & byUS(dgb),
     ),
     namespace,
   )
@@ -221,18 +218,12 @@ object ODELiveness {
             ))(1) &
             G(1) & DassignbCustom(1) &
             byUS(Ax.equalReflexive),
-          QE
+          QE,
         ),
     )
     // , namespace).fact
 
-    val pr2 = proveBy(
-      DDGimply,
-      cut(Exists(ghostvar :: Nil, inv)) < (
-        skip,
-        cohideR(2) & QE
-      ),
-    )
+    val pr2 = proveBy(DDGimply, cut(Exists(ghostvar :: Nil, inv)) < (skip, cohideR(2) & QE))
 
     // existsL does something crazy, so explicitly call Skolemize instead
     val pr3 = proveBy(pr2(Skolemize(AntePos(0)), 0), implyRi & byUS(pr))
@@ -243,10 +234,8 @@ object ODELiveness {
   /**
    * Helper that gets the appropriate VDG instance (already instantiated for the ghosts and ODE by renaming and friends)
    *
-   * @param ghostODEs
-   *   the ghost ODEs
-   * @return
-   *   both directions of VDG instantiated for the ghost ODEs (everything else is left uninstantiated)
+   * @param ghostODEs the ghost ODEs
+   * @return both directions of VDG instantiated for the ghost ODEs (everything else is left uninstantiated)
    */
   def getVDGinst(ghostODEs: DifferentialProgram): (ProvableSig, ProvableSig) = {
 
@@ -283,10 +272,8 @@ object ODELiveness {
    * Helper that gets the appropriate DDG instance (already instantiated for the ghosts by renaming and friends) This
    * helps simplify the (y^2)' term away
    *
-   * @param ghostODEs
-   *   the ghosts to add to the ODE
-   * @return
-   *   DDG instantiated for the particular boxode question
+   * @param ghostODEs the ghosts to add to the ODE
+   * @return DDG instantiated for the particular boxode question
    */
   def getDDGinst(ghostODEs: DifferentialProgram): ProvableSig = {
 
@@ -344,7 +331,7 @@ object ODELiveness {
             derive(1, PosInExpr(1 :: 1 :: Nil)) &
               (DESystemCustom(1) * length) & G(1) & DassignbCustom(1) & QE
           )(1),
-        cohideR(1) & by(pr)
+        cohideR(1) & by(pr),
       ),
     )
   }
@@ -412,11 +399,8 @@ object ODELiveness {
       goal,
       cutR(pre)(1)
         < (
-          G(1) & cutR(bound.conclusion.succ(0))(1) < (
-            by(bound),
-            useAt(ineqLem1, PosInExpr(1 :: Nil))(1) & QE
-          ),
-          by(ddg)
+          G(1) & cutR(bound.conclusion.succ(0))(1) < (by(bound), useAt(ineqLem1, PosInExpr(1 :: Nil))(1) & QE),
+          by(ddg),
         ),
     )
 
@@ -436,8 +420,7 @@ object ODELiveness {
   /**
    * Given ODE, returns the global existence axiom `<t'=1,x'=f(x)>t>p()` (if it proves)
    * @param ode
-   * @return
-   *   (optional) ProvableSig proving the global existence axiom, None if failed
+   * @return (optional) ProvableSig proving the global existence axiom, None if failed
    */
   def deriveGlobalExistence(ode: DifferentialProgram): Option[ProvableSig] = {
 
@@ -559,30 +542,30 @@ object ODELiveness {
         // v=r case
         dC(disj0)(1) < (
           DifferentialTactics.diffWeakenG(1) & QE, // could be done manually with US instead of QE
-          dRI(1)
+          dRI(1),
         ) // maybe can be made faster
         ,
         orL(-3) < (
           andL(-3) &
             DifferentialTactics.DconstV(1) & dC(pleq)(1) < (
-              dC(GreaterEqual(x, oldvar))(1) < (
-                DifferentialTactics.diffWeakenG(1) & QE, DifferentialTactics.dgBarrier(1)
-              ),
-              ODEInvariance.sAIclosed(1)
+              dC(
+                GreaterEqual(x, oldvar)
+              )(1) < (DifferentialTactics.diffWeakenG(1) & QE, DifferentialTactics.dgBarrier(1)),
+              ODEInvariance.sAIclosed(1),
             ),
           andL(-3) &
             DifferentialTactics.DconstV(1) & dC(pgeq)(1) < (
               dC(LessEqual(x, oldvar))(1) < (DifferentialTactics.diffWeakenG(1) & QE, DifferentialTactics.dgBarrier(1)),
-              ODEInvariance.sAIclosed(1)
-            )
-        )
+              ODEInvariance.sAIclosed(1),
+            ),
+        ),
       )
 
       val tac = cut(precond) < (
         existsL(Symbol("Llast")) &
-          cut(Exists(oldvar :: Nil, Equal(x, oldvar))) < (
-            existsL(Symbol("Llast")) & exhaustiveEqL2R(Symbol("Llast")), cohideR(Symbol("Rlast")) & QE
-          ) &
+          cut(
+            Exists(oldvar :: Nil, Equal(x, oldvar))
+          ) < (existsL(Symbol("Llast")) & exhaustiveEqL2R(Symbol("Llast")), cohideR(Symbol("Rlast")) & QE) &
           andL(-(seq.ante.length + 1)) &
           cut(Box(sys, LessEqual(Times(x, x), Plus(Times(oldvar, oldvar), Times(rootvar, rootvar))))) < (
             (hideL(-(seq.ante.length + 1)) * 3) & removeODENonLin(
@@ -593,9 +576,9 @@ object ODELiveness {
             )(pos),
             // From here, we don't need any extra information
             (hideL(-1) * seq.ante.length) &
-              cohideOnlyR(Symbol("Rlast")) & splittac
+              cohideOnlyR(Symbol("Rlast")) & splittac,
           ),
-        by(starter)
+        by(starter),
       )
 
       tac
@@ -659,7 +642,7 @@ object ODELiveness {
             useAt(finalrw, PosInExpr(1 :: Nil))(1) &
             odeUnify(1) &
             hideNonFOLLeft &
-            ODE(1) & done
+            ODE(1) & done,
         )
       }
       case None => skip
@@ -693,12 +676,9 @@ object ODELiveness {
   /**
    * Applied to a top-level position containing a succedent diamond, this tactic removes irrelevant ODEs
    *
-   * @param strict
-   *   whether to throw an error when it meets a nonlinear ODE that can't be reduced
-   * @param hints
-   *   a list of
-   * @return
-   *   reduces away all irrelevant ODEs
+   * @param strict whether to throw an error when it meets a nonlinear ODE that can't be reduced
+   * @param hints a list of
+   * @return reduces away all irrelevant ODEs
    */
   def odeReduce(strict: Boolean = true, hints: List[Formula]): DependentPositionTactic =
     anon((pos: Position, seq: Sequent) => {
@@ -873,10 +853,7 @@ object ODELiveness {
         skip,
         cohideOnlyL(AntePosition(i + 1)) & cohideOnlyR(pos) &
           tac &
-          dR(dom)(1) < (
-            id,
-            DifferentialTactics.diffWeakenG(1) & implyR(1) & by(pr)
-          )
+          dR(dom)(1) < (id, DifferentialTactics.diffWeakenG(1) & implyR(1) & by(pr)),
       )
     })
   }
@@ -942,10 +919,8 @@ object ODELiveness {
    * G |- <ODE & Q> P
    * }}}
    *
-   * @param R
-   *   the formula R to refine the postcondition
-   * @return
-   *   two premises, as shown above when applied to a top-level succedent diamond
+   * @param R the formula R to refine the postcondition
+   * @return two premises, as shown above when applied to a top-level succedent diamond
    */
   // was kDomD
   def kDomainDiamond(R: Formula): DependentPositionWithAppliedInputTactic = "kDomainDiamond".byWithInputs(
@@ -967,7 +942,7 @@ object ODELiveness {
 
       cutR(newfml)(pos) < (
         skip & label(BelleLabels.cutUse),
-        useAt(Ax.KDomD, PosInExpr(1 :: Nil))(pos) & odeUnify(pos) & label(BelleLabels.cutShow)
+        useAt(Ax.KDomD, PosInExpr(1 :: Nil))(pos) & odeUnify(pos) & label(BelleLabels.cutShow),
       )
     },
   )
@@ -992,10 +967,8 @@ object ODELiveness {
    * G |- <ODE & Q> P
    * }}}
    *
-   * @param R
-   *   the formula R to refine the domain constraint
-   * @return
-   *   two premises, as shown above when applied to a top-level succedent diamond
+   * @param R the formula R to refine the domain constraint
+   * @return two premises, as shown above when applied to a top-level succedent diamond
    */
   def dDR(R: Formula): DependentPositionWithAppliedInputTactic = "dDR".byWithInputs(
     List(R),
@@ -1015,10 +988,7 @@ object ODELiveness {
 
         val newfml = Diamond(ODESystem(sys.ode, R), post)
 
-        cutR(newfml)(pos) < (
-          skip,
-          useAt(Ax.DRd, PosInExpr(1 :: Nil))(pos) & odeUnify(pos)
-        )
+        cutR(newfml)(pos) < (skip, useAt(Ax.DRd, PosInExpr(1 :: Nil))(pos) & odeUnify(pos))
       }
     },
   )
@@ -1048,10 +1018,8 @@ object ODELiveness {
    *
    * }}}
    *
-   * @param ghost
-   *   the ODEs to ghost in
-   * @return
-   *   the sequent with ghosts added in requested position
+   * @param ghost the ODEs to ghost in
+   * @return the sequent with ghosts added in requested position
    */
   def vDG(ghost: DifferentialProgram): DependentPositionTactic = anon { (pos: Position, seq: Sequent) =>
     {
@@ -1173,12 +1141,9 @@ object ODELiveness {
    *
    * Note that domain constraint Q is kept around!
    *
-   * @param bnd
-   *   the lower bound on derivatives
-   * @param manual
-   *   whether to try closing automatically
-   * @return
-   *   closes (or partially so)
+   * @param bnd the lower bound on derivatives
+   * @param manual whether to try closing automatically
+   * @return closes (or partially so)
    */
   def dV(bnd: Term, manual: Boolean = false): DependentPositionTactic = anon { (pos: Position, seq: Sequent) =>
     {
@@ -1211,9 +1176,9 @@ object ODELiveness {
       val timer = AtomicODE(DifferentialSymbol(timevar), Number(1))
 
       // Introduces the time variable in a mildly gross way so that it is set to 0 initially
-      val timetac = cut(Exists(List(timevar), Equal(timevar, Number(0)))) < (
-        existsL(Symbol("Llast")), cohideR(Symbol("Rlast")) & QE
-      ) &
+      val timetac = cut(
+        Exists(List(timevar), Equal(timevar, Number(0)))
+      ) < (existsL(Symbol("Llast")), cohideR(Symbol("Rlast")) & QE) &
         vDG(timer)(pos)
 
       val p = property.sub(PosInExpr(0 :: Nil)).get.asInstanceOf[Term]
@@ -1245,10 +1210,10 @@ object ODELiveness {
              ToolTactics.hideNonFOL & QE &
                DebuggingTactics.done("Unable to prove " + bnd + " strictly positive."), // G |- e_() > 0
              odeReduce(strict = false, Nil)(pos) &
-               Idioms.?(cohideR(pos) & byUScaught(ex))
+               Idioms.?(cohideR(pos) & byUScaught(ex)),
            ), // existence
            (odeUnify(pos) & dI(Symbol("full"))(pos) & done |
-             skip)
+             skip),
            // DebuggingTactics.done("Unable to prove derivative lower bound using "+ bnd +".")
            // derivative lower bound
          ))
@@ -1323,8 +1288,9 @@ object ODELiveness {
             // hide the eps assumptions
             label(BelleLabels.dVexists) &
               hideL(-(seq.ante.length + 1)) & hideL(-(seq.ante.length + 1)) &
-              odeReduce(strict = false, Nil)(pos) & Idioms
-                .?(cohideR(pos) & (byUScaught(Ax.TExge) | byUScaught(Ax.TExgt)))
+              odeReduce(strict = false, Nil)(pos) & Idioms.?(
+                cohideR(pos) & (byUScaught(Ax.TExge) | byUScaught(Ax.TExgt))
+              ),
           ), // existence
           odeUnify(pos) &
             dR(lie, false)(pos) < (
@@ -1332,14 +1298,11 @@ object ODELiveness {
               // add the quantified assumption manually
               dC(quantliecheck)(pos) < (
                 DifferentialTactics.diffWeakenG(pos) & implyR(1) & andL(-1) & (allL(Symbol("Llast")) * bvs
-                  .length) & implyL(Symbol("Llast")) < (
-                  id,
-                  id
-                ),
-                V(pos) & id
-              )
-            ) // derivative lower bound
-        )
+                  .length) & implyL(Symbol("Llast")) < (id, id),
+                V(pos) & id,
+              ),
+            ), // derivative lower bound
+        ),
     )
   })
 
@@ -1372,9 +1335,9 @@ object ODELiveness {
       val timer = AtomicODE(DifferentialSymbol(timevar), Number(1))
 
       // Introduces the time variable in a mildly gross way so that it is set to 0 initially
-      val timetac = cut(Exists(List(timevar), Equal(timevar, Number(0)))) < (
-        existsL(Symbol("Llast")), cohideR(Symbol("Rlast")) & QE
-      ) &
+      val timetac = cut(
+        Exists(List(timevar), Equal(timevar, Number(0)))
+      ) < (existsL(Symbol("Llast")), cohideR(Symbol("Rlast")) & QE) &
         vDG(timer)(pos)
 
       // Symbolic lower bound
@@ -1405,19 +1368,20 @@ object ODELiveness {
       starter & timetac &
         cut(Exists(List(oldp), inv)) < (
           existsL(Symbol("Llast")),
-          cohideR(Symbol("Rlast")) & QE // this should be a trivial QE question
+          cohideR(Symbol("Rlast")) & QE, // this should be a trivial QE question
         ) &
         kDomainDiamond(oldpbound)(pos) < (
           useAt(axren, PosInExpr(1 :: Nil))(pos) & andR(pos) < (
             ToolTactics.hideNonFOL & QE,
-            odeReduce(strict = false, Nil)(pos) & Idioms.?(cohideR(pos) & byUScaught(Ax.TExgt))
+            odeReduce(strict = false, Nil)(pos) & Idioms.?(cohideR(pos) & byUScaught(Ax.TExgt)),
           ), // existence
           dC(inv)(pos) < (
             DW(pos) & G(pos) & ToolTactics.hideNonFOL & QE, // can be proved manually
-            DifferentialTactics
-              .DconstV(pos) & sAIclosed(pos) & done | // ODE does a boxand split, which is specifically a bad idea here
-              skip
-          )
+            DifferentialTactics.DconstV(pos) & sAIclosed(
+              pos
+            ) & done | // ODE does a boxand split, which is specifically a bad idea here
+              skip,
+          ),
         )
 
     }
@@ -1453,9 +1417,9 @@ object ODELiveness {
       val timer = AtomicODE(DifferentialSymbol(timevar), Number(1))
 
       // Introduces the time variable in a mildly gross way so that it is set to 0 initially
-      val timetac = cut(Exists(List(timevar), Equal(timevar, Number(0)))) < (
-        existsL(Symbol("Llast")), cohideR(Symbol("Rlast")) & QE
-      ) &
+      val timetac = cut(
+        Exists(List(timevar), Equal(timevar, Number(0)))
+      ) < (existsL(Symbol("Llast")), cohideR(Symbol("Rlast")) & QE) &
         vDG(timer)(pos)
 
       val eps = TacticHelper.freshNamedSymbol("eps".asVariable, seq)
@@ -1488,13 +1452,7 @@ object ODELiveness {
       val sim = proveBy(
         seq,
         starter & timetac &
-          kDomainDiamond(oldpbound)(pos) < (
-            skip,
-            dC(inv)(pos) < (
-              skip,
-              DifferentialTactics.DconstV(pos)
-            )
-          ),
+          kDomainDiamond(oldpbound)(pos) < (skip, dC(inv)(pos) < (skip, DifferentialTactics.DconstV(pos))),
       )
 
       val simseq = sim.subgoals.last
@@ -1527,14 +1485,15 @@ object ODELiveness {
           implyR(pos) & existsL(Symbol("Llast")) & andL(Symbol("Llast")) &
             cut(Exists(List(oldp), inv)) < (
               existsL(Symbol("Llast")) & allL(-(seq.ante.length + 3)),
-              cohideR(Symbol("Rlast")) & QE // this should be a trivial QE question
+              cohideR(Symbol("Rlast")) & QE, // this should be a trivial QE question
             ) &
             kDomainDiamond(oldpbound)(pos) < (
               hideL(-(seq.ante.length + 3)) &
                 useAt(axren, PosInExpr(1 :: Nil))(pos) & andR(pos) < (
                   ToolTactics.hideNonFOL & QE,
-                  label(BelleLabels.dVexists) & odeReduce(strict = false, Nil)(pos) & Idioms
-                    .?(cohideR(pos) & byUScaught(Ax.TExgt))
+                  label(BelleLabels.dVexists) & odeReduce(strict = false, Nil)(pos) & Idioms.?(
+                    cohideR(pos) & byUScaught(Ax.TExgt)
+                  ),
                 ), // existence
               dC(inv)(pos) < (
                 DW(pos) & G(pos) & ToolTactics.hideNonFOL & QE, // can be proved manually
@@ -1546,11 +1505,11 @@ object ODELiveness {
                     DifferentialTactics.diffWeakenG(pos) &
                       implyR(1) & andL(-1) & (allL(Symbol("Llast")) * bvs.length) &
                       id,
-                    V(pos) & id
-                  )
-                )
-              )
-            )
+                    V(pos) & id,
+                  ),
+                ),
+              ),
+            ),
         )
 
     }
@@ -1565,9 +1524,9 @@ object ODELiveness {
           cutR("[{t'=1,c&(q_(||)&!(t>-p(||)/e_()&e_()>0)) & e_() > 0}](!t>-p(||)/e_())".asFormula)(1) < (
             DW(1) & G(1) & prop,
             equivifyR(1) & commuteEquivR(1) &
-              useAt(Ax.DC, PosInExpr(1 :: Nil))(1) & V(1) & id
+              useAt(Ax.DC, PosInExpr(1 :: Nil))(1) & V(1) & id,
           ),
-        cohideR(1) & implyR(1) & mond & byUS(proveBy("t>-p()/e_()&e_()>0 ==> p()+e_()*t>0".asSequent, QE))
+        cohideR(1) & implyR(1) & mond & byUS(proveBy("t>-p()/e_()&e_()>0 ==> p()+e_()*t>0".asSequent, QE)),
       ),
     namespace,
   )
@@ -1580,9 +1539,9 @@ object ODELiveness {
           cutR("[{t'=1,c&(q_(||)&!(t>=-p(||)/e_()&e_()>0)) & e_() > 0}](!t>=-p(||)/e_())".asFormula)(1) < (
             DW(1) & G(1) & prop,
             equivifyR(1) & commuteEquivR(1) &
-              useAt(Ax.DC, PosInExpr(1 :: Nil))(1) & V(1) & id
+              useAt(Ax.DC, PosInExpr(1 :: Nil))(1) & V(1) & id,
           ),
-        cohideR(1) & implyR(1) & mond & byUS(proveBy("t>=-p()/e_()&e_()>0 ==> p()+e_()*t>=0".asSequent, QE))
+        cohideR(1) & implyR(1) & mond & byUS(proveBy("t>=-p()/e_()&e_()>0 ==> p()+e_()*t>=0".asSequent, QE)),
       ),
     namespace,
   )
@@ -1598,7 +1557,7 @@ object ODELiveness {
         ),
         equivifyR(1) & commuteEquivR(1) &
           useAt(Ax.DC, PosInExpr(1 :: Nil))(1) &
-          useAt(Ax.notGreaterEqual, PosInExpr(0 :: Nil))(1, 0 :: 1 :: 1 :: Nil) & id
+          useAt(Ax.notGreaterEqual, PosInExpr(0 :: Nil))(1, 0 :: 1 :: 1 :: Nil) & id,
       ),
     namespace,
   )
@@ -1614,7 +1573,7 @@ object ODELiveness {
         ),
         equivifyR(1) & commuteEquivR(1) &
           useAt(Ax.DC, PosInExpr(1 :: Nil))(1) &
-          useAt(Ax.notGreater, PosInExpr(0 :: Nil))(1, 0 :: 1 :: 1 :: Nil) & id
+          useAt(Ax.notGreater, PosInExpr(0 :: Nil))(1, 0 :: 1 :: 1 :: Nil) & id,
       ),
     namespace,
   )
@@ -1632,10 +1591,8 @@ object ODELiveness {
    *
    * Note that domain constraint Q is kept around!
    *
-   * @param bnds
-   *   the lower bound on derivatives
-   * @return
-   *   two subgoals, shown above
+   * @param bnds the lower bound on derivatives
+   * @return two subgoals, shown above
    */
   def higherdV(bnds: List[Term]): DependentPositionTactic = anon { (pos: Position, seq: Sequent) =>
     {
@@ -1664,9 +1621,9 @@ object ODELiveness {
       val timer = AtomicODE(DifferentialSymbol(timevar), Number(1))
 
       // Introduces the time variable in a mildly gross way so that it is set to 0 initially
-      val timetac = cut(Exists(List(timevar), Equal(timevar, Number(0)))) < (
-        existsL(Symbol("Llast")), cohideR(Symbol("Rlast")) & QE
-      ) &
+      val timetac = cut(
+        Exists(List(timevar), Equal(timevar, Number(0)))
+      ) < (existsL(Symbol("Llast")), cohideR(Symbol("Rlast")) & QE) &
         vDG(timer)(pos)
 
       val p = property.sub(PosInExpr(0 :: Nil)).get.asInstanceOf[Term]
@@ -1696,8 +1653,8 @@ object ODELiveness {
           dC(GreaterEqual(p, series))(pos) < (
             DW(pos) & G(pos) & QE // might as well have usubst here
             ,
-            skip
-          )
+            skip,
+          ),
         )
 //      discreteGhost(p, Some(oldp))(pos) &
 //      useAt(axren,PosInExpr(1::Nil))(pos) &
@@ -1735,10 +1692,7 @@ object ODELiveness {
         )
     }
 
-    cut(Box(tarsys, Not(tarpost))) < (
-      skip,
-      useAt(Ax.diamond, PosInExpr(1 :: Nil))(pos) & notR(pos) & id
-    )
+    cut(Box(tarsys, Not(tarpost))) < (skip, useAt(Ax.diamond, PosInExpr(1 :: Nil))(pos) & notR(pos) & id)
   })
 
   /**
@@ -1750,8 +1704,7 @@ object ODELiveness {
    * G |- <x'=f(x)&Q>P
    * }}}
    *
-   * @return
-   *   see rule above
+   * @return see rule above
    */
   def dDX: BuiltInPositionTactic = useAt(Ax.dDX)
 
@@ -1766,8 +1719,7 @@ object ODELiveness {
    * G |- <ODE & p>=0> P
    * }}}
    *
-   * @todo:
-   *   succeeds but probably unexpectedly when Q is not closed. Best to error instead.
+   * @todo: succeeds but probably unexpectedly when Q is not closed. Best to error instead.
    */
   def closedRef(R: Formula): DependentPositionWithAppliedInputTactic = "closedRef".byWithInputs(
     List(R),
@@ -1788,10 +1740,7 @@ object ODELiveness {
       saveBox(pos) & dDR(R)(pos) < (
         // Remove the saveBox to reduce clutter
         hideL(Symbol("Llast")),
-        DifferentialTactics.dCClosure(pos) < (
-          hideL(Symbol("Llast")) & skip,
-          odeUnify(pos) & hideL(Symbol("Llast"))
-        )
+        DifferentialTactics.dCClosure(pos) < (hideL(Symbol("Llast")) & skip, odeUnify(pos) & hideL(Symbol("Llast"))),
       )
     },
   )
@@ -1818,11 +1767,10 @@ object ODELiveness {
    * G |- [ODE]P
    * }}}
    *
-   * @param ghost
-   *   the ghost ODEs, L, M as above
+   * @param ghost the ghost ODEs, L, M as above
    */
-  def dDG(ghost: DifferentialProgram, L: Term, M: Term): DependentPositionTactic =
-    anon((pos: Position, seq: Sequent) => {
+  def dDG(ghost: DifferentialProgram, L: Term, M: Term): DependentPositionTactic = anon(
+    (pos: Position, seq: Sequent) => {
       require(pos.isTopLevel && pos.isSucc, "dDG is only applicable at a top-level succedent")
 
       val (sys, post) = seq.sub(pos) match {
@@ -1846,7 +1794,8 @@ object ODELiveness {
       useAt(useFor(curry, PosInExpr(0 :: Nil), ((us: Subst) => us))(Position(1))(ddg), PosInExpr(1 :: Nil))(pos) & andR(
         pos
       )
-    })
+    }
+  )
 
   /**
    * Implements bDG rule that adds ghosts to box ODEs on the right of the turnstile
@@ -1858,8 +1807,7 @@ object ODELiveness {
    * G |- [ODE]P
    * }}}
    *
-   * @param ghost
-   *   the ghost ODEs, L, M as above
+   * @param ghost the ghost ODEs, L, M as above
    */
   def bDG(ghost: DifferentialProgram, p: Term): DependentPositionTactic = anon((pos: Position, seq: Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "bDG is only applicable at a top-level succedent")
@@ -1904,8 +1852,8 @@ object ODELiveness {
     displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ |- [ghost, x'=f(x) & Q] (||ghost||)^2 <= p, Δ ;; [ghost, x'=f(x) & Q]P, Δ",
     displayConclusion = "Γ |- [{x'=f(x) & Q}]P, Δ",
-    constructor = TacticConstructor2
-      .create(ExpressionArg("ghost"), TermArg("p"))((ghost: Expression, p: Term) => bDG(ghost, p)),
+    constructor =
+      TacticConstructor2.create(ExpressionArg("ghost"), TermArg("p"))((ghost: Expression, p: Term) => bDG(ghost, p)),
   )
 
   /** Wrapper around vDG for display. */
@@ -1942,10 +1890,8 @@ object ODELiveness {
    * G |- <ghosts , ODE & p>=0> P
    * }}}
    *
-   * @param L,
-   *   M as above
-   * @param dim
-   *   The first dim ODEs at the given position are treated as ghosts
+   * @param L, M as above
+   * @param dim The first dim ODEs at the given position are treated as ghosts
    */
   private def dDDGInternal(L: Term, M: Term, dim: Int = 1)(pos: Position, seq: Sequent) = {
     require(pos.isTopLevel && pos.isSucc, "dDDG is only applicable at a top-level succedent")
@@ -2001,10 +1947,8 @@ object ODELiveness {
    * G |- <ghosts , ODE & R> P
    * }}}
    *
-   * @param p
-   *   as above
-   * @param dim
-   *   The first dim ODEs at the given position are treated as ghosts
+   * @param p as above
+   * @param dim The first dim ODEs at the given position are treated as ghosts
    */
   private def dBDGInternal(p: Term, dim: Int = 1)(pos: Position, seq: Sequent) = {
     require(pos.isTopLevel && pos.isSucc, "dBDG is only applicable at a top-level succedent")
@@ -2046,8 +1990,8 @@ object ODELiveness {
   def dBDG(p: Term, dim: Int): DependentPositionTactic =
     anon((pos: Position, sequent: Sequent) => dBDGInternal(p, dim)(pos, sequent))
 
-  def dBDG(p: Term): DependentPositionWithAppliedInputTactic = "dBDG"
-    .byWithInputs(List(p), { (pos: Position, sequent: Sequent) => dBDGInternal(p, 1)(pos, sequent) })
+  def dBDG(p: Term): DependentPositionWithAppliedInputTactic =
+    "dBDG".byWithInputs(List(p), { (pos: Position, sequent: Sequent) => dBDGInternal(p, 1)(pos, sequent) })
 
   @Derivation
   val dBDGInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
@@ -2058,8 +2002,8 @@ object ODELiveness {
     constructor = TacticConstructor1.create(TermArg("p"))((p: Term) => dBDG(p)),
   )
 
-  def dDDG(L: Term, M: Term): DependentPositionWithAppliedInputTactic = "dDDG"
-    .byWithInputs(List(L, M), { (pos: Position, sequent: Sequent) => dDDGInternal(L, M, 1)(pos, sequent) })
+  def dDDG(L: Term, M: Term): DependentPositionWithAppliedInputTactic =
+    "dDDG".byWithInputs(List(L, M), { (pos: Position, sequent: Sequent) => dDDGInternal(L, M, 1)(pos, sequent) })
 
   @Derivation
   val dDDGInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
@@ -2079,8 +2023,9 @@ object ODELiveness {
   def gEx(hint: scala.Option[Formula]): DependentPositionWithAppliedInputTactic = "gEx".byWithInputs(
     List(hint),
     { (pos: Position) =>
-      odeReduce(strict = true, hint.toList)(pos) & Idioms
-        .?(cohideR(pos) & (byUScaught(Ax.TExge) | byUScaught(Ax.TExgt)) & done)
+      odeReduce(strict = true, hint.toList)(pos) & Idioms.?(
+        cohideR(pos) & (byUScaught(Ax.TExge) | byUScaught(Ax.TExgt)) & done
+      )
     },
   )
 

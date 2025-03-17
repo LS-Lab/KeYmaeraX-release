@@ -16,10 +16,8 @@ import scala.annotation.nowarn
  * Generates formula and term evaluation code. `termContainer` configures the location where primitive terms are looked
  * up (e.g., structs, classes).
  *
- * @author
- *   Stefan Mitsch
- * @author
- *   Ran Ji
+ * @author Stefan Mitsch
+ * @author Ran Ji
  */
 abstract class FormulaTermGenerator(termContainer: Expression => String, defs: Declaration)
     extends CodeGenerator with Logging {
@@ -80,12 +78,9 @@ abstract class FormulaTermGenerator(termContainer: Expression => String, defs: D
 
   /**
    * Compile exponentials
-   * @param base
-   *   base of the exponential
-   * @param exp
-   *   index of the exponential
-   * @return
-   *   simplified generation of exponential
+   * @param base base of the exponential
+   * @param exp index of the exponential
+   * @return simplified generation of exponential
    */
   protected def compilePower(base: Term, exp: Term): CTerm = {
     if (base.equals(Number(0))) {

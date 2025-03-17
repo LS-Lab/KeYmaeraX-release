@@ -12,14 +12,10 @@ import scala.annotation.nowarn
 
 /**
  * Generic traversal functionality for expressions for pre/post/infix traversal.
- * @author
- *   Nathan Fulton
- * @author
- *   Ran Ji
- * @author
- *   Stefan Mitsch
- * @author
- *   Jan-David Quesel
+ * @author Nathan Fulton
+ * @author Ran Ji
+ * @author Stefan Mitsch
+ * @author Jan-David Quesel
  */
 object ExpressionTraversal {
   def fail(x: Expression) = throw UnknownOperatorException("Unimplemented case in Expr traversal", x)

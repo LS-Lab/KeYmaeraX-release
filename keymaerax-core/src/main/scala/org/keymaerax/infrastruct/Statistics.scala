@@ -11,17 +11,14 @@ import org.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunctio
 
 /**
  * Formula, term, and tactic statistics.
- * @author
- *   Stefan Mitsch
- * @author
- *   Andre Platzer
+ * @author Stefan Mitsch
+ * @author Andre Platzer
  */
 object Statistics {
 
   /**
    * Returns the number of composition operators in the formula `fml`
-   * @param arith
-   *   true to include counting arithmetic operators.
+   * @param arith true to include counting arithmetic operators.
    */
   def countFormulaOperators(fml: Formula, arith: Boolean = false): Int = {
     var numOperators = 0

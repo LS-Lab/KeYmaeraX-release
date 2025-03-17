@@ -13,8 +13,7 @@ import org.keymaerax.tools.{Tool, ToolExecutionException, ToolOperationManagemen
 
 /**
  * Big decimal quantifier elimination tool for tactics, forwards to [[BigDecimalQETool]].
- * @author
- *   Stefan Mitsch
+ * @author Stefan Mitsch
  */
 final class BigDecimalTool extends Tool with QETacticTool with ToolOperationManagement {
 

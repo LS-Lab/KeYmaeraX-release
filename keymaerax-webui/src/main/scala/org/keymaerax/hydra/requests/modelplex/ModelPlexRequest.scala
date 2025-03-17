@@ -195,8 +195,8 @@ class ModelPlexRequest(
       vars: Set[BaseVariable],
       unobservable: ListMap[NamedSymbol, Option[Formula]],
   ): Either[(Formula, Formula, BelleExpr), ErrorResponse] = {
-    val ModelPlexConjecture(_, modelplexInput, assumptions) = ModelPlex
-      .createMonitorSpecificationConjecture(modelFml, vars.toList.sorted[NamedSymbol], unobservable)
+    val ModelPlexConjecture(_, modelplexInput, assumptions) =
+      ModelPlex.createMonitorSpecificationConjecture(modelFml, vars.toList.sorted[NamedSymbol], unobservable)
 
     val mx = ModelPlex.mxSynthesize(monitorKind) &
       // @todo unobservable symbols tactic argument not yet serializable

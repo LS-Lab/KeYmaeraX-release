@@ -6,28 +6,18 @@
 /**
  * Sequent prover, proof rules, and axioms of KeYmaera X.
  *
- * @note
- *   Soundness-critical: Only provide sound proof rule application mechanisms.
- * @author
- *   Andre Platzer
- * @author
- *   Jan-David Quesel
- * @author
- *   nfulton
- * @see
- *   [[org.keymaerax.Bibliography.JacmPlatzerT20 Differential equation invariance axiomatization]]
+ * @note Soundness-critical: Only provide sound proof rule application mechanisms.
+ * @author Andre Platzer
+ * @author Jan-David Quesel
+ * @author nfulton
+ * @see [[org.keymaerax.Bibliography.JacmPlatzerT20 Differential equation invariance axiomatization]]
  * @see
  *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
- * @see
- *   [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
- * @see
- *   [[org.keymaerax.Bibliography.ToclPlatzer15 Differential game logic]]
- * @see
- *   [[org.keymaerax.Bibliography.LicsPlatzer12b The complete proof theory of hybrid systems]]
- * @see
- *   [[org.keymaerax.Bibliography.JarPlatzer08 Differential dynamic logic for hybrid systems]]
- * @note
- *   Code Review: 2020-02-17
+ * @see [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
+ * @see [[org.keymaerax.Bibliography.ToclPlatzer15 Differential game logic]]
+ * @see [[org.keymaerax.Bibliography.LicsPlatzer12b The complete proof theory of hybrid systems]]
+ * @see [[org.keymaerax.Bibliography.JarPlatzer08 Differential dynamic logic for hybrid systems]]
+ * @note Code Review: 2020-02-17
  */
 package org.keymaerax.core
 
@@ -64,29 +54,20 @@ import scala.collection.immutable
  * Provables are stateless and do not themselves remember other provables that they resulted from. The ProofTree data
  * structure outside the kernel provides such proof tree navigation information.
  *
- * @param conclusion
- *   the conclusion `G |- D` that follows if all subgoals are valid.
- * @param subgoals
- *   the premises `Gi |- Di` that, if they are all valid, imply the conclusion.
- * @note
- *   soundness-critical logical framework.
- * @note
- *   Only private constructor calls for soundness
- * @note
- *   For soundness: No reflection should bypass constructor call privacy, nor reflection to bypass immutable val
+ * @param conclusion the conclusion `G |- D` that follows if all subgoals are valid.
+ * @param subgoals the premises `Gi |- Di` that, if they are all valid, imply the conclusion.
+ * @note soundness-critical logical framework.
+ * @note Only private constructor calls for soundness
+ * @note For soundness: No reflection should bypass constructor call privacy, nor reflection to bypass immutable val
  *   algebraic data types.
- * @author
- *   Andre Platzer
+ * @author Andre Platzer
  * @see
  *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
  * @see
  *   [[org.keymaerax.core.Provable.startProof(goal:edu\.cmu\.cs\.ls\.keymaerax\.core\.Sequent):edu\.cmu\.cs\.ls\.keymaerax\.core\.Provable*]]
- * @see
- *   [[org.keymaerax.core.Provable.axioms]]
- * @see
- *   [[org.keymaerax.core.Provable.rules]]
- * @see
- *   [[org.keymaerax.core.Provable.proveArithmetic]]
+ * @see [[org.keymaerax.core.Provable.axioms]]
+ * @see [[org.keymaerax.core.Provable.rules]]
+ * @see [[org.keymaerax.core.Provable.proveArithmetic]]
  * @see
  *   [[org.keymaerax.core.Provable.fromStorageString(storedProvable:String):edu\.cmu\.cs\.ls\.keymaerax\.core\.Provable*]]
  * @example
@@ -209,19 +190,16 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
   /**
    * Checks whether this Provable proves its conclusion.
    *
-   * @return
-   *   true if conclusion is proved by this Provable, false if subgoals are missing that need to be proved first.
-   * @note
-   *   soundness-critical
+   * @return true if conclusion is proved by this Provable, false if subgoals are missing that need to be proved first.
+   * @note soundness-critical
    */
   final def isProved: Boolean = subgoals.isEmpty
 
   /**
    * What conclusion this Provable proves if isProved.
-   * @requires
-   *   (isProved)
-   * @throws UnprovedException
-   *   if !isProved so illegally trying to read a proved sequent from a Provable that is not in fact proved.
+   * @requires (isProved)
+   * @throws UnprovedException if !isProved so illegally trying to read a proved sequent from a Provable that is not in
+   *   fact proved.
    */
   final def proved: Sequent =
     if (isProved) conclusion
@@ -241,21 +219,14 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
    *                Gi |- Di
    * }}}
    *
-   * @param rule
-   *   the proof rule to apply to the indicated subgoal of this Provable derivation.
-   * @param subgoal
-   *   which of our subgoals to apply the given proof rule to.
-   * @return
-   *   A Provable derivation that proves the premise subgoal by using the given proof rule. Will return a Provable with
-   *   the same conclusion but an updated set of premises.
-   * @throws IllegalArgumentException
-   *   if subgoal is out of range of the subgoals.
-   * @throws CoreException
-   *   subtypes if rule raises those exceptions when applied to the indicated subgoal.
-   * @requires
-   *   `0 <= subgoal && subgoal < subgoals.length`
-   * @note
-   *   soundness-critical. And soundness needs Rule to be sealed.
+   * @param rule the proof rule to apply to the indicated subgoal of this Provable derivation.
+   * @param subgoal which of our subgoals to apply the given proof rule to.
+   * @return A Provable derivation that proves the premise subgoal by using the given proof rule. Will return a Provable
+   *   with the same conclusion but an updated set of premises.
+   * @throws IllegalArgumentException if subgoal is out of range of the subgoals.
+   * @throws CoreException subtypes if rule raises those exceptions when applied to the indicated subgoal.
+   * @requires `0 <= subgoal && subgoal < subgoals.length`
+   * @note soundness-critical. And soundness needs Rule to be sealed.
    */
   final def apply(rule: Rule, subgoal: Provable.Subgoal): Provable = {
     require(
@@ -302,24 +273,16 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
    *                Gi |- Di
    * }}}
    *
-   * @param subderivation
-   *   the Provable derivation that proves premise subgoal.
-   * @param subgoal
-   *   the index of our subgoal that the given subderivation concludes.
-   * @return
-   *   A Provable derivation that joins our derivation and subderivation to a joint derivation of our conclusion using
-   *   subderivation to show our subgoal. Will return a Provable with the same conclusion but an updated set of
+   * @param subderivation the Provable derivation that proves premise subgoal.
+   * @param subgoal the index of our subgoal that the given subderivation concludes.
+   * @return A Provable derivation that joins our derivation and subderivation to a joint derivation of our conclusion
+   *   using subderivation to show our subgoal. Will return a Provable with the same conclusion but an updated set of
    *   premises.
-   * @throws IllegalArgumentException
-   *   if subgoal is out of range of the subgoals.
-   * @throws SubderivationSubstitutionException
-   *   if the subderivation's conclusion is not equal to the indicated subgoal.
-   * @requires
-   *   `0 <= subgoal && subgoal < subgoals.length`
-   * @requires
-   *   `subderivation.conclusion == subgoals(subgoal)`
-   * @note
-   *   soundness-critical
+   * @throws IllegalArgumentException if subgoal is out of range of the subgoals.
+   * @throws SubderivationSubstitutionException if the subderivation's conclusion is not equal to the indicated subgoal.
+   * @requires `0 <= subgoal && subgoal < subgoals.length`
+   * @requires `subderivation.conclusion == subgoals(subgoal)`
+   * @note soundness-critical
    */
   final def apply(subderivation: Provable, subgoal: Provable.Subgoal): Provable = {
     require(
@@ -362,19 +325,14 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
    *            G |- D                                s(G) |- s(D)
    * }}}
    *
-   * @param subst
-   *   The uniform substitution (of no free variables) to be used on the premises and conclusion of this Provable.
-   * @return
-   *   The Provable resulting from applying `subst` to our subgoals and conclusion.
-   * @throws SubstitutionClashException
-   *   if this substitution is not admissible for this Provable.
-   * @author
-   *   Andre Platzer
-   * @see
-   *   Theorem 26+27 in
+   * @param subst The uniform substitution (of no free variables) to be used on the premises and conclusion of this
+   *   Provable.
+   * @return The Provable resulting from applying `subst` to our subgoals and conclusion.
+   * @throws SubstitutionClashException if this substitution is not admissible for this Provable.
+   * @author Andre Platzer
+   * @see Theorem 26+27 in
    *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
-   * @note
-   *   soundness-critical. And soundness-critical that only locally sound Provables can be constructed (otherwise
+   * @note soundness-critical. And soundness-critical that only locally sound Provables can be constructed (otherwise
    *   implementation would be more complicated).
    */
   final def apply(subst: USubst): Provable =
@@ -407,27 +365,19 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
    *            G |- D                                r(G) |- r(D)
    * }}}
    *
-   * @param ren
-   *   The uniform renaming to be used on the premises and conclusion of this Provable.
-   * @return
-   *   The Provable resulting from applying `ren` to our subgoals and conclusion.
-   * @throws RenamingClashException
-   *   if this uniform renaming is not admissible (because a semantic symbol occurs despite !semantic).
-   * @author
-   *   Andre Platzer
-   * @see
-   *   Theorem 26+27 in
+   * @param ren The uniform renaming to be used on the premises and conclusion of this Provable.
+   * @return The Provable resulting from applying `ren` to our subgoals and conclusion.
+   * @throws RenamingClashException if this uniform renaming is not admissible (because a semantic symbol occurs despite
+   *   !semantic).
+   * @author Andre Platzer
+   * @see Theorem 26+27 in
    *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
-   * @see
-   *   [[org.keymaerax.Bibliography.CadePlatzer19 Uniform substitution at one fell swoop]]
+   * @see [[org.keymaerax.Bibliography.CadePlatzer19 Uniform substitution at one fell swoop]]
    * @since 4.7.5
-   * @note
-   *   soundness-critical: Semantic uniform renaming requires locally sound input provables. The kernel is easier when
-   *   keeping everything locally sound.
-   * @see
-   *   [[URename]]
-   * @see
-   *   [[UniformRenaming]]
+   * @note soundness-critical: Semantic uniform renaming requires locally sound input provables. The kernel is easier
+   *   when keeping everything locally sound.
+   * @see [[URename]]
+   * @see [[UniformRenaming]]
    */
   final def apply(ren: URename): Provable =
     try { new Provable(ren(conclusion), subgoals.map(s => ren(s))) }
@@ -452,17 +402,12 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
    *         newConsequence
    * }}}
    *
-   * @param newConsequence
-   *   the new conclusion that the rule shows to follow from this.conclusion
-   * @param rule
-   *   the proof rule to apply to concludes to reduce it to this.conclusion.
-   * @return
-   *   A Provable derivation that proves concludes from the same subgoals by using the given proof rule. Will return a
-   *   Provable with the same subgoals but an updated conclusion.
-   * @throws CoreException
-   *   subtypes if rule raises those exceptions when applied to `newConsequent`.
-   * @note
-   *   not soundness-critical derived function since implemented in terms of other apply functions
+   * @param newConsequence the new conclusion that the rule shows to follow from this.conclusion
+   * @param rule the proof rule to apply to concludes to reduce it to this.conclusion.
+   * @return A Provable derivation that proves concludes from the same subgoals by using the given proof rule. Will
+   *   return a Provable with the same subgoals but an updated conclusion.
+   * @throws CoreException subtypes if rule raises those exceptions when applied to `newConsequent`.
+   * @note not soundness-critical derived function since implemented in terms of other apply functions
    */
   def apply(newConsequence: Sequent, rule: Rule): Provable = {
     // @note the following requirement is redundant and not soundness-critical. It just gives a better error message.
@@ -496,12 +441,10 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
    *           G0 |- D0
    * }}}
    *
-   * @param prolongation
-   *   the subderivation used to prolong this Provable. Where subderivation has a subgoal equaling our conclusion.
-   * @return
-   *   A Provable derivation that proves prolongation's conclusion from our subgoals.
-   * @note
-   *   not soundness-critical derived function since implemented in terms of other apply functions
+   * @param prolongation the subderivation used to prolong this Provable. Where subderivation has a subgoal equaling our
+   *   conclusion.
+   * @return A Provable derivation that proves prolongation's conclusion from our subgoals.
+   * @note not soundness-critical derived function since implemented in terms of other apply functions
    */
   def apply(prolongation: Provable): Provable = {
     // @note it really already works when prolongation.subgoal(0)==conclusion but it's somewhat surprising so disallowed.
@@ -521,8 +464,7 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
    *
    * Provables resulting from the returned subgoal can be merged into this Provable to prove said subgoal.
    *
-   * @param subgoal
-   *   the index of our subgoal for which to return a new open Provable.
+   * @param subgoal the index of our subgoal for which to return a new open Provable.
    * @return
    *   an initial unfinished open Provable for the subgoal `i`:
    *   {{{
@@ -531,10 +473,8 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
    *    Gi |- Di
    *   }}}
    *   which is suitable for being merged back into this Provable for subgoal `i` subsequently.
-   * @throws IllegalArgumentException
-   *   if subgoal is out of range of the subgoals.
-   * @note
-   *   not soundness-critical only helpful for completeness-critical
+   * @throws IllegalArgumentException if subgoal is out of range of the subgoals.
+   * @note not soundness-critical only helpful for completeness-critical
    */
   def sub(subgoal: Provable.Subgoal): Provable = {
     require(
@@ -558,10 +498,8 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
 /**
  * Starting new Provables to begin a proof, either with unproved conjectures or with proved axioms or axiomatic proof
  * rules.
- * @see
- *   [[Provable.axioms]]
- * @see
- *   [[Provable.rules]]
+ * @see [[Provable.axioms]]
+ * @see [[Provable.rules]]
  * @see
  *   [[Provable$.startProof(goal:edu\.cmu\.cs\.ls\.keymaerax\.core\.Sequent):edu\.cmu\.cs\.ls\.keymaerax\.core\.Provable*]]
  */
@@ -585,10 +523,8 @@ object Provable {
    *    |- axiom
    * }}}
    *
-   * @see
-   *   [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
-   * @note
-   *   soundness-critical: only valid formulas are sound axioms.
+   * @see [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
+   * @note soundness-critical: only valid formulas are sound axioms.
    */
   val axioms: immutable.Map[String, Provable] = axiom
     .view
@@ -605,10 +541,8 @@ object Provable {
    *     G |- D
    * }}}
    *
-   * @see
-   *   [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
-   * @note
-   *   soundness-critical: only list locally sound rules.
+   * @see [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
+   * @note soundness-critical: only list locally sound rules.
    * @see
    *   [[Provable.apply(subst:edu\.cmu\.cs\.ls\.keymaerax\.core\.USubstOne):edu\.cmu\.cs\.ls\.keymaerax\.core\.Provable*]]
    */
@@ -626,16 +560,12 @@ object Provable {
    *    goal
    * }}}
    *
-   * @param goal
-   *   the desired conclusion.
-   * @return
-   *   a Provable whose subgoals need to be all proved in order to prove goal.
-   * @note
-   *   soundness-critical
+   * @param goal the desired conclusion.
+   * @return a Provable whose subgoals need to be all proved in order to prove goal.
+   * @note soundness-critical
    */
-  final def startProof(goal: Sequent): Provable = {
-    Provable(goal, immutable.IndexedSeq(goal))
-  } ensures (r => !r.isProved && r.subgoals == immutable.IndexedSeq(r.conclusion), "correct initial proof start")
+  final def startProof(goal: Sequent): Provable = { Provable(goal, immutable.IndexedSeq(goal)) } ensures
+    (r => !r.isProved && r.subgoals == immutable.IndexedSeq(r.conclusion), "correct initial proof start")
 
   /**
    * Begin a new proof for the desired conclusion formula from no antecedent.
@@ -645,12 +575,9 @@ object Provable {
    *    |- goal
    * }}}
    *
-   * @param goal
-   *   the desired conclusion formula for the succedent.
-   * @return
-   *   a Provable whose subgoals need to be all proved in order to prove goal.
-   * @note
-   *   Not soundness-critical (convenience method)
+   * @param goal the desired conclusion formula for the succedent.
+   * @return a Provable whose subgoals need to be all proved in order to prove goal.
+   * @note Not soundness-critical (convenience method)
    */
   def startProof(goal: Formula): Provable = startProof(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(goal)))
 
@@ -662,16 +589,11 @@ object Provable {
    *     |- f<->QE(f)
    * }}}
    *
-   * @param tool
-   *   The quantifier-elimination tool that computes the equivalent `QE(f)`.
-   * @param f
-   *   The formula.
-   * @requires
-   *   QE(f) is equivalent to f
-   * @return
-   *   a Provable with an equivalence of f to the quantifier-free formula equivalent to f, justified by tool.
-   * @see
-   *   [[QETool.quantifierElimination()]]
+   * @param tool The quantifier-elimination tool that computes the equivalent `QE(f)`.
+   * @param f The formula.
+   * @requires QE(f) is equivalent to f
+   * @return a Provable with an equivalence of f to the quantifier-free formula equivalent to f, justified by tool.
+   * @see [[QETool.quantifierElimination()]]
    */
   final def proveArithmetic(tool: QETool, f: Formula): Provable = {
     insist(
@@ -696,8 +618,7 @@ object Provable {
    *   [{c{|y_|}&q(|y_|)}]p(|y_|) -> [{y_'=g(||),c{|y_|}&q(|y_|)}]p(|y_|)
    * }}}
    *
-   * @param dim
-   *   The number of ghost variables
+   * @param dim The number of ghost variables
    */
   final def vectorialDG(dim: Int): (Provable, Provable) = {
     insist(dim > 0, "Must introduce at least one vectorial differential ghost variable.")
@@ -751,8 +672,7 @@ object Provable {
    *   <{x_'=f_(x_) & q_(x_)}>x_=y_ <-> <{y_'=-f_(y_) & q_(y_)}>x_=y_
    * }}}
    *
-   * @param dim
-   *   The dimension of ODE x_'=f_(x_)
+   * @param dim The dimension of ODE x_'=f_(x_)
    */
   final def diffAdjoint(dim: Int): Provable = {
     insist(dim > 0, "Diff. adjoint over ODE with at least 1 variable.")
@@ -804,15 +724,12 @@ object Provable {
    *
    *   - The assignment block { x1:=*;...;xn:=*; x0:=.0; t:=.1; } must set the output variable x0 to .0 and the time
    *     variable t to .1. All other variables are assigned nondeterministically.
-   *
    *   - The backward ODE {x1'=-e1,...,xn'=-en,t'=-(1)} must be the forward ODE {x1'=e1,...,xn'=en,t'=1} with the same
    *     LHS but the negative of all RHS. Both ODE RHS have no uninterpreted symbols (no dot terms).
-   *
    *   - The postcondition x0=X0 & x1=X1 & ... & xn = Xn & t=T0 specifies initial values for the ODE so X0, ..., Xn, T0
    *     are dL terms with no free variables (no x0,...,xn) and no uninterpreted symbols (no dot terms).
    *
-   * @param interp
-   *   the interpretation formula
+   * @param interp the interpretation formula
    */
   private def isODEInterp(interp: Formula): Unit = {
 
@@ -904,10 +821,8 @@ object Provable {
    *   |- ._0 = f<< P(._0,._1,...,._n) >>(._1,...,._n)  <->  P(.0,._1,...,._n)
    * }}}
    *
-   * @param f
-   *   the interpreted function
-   * @param pr
-   *   the proof of existence of the function's value.
+   * @param f the interpreted function
+   * @param pr the proof of existence of the function's value.
    */
   final def implicitFunc(f: Function, pr: Provable): Provable = {
     insist(f.interpreted, "Function must be interpreted: " + f)
@@ -949,14 +864,11 @@ object Provable {
   /**
    * Create a new provable for oracle facts provided by external tools or lemma loading.
    *
-   * @param conclusion
-   *   the desired conclusion.
-   * @param subgoals
-   *   the remaining subgoals.
-   * @return
-   *   a Provable of given conclusion and given subgoals.
-   * @note
-   *   soundness-critical magic/trustme, only call from [[proveArithmetic()]]/[[fromStorageString()]] with true facts.
+   * @param conclusion the desired conclusion.
+   * @param subgoals the remaining subgoals.
+   * @return a Provable of given conclusion and given subgoals.
+   * @note soundness-critical magic/trustme, only call from [[proveArithmetic()]]/[[fromStorageString()]] with true
+   *   facts.
    */
   private[this] final def oracle(conclusion: Sequent, subgoals: immutable.IndexedSeq[Sequent]) =
     Provable(conclusion, subgoals)
@@ -971,13 +883,10 @@ object Provable {
 
   /**
    * Stored Provable representation as a string of the given Provable that will reparse correctly.
-   * @note
-   *   If store printer is injective function, then only `fact` reparses via fromStorageString unless checksum modified
-   *   or not injective.
-   * @see
-   *   [[Provable.fromStorageString(storedProvable:String):edu\.cmu\.cs\.ls\.keymaerax\.core\.Provable*]]
-   * @ensures
-   *   fromStorageString(\result) == fact
+   * @note If store printer is injective function, then only `fact` reparses via fromStorageString unless checksum
+   *   modified or not injective.
+   * @see [[Provable.fromStorageString(storedProvable:String):edu\.cmu\.cs\.ls\.keymaerax\.core\.Provable*]]
+   * @ensures fromStorageString(\result) == fact
    */
   final def toStorageString(fact: Provable): String = {
     val s = toExternalString(fact)
@@ -993,14 +902,11 @@ object Provable {
   /**
    * Parses a Stored Provable String representation back again as a Provable. Soundness depends on the fact that the
    * String came from [[toStorageString()]], which is checked in a lightweight fashion using checksums.
-   * @param storedProvable
-   *   The String obtained via [[toStorageString(fact:edu\.cmu\.cs\.ls\.keymaerax\.core\.Provable):String*]].
-   * @return
-   *   The Provable that represents `storedProvable`.
-   * @throws ProvableStorageException
-   *   if storedProvable is illegal.
-   * @see
-   *   [[Provable.toStorageString(fact:edu\.cmu\.cs\.ls\.keymaerax\.core\.Provable):String*]]
+   * @param storedProvable The String obtained via
+   *   [[toStorageString(fact:edu\.cmu\.cs\.ls\.keymaerax\.core\.Provable):String*]].
+   * @return The Provable that represents `storedProvable`.
+   * @throws ProvableStorageException if storedProvable is illegal.
+   * @see [[Provable.toStorageString(fact:edu\.cmu\.cs\.ls\.keymaerax\.core\.Provable):String*]]
    */
   final def fromStorageString(storedProvable: String): Provable = {
     val separator = storedProvable.lastIndexOf("::")
@@ -1035,18 +941,15 @@ object Provable {
 
   /**
    * A fully parenthesized String representation of the given Sequent for externalization.
-   * @see
-   *   [[Sequent.toString]]
+   * @see [[Sequent.toString]]
    */
   private def toExternalString(s: Sequent): String = s.ante.map(store).mkString(" :: ") +
     (if (s.ante.isEmpty) "  ==>  " else "\n  ==>  ") + s.succ.map(store).mkString(" :: ")
 
   /**
    * A fully parenthesized String representation of the given Provable for externalization.
-   * @see
-   *   [[Provable.toString()]]
-   * @see
-   *   [[toStorageString(fact:edu\.cmu\.cs\.ls\.keymaerax\.core\.Provable):String*]]
+   * @see [[Provable.toString()]]
+   * @see [[toStorageString(fact:edu\.cmu\.cs\.ls\.keymaerax\.core\.Provable):String*]]
    */
   private def toExternalString(fact: Provable): String = toExternalString(fact.conclusion) +
     (if (fact.isProved) "\n\\qed"
@@ -1066,10 +969,8 @@ object Provable {
  * A proof rule is ultimately a named mapping from sequents to lists of sequents. The resulting list of sequents
  * represent the subgoals/premises all of which need to be proved to prove the current sequent (desired conclusion).
  *
- * @note
- *   soundness-critical This class is sealed, so no rules can be added outside Proof.scala
- * @see
- *   [[Provable.rules]]
+ * @note soundness-critical This class is sealed, so no rules can be added outside Proof.scala
+ * @see [[Provable.rules]]
  */
 sealed trait Rule extends (Sequent => immutable.List[Sequent]) {
   // @note If there were inherited contracts in Scala, we could augment apply with contract "ensures instanceOf[ClosingRule](_) || (!_.isEmpty)" to ensure only closing rules can ever come back with an empty list of premises
@@ -1089,8 +990,7 @@ sealed trait Rule extends (Sequent => immutable.List[Sequent]) {
 
 /**
  * A rule applied to a position in a sequent.
- * @see
- *   [[SeqPos]]
+ * @see [[SeqPos]]
  */
 sealed trait PositionRule extends Rule {
 
@@ -1102,8 +1002,7 @@ sealed trait PositionRule extends Rule {
 /**
  * A rule applied to a position in the antecedent on the left of a sequent. LeftRules can only be applied to antecedent
  * positions.
- * @see
- *   [[AntePos]]
+ * @see [[AntePos]]
  */
 sealed trait LeftRule extends PositionRule {
 
@@ -1114,8 +1013,7 @@ sealed trait LeftRule extends PositionRule {
 /**
  * A rule applied to a position in the succedent on the right of a sequent. RightRules can only be applied to succedent
  * positions.
- * @see
- *   [[SuccPos]]
+ * @see [[SuccPos]]
  */
 sealed trait RightRule extends PositionRule {
 
@@ -1224,8 +1122,8 @@ final case class Close(assume: AntePos, pos: SuccPos) extends Rule {
 
   /**
    * Close identity
-   * @throws InapplicableRuleException
-   *   if the two formulas at the two indicated positions in the sequent are not identical.
+   * @throws InapplicableRuleException if the two formulas at the two indicated positions in the sequent are not
+   *   identical.
    */
   def apply(s: Sequent): immutable.List[Sequent] = {
     if (s(assume) == s(pos)) { assert(assume.isAnte && pos.isSucc); Nil }
@@ -1250,8 +1148,7 @@ final case class CloseTrue(pos: SuccPos) extends RightRule {
 
   /**
    * close true
-   * @throws InapplicableRuleException
-   *   if the formula True is not at the indicated position in the sequent.
+   * @throws InapplicableRuleException if the formula True is not at the indicated position in the sequent.
    */
   override def apply(s: Sequent): immutable.List[Sequent] = {
     if (s(pos) == True) { assert(pos.isSucc); Nil }
@@ -1272,8 +1169,7 @@ final case class CloseFalse(pos: AntePos) extends LeftRule {
 
   /**
    * close false
-   * @throws InapplicableRuleException
-   *   if the formula False is not at the indicated position in the sequent.
+   * @throws InapplicableRuleException if the formula False is not at the indicated position in the sequent.
    */
   override def apply(s: Sequent): immutable.List[Sequent] = {
     if (s(pos) == False) { assert(pos.isAnte); Nil }
@@ -1290,8 +1186,7 @@ final case class CloseFalse(pos: AntePos) extends LeftRule {
  * }}}
  * The ordering of premises is optimistic, i.e., the premise using the cut-in formula `c` comes before the one proving
  * `c`.
- * @note
- *   c will be added at the end on the subgoals
+ * @note c will be added at the end on the subgoals
  */
 final case class Cut(c: Formula) extends Rule {
   val name: String = "cut"
@@ -1491,8 +1386,7 @@ final case class EquivRight(pos: SuccPos) extends RightRule {
  * ----------------------------- (<-> Equiv left)
  *   p<->q, G |- D
  * }}}
- * @note
- *   Positions remain stable when decomposed this way around.
+ * @note Positions remain stable when decomposed this way around.
  */
 final case class EquivLeft(pos: AntePos) extends LeftRule {
   val name: String = "Equiv Left"
@@ -1529,23 +1423,16 @@ object UniformRenaming {
  *       G |- D
  * }}}
  *
- * @param what
- *   What variable to replace (along with its associated [[DifferentialSymbol]]).
- * @param repl
- *   The target variable to replace `what` with (and vice versa).
- * @author
- *   Andre Platzer
- * @see
- *   [[URename]]
+ * @param what What variable to replace (along with its associated [[DifferentialSymbol]]).
+ * @param repl The target variable to replace `what` with (and vice versa).
+ * @author Andre Platzer
+ * @see [[URename]]
  * @see
  *   [[org.keymaerax.core.Provable.apply(ren:edu\.cmu\.cs\.ls\.keymaerax\.core\.URename):edu\.cmu\.cs\.ls\.keymaerax\.core\.Provable*]]
- * @see
- *   [[BoundRenaming]]
- * @see
- *   [[RenamingClashException]]
- * @note
- *   soundness-critical: For uniform renaming purposes the semantic renaming proof rule would be sound but not locally
- *   sound. The kernel is easier when keeping everything locally sound.
+ * @see [[BoundRenaming]]
+ * @see [[RenamingClashException]]
+ * @note soundness-critical: For uniform renaming purposes the semantic renaming proof rule would be sound but not
+ *   locally sound. The kernel is easier when keeping everything locally sound.
  */
 final case class UniformRenaming(what: Variable, repl: Variable) extends Rule {
   // @note implied: insist(what.sort == repl.sort, "Uniform renaming only to variables of the same sort")
@@ -1556,8 +1443,8 @@ final case class UniformRenaming(what: Variable, repl: Variable) extends Rule {
 
   /**
    * Apply uniform renaming everywhere in the sequent.
-   * @throws RenamingClashException
-   *   if uniform renaming what~>repl is not admissible for s (because a semantic symbol occurs).
+   * @throws RenamingClashException if uniform renaming what~>repl is not admissible for s (because a semantic symbol
+   *   occurs).
    */
   def apply(s: Sequent): immutable.List[Sequent] = List(renaming(s))
 }
@@ -1594,24 +1481,15 @@ final case class UniformRenaming(what: Variable, repl: Variable) extends Rule {
  *    G, [what:=e]P    |- D
  * }}}
  *
- * @param what
- *   What variable (and its associated DifferentialSymbol) to replace.
- * @param repl
- *   The target variable to replace what with.
- * @param pos
- *   The position at which to perform a bound renaming.
- * @requires
- *   repl is fresh in the sequent.
- * @author
- *   Andre Platzer
- * @author
- *   Stefan Mitsch
- * @note
- *   soundness-critical: For bound renaming purposes semantic renaming would be unsound.
- * @see
- *   [[UniformRenaming]]
- * @see
- *   [[RenamingClashException]]
+ * @param what What variable (and its associated DifferentialSymbol) to replace.
+ * @param repl The target variable to replace what with.
+ * @param pos The position at which to perform a bound renaming.
+ * @requires repl is fresh in the sequent.
+ * @author Andre Platzer
+ * @author Stefan Mitsch
+ * @note soundness-critical: For bound renaming purposes semantic renaming would be unsound.
+ * @see [[UniformRenaming]]
+ * @see [[RenamingClashException]]
  */
 final case class BoundRenaming(what: Variable, repl: Variable, pos: SeqPos) extends PositionRule {
   // @note implied: insist(what.sort == repl.sort, "Bounding renaming only to variables of the same sort")
@@ -1623,17 +1501,16 @@ final case class BoundRenaming(what: Variable, repl: Variable, pos: SeqPos) exte
 
   /**
    * Performs bound renaming what~>repl for a fresh repl on a sequent.
-   * @throws RenamingClashException
-   *   if this bound renaming is not admissible for s at the indicated position because repl,repl',what' already
-   *   occurred, or because a semantic symbol occurs, or because the formula at `pos` has the wrong shape.
+   * @throws RenamingClashException if this bound renaming is not admissible for s at the indicated position because
+   *   repl,repl',what' already occurred, or because a semantic symbol occurs, or because the formula at `pos` has the
+   *   wrong shape.
    */
   def apply(s: Sequent): immutable.List[Sequent] = immutable.List(s.updated(pos, apply(s(pos))))
 
   /**
    * Performs bound renaming what~>repl for a fresh repl on a formula.
-   * @throws RenamingClashException
-   *   if this bound renaming is not admissible for f because repl,repl',what' already occurred, or because a semantic
-   *   symbol occurs, or because the formula has the wrong shape.
+   * @throws RenamingClashException if this bound renaming is not admissible for f because repl,repl',what' already
+   *   occurred, or because a semantic symbol occurs, or because the formula has the wrong shape.
    */
   def apply(f: Formula): Formula = {
     if (admissible(f)) f match {
@@ -1661,14 +1538,10 @@ final case class BoundRenaming(what: Variable, repl: Variable, pos: SeqPos) exte
    * Check whether this renaming is admissible for expression e, i.e. the new name repl and primed version of old name
    * what do not already occur (or the renaming was the identity).
    *
-   * @note
-   *   identity renaming is merely allowed to enable BoundVariableRenaming to introduce stutter.
-   * @note
-   *   This implementation currently errors if repl.sort!=Real
-   * @note
-   *   what==repl identity case is not used in the prover but is sound.
-   * @note
-   *   URename.TRANSPOSITION is irrelevant here, since repl can't occur when admissible.
+   * @note identity renaming is merely allowed to enable BoundVariableRenaming to introduce stutter.
+   * @note This implementation currently errors if repl.sort!=Real
+   * @note what==repl identity case is not used in the prover but is sound.
+   * @note URename.TRANSPOSITION is irrelevant here, since repl can't occur when admissible.
    */
   private def admissible(e: Expression): Boolean = what == repl ||
     StaticSemantics.freeVars(e).intersect(Set(repl, DifferentialSymbol(repl), DifferentialSymbol(what))).isEmpty
@@ -1705,19 +1578,16 @@ final case class BoundRenaming(what: Variable, repl: Variable, pos: SeqPos) exte
  *   \forall x. p(x)
  *   }}}
  *   Kept because of the incurred cost.
- * @see
- *   SkolemClashException
+ * @see SkolemClashException
  */
 final case class Skolemize(pos: SeqPos) extends PositionRule {
   val name: String = "Skolemize"
 
   /**
    * Skolemize a universal quantifier in the succedent or an existential quantifier in the antecedent.
-   * @throws InapplicableRuleException
-   *   if something other than the appropriate quantifier is at the indicated position.
-   * @throws SkolemClashException
-   *   if the quantified variable that is to be Skolemized already occurs free in the sequent. Use [[BoundRenaming]] to
-   *   resolve.
+   * @throws InapplicableRuleException if something other than the appropriate quantifier is at the indicated position.
+   * @throws SkolemClashException if the quantified variable that is to be Skolemized already occurs free in the
+   *   sequent. Use [[BoundRenaming]] to resolve.
    */
   override def apply(s: Sequent): immutable.List[Sequent] = {
     // all free symbols anywhere else in the sequent, i.e. except at the quantifier position
@@ -1778,10 +1648,8 @@ final case class CoHideRight(pos: SuccPos) extends RightRule {
  *   p, G |- D
  * }}}
  *
- * @note
- *   Rarely useful (except for contradictory `p`)
- * @note
- *   Not used, just contained for symmetry reasons
+ * @note Rarely useful (except for contradictory `p`)
+ * @note Not used, just contained for symmetry reasons
  * @derived
  */
 final case class CoHideLeft(pos: AntePos) extends LeftRule {
@@ -1822,8 +1690,7 @@ final case class CoHide2(pos1: AntePos, pos2: SuccPos) extends Rule {
  * Forward Hilbert style rules can move further away, implicationally, from the sequent implication. Backwards tableaux
  * style sequent rules can move closer, implicationally, toward the sequent implication.
  *
- * @derived(cut(c->p)
- *   & <(ImplyLeft & <(CloseId, HideRight), HideRight))
+ * @derived(cut(c->p) & <(ImplyLeft & <(CloseId, HideRight), HideRight))
  */
 final case class CutRight(c: Formula, pos: SuccPos) extends Rule {
   val name: String = "cut Right"
@@ -1843,17 +1710,17 @@ final case class CutRight(c: Formula, pos: SuccPos) extends Rule {
  * Forward Hilbert style rules can move further away, implicationally, from the sequent implication. Backwards tableaux
  * style sequent rules can move closer, implicationally, toward the sequent implication.
  *
- * @note
- *   this would perhaps surprising that inconsistent posititioning within this rule, unlike in ImplyLeft?
- * @derived(cut(p->c)
- *   & <(ImplyLeft & <(HideLeft, CloseId), HideLeft))
+ * @note this would perhaps surprising that inconsistent posititioning within this rule, unlike in ImplyLeft?
+ * @derived(cut(p->c) & <(ImplyLeft & <(HideLeft, CloseId), HideLeft))
  */
 final case class CutLeft(c: Formula, pos: AntePos) extends Rule {
   val name: String = "cut Left"
   def apply(s: Sequent): immutable.List[Sequent] = {
     val p = s(pos)
-    immutable
-      .List(s.updated(pos, c), s.updated(pos, Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(Imply(p, c)))))
+    immutable.List(
+      s.updated(pos, c),
+      s.updated(pos, Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(Imply(p, c)))),
+    )
   }
 }
 
@@ -1884,8 +1751,7 @@ final case class CommuteEquivRight(pos: SuccPos) extends RightRule {
  * }}}
  *
  * @derived
- * @note
- *   Not used, just contained for symmetry reasons
+ * @note Not used, just contained for symmetry reasons
  */
 final case class CommuteEquivLeft(pos: AntePos) extends LeftRule {
   val name: String = "CommuteEquivLeft"

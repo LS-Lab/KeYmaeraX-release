@@ -12,19 +12,15 @@ import scala.io.Source
 
 /**
  * Created by ran on 2/4/15.
- * @author
- *   Ran Ji
- * @author
- *   Stefan Mitsch
+ * @author Ran Ji
+ * @author Stefan Mitsch
  */
 object ParserFactory {
 
   /**
    * Returns the sequent from an input stream. Substitutes function declarations.
-   * @param in
-   *   The input stream.
-   * @return
-   *   The sequent.
+   * @param in The input stream.
+   * @return The sequent.
    */
   def parseToSequent(in: java.io.InputStream): Sequent = parseToSequent(Source.fromInputStream(in).mkString)
 

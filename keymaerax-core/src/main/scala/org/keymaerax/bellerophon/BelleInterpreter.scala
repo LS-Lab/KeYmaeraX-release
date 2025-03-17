@@ -7,8 +7,7 @@ package org.keymaerax.bellerophon
 
 /**
  * Provides the interpreter for running tactics.
- * @author
- *   Stefan Mitsch
+ * @author Stefan Mitsch
  */
 object BelleInterpreter extends Interpreter {
   private[this] var theInterpreter: Interpreter = _

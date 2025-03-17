@@ -48,9 +48,8 @@ class QETest extends TacticTestBase {
     val n = 250
 
     /**
-     * @note
-     *   the reason behind this returning $Failed is triggered more directly by the "expressions deeper than 256" test
-     *   case in JLinkMathematicaLinkTests
+     * @note the reason behind this returning $Failed is triggered more directly by the "expressions deeper than 256"
+     *   test case in JLinkMathematicaLinkTests
      */
     withTemporaryConfig(Map(Configuration.Keys.JLINK_USE_EXPR_INTERFACE -> "true")) {
       qeTool.qe(eq(n)).fact.conclusion.succ(0).asInstanceOf[Equiv].right shouldBe True

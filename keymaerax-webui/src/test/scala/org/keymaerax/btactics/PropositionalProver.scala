@@ -13,8 +13,7 @@ import scala.collection.immutable._
 
 /**
  * Automatic Propositional Prover tests.
- * @author
- *   Andre Platzer
+ * @author Andre Platzer
  */
 @SummaryTest
 class PropositionalProver extends TacticTestBase {

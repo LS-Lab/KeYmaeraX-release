@@ -18,10 +18,8 @@ import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
  * Tests free variables
  *
  * Created by smitsch on 1/7/15.
- * @author
- *   Stefan Mitsch
- * @author
- *   Ran Ji
+ * @author Stefan Mitsch
+ * @author Ran Ji
  */
 @SummaryTest
 class FreeVariablesTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {

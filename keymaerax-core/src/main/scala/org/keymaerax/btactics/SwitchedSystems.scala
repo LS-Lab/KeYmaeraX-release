@@ -153,16 +153,14 @@ object SwitchedSystems {
   /**
    * Controlled switching models
    *
-   * @param initopt
-   *   optional initialization program
+   * @param initopt optional initialization program
    * @param modes
    *   list of modes, each mode consisting of:
    *   - name: String (representing constant function name())
    *   - ode: ODESystem (continuous dynamics)
    *   - transitions: List[(String,Program)] (transitions p->q where program a is executed along the transition, e.g., a
    *     guard and/or reset map)
-   * @param u
-   *   the mode control variable u
+   * @param u the mode control variable u
    */
   case class Controlled(
       initopt: Option[Program],
@@ -637,8 +635,8 @@ object SwitchedSystems {
     val init = Less(normsq, Power(del, Number(2)))
 
     // w serves as an lower bound on V for ||x||=eps
-    val epsbound = cvars
-      .foldRight(Imply(Equal(normsq, epssq), GreaterEqual(lyap, w)): Formula)((v, f) => Forall(v :: Nil, f))
+    val epsbound =
+      cvars.foldRight(Imply(Equal(normsq, epssq), GreaterEqual(lyap, w)): Formula)((v, f) => Forall(v :: Nil, f))
     val epsw = Exists(w :: Nil, And(Greater(w, Number(0)), epsbound))
 
     // w serves as an upper bound on V for ||x||<del
@@ -657,11 +655,11 @@ object SwitchedSystems {
         implyRiLast & implyRiLast & cohideR(Symbol("Rlast")) & QE,
         hideL(Symbol("Llast")) & hideL(Symbol("Llast")) & implyRiLast & cohideR(Symbol("Rlast")) &
           implyR(1) &
-          DW(1) & abstractionb(1) & SaturateTactic(allR(1)) & SaturateTactic(allL(-1)) & QE
+          DW(1) & abstractionb(1) & SaturateTactic(allR(1)) & SaturateTactic(allL(-1)) & QE,
       ),
-      hideL(Symbol("Llast")) & implyRiLast & hideL(Symbol("Llast")) & implyR(Symbol("Rlast")) & dI(Symbol("full"))(
-        Symbol("Rlast")
-      )
+      hideL(Symbol("Llast")) & implyRiLast & hideL(Symbol("Llast")) & implyR(Symbol("Rlast")) & dI(
+        Symbol("full")
+      )(Symbol("Rlast")),
     )
 
     val inv = And(Less(lyap, w), Less(normsq, epssq))
@@ -674,7 +672,7 @@ object SwitchedSystems {
           implyRi & implyR(1) & andL(Symbol("Llast")) &
             (choiceb(Symbol("Rlast")) & andR(Symbol("Rlast")) < (odetac, skip)) * (odes
               .length - 1) & // split per control choice
-            odetac
+            odetac,
         )
       case _ => composeb(pos) &
           abstractionb(pos) & SaturateTactic(allR(pos)) &
@@ -683,11 +681,10 @@ object SwitchedSystems {
             prop,
             implyRi & implyR(1) & andL(Symbol("Llast")) &
               composeb(Symbol("Rlast")) & abstractionb(Symbol("Rlast")) & SaturateTactic(allR(Symbol("Rlast"))) &
-              (choiceb(Symbol("Rlast")) & andR(Symbol("Rlast")) < (
-                composeb(Symbol("Rlast")) & abstractionb(Symbol("Rlast")) & odetac,
-                skip
-              )) * (ss.odes.length - 1) &
-              composeb(Symbol("Rlast")) & abstractionb(Symbol("Rlast")) & odetac
+              (choiceb(Symbol("Rlast")) & andR(
+                Symbol("Rlast")
+              ) < (composeb(Symbol("Rlast")) & abstractionb(Symbol("Rlast")) & odetac, skip)) * (ss.odes.length - 1) &
+              composeb(Symbol("Rlast")) & abstractionb(Symbol("Rlast")) & odetac,
           )
     }
 
@@ -707,11 +704,11 @@ object SwitchedSystems {
                     cutR(Less(normsq, epssq))(pos) < (
                       (implyRi()(AntePos(apos + 2), pos.checkSucc) * 3) & cohideR(pos) & byUS(edswap),
                       (hideL(-(apos + 3)) * 3) & implyR(pos) &
-                        conttac
-                    )
-                  )
-              )
-          )
+                        conttac,
+                    ),
+                  ),
+              ),
+          ),
       )
 
   }
@@ -862,8 +859,8 @@ object SwitchedSystems {
     val Tchoice = And(GreaterEqual(TVar, Number(0)), LessEqual(Plus(w, Times(k, TVar)), u))
 
     // w serves as an lower bound on V for ||x||=eps
-    val epsbound = cvars
-      .foldRight(Imply(Equal(normsq, epssq), GreaterEqual(lyap, w)): Formula)((v, f) => Forall(v :: Nil, f))
+    val epsbound =
+      cvars.foldRight(Imply(Equal(normsq, epssq), GreaterEqual(lyap, w)): Formula)((v, f) => Forall(v :: Nil, f))
     val epsw = Exists(w :: Nil, And(Greater(w, Number(0)), epsbound))
 
     // The relevant tactic for a single ODE
@@ -881,13 +878,13 @@ object SwitchedSystems {
             dC(bd)(1) < ( // maybe DR instead?
               implyRiLast & hideL(Symbol("Llast")) & implyRiLast & cohideR(1) & implyR(1) & implyR(1) &
                 dI(Symbol("full"))(1),
-              DW(1) & abstractionb(1) & hideL(-1) & SaturateTactic(allR(1)) & SaturateTactic(allL(-1)) & prop
+              DW(1) & abstractionb(1) & hideL(-1) & SaturateTactic(allR(1)) & SaturateTactic(allL(-1)) & prop,
             ),
-          (hideL(Symbol("Llast")) * 6) & dW(Symbol("Rlast")) & implyR(1) & dI(Symbol("full"))(1)
-        )
+          (hideL(Symbol("Llast")) * 6) & dW(Symbol("Rlast")) & implyR(1) & dI(Symbol("full"))(1),
+        ),
       ),
       hideL(Symbol("Llast")) & implyRiLast & (hideL(Symbol("Llast")) * 4) & implyR(Symbol("Rlast")) &
-        dI(Symbol("full"))(Symbol("Rlast"))
+        dI(Symbol("full"))(Symbol("Rlast")),
     )
 
     val inv = And(Less(lyap, w), Imply(GreaterEqual(lyap, u), Less(lyap, Plus(w, Times(k, tVar)))))
@@ -895,48 +892,46 @@ object SwitchedSystems {
     // Continuation
     val conttac = ss match {
       case StateDependent(odes) => HybridProgramCalculus.loop(inv)(pos) < (
-          cutR(Equal(tVar, Number(0)))(pos) < (
-            id,
-            implyR(pos) & exhaustiveEqL2R(Symbol("Llast")) & SimplifierV3.simplify(pos) & closeT
-          ),
+          cutR(
+            Equal(tVar, Number(0))
+          )(pos) < (id, implyR(pos) & exhaustiveEqL2R(Symbol("Llast")) & SimplifierV3.simplify(pos) & closeT),
           // Note: for these next two branches, the "loop" branch is moved to the first succedent position
           ArithmeticSimplification.hideFactsAbout(kis) &
-            hideL(Symbol("Llast")) & implyRiLast & implyRiLast & (allL(Symbol("Llast")) * cvars
-              .length) & implyL(Symbol("Llast")) < (
+            hideL(Symbol("Llast")) & implyRiLast & implyRiLast & (allL(Symbol("Llast")) * cvars.length) & implyL(
+              Symbol("Llast")
+            ) < (
               andR(Symbol("Rlast")) < (prop, SaturateTactic(hideL(Symbol("L"))) & QE),
-              andL(-1) & implyL(Symbol("Llast")) < (id, QE) // todo: this last QE can be done more manually
+              andL(-1) & implyL(Symbol("Llast")) < (id, QE), // todo: this last QE can be done more manually
             ),
           ArithmeticSimplification.hideFactsAbout(TVar :: eps :: Nil) &
             implyRi & implyR(1) & andL(Symbol("Llast")) &
-
             (kis zip derbods)
               .map(kb => ArithmeticSimplification.hideFactsAbout(kis.filter(_ != kb._1)) & odetac(kb._2))
-              .reduceRight((p1, p2) => choiceb(Symbol("Rlast")) & andR(Symbol("Rlast")) < (p1, p2))
+              .reduceRight((p1, p2) => choiceb(Symbol("Rlast")) & andR(Symbol("Rlast")) < (p1, p2)),
         )
       case _ => composeb(pos) &
           abstractionb(pos) & SaturateTactic(allR(pos)) &
           HybridProgramCalculus.loop(inv)(pos) < (
-            cutR(Equal(tVar, Number(0)))(pos) < (
-              id,
-              implyR(pos) & exhaustiveEqL2R(Symbol("Llast")) & SimplifierV3.simplify(pos) & closeT
-            ),
+            cutR(
+              Equal(tVar, Number(0))
+            )(pos) < (id, implyR(pos) & exhaustiveEqL2R(Symbol("Llast")) & SimplifierV3.simplify(pos) & closeT),
             // Note: for these next two branches, the "loop" branch is moved to the first succedent position
             ArithmeticSimplification.hideFactsAbout(kis) &
-              hideL(Symbol("Llast")) & implyRiLast & implyRiLast & (allL(Symbol("Llast")) * cvars
-                .length) & implyL(Symbol("Llast")) < (
+              hideL(Symbol("Llast")) & implyRiLast & implyRiLast & (allL(Symbol("Llast")) * cvars.length) & implyL(
+                Symbol("Llast")
+              ) < (
                 andR(Symbol("Rlast")) < (prop, SaturateTactic(hideL(Symbol("L"))) & QE),
-                andL(-1) & implyL(Symbol("Llast")) < (id, QE) // todo: this last QE can be done more manually
+                andL(-1) & implyL(Symbol("Llast")) < (id, QE), // todo: this last QE can be done more manually
               ),
             implyRi & implyR(1) & andL(Symbol("Llast")) &
               composeb(Symbol("Rlast")) & abstractionb(Symbol("Rlast")) & SaturateTactic(allR(Symbol("Rlast"))) &
-
               (kis zip derbods)
                 .map(kb =>
                   ArithmeticSimplification.hideFactsAbout(kis.filter(_ != kb._1)) & composeb(
                     Symbol("Rlast")
                   ) & abstractionb(Symbol("Rlast")) & odetac(kb._2)
                 )
-                .reduceRight((p1, p2) => choiceb(Symbol("Rlast")) & andR(Symbol("Rlast")) < (p1, p2))
+                .reduceRight((p1, p2) => choiceb(Symbol("Rlast")) & andR(Symbol("Rlast")) < (p1, p2)),
           )
     }
 
@@ -974,33 +969,24 @@ object SwitchedSystems {
                                   -(apos + 2)
                                 ) & // hide eps > 0, W > 0 and U > 0 assumptions which aren't needed anymore from here
                                 composeb(pos) & assignb(pos) & // t_=0 initially
-                                conttac
-                            )
-                        )
-                      )
-                  )
-              )
-          )
+                                conttac,
+                            ),
+                        ),
+                      ),
+                  ),
+              ),
+          ),
       )
 
   }
 
   // MLF tactics
-  private lazy val conjSplit = remember(
-    "((p(||) | q(||))&r(||)) <-> (p(||) & r(||) | q(||)&r(||))".asFormula,
-    equivR(1) < (
-      prop,
-      prop
-    ),
-    namespace,
-  )
+  private lazy val conjSplit =
+    remember("((p(||) | q(||))&r(||)) <-> (p(||) & r(||) | q(||)&r(||))".asFormula, equivR(1) < (prop, prop), namespace)
 
   private lazy val conjAssoc = remember(
     "( (a(||) & b(||)) & c(||) ) <-> (  a(||) & b(||) & c(||) )".asFormula,
-    equivR(1) < (
-      prop,
-      prop
-    ),
+    equivR(1) < (prop, prop),
     namespace,
   )
 
@@ -1069,8 +1055,9 @@ object SwitchedSystems {
     )
     require(
       lyaps.length == ss.odes.length,
-      "Require one Lyapunov function for each mode but got : " + lyaps
-        .length + " out of " + ss.odes.length + " required",
+      "Require one Lyapunov function for each mode but got : " + lyaps.length + " out of " + ss
+        .odes
+        .length + " required",
     )
     val eps = Variable("eps")
     val delName = "del"
@@ -1144,12 +1131,12 @@ object SwitchedSystems {
         DifferentialTactics.dCClosure(Symbol("Rlast")) < (
           implyRiLast & cohideR(Symbol("Rlast")) & QE,
           hideL(Symbol("Llast")) * 2 & implyRiLast * 3 & cohideR(Symbol("Rlast")) & implyR(1) * 3 &
-            DW(1) & abstractionb(1) & SaturateTactic(allR(1)) & SaturateTactic(allL(-1)) & QE
-        )
+            DW(1) & abstractionb(1) & SaturateTactic(allR(1)) & SaturateTactic(allL(-1)) & QE,
+        ),
       ),
       ArithmeticSimplification.hideFactsAbout(eps :: wis) &
         DebuggingTactics.debug("dI for: " + lyap, debugTactic) &
-        dI(Symbol("full"))(Symbol("Rlast"))
+        dI(Symbol("full"))(Symbol("Rlast")),
     )
 
     // Continuation
@@ -1163,13 +1150,14 @@ object SwitchedSystems {
           andR(pos) < (
             ArithmeticSimplification.hideFactsAbout(eps :: wis) & SimplifierV3.simplify(pos) &
               // assumes domains cover entire space, if not, the loop invariant mut split
-              ArithmeticSimplification.hideFactsAbout(w :: Nil) & QE, prop
+              ArithmeticSimplification.hideFactsAbout(w :: Nil) & QE,
+            prop,
           ),
           prop,
           implyRi & implyR(1) & andL(Symbol("Llast")) &
             (lyaps zip wis)
               .map(lyapwi => ArithmeticSimplification.hideFactsAbout(wis.filter(_ != lyapwi._2)) & odetac(lyapwi._1))
-              .reduceRight((p1, p2) => choiceb(Symbol("Rlast")) & andR(Symbol("Rlast")) < (p1, p2))
+              .reduceRight((p1, p2) => choiceb(Symbol("Rlast")) & andR(Symbol("Rlast")) < (p1, p2)),
         )
       }
       case Guarded(modes, u) => {
@@ -1188,12 +1176,14 @@ object SwitchedSystems {
           HybridProgramCalculus.loop(inv)(1) < (
             andR(1) < (
               ArithmeticSimplification.hideFactsAbout(eps :: wis) & SimplifierV3.simplify(1) &
-                ArithmeticSimplification.hideFactsAbout(w :: Nil) & QE, prop
+                ArithmeticSimplification.hideFactsAbout(w :: Nil) & QE,
+              prop,
             ),
             prop,
             composeb(1) & HybridProgramCalculus.generalize(gen)(1) < (
-              SaturateTactic(andL(Symbol("L"))) & ArithmeticSimplification
-                .hideFactsAbout(wis) & unfoldProgramNormalize & OnAll(Idioms.?(QE & done)),
+              SaturateTactic(
+                andL(Symbol("L"))
+              ) & ArithmeticSimplification.hideFactsAbout(wis) & unfoldProgramNormalize & OnAll(Idioms.?(QE & done)),
               (lyaps zip wis)
                 .map(lyapwi =>
                   useAt(conjAssoc)(1, 1 :: Nil) &
@@ -1203,8 +1193,8 @@ object SwitchedSystems {
                         V(1) & id,
                         SaturateTactic(andL(Symbol("L"))) &
                           ArithmeticSimplification.hideFactsAbout(wis.filter(_ != lyapwi._2)) &
-                          implyRi & hideL(-1) & implyR(1) & implyRi & implyR(1) & odetac(lyapwi._1)
-                      )
+                          implyRi & hideL(-1) & implyR(1) & implyRi & implyR(1) & odetac(lyapwi._1),
+                      ),
                     )
                 )
                 .reduceRight((p1, p2) =>
@@ -1212,11 +1202,11 @@ object SwitchedSystems {
                     choiceb(1) & andL(Symbol("Llast")) & andR(1) < (
                       useAt(Ax.boxOrLeft, PosInExpr(1 :: Nil))(1) & hideL(Symbol("Llast")) & p1,
                       useAt(Ax.boxOrRight, PosInExpr(1 :: Nil))(1) &
-                        implyRiLast & hideL(Symbol("Llast")) & implyR(Symbol("Rlast")) & p2
+                        implyRiLast & hideL(Symbol("Llast")) & implyR(Symbol("Rlast")) & p2,
                     )
-                )
-            )
-          )
+                ),
+            ),
+          ),
         )
       }
     }
@@ -1257,34 +1247,31 @@ object SwitchedSystems {
                                     .map(_ =>
                                       (allL(-(apos + 1)) * cvars.length) & implyL(-(apos + 1)) < (
                                         implyRiLast & implyRiLast & implyRiLast & cohideR(Symbol("Rlast")) & QE,
-                                        id
+                                        id,
                                       )
                                     )
                                     .reduceRight((p1, p2) => andR(pos) < (p1, hideL(-(apos + 1)) & p2)),
-                                ArithmeticSimplification.hideFactsAbout(delis) & QE
+                                ArithmeticSimplification.hideFactsAbout(delis) & QE,
                               ),
                             hideL(-(apos + 1)) &
                               ArithmeticSimplification.hideFactsAbout(del :: delis) &
-                              implyR(pos) & conttac
-                          )
-                      )
-                  )
-              )
-          )
+                              implyR(pos) & conttac,
+                          ),
+                      ),
+                  ),
+              ),
+          ),
       )
   }
 
   /**
    * MLF tactic for time-dependent
    *
-   * @param Vp
-   *   list of Lyapunov functions V_p
-   * @param Lp
-   *   list of lambdas such that `V_p' <= -lambda V_p`. Note: lambdas is provided as a list of Formulas expected to have
-   *   shape `lambda_p <= 0` or `lambda_p > 0`. This is to support parametric lambda (where the sign is not necessarily
-   *   known)
-   * @return
-   *   Tactic proving stability for the Timed switched system at a given position
+   * @param Vp list of Lyapunov functions V_p
+   * @param Lp list of lambdas such that `V_p' <= -lambda V_p`. Note: lambdas is provided as a list of Formulas expected
+   *   to have shape `lambda_p <= 0` or `lambda_p > 0`. This is to support parametric lambda (where the sign is not
+   *   necessarily known)
+   * @return Tactic proving stability for the Timed switched system at a given position
    */
   def proveStabilityTimeMLF(Vp: List[Term], Lp: List[Formula]): DependentPositionWithAppliedInputTactic =
     "stabilityTimeMLF".byWithInputs(
@@ -1319,10 +1306,9 @@ object SwitchedSystems {
     displayPremises = "Γ |- Vp' <= Lp*Vp",
     displayConclusion =
       "Γ |- ∀ℇ>0 ∀∆>0 ∃T≥0 ∀x<sup>2</sup><∆<sup>2</sup> [t:=0; {t'=1,x'=f_p(x) & Q}*](t≥T → x<sup>2</sup><ℇ<sup>2</sup>), Δ",
-    constructor = TacticConstructor2
-      .create(ListArg(TermArg("Vp")), ListArg(FormulaArg("Lp")))((Vp: List[Term], Lp: List[Formula]) =>
-        proveStabilityTimeMLF(Vp, Lp)
-      ),
+    constructor = TacticConstructor2.create(ListArg(TermArg("Vp")), ListArg(FormulaArg("Lp")))(
+      (Vp: List[Term], Lp: List[Formula]) => proveStabilityTimeMLF(Vp, Lp)
+    ),
   )
 
   private def factorial(i: Int): BigDecimal = { if (i <= 1) 1 else i * factorial(i - 1) }
@@ -1348,8 +1334,9 @@ object SwitchedSystems {
     )
     require(
       lyaps.length == ss.odes.length,
-      "Require one Lyapunov function for each mode but got : " + lyaps
-        .length + " out of " + ss.odes.length + " required",
+      "Require one Lyapunov function for each mode but got : " + lyaps.length + " out of " + ss
+        .odes
+        .length + " required",
     )
 
     val eps = Variable("eps")
@@ -1460,15 +1447,15 @@ object SwitchedSystems {
               hideL(Symbol("Llast")) * 2 & implyRiLast * 3 & cohideR(Symbol("Rlast")) & implyR(1) * 3 &
                 DW(1) & abstractionb(1) & SaturateTactic(allR(1)) & SaturateTactic(allL(-1)) &
                 QE &
-                DebuggingTactics.debug("done", debugTactic)
-            )
+                DebuggingTactics.debug("done", debugTactic),
+            ),
           ),
           ArithmeticSimplification.hideFactsAbout(eps :: wis) &
             dI(Symbol("full"))(Symbol("Rlast")) &
-            DebuggingTactics.debug("done", debugTactic)
+            DebuggingTactics.debug("done", debugTactic),
         ),
         ArithmeticSimplification.keepFactsAbout(ss.timer :: Nil) &
-          dI(Symbol("full"))(Symbol("Rlast"))
+          dI(Symbol("full"))(Symbol("Rlast")),
       )
 
     // Continuation
@@ -1513,12 +1500,13 @@ object SwitchedSystems {
               ArithmeticSimplification.hideFactsAbout(eps :: wis) & SimplifierV3
                 .fullSimplify & // fullSimplify needed for unstable modes
                 ArithmeticSimplification.hideFactsAbout(w :: Nil) & Idioms.?(QE & done),
-              andR(1) < (cohideR(1) & Idioms.?(QE & done), prop)
+              andR(1) < (cohideR(1) & Idioms.?(QE & done), prop),
             ),
             prop,
             composeb(1) & HybridProgramCalculus.generalize(gen)(1) < (
-              SaturateTactic(andL(Symbol("L"))) & ArithmeticSimplification
-                .hideFactsAbout(wis) & unfoldProgramNormalize &
+              SaturateTactic(
+                andL(Symbol("L"))
+              ) & ArithmeticSimplification.hideFactsAbout(wis) & unfoldProgramNormalize &
                 OnAll(Idioms.?(QE & done)),
               invLess
                 .lazyZip(wis)
@@ -1534,8 +1522,8 @@ object SwitchedSystems {
                           implyR(Symbol("Rlast")) & implyR(Symbol("Rlast")) & hideL(Symbol("Llast")) & implyRi & implyR(
                             1
                           ) &
-                          odetac(less)
-                      )
+                          odetac(less),
+                      ),
                     )
                 )
                 .reduceRight((p1, p2) =>
@@ -1543,11 +1531,11 @@ object SwitchedSystems {
                     choiceb(1) & andL(Symbol("Llast")) & andR(1) < (
                       useAt(Ax.boxOrLeft, PosInExpr(1 :: Nil))(1) & hideL(Symbol("Llast")) & p1,
                       useAt(Ax.boxOrRight, PosInExpr(1 :: Nil))(1) &
-                        implyRiLast & hideL(Symbol("Llast")) & implyR(Symbol("Rlast")) & p2
+                        implyRiLast & hideL(Symbol("Llast")) & implyR(Symbol("Rlast")) & p2,
                     )
-                )
-            )
-          )
+                ),
+            ),
+          ),
       )
     }
 
@@ -1589,20 +1577,20 @@ object SwitchedSystems {
                                     .map(_ =>
                                       (allL(-(apos + 1)) * cvars.length) & implyL(-(apos + 1)) < (
                                         implyRiLast & implyRiLast & implyRiLast & cohideR(Symbol("Rlast")) & QE,
-                                        id
+                                        id,
                                       )
                                     )
                                     .reduceRight((p1, p2) => andR(pos) < (p1, hideL(-(apos + 1)) & p2)),
-                                ArithmeticSimplification.hideFactsAbout(delis) & QE
+                                ArithmeticSimplification.hideFactsAbout(delis) & QE,
                               ),
                             hideL(-(apos + 1)) &
                               ArithmeticSimplification.hideFactsAbout(del :: delis) &
-                              implyR(pos) & conttac
-                          )
-                      )
-                  )
-              )
-          )
+                              implyR(pos) & conttac,
+                          ),
+                      ),
+                  ),
+              ),
+          ),
       )
 
   }
@@ -1685,8 +1673,9 @@ object SwitchedSystems {
     )
     require(
       lyaps.length == ss.odes.length,
-      "Require one Lyapunov function for each mode but got : " + lyaps
-        .length + " out of " + ss.odes.length + " required",
+      "Require one Lyapunov function for each mode but got : " + lyaps.length + " out of " + ss
+        .odes
+        .length + " required",
     )
 
     // whether to use the full QE question for radial unboundedness
@@ -1705,10 +1694,7 @@ object SwitchedSystems {
     // can specialize this
     val lessTransW = proveBy(
       "(p() -> f() < g()) -> (p() & g() <= w_ -> f() < w_)".asFormula,
-      implyR(1) & implyR(1) & andL(-2) & implyL(-1) < (
-        id,
-        QE
-      ),
+      implyR(1) & implyR(1) & andL(-2) & implyL(-1) < (id, QE),
     )
 
     val uName = "u_"
@@ -1808,8 +1794,10 @@ object SwitchedSystems {
     // assums, k < 0, k <= k_i,  k_i < 0, \forall x ( Q&V>=U&V<W -> V' < k_i),  V_i < w , (V_i >= u -> V_i < w + k * t)
     // Succedent has form:
     // assums, [ODE_i](V_i < w & (V_i >= u -> V_i < w + k * t))
-    def odetac(lyap: Term, bd: Formula, ki: Term): BelleExpr = DebuggingTactics
-      .debug("Enter ODE for " + lyap, debugTactic) &
+    def odetac(lyap: Term, bd: Formula, ki: Term): BelleExpr = DebuggingTactics.debug(
+      "Enter ODE for " + lyap,
+      debugTactic,
+    ) &
       dC(Less(lyap, w))(pos) < (
         boxAnd(Symbol("Rlast")) & andR(Symbol("Rlast")) < (
           DifferentialTactics.diffWeakenG(Symbol("Rlast")) & prop,
@@ -1822,19 +1810,23 @@ object SwitchedSystems {
                 implyRiLast & cutR(LessEqual(ki, k))(Symbol("Rlast")) < (
                   prop,
                   cohideR(Symbol("Rlast")) & implyR(1) & implyR(1) &
-                    DebuggingTactics.debug("dI 1", debugTactic) & dI(Symbol("full"))(1) & DebuggingTactics
-                      .debug("done", debugTactic)
+                    DebuggingTactics.debug("dI 1", debugTactic) & dI(
+                      Symbol("full")
+                    )(1) & DebuggingTactics.debug("done", debugTactic),
                 ),
                 ArithmeticSimplification.hideFactsAbout(k :: Nil) &
-                  hideL(-1) & DW(1) & abstractionb(1) & SaturateTactic(allR(1)) & SaturateTactic(allL(-1)) & prop
+                  hideL(-1) & DW(1) & abstractionb(1) & SaturateTactic(allR(1)) & SaturateTactic(allL(-1)) & prop,
               ),
-            (hideL(Symbol("Llast")) * 4) & dW(Symbol("Rlast")) & implyR(1) & DebuggingTactics
-              .debug("dI 2", debugTactic) & dI(Symbol("full"))(1) & DebuggingTactics.debug("done", debugTactic)
-          )
+            (hideL(Symbol("Llast")) * 4) & dW(
+              Symbol("Rlast")
+            ) & implyR(1) & DebuggingTactics.debug("dI 2", debugTactic) & dI(Symbol("full"))(1) & DebuggingTactics
+              .debug("done", debugTactic),
+          ),
         ),
         hideL(Symbol("Llast")) & implyRiLast & (hideL(Symbol("Llast")) * 3) & implyR(Symbol("Rlast")) &
-          DebuggingTactics.debug("dI 3", debugTactic) & dI(Symbol("full"))(Symbol("Rlast")) & DebuggingTactics
-            .debug("done", debugTactic)
+          DebuggingTactics.debug("dI 3", debugTactic) & dI(
+            Symbol("full")
+          )(Symbol("Rlast")) & DebuggingTactics.debug("done", debugTactic),
       )
 
     // Continuation
@@ -1855,7 +1847,7 @@ object SwitchedSystems {
             id,
             implyR(pos) & exhaustiveEqL2R(Symbol("Llast")) & SimplifierV3.simplify(pos) &
               ArithmeticSimplification.hideFactsAbout(w :: u :: k :: uis ++ kis) &
-              QE
+              QE,
           ),
           // Note: for these next two branches, the "loop" branch is moved to the first succedent position
           // Tricky here: loop
@@ -1865,10 +1857,9 @@ object SwitchedSystems {
                 ArithmeticSimplification.hideFactsAbout(uis.filter(_ != ui)) &
                   (allL(Symbol("Llast")) * cvars.length) & implyL(Symbol("Llast")) < (
                     andR(Symbol("Rlast")) < (prop, SaturateTactic(hideL(Symbol("L"))) & QE),
-                    andL(-1) & andL(Symbol("Llast")) & implyL(Symbol("Llast")) < (
-                      ArithmeticSimplification.keepFactsAbout(u :: ui :: Nil) & QE,
-                      QE
-                    )
+                    andL(-1) & andL(
+                      Symbol("Llast")
+                    ) & implyL(Symbol("Llast")) < (ArithmeticSimplification.keepFactsAbout(u :: ui :: Nil) & QE, QE),
                   )
               )
               .reduceRight((p1, p2) => orL(-1) < (p1, p2)),
@@ -1880,25 +1871,25 @@ object SwitchedSystems {
               .map((ki, lyap, bd) =>
                 ArithmeticSimplification.hideFactsAbout(kis.filter(_ != ki)) &
                   DifferentialTactics.diffUnpackEvolutionDomainInitially(Symbol("Rlast")) &
-                  cutR(And(Less(lyap, w), Imply(GreaterEqual(lyap, u), Less(lyap, Plus(w, Times(k, tVar))))))(Symbol(
-                    "Rlast"
-                  )) < (
+                  cutR(
+                    And(Less(lyap, w), Imply(GreaterEqual(lyap, u), Less(lyap, Plus(w, Times(k, tVar)))))
+                  )(Symbol("Rlast")) < (
                     implyRiLast & implyRiLast & (hideL(Symbol("Llast")) * 4) & QE,
                     hideL(Symbol("Llast")) & hideL(Symbol("Llast")) & implyR(Symbol("Rlast")) & boxAnd(
                       Symbol("Rlast")
                     ) &
                       andR(Symbol("Rlast")) < (
                         DifferentialTactics.diffWeakenG(Symbol("Rlast")) & prop,
-                        andL(Symbol("Llast")) & odetac(lyap, bd, ki)
-                      )
+                        andL(Symbol("Llast")) & odetac(lyap, bd, ki),
+                      ),
                   )
               )
               .reduceRight((p1, p2) =>
                 choiceb(Symbol("Rlast")) & andR(Symbol("Rlast")) < (
                   useAt(Ax.boxOrLeft, PosInExpr(1 :: Nil))(Symbol("Rlast")) & p1,
-                  useAt(Ax.boxOrRight, PosInExpr(1 :: Nil))(Symbol("Rlast")) & p2
+                  useAt(Ax.boxOrRight, PosInExpr(1 :: Nil))(Symbol("Rlast")) & p2,
                 )
-              )
+              ),
         )
       }
 
@@ -1926,20 +1917,19 @@ object SwitchedSystems {
           unfoldProgramNormalize & OnAll(SimplifierV3.fullSimplify & closeT),
           // note: generalize throws away context, so pos is now 1
           HybridProgramCalculus.loop(inv)(1) < (
-            cutR(Equal(tVar, Number(0)))(pos) < (
-              id,
-              implyR(1) & exhaustiveEqL2R(Symbol("Llast")) & SimplifierV3.simplify(1) & closeT
-            ),
+            cutR(
+              Equal(tVar, Number(0))
+            )(pos) < (id, implyR(1) & exhaustiveEqL2R(Symbol("Llast")) & SimplifierV3.simplify(1) & closeT),
             // Note: for these next two branches, the "loop" branch is moved to the first succedent position
             ArithmeticSimplification.hideFactsAbout(kis) &
               uis
                 .map(ui =>
                   ArithmeticSimplification.hideFactsAbout(uis.filter(_ != ui)) &
                     implyRiLast * 4 & (allL(Symbol("Llast")) * cvars.length) & implyL(Symbol("Llast")) < (
-                      andR(Symbol("Rlast")) < (
-                        prop, SaturateTactic(hideL(Symbol("L"))) & SaturateTactic(implyR(Symbol("R"))) & QE
-                      ),
-                      QE
+                      andR(
+                        Symbol("Rlast")
+                      ) < (prop, SaturateTactic(hideL(Symbol("L"))) & SaturateTactic(implyR(Symbol("R"))) & QE),
+                      QE,
                     )
                 )
                 .reduceRight((p1, p2) => orL(-1) < (p1, p2)),
@@ -1958,19 +1948,19 @@ object SwitchedSystems {
                           implyR(1) & hideL(Symbol("Llast")) &
                           ArithmeticSimplification.hideFactsAbout(kis.filter(_ != ki)) &
                           implyRi & implyR(1) &
-                          implyRi & implyR(1) & odetac(lyap, bd, ki)
-                      )
+                          implyRi & implyR(1) & odetac(lyap, bd, ki),
+                      ),
                     )
                   )
                   .reduceRight((p1, p2) =>
                     choiceb(1) & andL(Symbol("Llast")) & andR(1) < (
                       useAt(Ax.boxOrLeft, PosInExpr(1 :: Nil))(1) & hideL(Symbol("Llast")) & p1,
                       useAt(Ax.boxOrRight, PosInExpr(1 :: Nil))(1) &
-                        implyRiLast & hideL(Symbol("Llast")) & implyR(Symbol("Rlast")) & p2
+                        implyRiLast & hideL(Symbol("Llast")) & implyR(Symbol("Rlast")) & p2,
                     )
-                  )
-              )
-          )
+                  ),
+              ),
+          ),
         )
       }
     }
@@ -2018,10 +2008,7 @@ object SwitchedSystems {
                                       .map(i =>
                                         (allL(-(apos + 2 + i)) * cvars.length) &
                                           useAt(lessTransW)(-(apos + 2 + i)) &
-                                          implyL(-(apos + 2 + i)) < (
-                                            prop,
-                                            skip
-                                          )
+                                          implyL(-(apos + 2 + i)) < (prop, skip)
                                       )
                                       .reduceRight(_ & _) &
                                     // Don't need del, w_i anymore
@@ -2030,14 +2017,14 @@ object SwitchedSystems {
                                       -(apos + 2 * lyaps.length + 1)
                                     ) & // hide eps > 0, W > 0 and U > 0 assumptions which aren't needed anymore from here
                                     composeb(pos) & assignb(pos) & // t_=0 initially
-                                    conttac
-                                )
-                              )
-                          )
-                      )
-                  )
-              )
-          )
+                                    conttac,
+                                ),
+                              ),
+                          ),
+                      ),
+                  ),
+              ),
+          ),
       )
 
   }
@@ -2107,8 +2094,9 @@ object SwitchedSystems {
     )
     require(
       lyaps.length == ss.odes.length,
-      "Require one Lyapunov function for each mode but got : " + lyaps
-        .length + " out of " + ss.odes.length + " required",
+      "Require one Lyapunov function for each mode but got : " + lyaps.length + " out of " + ss
+        .odes
+        .length + " required",
     )
 
     // whether to use the full QE question for radial unboundedness
@@ -2127,10 +2115,7 @@ object SwitchedSystems {
     // can specialize this
     val lessTransW = proveBy(
       "(p() -> f() < g()) -> (p() & g() <= w_ -> f() < w_)".asFormula,
-      implyR(1) & implyR(1) & andL(-2) & implyL(-1) < (
-        id,
-        QE
-      ),
+      implyR(1) & implyR(1) & andL(-2) & implyL(-1) < (id, QE),
     )
 
     val uName = "u_"
@@ -2234,13 +2219,13 @@ object SwitchedSystems {
             DifferentialTactics.diffWeakenG(Symbol("Rlast")) & prop,
             DebuggingTactics.debug("enter dI", debugTactic) &
               dI(Symbol("full"))(Symbol("Rlast")) &
-              DebuggingTactics.debug("done", debugTactic)
+              DebuggingTactics.debug("done", debugTactic),
           ),
           ArithmeticSimplification.keepFactsAbout(ss.timer :: tVar :: Nil) &
-            dI(Symbol("full"))(Symbol("Rlast"))
+            dI(Symbol("full"))(Symbol("Rlast")),
         ),
         ArithmeticSimplification.keepFactsAbout(ss.timer :: Nil) &
-          dI(Symbol("full"))(Symbol("Rlast"))
+          dI(Symbol("full"))(Symbol("Rlast")),
       )
 
     // Continuation
@@ -2299,7 +2284,7 @@ object SwitchedSystems {
                 ArithmeticSimplification.hideFactsAbout(eps :: wis) & SimplifierV3
                   .fullSimplify & // fullSimplify needed for unstable modes
                   ArithmeticSimplification.hideFactsAbout(w :: Nil) & Idioms.?(QE & done),
-                cohideR(1) & QE
+                cohideR(1) & QE,
               ),
             andL(-1) & implyRiLast &
               uis
@@ -2307,17 +2292,18 @@ object SwitchedSystems {
                   ArithmeticSimplification.hideFactsAbout(uis.filter(_ != ui)) &
                     implyRiLast * 4 & (allL(Symbol("Llast")) * cvars.length) & implyL(Symbol("Llast")) < (
                       andR(Symbol("Rlast")) < (
-                        Idioms
-                          .?(QE & done), SaturateTactic(hideL(Symbol("L"))) & SaturateTactic(implyR(Symbol("R"))) & QE
+                        Idioms.?(QE & done),
+                        SaturateTactic(hideL(Symbol("L"))) & SaturateTactic(implyR(Symbol("R"))) & QE,
                       ),
-                      QE
+                      QE,
                     )
                 )
                 .reduceRight((p1, p2) => orL(Symbol("Llast")) < (p1, p2)),
             ArithmeticSimplification.hideFactsAbout(TVar :: eps :: uis) &
               composeb(1) & HybridProgramCalculus.generalize(gen)(1) < (
-                SaturateTactic(andL(Symbol("L"))) & ArithmeticSimplification
-                  .hideFactsAbout(wis) & unfoldProgramNormalize & OnAll(Idioms.?(QE & done)),
+                SaturateTactic(
+                  andL(Symbol("L"))
+                ) & ArithmeticSimplification.hideFactsAbout(wis) & unfoldProgramNormalize & OnAll(Idioms.?(QE & done)),
                 invLess
                   .lazyZip(wis)
                   .map((less, wi) =>
@@ -2327,8 +2313,8 @@ object SwitchedSystems {
                         implyR(1) & boxAnd(1) & andR(1) < (
                           V(1) & id,
                           hideL(Symbol("Llast")) & andL(Symbol("Llast")) & andL(Symbol("Llast")) &
-                            odetac(less)
-                        )
+                            odetac(less),
+                        ),
                       )
                   )
                   .reduceRight((p1, p2) =>
@@ -2336,11 +2322,11 @@ object SwitchedSystems {
                       choiceb(1) & andL(Symbol("Llast")) & andR(1) < (
                         useAt(Ax.boxOrLeft, PosInExpr(1 :: Nil))(1) & hideL(Symbol("Llast")) & p1,
                         useAt(Ax.boxOrRight, PosInExpr(1 :: Nil))(1) &
-                          implyRiLast & hideL(Symbol("Llast")) & implyR(Symbol("Rlast")) & p2
+                          implyRiLast & hideL(Symbol("Llast")) & implyR(Symbol("Rlast")) & p2,
                       )
-                  )
-              )
-          )
+                  ),
+              ),
+          ),
       )
     }
 
@@ -2377,10 +2363,7 @@ object SwitchedSystems {
                               .map(i =>
                                 (allL(-(apos + 2 + i)) * cvars.length) &
                                   useAt(lessTransW)(-(apos + 2 + i)) &
-                                  implyL(-(apos + 2 + i)) < (
-                                    prop,
-                                    skip
-                                  )
+                                  implyL(-(apos + 2 + i)) < (prop, skip)
                               )
                               .reduceRight(_ & _) &
                             // Don't need del, w_i anymore
@@ -2389,20 +2372,19 @@ object SwitchedSystems {
                               -(apos + 2 * lyaps.length + 1)
                             ) & // hide eps > 0, W > 0 and U > 0 assumptions which aren't needed anymore from here
                             composeb(pos) & assignb(pos) & // t_=0 initially
-                            conttac
-                        )
-                      )
-                  )
-              )
-          )
+                            conttac,
+                        ),
+                      ),
+                  ),
+              ),
+          ),
       )
 
   }
 
   /**
    * Extract an underlying indexed transition map suitable for MLF generation
-   * @param ss
-   *   the switched system under consideration
+   * @param ss the switched system under consideration
    */
   def guardedTransitionMap(ss: SwitchedSystem): List[(Int, Int, Formula)] = {
     ss match {
@@ -2426,14 +2408,10 @@ object SwitchedSystems {
   /**
    * Check that ODE's domain includes points that are about to locally exit or enter it under the dynamics of the ODE
    *
-   * @note
-   *   for closed domains, this is automatically true
-   * @note
-   *   returns an option with string and counterexample if it manages to find one
-   * @param sys
-   *   the ODE under consideration
-   * @param dom
-   *   the "global" domain of points to be considered
+   * @note for closed domains, this is automatically true
+   * @note returns an option with string and counterexample if it manages to find one
+   * @param sys the ODE under consideration
+   * @param dom the "global" domain of points to be considered
    */
   def odeActive(sys: ODESystem, dom: Formula): Option[(String, Map[NamedSymbol, Expression])] = {
 
@@ -2475,10 +2453,8 @@ object SwitchedSystems {
   /**
    * Check that all states can locally evolve under at least one ODE
    *
-   * @param odes
-   *   ODEs in the family
-   * @param dom
-   *   the expected domain of the overall system (defaults: the entire state space)
+   * @param odes ODEs in the family
+   * @param dom the expected domain of the overall system (defaults: the entire state space)
    */
   def stateSwitchActive(odes: List[ODESystem], dom: Formula = True): Option[(String, Map[NamedSymbol, Expression])] = {
 
@@ -2510,12 +2486,9 @@ object SwitchedSystems {
    *   - Each index i can be associated with an (optional) positive time bound t <= T_i for the maximum dwell time
    *   - Each pair (i,j) can be associated with a positive time tau_{ij} <= t for minimum dwell time before transition
    *
-   * @param odes
-   *   ODEs in the family with their time bounds
-   * @param transitions
-   *   for each ODE i, an associated list of pairs (j,tau_{ij})
-   * @return
-   *   a hybrid program modeling time-dependent switching between the ODEs
+   * @param odes ODEs in the family with their time bounds
+   * @param transitions for each ODE i, an associated list of pairs (j,tau_{ij})
+   * @return a hybrid program modeling time-dependent switching between the ODEs
    */
   def timeSwitch(
       odes: List[(ODESystem, Option[Term])],
@@ -2591,12 +2564,9 @@ object SwitchedSystems {
   /**
    * Standard slow switching model. Each ODE is indexed 0,...,n-1.
    *
-   * @param odes
-   *   ODEs in the family
-   * @param dwell
-   *   the (global) minimum dwell time
-   * @return
-   *   a hybrid program modeling slow switching between the ODEs
+   * @param odes ODEs in the family
+   * @param dwell the (global) minimum dwell time
+   * @return a hybrid program modeling slow switching between the ODEs
    */
   def slowSwitch(
       odes: List[ODESystem],
@@ -2620,13 +2590,10 @@ object SwitchedSystems {
    * \forall x ( ||x|| < del -> [ a ] ||x|| < eps )
    * }}}
    *
-   * @param prog
-   *   the hybrid program a to specify stability
-   * @param varsopt
-   *   Optional list of variables to quantify and perturb. By default None will pick non-differential freeVars(a) \cap
-   *   boundVars(a)
-   * @param restr
-   *   an optional additional restriction on the initial perturbation
+   * @param prog the hybrid program a to specify stability
+   * @param varsopt Optional list of variables to quantify and perturb. By default None will pick non-differential
+   *   freeVars(a) \cap boundVars(a)
+   * @param restr an optional additional restriction on the initial perturbation
    *
    * With the additional options, we can write down slightly more nuanced specifications
    * {{{
@@ -2700,16 +2667,11 @@ object SwitchedSystems {
    *
    * Additionally, V must be a "throughout" invariant of the hybrid program
    *
-   * @param lyap
-   *   the (common) Lyapunov function
-   * @param prog
-   *   ?
-   * @param varsopt
-   *   ?
-   * @param restr
-   *   ?
-   * @return
-   *   stability tactic
+   * @param lyap the (common) Lyapunov function
+   * @param prog ?
+   * @param varsopt ?
+   * @param restr ?
+   * @return stability tactic
    */
   def proveStable(
       lyap: Term,
@@ -2750,8 +2712,8 @@ object SwitchedSystems {
     }
 
     // w serves as an lower bound on V for ||x||=eps
-    val epsbound = vars
-      .foldRight(Imply(Equal(normsq, epssq), GreaterEqual(lyap, w)): Formula)((v, f) => Forall(v :: Nil, f))
+    val epsbound =
+      vars.foldRight(Imply(Equal(normsq, epssq), GreaterEqual(lyap, w)): Formula)((v, f) => Forall(v :: Nil, f))
     val epsw = Exists(w :: Nil, And(Greater(w, Number(0)), epsbound))
     // w serves as an upper bound on V for ||x||<del
     val delw = And(
@@ -2770,9 +2732,9 @@ object SwitchedSystems {
         cohideOnlyL(-(apos + 1)) &
           DifferentialTactics.DconstV(pos) &
           DifferentialTactics.diffWeakenG(pos) & implyR(1) &
-          andL(-1) & (allL(-1) * vars.length) & QE // can be done by subst
+          andL(-1) & (allL(-1) * vars.length) & QE, // can be done by subst
       ),
-      hideL(-(apos + 1)) & hideL(-(apos + 2)) & dI(Symbol("full"))(pos)
+      hideL(-(apos + 1)) & hideL(-(apos + 2)) & dI(Symbol("full"))(pos),
     )
 
     // The relevant tactic for a switched system
@@ -2781,7 +2743,7 @@ object SwitchedSystems {
       prop,
       prop,
       implyRi & implyR(pos) & andL(Symbol("Llast")) & chase(pos) &
-        SaturateTactic(andR(pos) < (skip, odetac)) & odetac
+        SaturateTactic(andR(pos) < (skip, odetac)) & odetac,
     )
 
     val conttac = prog match {
@@ -2806,11 +2768,11 @@ object SwitchedSystems {
                     cutR(Less(normsq, epssq))(pos) < (
                       (implyRi()(AntePos(apos + 2), pos.checkSucc) * 3) & cohideR(pos) & byUS(edswap),
                       (hideL(-(apos + 3)) * 3) & implyR(pos) &
-                        conttac
-                    )
-                  )
-              )
-          )
+                        conttac,
+                    ),
+                  ),
+              ),
+          ),
       )
 
   })

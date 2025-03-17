@@ -20,8 +20,7 @@ import scala.collection.immutable._
 
 /**
  * Tests Propositional Calculus.
- * @see
- *   [[org.keymaerax.btactics.PropositionalTactics]]
+ * @see [[org.keymaerax.btactics.PropositionalTactics]]
  */
 @SummaryTest @UsualTest @nowarn("cat=deprecation&origin=org.keymaerax.btactics.TactixLibrary.master")
 class PropositionalTests extends TacticTestBase {

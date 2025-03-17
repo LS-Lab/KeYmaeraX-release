@@ -11,8 +11,7 @@ import org.keymaerax.tagobjects.TodoTest
 
 /**
  * Tests for DGauto tactic.
- * @author
- *   Nathan Fulton
+ * @author Nathan Fulton
  */
 class AutoDGTests extends TacticTestBase {
   "autoDG" should "prove x>0 -> [{x'=-x}]x>0" in withMathematica { _ =>

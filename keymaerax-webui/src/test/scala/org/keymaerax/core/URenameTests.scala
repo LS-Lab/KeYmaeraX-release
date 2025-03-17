@@ -18,8 +18,7 @@ import scala.collection.immutable._
 /**
  * Uniform renaming and bound renaming clash test dummies.
  *
- * @author
- *   Andre Platzer
+ * @author Andre Platzer
  */
 @SummaryTest @USubstTest
 class URenameTests extends TacticTestBase(registerAxTactics = Some("z3")) {
@@ -98,16 +97,14 @@ class URenameTests extends TacticTestBase(registerAxTactics = Some("z3")) {
     val prem = ProvableSig.startPlainProof(Sequent(IndexedSeq(), IndexedSeq("p(||) -> \\forall x p(||)".asFormula)))
     prem should not be Symbol("proved")
     a[RenamingClashException] shouldBe thrownBy {
-      ProvableSig.startPlainProof(Sequent(IndexedSeq(), IndexedSeq("p(||) -> \\forall y p(||)".asFormula)))(
-        UniformRenaming(Variable("y"), Variable("x")),
-        0,
-      )
+      ProvableSig.startPlainProof(
+        Sequent(IndexedSeq(), IndexedSeq("p(||) -> \\forall y p(||)".asFormula))
+      )(UniformRenaming(Variable("y"), Variable("x")), 0)
     }
     a[RenamingClashException] shouldBe thrownBy {
-      val clash = ProvableSig.startPlainProof(Sequent(IndexedSeq(), IndexedSeq("p(||) -> \\forall y p(||)".asFormula)))(
-        UniformRenaming(Variable("y"), Variable("x")),
-        0,
-      )
+      val clash = ProvableSig.startPlainProof(
+        Sequent(IndexedSeq(), IndexedSeq("p(||) -> \\forall y p(||)".asFormula))
+      )(UniformRenaming(Variable("y"), Variable("x")), 0)
       // wouldBe from now on
       clash.subgoals shouldBe IndexedSeq(Sequent(IndexedSeq(), IndexedSeq("p(||) -> \\forall x p(||)".asFormula)))
       clash.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("p(||) -> \\forall y p(||)".asFormula))
@@ -119,8 +116,11 @@ class URenameTests extends TacticTestBase(registerAxTactics = Some("z3")) {
   }
 
   it should "rename conclusions forward but keep subgoals of unproved provables" in {
-    val p = RenUSubst
-      .UniformRenamingForward(ProvableSig.startPlainProof("[x:=*;]x>=0".asFormula), "x".asVariable, "y".asVariable)
+    val p = RenUSubst.UniformRenamingForward(
+      ProvableSig.startPlainProof("[x:=*;]x>=0".asFormula),
+      "x".asVariable,
+      "y".asVariable,
+    )
     p.subgoals.loneElement shouldBe "==> [x:=*;]x>=0".asSequent
     p.conclusion shouldBe "==> [y:=*;]y>=0".asSequent
   }
@@ -137,8 +137,10 @@ class URenameTests extends TacticTestBase(registerAxTactics = Some("z3")) {
   }
 
   it should "allow semantic renaming forward of proved provables" in {
-    val p = ProvableSig
-      .startPlainProof("[a;]x>=0 -> [a;]x>=0".asFormula)(ImplyRight(SuccPos(0)), 0)(Close(AntePos(0), SuccPos(0)), 0)
+    val p = ProvableSig.startPlainProof("[a;]x>=0 -> [a;]x>=0".asFormula)(ImplyRight(SuccPos(0)), 0)(
+      Close(AntePos(0), SuccPos(0)),
+      0,
+    )
     p shouldBe Symbol("proved")
     RenUSubst.UniformRenamingForward(p, "x".asVariable, "y".asVariable).conclusion shouldBe
       "==> [a;]y>=0 -> [a;]y>=0".asSequent
@@ -241,8 +243,10 @@ class URenameTests extends TacticTestBase(registerAxTactics = Some("z3")) {
 //    proof1.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("(x+y)'=(x)'+(y)'".asFormula))
 //    val proof = proof1
     import TactixLibrary._
-    val proof = TactixLibrary
-      .proveBy("(x+y)'=x'+y'".asFormula, HilbertCalculus.derive(1, 0 :: Nil) & UnifyUSCalculus.byUS(Ax.equalReflexive))
+    val proof = TactixLibrary.proveBy(
+      "(x+y)'=x'+y'".asFormula,
+      HilbertCalculus.derive(1, 0 :: Nil) & UnifyUSCalculus.byUS(Ax.equalReflexive),
+    )
     proof shouldBe Symbol("proved")
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("(x+y)'=x'+y'".asFormula))
     a[CoreException] shouldBe thrownBy {

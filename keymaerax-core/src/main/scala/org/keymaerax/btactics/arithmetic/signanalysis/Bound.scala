@@ -13,8 +13,7 @@ import scala.collection.immutable._
 /**
  * Directionality arithmetic.
  *
- * @author
- *   Stefan Mitsch
+ * @author Stefan Mitsch
  */
 object Bound extends Enumeration {
   type Bound = Value

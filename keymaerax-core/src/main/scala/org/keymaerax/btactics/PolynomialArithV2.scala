@@ -181,8 +181,7 @@ trait PolynomialRing {
  *
  * The main interface is that of a [[PolynomialRing]]
  *
- * @author
- *   Fabian Immler
+ * @author Fabian Immler
  */
 object PolynomialArithV2
     extends TwoThreeTreePolynomialRing(
@@ -247,9 +246,7 @@ object MonomialOrders {
                 case c if c > 0 => (0, py(j))
                 case c if c == 0 => (px(i), py(j))
               }
-            } else if (i < lx) { (px(i), 0) }
-            else if (j < ly) { (0, py(j)) }
-            else { (0, 0) }
+            } else if (i < lx) { (px(i), 0) } else if (j < ly) { (0, py(j)) } else { (0, 0) }
           lastPowerX.compare(lastPowerY) match {
             case c if c == 0 => if (i < lx || j < ly) compareAt(i + 1, j + 1) else 0
             case c => c
@@ -275,9 +272,7 @@ object MonomialOrders {
                 case c if c > 0 => (px(i), 0)
                 case c if c == 0 => (px(i), py(j))
               }
-            } else if (i >= 0) { (px(i), 0) }
-            else if (j >= 0) { (0, py(j)) }
-            else { (0, 0) }
+            } else if (i >= 0) { (px(i), 0) } else if (j >= 0) { (0, py(j)) } else { (0, 0) }
           lastPowerX.compare(lastPowerY) match {
             case c if c == 0 => if (i >= 0 || j >= 0) compareAt(i - 1, j - 1) else 0
             case c => -c
@@ -353,12 +348,9 @@ object PolynomialArithV2Helpers {
   }
 
   /**
-   * @param PsQ
-   *   `G |- (p1 & ... & pn) -> q`
-   * @param Ps
-   *   `G |- p1, ... G |- pn`
-   * @return
-   *   G |- q
+   * @param PsQ `G |- (p1 & ... & pn) -> q`
+   * @param Ps `G |- p1, ... G |- pn`
+   * @return G |- q
    */
   def impliesElim(PsQ: ProvableSig, Ps: Seq[ProvableSig]): ProvableSig =
     if (Ps.length == 0) PsQ
@@ -366,10 +358,10 @@ object PolynomialArithV2Helpers {
       val conj = Ps.map(P => P.conclusion.succ(0)).reduceRight(And.apply)
       val conjPrv = Ps
         .dropRight(1)
-        .foldLeft(
-          ProvableSig
-            .startProof(Sequent(PsQ.conclusion.ante, IndexedSeq(conj)), PsQ.defs ++ Ps.map(_.defs).reduce(_ ++ _))
-        ) { (prv, P) => prv(AndRight(SuccPos(0)), 0)(P, 0) }(Ps.last, 0)
+        .foldLeft(ProvableSig.startProof(
+          Sequent(PsQ.conclusion.ante, IndexedSeq(conj)),
+          PsQ.defs ++ Ps.map(_.defs).reduce(_ ++ _),
+        )) { (prv, P) => prv(AndRight(SuccPos(0)), 0)(P, 0) }(Ps.last, 0)
       impliesElim(PsQ, conjPrv)
     }
 
@@ -449,8 +441,8 @@ case class TwoThreeTreePolynomialRing(
     val (eq, lhs, rhs) = prv.conclusion.succ(0) match { case eq @ Equal(lhs, rhs @ Divide(n, d)) => (eq, lhs, rhs) }
 
     def unary_- : Coefficient = {
-      val negPrv = ProvableSig
-        .proveArithmetic(BigDecimalQETool, And(Equal(Neg(numN), Number(-num)), NotEqual(denomN, Number(0))))
+      val negPrv =
+        ProvableSig.proveArithmetic(BigDecimalQETool, And(Equal(Neg(numN), Number(-num)), NotEqual(denomN, Number(0))))
       Coefficient(
         -num,
         denom,
@@ -463,8 +455,8 @@ case class TwoThreeTreePolynomialRing(
     }
 
     def +(that: Coefficient): Coefficient = {
-      val numRes = BigDecimalQETool
-        .eval(Plus(Times(Number(num), Number(that.denom)), Times(Number(that.num), Number(denom))))
+      val numRes =
+        BigDecimalQETool.eval(Plus(Times(Number(num), Number(that.denom)), Times(Number(that.num), Number(denom))))
       val denomRes = BigDecimalQETool.eval(Times(Number(denom), Number(that.denom)))
       val inst = Seq(
         ("ln_", numN),
@@ -517,8 +509,7 @@ case class TwoThreeTreePolynomialRing(
 
     def bigDecimalOption: Option[ProvableSig] = {
       val d = Divide(numN, denomN)
-      (try { Some(Number(BigDecimalQETool.eval(d))) }
-      catch { case _: IllegalArgumentException => None }).map { bd =>
+      (try { Some(Number(BigDecimalQETool.eval(d))) } catch { case _: IllegalArgumentException => None }).map { bd =>
         useDirectly(
           coefficientBigDecimalPrv,
           Seq(("x_", lhs), ("xn_", numN), ("xd_", denomN), ("bd_", bd)),
@@ -1067,9 +1058,8 @@ case class TwoThreeTreePolynomialRing(
         val treeInst = IndexedSeq(("t_", tree.lhs), ("v_", v.rhs), ("x_", x.lhs), ("l_", left.rhs), ("r_", right.rhs))
         monomialOrdering.compare(x.powers, v.powers) match {
           case 0 =>
-            val vx = (v.forgetPrv + x).getOrElse(
-              throw new IllegalArgumentException(s"${v.forgetPrv.powersTerm} and ${x.powersTerm} do not fit")
-            )
+            val vx = (v.forgetPrv + x).getOrElse(throw new IllegalArgumentException(s"${v.forgetPrv.powersTerm} and ${x
+                .powersTerm} do not fit"))
             val newRhs = Plus(Plus(left.rhs, vx.rhs), right.rhs)
             val newPrv = useDirectly(branch2Value, treeInst ++ Seq(("vx_", vx.rhs)), Seq(tree.prv, vx.prv))
             Stay(Branch2(left, vx, right, Some(newPrv)))
@@ -1416,8 +1406,10 @@ case class TwoThreeTreePolynomialRing(
             r.updatePrv(newPrv)
           } else {
             val m = n / 2
-            val mPrv = ProvableSig
-              .proveArithmetic(BigDecimalQETool, Equal(Number(n), Plus(Times(Number(2), Number(m)), Number(1))))
+            val mPrv = ProvableSig.proveArithmetic(
+              BigDecimalQETool,
+              Equal(Number(n), Plus(Times(Number(2), Number(m)), Number(1))),
+            )
             val p = this ^ (m)
             val r = p.forgetPrv * p.forgetPrv * this
             val newPrv = useDirectly(
@@ -1618,8 +1610,8 @@ case class TwoThreeTreePolynomialRing(
         acc match { case (pos, neg) => if (P(m)) (m +: pos, neg) else (pos, m +: neg) }
       this match {
         case Empty(_) => acc
-        case Branch2(left, value, right, _) => right
-            .partitionMonomials(P)(accumulate(value)(left.partitionMonomials(P)(acc)))
+        case Branch2(left, value, right, _) =>
+          right.partitionMonomials(P)(accumulate(value)(left.partitionMonomials(P)(acc)))
         case Branch3(left, value1, mid, value2, right, _) => right.partitionMonomials(P)(accumulate(value2)(
             mid.partitionMonomials(P)(accumulate(value1)(left.partitionMonomials(P)(acc)))
           ))
@@ -1716,8 +1708,9 @@ case class TwoThreeTreePolynomialRing(
       val ringsLib = new RingsLibrary(vars) // for non-certified computations @todo: initialize only once?!
       val ringVars = variableOrder.getOrElse(vars).map(ringsLib.toRing).toList
       val horner = ringsLib.toHorner(ringsLib.toRing(term), ringVars)
-      equate(ofTerm(horner))
-        .getOrElse(throw new RuntimeException("zeroTest failed for horner form - this should not happen!"))
+      equate(
+        ofTerm(horner)
+      ).getOrElse(throw new RuntimeException("zeroTest failed for horner form - this should not happen!"))
     }
 
     override def divideAndRemainder(
@@ -1796,7 +1789,7 @@ case class TwoThreeTreePolynomialRing(
 
   lazy val One: TreePolynomial = Const(1)
 
-  case class Empty(prvO: Option[ProvableSig]) extends TreePolynomial(prv=prvO.getOrElse(zez)) {
+  case class Empty(prvO: Option[ProvableSig]) extends TreePolynomial(prv = prvO.getOrElse(zez)) {
     override def forgetPrv: Empty = Empty(None)
     override def treeSketch: String = "."
     override def degree(include: Term => Boolean) = 0
@@ -1806,10 +1799,10 @@ case class TwoThreeTreePolynomialRing(
     }
   }
   case class Branch2(left: TreePolynomial, value: Monomial, right: TreePolynomial, prvO: Option[ProvableSig])
-    extends TreePolynomial(
-      // @note detour for "dependent" default argument
-      prv = prvO.getOrElse(equalReflex(Seq(left.rhs, value.rhs, right.rhs).reduceLeft(Plus.apply)))
-  ) {
+      extends TreePolynomial(
+        // @note detour for "dependent" default argument
+        prv = prvO.getOrElse(equalReflex(Seq(left.rhs, value.rhs, right.rhs).reduceLeft(Plus.apply)))
+      ) {
     override def forgetPrv: TreePolynomial = Branch2(left, value, right, None)
     override def treeSketch: String = "[" + left.treeSketch + ", " + value.powersString + ", " + right.treeSketch + "]"
     override def degree(include: Term => Boolean): Int = left.degree(include) max value.degree(include) max
@@ -1827,9 +1820,10 @@ case class TwoThreeTreePolynomialRing(
       right: TreePolynomial,
       prvO: Option[ProvableSig],
   ) extends TreePolynomial(
-    // @note detour for "dependent" default argument
-    prv = prvO.getOrElse(equalReflex(Seq(left.rhs, value1.rhs, mid.rhs, value2.rhs, right.rhs).reduceLeft(Plus.apply)))
-  ) {
+        // @note detour for "dependent" default argument
+        prv =
+          prvO.getOrElse(equalReflex(Seq(left.rhs, value1.rhs, mid.rhs, value2.rhs, right.rhs).reduceLeft(Plus.apply)))
+      ) {
     override def forgetPrv: TreePolynomial = Branch3(left, value1, mid, value2, right, None)
     override def treeSketch: String = "{" + left.treeSketch + ", " + value1.powersString + ", " + mid.treeSketch +
       ", " + value2.powersString + ", " + right.treeSketch + "}"
@@ -1864,7 +1858,7 @@ case class TwoThreeTreePolynomialRing(
 
   def normalize(term: Term): ProvableSig = ofTerm(term).prettyRepresentation
 
-  lazy private val eqNormalize = Ax.eqNormalize.provable
+  private lazy val eqNormalize = Ax.eqNormalize.provable
   val normalizeAt: DependentPositionTactic = anon { (pos: Position, seq: Sequent) =>
     seq.sub(pos) match {
       case Some(Equal(t, Number(n))) if n.compareTo(0) == 0 =>
@@ -1880,16 +1874,16 @@ case class TwoThreeTreePolynomialRing(
     }
   }
 
-  lazy private val ratFormAdd = anyArgify(Ax.ratFormAdd.provable)
-  lazy private val ratFormMinus = anyArgify(Ax.ratFormMinus.provable)
-  lazy private val ratFormTimes = anyArgify(Ax.ratFormTimes.provable)
-  lazy private val ratFormDivide = anyArgify(Ax.ratFormDivide.provable)
-  lazy private val ratFormPower = anyArgify(Ax.ratFormPower.provable)
-  lazy private val ratFormNeg = anyArgify(Ax.ratFormNeg.provable)
+  private lazy val ratFormAdd = anyArgify(Ax.ratFormAdd.provable)
+  private lazy val ratFormMinus = anyArgify(Ax.ratFormMinus.provable)
+  private lazy val ratFormTimes = anyArgify(Ax.ratFormTimes.provable)
+  private lazy val ratFormDivide = anyArgify(Ax.ratFormDivide.provable)
+  private lazy val ratFormPower = anyArgify(Ax.ratFormPower.provable)
+  private lazy val ratFormNeg = anyArgify(Ax.ratFormNeg.provable)
 
-  lazy private val powerDivide0 = anyArgify(Ax.powerDivide0.provable)
-  lazy private val powerDivideEven = anyArgify(Ax.powerDivideEven.provable)
-  lazy private val powerDivideOdd = anyArgify(Ax.powerDivideOdd.provable)
+  private lazy val powerDivide0 = anyArgify(Ax.powerDivide0.provable)
+  private lazy val powerDivideEven = anyArgify(Ax.powerDivideEven.provable)
+  private lazy val powerDivideOdd = anyArgify(Ax.powerDivideOdd.provable)
 
   private def provePowerDivideLemma(n: Int, maxCache: Int, cache: Int => ProvableSig): ProvableSig = n match {
     case n if n <= maxCache => cache(n)
@@ -1900,8 +1894,8 @@ case class TwoThreeTreePolynomialRing(
       useDirectly(powerDivideEven, Seq(("n_", Number(n)), ("m_", Number(m))), Seq(mPrv, powerDivideM))
     case n if n > 0 && n % 2 == 1 =>
       val m = n / 2
-      val mPrv = ProvableSig
-        .proveArithmetic(BigDecimalQETool, Equal(Number(n), Plus(Times(Number(2), Number(m)), Number(1))))
+      val mPrv =
+        ProvableSig.proveArithmetic(BigDecimalQETool, Equal(Number(n), Plus(Times(Number(2), Number(m)), Number(1))))
       val powerDivideM = provePowerDivideLemma(m, maxCache, cache)
       useDirectly(powerDivideOdd, Seq(("n_", Number(n)), ("m_", Number(m))), Seq(mPrv, powerDivideM))
     case _ => throw new IllegalArgumentException("powerDivideLemma requires natural number exponent")

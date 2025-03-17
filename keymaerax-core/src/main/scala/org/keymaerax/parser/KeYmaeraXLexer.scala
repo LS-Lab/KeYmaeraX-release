@@ -6,10 +6,8 @@
 /**
  * Differential Dynamic Logic lexer for concrete KeYmaera X notation.
  *
- * @author
- *   Andre Platzer
- * @see
- *   [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
+ * @author Andre Platzer
+ * @see [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
  */
 package org.keymaerax.parser
 
@@ -30,10 +28,8 @@ object StoredProvableMode extends LexerMode
 /**
  * Lexer for KeYmaera X turns string into list of tokens.
  *
- * @author
- *   Andre Platzer
- * @author
- *   nfulton
+ * @author Andre Platzer
+ * @author nfulton
  */
 object KeYmaeraXLexer extends (String => List[Token]) with Logging {
 
@@ -55,12 +51,9 @@ object KeYmaeraXLexer extends (String => List[Token]) with Logging {
    * disallow non-expression symbols from occuring when the lexer is in expression mode. This also ensures that reserved
    * symbols are never used as function names.
    *
-   * @param input
-   *   The string to lex.
-   * @param mode
-   *   The lexer mode.
-   * @return
-   *   A stream of symbols corresponding to input.
+   * @param input The string to lex.
+   * @param mode The lexer mode.
+   * @return A stream of symbols corresponding to input.
    */
   // @todo performance bottleneck
   def inMode(input: String, mode: LexerMode): KeYmaeraXLexer.TokenStream = {
@@ -77,16 +70,11 @@ object KeYmaeraXLexer extends (String => List[Token]) with Logging {
   /**
    * The lexer.
    *
-   * @todo
-   *   optimize
-   * @param input
-   *   The input to lex.
-   * @param inputLocation
-   *   The position of the input (e.g., wrt a source file).
-   * @param mode
-   *   The mode of the lexer.
-   * @return
-   *   A token stream.
+   * @todo optimize
+   * @param input The input to lex.
+   * @param inputLocation The position of the input (e.g., wrt a source file).
+   * @param mode The mode of the lexer.
+   * @return A token stream.
    */
   private def lex(input: String, inputLocation: Location, mode: LexerMode): TokenStream = {
     var remaining: String = input
@@ -121,14 +109,10 @@ object KeYmaeraXLexer extends (String => List[Token]) with Logging {
   }
 
   /**
-   * @param cols
-   *   Number of columns to move cursor.
-   * @param terminal
-   *   terminal to generate a token for.
-   * @param location
-   *   Current location.
-   * @return
-   *   Return value of findNextToken
+   * @param cols Number of columns to move cursor.
+   * @param terminal terminal to generate a token for.
+   * @param location Current location.
+   * @return Return value of findNextToken
    */
   private def consumeColumns(
       s: String,
@@ -558,15 +542,11 @@ object KeYmaeraXLexer extends (String => List[Token]) with Logging {
   /**
    * Finds the next token in a string.
    *
-   * @todo
-   *   Untested correctness condition: If a token's regex pattern contains another's, then the more restrictive token is
-   *   processed first in the massive if/else.
-   * @param s
-   *   The string to process.
-   * @param loc
-   *   The location of s.
-   * @param mode
-   *   The mode of the lexer.
+   * @todo Untested correctness condition: If a token's regex pattern contains another's, then the more restrictive
+   *   token is processed first in the massive if/else.
+   * @param s The string to process.
+   * @param loc The location of s.
+   * @param mode The mode of the lexer.
    * @return
    *   A triple containing:
    *   - `_1`: the next token,
@@ -604,12 +584,9 @@ object KeYmaeraXLexer extends (String => List[Token]) with Logging {
    * Returns the region containing everything between the starting position of the current location location and the
    * indicated offset of from the starting positiong of the current location, inclusive.
    *
-   * @param location
-   *   Current location
-   * @param endColOffset
-   *   Column offset of the region
-   * @return
-   *   The region spanning from the start of ``location" to the offset from the start of ``location".
+   * @param location Current location
+   * @param endColOffset Column offset of the region
+   * @return The region spanning from the start of ``location" to the offset from the start of ``location".
    */
   private def spanningRegion(location: Location, endColOffset: Int) = location match {
     case UnknownLocation => UnknownLocation
@@ -618,13 +595,10 @@ object KeYmaeraXLexer extends (String => List[Token]) with Logging {
   }
 
   /**
-   * @param location
-   *   Current location
-   * @param colOffset
-   *   Number of columns to chop off from the starting position of location.
-   * @return
-   *   A region containing all of location except the indicated columns in the initial row. I.e., the colOffset-suffix
-   *   of location.
+   * @param location Current location
+   * @param colOffset Number of columns to chop off from the starting position of location.
+   * @return A region containing all of location except the indicated columns in the initial row. I.e., the
+   *   colOffset-suffix of location.
    */
   private def suffixOf(location: Location, colOffset: Int): Location = location match {
     case UnknownLocation => UnknownLocation

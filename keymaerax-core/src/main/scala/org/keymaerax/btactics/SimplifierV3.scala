@@ -147,9 +147,7 @@ object SimplifierV3 {
     // todo: Add some kind of unification search? (that precludes fast HashSet lookups though)
     pr.conclusion.succ(0) match {
       case Imply(prem, Equal(k, v)) =>
-        val unif =
-          try { UnificationMatch(k, t) }
-          catch { case _: UnificationException => return None }
+        val unif = try { UnificationMatch(k, t) } catch { case _: UnificationException => return None }
         val uprem = unif(prem)
         if (ctx.contains(uprem)) {
           val concl = unif(v)
@@ -158,14 +156,11 @@ object SimplifierV3 {
           Some(concl, uprem, proof)
         } else None
       case Equal(k, v) =>
-        val unif =
-          try { UnificationMatch(k, t) }
-          catch { case _: UnificationException => return None }
+        val unif = try { UnificationMatch(k, t) } catch { case _: UnificationException => return None }
         val concl = unif(v)
-        val proof = ProvableSig.startPlainProof(Imply(True, Equal(t, unif(v))))(ImplyRight(SuccPos(0)), 0)(
-          CoHideRight(SuccPos(0)),
-          0,
-        )(pr(unif.usubst), 0)
+        val proof = ProvableSig.startPlainProof(
+          Imply(True, Equal(t, unif(v)))
+        )(ImplyRight(SuccPos(0)), 0)(CoHideRight(SuccPos(0)), 0)(pr(unif.usubst), 0)
         // assert(proof.isProved)
         Some(concl, True, proof)
       case r => throw new IllegalArgumentException(
@@ -176,14 +171,10 @@ object SimplifierV3 {
 
   /**
    * Term simplification of term t to term s
-   * @param t
-   *   term to simplify
-   * @param ctx
-   *   current context (assumptions)
-   * @param taxs
-   *   the term index
-   * @return
-   *   the simplified term s and an optional provable containing (premise,proof of premise->s=t) only if some
+   * @param t term to simplify
+   * @param ctx current context (assumptions)
+   * @param taxs the term index
+   * @return the simplified term s and an optional provable containing (premise,proof of premise->s=t) only if some
    *   simplification was applied. premise is an assumption in contained in ctx
    */
   @nowarn("msg=match may not be exhaustive")
@@ -462,9 +453,7 @@ object SimplifierV3 {
     // todo: Add some kind of unification search? (that precludes fast HashSet lookups though)
     pr.conclusion.succ(0) match {
       case Imply(prem, Equiv(k, v)) =>
-        val unif =
-          try { UnificationMatch(k, f) }
-          catch { case _: UnificationException => return None }
+        val unif = try { UnificationMatch(k, f) } catch { case _: UnificationException => return None }
         val uprem = unif(prem)
         if (ctx.contains(uprem)) {
           val concl = unif(v)
@@ -474,17 +463,14 @@ object SimplifierV3 {
           Some(concl, uprem, proof)
         } else None
       case Equiv(k, v) =>
-        val unif =
-          try { UnificationMatch(k, f) }
-          catch { case _: UnificationException => return None }
+        val unif = try { UnificationMatch(k, f) } catch { case _: UnificationException => return None }
         val Equiv(fsubst, _) = unif(Equiv(k, v))
         if (fsubst == f) {
           val concl = unif(v)
           // @todo construct substitution
-          val proof = ProvableSig.startPlainProof(Imply(True, Equiv(f, unif(v))))(ImplyRight(SuccPos(0)), 0)(
-            CoHideRight(SuccPos(0)),
-            0,
-          )(byUS(pr), 0)
+          val proof = ProvableSig.startPlainProof(
+            Imply(True, Equiv(f, unif(v)))
+          )(ImplyRight(SuccPos(0)), 0)(CoHideRight(SuccPos(0)), 0)(byUS(pr), 0)
           // assert(proof.isProved)
           Some(concl, True, proof)
         } else None
@@ -506,17 +492,12 @@ object SimplifierV3 {
 
   /**
    * Formula simplification of formula f to formula g
-   * @param f
-   *   formula to simplify
-   * @param ctx
-   *   current context (assumptions)
-   * @param faxs
-   *   the formula index
-   * @param taxs
-   *   the term index
-   * @return
-   *   the simplified formula g and an optional provable containing (premise,proof of premise -> (f<->g)) only if some
-   *   simplification was applied premise is an assumption in contained in ctx
+   * @param f formula to simplify
+   * @param ctx current context (assumptions)
+   * @param faxs the formula index
+   * @param taxs the term index
+   * @return the simplified formula g and an optional provable containing (premise,proof of premise -> (f<->g)) only if
+   *   some simplification was applied premise is an assumption in contained in ctx
    */
   def formulaSimp(
       f: Formula,
@@ -810,8 +791,8 @@ object SimplifierV3 {
             (concl, Some((premise, pr)))
         }
       case q: Quantified =>
-        val (remainingCtx, droppedCtx) = ctx
-          .partition(f => StaticSemantics.freeVars(f).toSet.intersect(q.vars.toSet).isEmpty)
+        val (remainingCtx, droppedCtx) =
+          ctx.partition(f => StaticSemantics.freeVars(f).toSet.intersect(q.vars.toSet).isEmpty)
         val (uf, upropt) = formulaSimp(q.child, remainingCtx, faxs, taxs)
         val nf = q.reapply(q.vars, uf)
 
@@ -878,10 +859,9 @@ object SimplifierV3 {
             // |- [a]p <-> [a]q
             val pr1 = useFor(upr2, PosInExpr(0 :: Nil))(SuccPosition(1, 1 :: 1 :: Nil))(init)
 
-            val pr = (ProvableSig.startPlainProof(Imply(True, Equiv(f, res)))(ImplyRight(SuccPos(0)), 0)(
-              CoHideRight(SuccPos(0)),
-              0,
-            )(pr1, 0))
+            val pr = (ProvableSig.startPlainProof(
+              Imply(True, Equiv(f, res))
+            )(ImplyRight(SuccPos(0)), 0)(CoHideRight(SuccPos(0)), 0)(pr1, 0))
             (res, Some(True, pr))
 
         }
@@ -991,17 +971,12 @@ object SimplifierV3 {
 
   /**
    * Almost identifcal to formulaSimp, but proves the rewrite directly with respect to ctx
-   * @param f
-   *   formula to simplify
-   * @param ctx
-   *   current context (assumptions)
-   * @param faxs
-   *   the formula index
-   * @param taxs
-   *   the term index
-   * @return
-   *   the simplified formula g and an optional provable containing proof of ctx -> (f<->g) only if some simplification
-   *   was applied
+   * @param f formula to simplify
+   * @param ctx current context (assumptions)
+   * @param faxs the formula index
+   * @param taxs the term index
+   * @return the simplified formula g and an optional provable containing proof of ctx -> (f<->g) only if some
+   *   simplification was applied
    */
   def simpWithDischarge(
       ctx: IndexedSeq[Formula],
@@ -1228,12 +1203,12 @@ object SimplifierV3 {
       .toOption
       .toList ++ Try(Ax.negOneTimes.provable).toOption.toList
 
-  private lazy val negArith
-      : List[ProvableSig] = Try(Ax.minusNeg.provable).toOption.toList ++ Try(Ax.negNeg.provable).toOption.toList
+  private lazy val negArith: List[ProvableSig] = Try(Ax.minusNeg.provable).toOption.toList ++
+    Try(Ax.negNeg.provable).toOption.toList
 
-  private lazy val plusArith
-      : List[ProvableSig] = Try(Ax.plusZero.provable).toOption.toList ++ Try(Ax.zeroPlus.provable).toOption.toList ++
-    Try(Ax.plusNeg.provable).toOption.toList ++ Try(Ax.negPlus.provable).toOption.toList
+  private lazy val plusArith: List[ProvableSig] = Try(Ax.plusZero.provable).toOption.toList ++
+    Try(Ax.zeroPlus.provable).toOption.toList ++ Try(Ax.plusNeg.provable).toOption.toList ++
+    Try(Ax.negPlus.provable).toOption.toList
 
   private lazy val minusArith: List[ProvableSig] = List(Ax.minusZero.provable, Ax.zeroMinus.provable)
 
@@ -1241,9 +1216,8 @@ object SimplifierV3 {
     Try(useFor(Ax.gtzImpNez, PosInExpr(1 :: Nil))(SuccPosition(1, 0 :: Nil))(Ax.zeroDivNez.provable)).toOption.toList ++
     Try(useFor(Ax.ltzImpNez, PosInExpr(1 :: Nil))(SuccPosition(1, 0 :: Nil))(Ax.zeroDivNez.provable)).toOption.toList
 
-  lazy val powArith
-      : List[ProvableSig] = Try(Ax.powZero.provable).toOption.toList ++ Try(Ax.powOne.provable).toOption.toList ++
-    Try(Ax.powNegOne.provable).toOption.toList
+  lazy val powArith: List[ProvableSig] = Try(Ax.powZero.provable).toOption.toList ++
+    Try(Ax.powOne.provable).toOption.toList ++ Try(Ax.powNegOne.provable).toOption.toList
 
   // These may also be useful:
   // qeTermProof("F_()*(F_()^-1)","1",Some("F_()>0")), qeTermProof("(F_()^-1)*F_()","1",Some("F_()>0")))
@@ -1418,8 +1392,9 @@ object SimplifierV3 {
     f match {
       // Not of a comparison formula
       case Not(bop: ComparisonFormula) =>
-        List(Ax.notNotEqual, Ax.notEqual, Ax.notLess, Ax.notGreater, Ax.notLessEqual, Ax.notGreaterEqual)
-          .map(l => l.provable)
+        List(Ax.notNotEqual, Ax.notEqual, Ax.notLess, Ax.notGreater, Ax.notLessEqual, Ax.notGreaterEqual).map(l =>
+          l.provable
+        )
       // Reflexive cases
       // This protects against unification errors using Scala to inspect the term directly
       case bop: ComparisonFormula if bop.left == bop.right =>
@@ -1582,14 +1557,14 @@ object SimplifierV3 {
   private def doNormalize(fi: formulaIndex, checkTerms: Boolean = true)(f: Formula): (Formula, Option[ProvableSig]) = {
     to_NNF(f) match {
       case Some((nnf, pr)) =>
-        val (ff, propt) = SimplifierV3
-          .simpWithDischarge(IndexedSeq[Formula](), nnf, fi, if (checkTerms) atomicTermIndex else emptyTaxs)
+        val (ff, propt) =
+          SimplifierV3.simpWithDischarge(IndexedSeq[Formula](), nnf, fi, if (checkTerms) atomicTermIndex else emptyTaxs)
         propt match {
           case None => (nnf, Some(pr))
           case Some(pr2) => (ff, Some(useFor(pr2, PosInExpr(0 :: Nil))(SuccPosition(1, 1 :: Nil))(pr)))
         }
-      case None => SimplifierV3
-          .simpWithDischarge(IndexedSeq[Formula](), f, fi, if (checkTerms) atomicTermIndex else emptyTaxs)
+      case None =>
+        SimplifierV3.simpWithDischarge(IndexedSeq[Formula](), f, fi, if (checkTerms) atomicTermIndex else emptyTaxs)
     }
   }
 

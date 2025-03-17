@@ -4,10 +4,8 @@
  */
 
 /**
- * @author
- *   Stefan Mitsch
- * @note
- *   Code Review: 2016-08-16
+ * @author Stefan Mitsch
+ * @note Code Review: 2016-08-16
  */
 package org.keymaerax.lemma
 
@@ -23,24 +21,19 @@ import scala.util.matching.Regex
  * File-based lemma DB implementation. Stores one lemma per file in the user's home directory under
  * `.keymaerax/cache/lemmadb/` directory. Lemma file names are created automatically and in a thread-safe manner.
  *
- * @note
- *   Prefer LemmaDBFactory.lemmaDB over instantiating directly to get an instance of a lemma database and ensure thread
- *   safety.
+ * @note Prefer LemmaDBFactory.lemmaDB over instantiating directly to get an instance of a lemma database and ensure
+ *   thread safety.
  *
  * Created by smitsch on 4/27/15.
- * @author
- *   Stefan Mitsch
- * @author
- *   Brandon Bohrer
+ * @author Stefan Mitsch
+ * @author Brandon Bohrer
  */
 class FileLemmaDB extends LemmaDBBase with Logging {
 
   /** The configured cache path (@todo needs to by lazy? or could be made class val?) */
   private lazy val cachePath = Path.of(Configuration.path(Configuration.Keys.LEMMA_CACHE_PATH))
 
-  /**
-   * Matches special characters in lemma names that might be problematic in file names (typically: whitespace, :, .).
-   */
+  /** Matches special characters in lemma names that might be problematic in file names (typically: whitespace, :, .). */
   private val SANITIZE_REGEX = "[^\\w\\-" + Regex.quote(File.separator) + "]"
 
   /** File handle to lemma database (creates parent directories if non-existent). */
@@ -63,41 +56,41 @@ class FileLemmaDB extends LemmaDBBase with Logging {
   private def folder(id: LemmaID): Path = lemmadbpath.resolve(sanitize(id))
 
   /** @inheritdoc */
-  final override def contains(lemmaID: LemmaID): Boolean = Files.exists(file(lemmaID))
+  override final def contains(lemmaID: LemmaID): Boolean = Files.exists(file(lemmaID))
 
   /** @inheritdoc */
-  final override def createLemma(): LemmaID = {
+  override final def createLemma(): LemmaID = {
     val f = Files.createTempFile(lemmadbpath, "lemma", ".alp")
     f.getFileName.toString.stripSuffix(".alp")
   }
 
   /** @inheritdoc */
-  final override def readLemmas(ids: List[LemmaID]): Option[List[String]] = flatOpt(ids.map({ lemmaID =>
+  override final def readLemmas(ids: List[LemmaID]): Option[List[String]] = flatOpt(ids.map({ lemmaID =>
     val f = file(lemmaID)
     if (Files.exists(f)) Some(Files.readString(f)) else None
   }))
 
   /** @inheritdoc */
-  final override def writeLemma(id: LemmaID, lemma: String): Unit = synchronized {
+  override final def writeLemma(id: LemmaID, lemma: String): Unit = synchronized {
     val f = file(id)
     Files.createDirectories(f.getParent)
     Files.writeString(f, lemma)
   }
 
   /** @inheritdoc */
-  final override def remove(id: String): Unit = {
+  override final def remove(id: String): Unit = {
     val f = file(id)
     Files.deleteIfExists(f)
   }
 
   /** @inheritdoc */
-  final override def removeAll(folderName: String): Unit = {
+  override final def removeAll(folderName: String): Unit = {
     val f = folder(folderName)
     deleteDirectory(f)
   }
 
   /** @inheritdoc */
-  final override def deleteDatabase(): Unit = {
+  override final def deleteDatabase(): Unit = {
     deleteDirectory(lemmadbpath)
     // @note make paths again to make sure subsequent additions to database work
     Files.createDirectories(lemmadbpath)
@@ -105,7 +98,7 @@ class FileLemmaDB extends LemmaDBBase with Logging {
   }
 
   /** @inheritdoc */
-  final override def version(): VersionNumber = {
+  override final def version(): VersionNumber = {
     val file = cachePath.resolve("VERSION")
     if (!Files.exists(file)) return VersionNumber(0, 0, 0)
     VersionNumber.parse(Files.readString(file))

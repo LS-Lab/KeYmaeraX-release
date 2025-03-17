@@ -30,8 +30,7 @@ object SimplifierV2 {
 
   /**
    * Returns the expression in expected position of `ctx |- t = t' or ctx |- f <-> f'`
-   * @param pr
-   *   the provable from which to extract the expression
+   * @param pr the provable from which to extract the expression
    */
   private def extract(pr: ProvableSig): Expression = { pr.conclusion.succ(0).sub(PosInExpr(1 :: Nil)).get }
 
@@ -160,8 +159,7 @@ object SimplifierV2 {
 
   /**
    * Recursive term simplification using chase, proving |- t = t'
-   * @param t
-   *   The term to be simplifed
+   * @param t The term to be simplifed
    */
   def termSimp(t: Term): (Term, ProvableSig) = {
     // Recursive simplification in sub-terms
@@ -598,12 +596,9 @@ object SimplifierV2 {
   /**
    * Recursive formula simplification under a context using chase, proving `ctx |- f <-> f'`. The recursion always
    * occurs left-to-right
-   * @param f
-   *   formula to simplify
-   * @param ctx
-   *   context in which to simplify
-   * @return
-   *   f',pr where pr proves the equivalence
+   * @param f formula to simplify
+   * @param ctx context in which to simplify
+   * @return f',pr where pr proves the equivalence
    */
   @nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
   def formulaSimp(f: Formula, ctx: IndexedSeq[Formula] = IndexedSeq()): (Formula, ProvableSig) = {
@@ -758,8 +753,8 @@ object SimplifierV2 {
           ),
         )
       case q: Quantified =>
-        val (remainingCtx, droppedCtx) = ctx
-          .partition(f => StaticSemantics.freeVars(f).toSet.intersect(q.vars.toSet).isEmpty)
+        val (remainingCtx, droppedCtx) =
+          ctx.partition(f => StaticSemantics.freeVars(f).toSet.intersect(q.vars.toSet).isEmpty)
         val (uf, upr) = formulaSimp(q.child, remainingCtx)
         val nf = q.reapply(q.vars, uf)
 

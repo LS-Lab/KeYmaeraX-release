@@ -26,20 +26,16 @@ trait SOSsolveTool {
 
   /**
    * Returns a continuous invariant for a safety problem sent to the tool.
-   * @param polys
-   *   polynomials (assumed to be equal to 0)
-   * @param vars
-   *   variables of polys
-   * @return
-   *   (1 + sos, cofactors) such that (cofactors, polynomials).zipped.map(Times) = 1 + sos.
+   * @param polys polynomials (assumed to be equal to 0)
+   * @param vars variables of polys
+   * @return (1 + sos, cofactors) such that (cofactors, polynomials).zipped.map(Times) = 1 + sos.
    */
   def sosSolve(polys: List[Term], vars: List[Term], degree: Int, timeout: Option[Int]): SOSsolveTool.Result
 }
 
 /**
  * Link to Yong Kiams SOSsolve implementation in Mathematica over the JLink interface.
- * @author
- *   Fabian Immler, based on MathematicaInvGenTool by Andrew Sogokon and QETool by Nathan Fulton and Stefan Mitsch
+ * @author Fabian Immler, based on MathematicaInvGenTool by Andrew Sogokon and QETool by Nathan Fulton and Stefan Mitsch
  */
 class MathematicaSOSsolveTool(override val link: MathematicaLink)
     extends BaseKeYmaeraMathematicaBridge[Expression](link, new KeYmaeraToMathematica(), PegasusM2KConverter)

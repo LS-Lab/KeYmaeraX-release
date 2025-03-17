@@ -46,10 +46,8 @@ trait ProofTreeNodeId {}
  * proof together as far as the children have completed it.
  *
  * The proof treee node also provides infrastructure for letting tactics run to expand this proof tree node.
- * @see
- *   [[org.keymaerax.core.Provable]]
- * @see
- *   [[ProvableSig]]
+ * @see [[org.keymaerax.core.Provable]]
+ * @see [[ProvableSig]]
  */
 trait ProofTreeNode {
   // proof tree node identifier information
@@ -64,8 +62,7 @@ trait ProofTreeNode {
 
   /**
    * The local provable, whose subgoals will be filled in by the node's [[children]].
-   * @see
-   *   [[provable]]
+   * @see [[provable]]
    */
   def localProvable: ProvableSig
 
@@ -75,15 +72,13 @@ trait ProofTreeNode {
   /**
    * Compute the overall provable with the sub-proofs already filled in for the local subgoals (potentially expensive)
    * from [[children]].
-   * @see
-   *   [[localProvable]]
+   * @see [[localProvable]]
    */
   final def provable: ProvableSig = theProvable
 
   /**
    * Indicates whether or not the proof from this node downwards is done (potentially expensive).
-   * @see
-   *   [[ProvableSig.isProved]]
+   * @see [[ProvableSig.isProved]]
    */
   final def isProved: Boolean = provable.isProved
 
@@ -106,8 +101,7 @@ trait ProofTreeNode {
 
   /**
    * The tactic (serialized BelleExpr) that produced this node from its parent.
-   * @ensures
-   *   \result == None <-> parent == None
+   * @ensures \result == None <-> parent == None
    */
   def maker: Option[String]
 
@@ -185,9 +179,8 @@ trait ProofTreeNode {
 
     /**
      * Apply sub to goal.
-     * @note
-     *   sub may originate from a lemma that was proved with expanded definitions, find expanded substitutions. both may
-     *   have applied partial substitutions separately, e.g., goal gt(x,y^2) |- gt(x,y^2) and sub x>sq(y) |- x>sq(y)
+     * @note sub may originate from a lemma that was proved with expanded definitions, find expanded substitutions. both
+     *   may have applied partial substitutions separately, e.g., goal gt(x,y^2) |- gt(x,y^2) and sub x>sq(y) |- x>sq(y)
      */
 //    @tailrec
 //    def applySub(goal: ProvableSig, sub: ProvableSig): ProvableSig = {
@@ -294,21 +287,16 @@ trait ProofTreeNode {
  * The central proof tree data structure managing the proof search, consisting of a set of [[ProofTreeNode]]. Unlike the
  * stateless [[org.keymaerax.core.Provable]] representation of the prover kernel, proof trees provide navigation and
  * tactic scheduling infrastructure.
- * @see
- *   [[org.keymaerax.core.Provable]]
- * @see
- *   [[ProvableSig]]
+ * @see [[org.keymaerax.core.Provable]]
+ * @see [[ProvableSig]]
  */
 trait ProofTree {
 
   /**
    * Verify that the proof is closed by constructing a proved provable.
-   * @ensures
-   *   \result==root.provable.isProved
-   * @see
-   *   [[ProofTreeNode.isProved]]
-   * @see
-   *   [[done]]
+   * @ensures \result==root.provable.isProved
+   * @see [[ProofTreeNode.isProved]]
+   * @see [[done]]
    */
   def isProved: Boolean = { load(); root.provable.isProved }
 
@@ -329,31 +317,26 @@ trait ProofTree {
   /**
    * Lightweight check indicating, if true, that the proof database representation thinks it might be closed (not
    * verified by core yet).
-   * @see
-   *   [[isProved]]
+   * @see [[isProved]]
    */
   def done: Boolean
 
   /**
    * Locates a node in the proof tree by its ID.
-   * @see
-   *   noteIdFromString(String)
+   * @see noteIdFromString(String)
    */
   def locate(id: ProofTreeNodeId): Option[ProofTreeNode]
 
   /**
    * Locates a node in the proof tree by its ID (string representation).
-   * @see
-   *   noteIdFromString(String)
-   * @see
-   *   [[locate(ProofTreeNodeId)]]
+   * @see noteIdFromString(String)
+   * @see [[locate(ProofTreeNodeId)]]
    */
   def locate(id: String): Option[ProofTreeNode] = nodeIdFromString(id).flatMap(locate)
 
   /**
    * Converts a string representation to a node ID.
-   * @see
-   *   [[locate(ProofTreeNodeId)]]
+   * @see [[locate(ProofTreeNodeId)]]
    */
   def nodeIdFromString(id: String): Option[ProofTreeNodeId]
 
@@ -405,10 +388,8 @@ case class DbStepPathNodeId(step: Option[Int], branch: Option[Int]) extends Proo
 
 /**
  * A [[ProofTreeNode]] that happens to be stored in the database `db`.
- * @param db
- *   The database that this proof tree node is stored in.
- * @param proof
- *   the proof that this proof tree node belongs to.
+ * @param db The database that this proof tree node is stored in.
+ * @param proof the proof that this proof tree node belongs to.
  */
 abstract class DbProofTreeNode(db: DBAbstraction, val proof: ProofTree) extends ProofTreeNode {
 
@@ -599,10 +580,7 @@ case class DbPlainExecStepProofTreeNode(
         db,
         DbStepPathNodeId(Some(pId), parentBranch),
         proof,
-        () => {
-          logger.debug(s"ripple loading (parent $pId)");
-          db.getPlainExecutionStep(proof.info.proofId, pId).get
-        },
+        () => { logger.debug(s"ripple loading (parent $pId)"); db.getPlainExecutionStep(proof.info.proofId, pId).get },
       ))
   }
 
@@ -729,9 +707,7 @@ case class DbRootProofTreeNode(db: DBAbstraction)(override val id: ProofTreeNode
   private lazy val dbLocal = db.getProvable(proof.info.provableId.get).provable
 }
 
-/**
- * Builds proof trees from database-recorded step executions, starting at the specified root step (None: proof root).
- */
+/** Builds proof trees from database-recorded step executions, starting at the specified root step (None: proof root). */
 case class DbProofTree(db: DBAbstraction, override val proofId: String) extends ProofTreeBase(proofId) {
 
   /** Locates a node in the proof tree relative to its parent. */
@@ -787,8 +763,8 @@ case class DbProofTree(db: DBAbstraction, override val proofId: String) extends 
   }
 
   /** @inheritdoc */
-  override def tactic: BelleExpr = ArchiveParser
-    .tacticParser(tacticString(new VerboseTraceToTacticConverter(dbDefs))._1)
+  override def tactic: BelleExpr =
+    ArchiveParser.tacticParser(tacticString(new VerboseTraceToTacticConverter(dbDefs))._1)
 
   /** Indicates whether or not the proof might be closed. */
   override def done: Boolean = dbProofInfo.closed

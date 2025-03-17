@@ -212,8 +212,8 @@ object Models extends Logging {
             if (getClass.getResourceAsStream(BUNDLED_ARCHIVE_DIR + path) != null)
               (BUNDLED_ARCHIVE_LOCATION + path, path)
             else {
-              logger
-                .info(s"Could not find ${BUNDLED_ARCHIVE_LOCATION + path} resource in JAR file. Accessing remote host.")
+              logger.info(s"Could not find ${BUNDLED_ARCHIVE_LOCATION +
+                  path} resource in JAR file. Accessing remote host.")
               (DEFAULT_ARCHIVE_LOCATION + path, path)
             }
         }

@@ -5,8 +5,7 @@
 
 /**
  * Differential Dynamic Logic parser for concrete KeYmaera X notation.
- * @author
- *   Andre Platzer, James Gallicchio
+ * @author Andre Platzer, James Gallicchio
  * @see
  *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
  */
@@ -36,10 +35,8 @@ import scala.collection.immutable._
  *   // parse only terms
  *   val term1 = parser.termParser("x^2+2*x+1")
  *   }}}
- * @author
- *   Andre Platzer
- * @see
- *   [[KeYmaeraXParser]]
+ * @author Andre Platzer
+ * @see [[KeYmaeraXParser]]
  */
 object DLParser {
   assert(OpSpec.statementSemicolon, "This parser is built for formulas whose atomic statements end with a ;")
@@ -122,28 +119,21 @@ object DLParser {
  *   // parse only terms
  *   val term1 = parser.termParser("x^2+2*x+1")
  *   }}}
- * @author
- *   Andre Platzer
- * @see
- *   [[KeYmaeraXParser]]
- * @see
- *   [[org.keymaerax.parser]]
- * @see
- *   [[http://keymaeraX.org/doc/dL-grammar.md Grammar]]
- * @see
- *   [[https://github.com/LS-Lab/KeYmaeraX-release/wiki/KeYmaera-X-Syntax-and-Informal-Semantics Wiki]]
+ * @author Andre Platzer
+ * @see [[KeYmaeraXParser]]
+ * @see [[org.keymaerax.parser]]
+ * @see [[http://keymaeraX.org/doc/dL-grammar.md Grammar]]
+ * @see [[https://github.com/LS-Lab/KeYmaeraX-release/wiki/KeYmaera-X-Syntax-and-Informal-Semantics Wiki]]
  */
 class DLParser extends Parser {
 
   /**
    * Parse the input string in the concrete syntax as a differential dynamic logic expression
    *
-   * @param input
-   *   the string to parse as a dL formula, dL term, or dL program.
-   * @ensures
-   *   apply(printer(\result)) == \result
-   * @throws ParseException
-   *   if `input` is not a well-formed expression of differential dynamic logic or differential game logic.
+   * @param input the string to parse as a dL formula, dL term, or dL program.
+   * @ensures apply(printer(\result)) == \result
+   * @throws ParseException if `input` is not a well-formed expression of differential dynamic logic or differential
+   *   game logic.
    */
   override def apply(input: String): Expression = exprParser(ParserHelper.checkUnicode(ParserHelper.removeBOM(input)))
 
@@ -160,7 +150,8 @@ class DLParser extends Parser {
   override val programParser: String => Program = DLParser.runParser(implicit p => fullProgram)
 
   /** Parse the input string in the concrete syntax as a differential dynamic logic differential program */
-  override val differentialProgramParser: String => DifferentialProgram = DLParser.runParser(implicit p => fullDifferentialProgram)
+  override val differentialProgramParser: String => DifferentialProgram =
+    DLParser.runParser(implicit p => fullDifferentialProgram)
 
   /** Parse the input string in the concrete syntax as a differential dynamic logic sequent. */
   override val sequentParser: String => Sequent = DLParser.runParser(implicit p => fullSequent)
@@ -171,16 +162,14 @@ class DLParser extends Parser {
   /**
    * A pretty-printer that can write the output that this parser reads
    *
-   * @ensures
-   *   \forall e: apply(printer(e)) == e
+   * @ensures \forall e: apply(printer(e)) == e
    */
   override val printer: KeYmaeraXPrettyPrinter.type = KeYmaeraXPrettyPrinter
 
   /**
    * Register a listener for @annotations during the parse.
    *
-   * @todo
-   *   this design is suboptimal.
+   * @todo this design is suboptimal.
    */
   override def setAnnotationListener(listener: (Program, Formula) => Unit): Unit = this.theAnnotationListener = listener
 
@@ -292,8 +281,8 @@ class DLParser extends Parser {
   )
 
   /** parses a number literal */
-  def numberLiteral[$: P]: P[Number] = P((CharIn("0-9").repX(1) ~~ ("." ~~/ CharIn("0-9").repX(1)).?).!)
-    .map(s => Number(BigDecimal(s)))
+  def numberLiteral[$: P]: P[Number] =
+    P((CharIn("0-9").repX(1) ~~ ("." ~~/ CharIn("0-9").repX(1)).?).!).map(s => Number(BigDecimal(s)))
 
   /** parses a number */
   def number[$: P](doAmbigCuts: Boolean): P[Number] = P(
@@ -331,12 +320,9 @@ class DLParser extends Parser {
 
   /**
    * parse an identifier.
-   * @return
-   *   the name and its index (if any).
-   * @note
-   *   Index is normalized so that x_00 cannot be mentioned and confused with x_0.
-   * @note
-   *   Keywords are not allowed as identifiers.
+   * @return the name and its index (if any).
+   * @note Index is normalized so that x_00 cannot be mentioned and confused with x_0.
+   * @note Keywords are not allowed as identifiers.
    */
   def ident[$: P]: P[(String, Option[Int])] = P(
     DLParserUtils.filterWithMsg((CharIn("a-zA-Z") ~~ CharIn("a-zA-Z0-9").repX ~~ ("_" ~~ !CharIn("0-9")).?).!)(
@@ -345,8 +331,9 @@ class DLParser extends Parser {
   )
 
   /** `.` or `._2`: dot parsing */
-  def dot[$: P]: P[DotTerm] = P(("." | "•") ~~ ("_" ~~ ("0" | CharIn("1-9") ~~ CharIn("0-9").repX).!).?)
-    .map(idx => DotTerm(Real, idx.map(_.toInt)))
+  def dot[$: P]: P[DotTerm] = P(("." | "•") ~~ ("_" ~~ ("0" | CharIn("1-9") ~~ CharIn("0-9").repX).!).?).map(idx =>
+    DotTerm(Real, idx.map(_.toInt))
+  )
 
   // terminals not used here but provided for other DL parsers
 
@@ -766,6 +753,6 @@ class DLParser extends Parser {
   def storedSequent[$: P]: P[Sequent] = P(formula.rep(sep = "::"./) ~ "==>" ~ formula.rep(sep = "::"./))
     .map({ case (ante, succ) => Sequent(ante.toIndexedSeq, succ.toIndexedSeq) })
 
-  def storedProvable[$: P]: P[List[Sequent]] = P(Start ~ storedSequent.rep(sep = "\\from"./) ~ "\\qed" ~ End)
-    .map(_.toList)
+  def storedProvable[$: P]: P[List[Sequent]] =
+    P(Start ~ storedSequent.rep(sep = "\\from"./) ~ "\\qed" ~ End).map(_.toList)
 }

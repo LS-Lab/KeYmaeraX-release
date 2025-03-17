@@ -33,8 +33,7 @@ import scala.language.{postfixOps, reflectiveCalls}
 /**
  * Very fine-grained tests of the sequential interpreter. These tests are all I/O tests, so it should be possible to
  * switch out theInterpreter when other interpreters are implemented.
- * @author
- *   Nathan Fulton
+ * @author Nathan Fulton
  */
 @nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
 @nowarn("cat=deprecation&origin=org.keymaerax.btactics.TactixLibrary.master")
@@ -287,8 +286,8 @@ class SequentialInterpreterTests extends TacticTestBase {
       prop,
       { (labels: Option[List[BelleLabel]]) =>
         labels match {
-          case Some(l) => l should contain theSameElementsAs BelleLabel
-              .fromString("0<=x//3<=y::0<=x//y<=4::x<=2//3<=y::x<=2//y<=4")
+          case Some(l) =>
+            l should contain theSameElementsAs BelleLabel.fromString("0<=x//3<=y::0<=x//y<=4::x<=2//3<=y::x<=2//y<=4")
           case None => fail("Labels expected, but got None")
         }
         ()
@@ -311,39 +310,31 @@ class SequentialInterpreterTests extends TacticTestBase {
   }
 
   "Branch Combinator" should "prove |- (1=1->1=1) & (2=2->2=2)" in withMathematica { _ =>
-    val tactic = andR(SuccPos(0)) < (
-      implyR(SuccPos(0)) & close,
-      implyR(SuccPos(0)) & close
-    )
-    inside(
-      theInterpreter
-        .apply(tactic, BelleProvable.plain(ProvableSig.startPlainProof("(1=1->1=1) & (2=2->2=2)".asFormula)))
-    ) { case BelleProvable(p, _) => p shouldBe Symbol("proved") }
+    val tactic = andR(SuccPos(0)) < (implyR(SuccPos(0)) & close, implyR(SuccPos(0)) & close)
+    inside(theInterpreter.apply(
+      tactic,
+      BelleProvable.plain(ProvableSig.startPlainProof("(1=1->1=1) & (2=2->2=2)".asFormula)),
+    )) { case BelleProvable(p, _) => p shouldBe Symbol("proved") }
   }
 
   it should "prove |- (1=1->1=1) & (2=2->2=2) with new < combinator" in withMathematica { _ =>
     // @note cannot use < in unit tests without fully qualifying the name, because Matchers also knows < operator
     val tactic = andR(SuccPos(0)) & Idioms.<(implyR(SuccPos(0)) & close, implyR(SuccPos(0)) & close)
-    inside(
-      theInterpreter
-        .apply(tactic, BelleProvable.plain(ProvableSig.startPlainProof("(1=1->1=1) & (2=2->2=2)".asFormula)))
-    ) { case BelleProvable(p, _) => p shouldBe Symbol("proved") }
+    inside(theInterpreter.apply(
+      tactic,
+      BelleProvable.plain(ProvableSig.startPlainProof("(1=1->1=1) & (2=2->2=2)".asFormula)),
+    )) { case BelleProvable(p, _) => p shouldBe Symbol("proved") }
   }
 
   it should "handle cases were subgoals are added." in withMathematica { _ =>
-    val tactic = andR(SuccPos(0)) < (
-      andR(SuccPos(0)),
-      implyR(SuccPos(0)) & close
-    )
+    val tactic = andR(SuccPos(0)) < (andR(SuccPos(0)), implyR(SuccPos(0)) & close)
     proveBy("(2=2 & 3=3) & (1=1->1=1)".asFormula, tactic).subgoals should contain
     theSameElementsInOrderAs("==> 2=2".asSequent :: "==> 3=3".asSequent :: Nil)
   }
 
   it should "fail whenever there's a non-partial tactic that doesn't close its goal." in withMathematica { _ =>
-    val tactic = andR(SuccPos(0)) < (
-      andR(SuccPos(0)) & DebuggingTactics.done,
-      implyR(SuccPos(0)) & close & DebuggingTactics.done
-    )
+    val tactic =
+      andR(SuccPos(0)) < (andR(SuccPos(0)) & DebuggingTactics.done, implyR(SuccPos(0)) & close & DebuggingTactics.done)
     val f = "(2=2 & 3=3) & (1=1->1=1)".asFormula
     a[BelleThrowable] shouldBe thrownBy(
       theInterpreter.apply(tactic, BelleProvable.plain(ProvableSig.startPlainProof(f)))
@@ -351,21 +342,20 @@ class SequentialInterpreterTests extends TacticTestBase {
   }
 
   it should "handle cases were subgoals are added -- switch order" in withMathematica { _ =>
-    val tactic = andR(SuccPos(0)) < (
-      implyR(SuccPos(0)) & close,
-      andR(SuccPos(0))
-    )
+    val tactic = andR(SuccPos(0)) < (implyR(SuccPos(0)) & close, andR(SuccPos(0)))
     proveBy("(1=1->1=1) & (2=2 & 3=3)".asFormula, tactic).subgoals should contain
     theSameElementsInOrderAs("==> 2=2".asSequent :: "==> 3=3".asSequent :: Nil)
   }
 
   it should "prove |- (1=1->1=1) & (!2=2  | 2=2) with labels out of order" in withMathematica { _ =>
-    val tactic = andR(1) & Idioms.<(label("foo"), label("bar")) & Idioms
-      .<((BelleTopLevelLabel("bar"), orR(1) & notR(1) & close), (BelleTopLevelLabel("foo"), implyR(1) & close))
-    inside(
-      theInterpreter
-        .apply(tactic, BelleProvable.plain(ProvableSig.startPlainProof("(1=1->1=1) & (!2=2 | 2=2)".asFormula)))
-    ) { case BelleProvable(p, _) => p shouldBe Symbol("proved") }
+    val tactic = andR(1) & Idioms.<(label("foo"), label("bar")) & Idioms.<(
+      (BelleTopLevelLabel("bar"), orR(1) & notR(1) & close),
+      (BelleTopLevelLabel("foo"), implyR(1) & close),
+    )
+    inside(theInterpreter.apply(
+      tactic,
+      BelleProvable.plain(ProvableSig.startPlainProof("(1=1->1=1) & (!2=2 | 2=2)".asFormula)),
+    )) { case BelleProvable(p, _) => p shouldBe Symbol("proved") }
   }
 
   it should "work with loop labels" in withMathematica { _ =>
@@ -398,10 +388,7 @@ class SequentialInterpreterTests extends TacticTestBase {
       "x>0 -> x>5 & x>0 & [?x>1;]x>1".asFormula,
       implyR(1) & andR(1) < (
         id & /* not reached */ logDone(1),
-        andR(1) < (
-          id & logDone(2),
-          testb(1) & prop & logDone(3)
-        )
+        andR(1) < (id & logDone(2), testb(1) & prop & logDone(3)),
       ),
     )
 
@@ -421,10 +408,7 @@ class SequentialInterpreterTests extends TacticTestBase {
       "x>0 -> x>5 & x>2 & [?x>1;]x>1".asFormula,
       implyR(1) & andR(1) < (
         id & /* not reached */ logDone(1),
-        andR(1) < (
-          id & /* not reached */ logDone(2),
-          testb(1) & prop & logDone(3)
-        )
+        andR(1) < (id & /* not reached */ logDone(2), testb(1) & prop & logDone(3)),
       ),
     ) should have message
       """Left: Expects same formula in antecedent and succedent. Found:
@@ -444,10 +428,7 @@ class SequentialInterpreterTests extends TacticTestBase {
         HybridProgramCalculus.loop("x>=0".asFormula)(1) < (
           QE,
           QE,
-          choiceb(1) & andR(1) < (
-            assignb(1) & label("1"),
-            assignb(1)
-          )
+          choiceb(1) & andR(1) < (assignb(1) & label("1"), assignb(1)),
         ),
       (labels: Option[List[BelleLabel]]) => {
         labels shouldBe Some(
@@ -477,7 +458,8 @@ class SequentialInterpreterTests extends TacticTestBase {
       .permutations
       .map(t =>
         implyR(1) & andR(1) /* creates labels that become parents of loop labels */ < (
-          HybridProgramCalculus.loop("x>1".asFormula)(1) & CaseTactic(t), id
+          HybridProgramCalculus.loop("x>1".asFormula)(1) & CaseTactic(t),
+          id,
         )
       )
     val v = BelleProvable.plain(ProvableSig.startPlainProof("x>2 -> [{x:=x+1;}*]x>1 & x>2".asFormula))
@@ -639,10 +621,7 @@ class SequentialInterpreterTests extends TacticTestBase {
     // now try with defs
     def repTwo = conj * 2
 
-    def split = andR(1) < (
-      repTwo,
-      skip
-    )
+    def split = andR(1) < (repTwo, skip)
 
     val thrown = intercept[Throwable] {
       theInterpreter.apply(
@@ -657,8 +636,9 @@ class SequentialInterpreterTests extends TacticTestBase {
     thrown.getMessage should include("Fails...")
     val s = thrown.getCause.getStackTrace
     // @todo works in isolation, but when run with other tests, we pick up stack trace elements of those too
-    s.filter(_.getFileName == "SequentialInterpreterTests.scala").slice(0, 11).map(_.getLineNumber) shouldBe Array(280,
-      279, 278, 271, 271, 269, 266, 266, 263, 262, 276)
+    s.filter(_.getFileName == "SequentialInterpreterTests.scala").slice(0, 11).map(_.getLineNumber) shouldBe Array(
+      280, 279, 278, 271, 271, 269, 266, 266, 263, 262, 276,
+    )
   }
 
   "Lazy interpreter" should "fail on the first failing branch" in withMathematica { _ =>
@@ -680,8 +660,8 @@ class SequentialInterpreterTests extends TacticTestBase {
         |==> 1:  false	False$}""".stripMargin
 
     listener.calls should have size 9
-    val andT @ SeqTactic(andRRule :: (labelT @ BranchTactic(labels)) :: Nil) = andR(1)
-      .computeExpr(BelleProvable.plain(ProvableSig.startPlainProof("==> false & true".asSequent)))
+    val andT @ SeqTactic(andRRule :: (labelT @ BranchTactic(labels)) :: Nil) =
+      andR(1).computeExpr(BelleProvable.plain(ProvableSig.startPlainProof("==> false & true".asSequent)))
 
     listener.calls should contain theSameElementsInOrderAs ("andR(1); <(close, close)".asTactic :: "andR(1)".asTactic ::
       andT :: andRRule :: labelT :: labels(0) :: labels(1) ::
@@ -706,8 +686,8 @@ class SequentialInterpreterTests extends TacticTestBase {
         |  from
         |==> 1:  false	False$}""".stripMargin
 
-    val andT @ SeqTactic(andRRule :: (labelT @ BranchTactic(labels)) :: Nil) = andR(1)
-      .computeExpr(BelleProvable.plain(ProvableSig.startPlainProof("==> false & true".asSequent)))
+    val andT @ SeqTactic(andRRule :: (labelT @ BranchTactic(labels)) :: Nil) =
+      andR(1).computeExpr(BelleProvable.plain(ProvableSig.startPlainProof("==> false & true".asSequent)))
 
     listener.calls should have size 10
     listener.calls should contain theSameElementsInOrderAs ("andR(1); <(close, close)".asTactic :: "andR(1)".asTactic ::
@@ -830,7 +810,7 @@ class SequentialInterpreterTests extends TacticTestBase {
           DebuggingTactics.assert(_ == "p(x),q(y) ==> q(y)".asSequent, "Unexpected result prior to expand") &
           expandAllDefs(entry.defs.substs) &
           DebuggingTactics.assert(_ == "x>0,y>0 ==> y>0".asSequent, "Unexpected expand result") &
-          id
+          id,
       ),
       entry.defs,
     ) shouldBe Symbol("proved")
@@ -855,7 +835,7 @@ class SequentialInterpreterTests extends TacticTestBase {
           expandAllDefs(entry.defs.substs) &
           DebuggingTactics.assert(_ == "x>0 ==> x>0".asSequent, "Unexpected expand result") &
           id,
-        testb(1) & implyR(1) & id
+        testb(1) & implyR(1) & id,
       ),
       entry.defs,
     ) shouldBe Symbol("proved")
@@ -869,7 +849,7 @@ class SequentialInterpreterTests extends TacticTestBase {
           DebuggingTactics.assert(_ == "p(x) ==> q(x)".asSequent, "Unexpected result prior to expand") &
           expandAllDefs(entry.defs.substs) &
           DebuggingTactics.assert(_ == "x>0 ==> x>0".asSequent, "Unexpected expand result") &
-          id
+          id,
       ),
       entry.defs,
     ) shouldBe Symbol("proved")
@@ -888,11 +868,8 @@ class SequentialInterpreterTests extends TacticTestBase {
     proveBy(
       entry.model.asInstanceOf[Formula],
       implyR(1) & cut("r>0".asFormula) < (
-        dC("x^2+y^2=r".asFormula)(1) < (
-          cut("r>1".asFormula),
-          dIRule(1) < (QE, unfoldProgramNormalize & QE)
-        ),
-        ODE(1)
+        dC("x^2+y^2=r".asFormula)(1) < (cut("r>1".asFormula), dIRule(1) < (QE, unfoldProgramNormalize & QE)),
+        ODE(1),
       ),
     ).subgoals should contain theSameElementsInOrderAs List(
       "x^2+y^2=r, r>0, r>1 ==> [{x'=r*y,y'=-r*x&true&x^2+y^2=r}]x^2+y^2=r".asSequent,
@@ -911,14 +888,9 @@ class SequentialInterpreterTests extends TacticTestBase {
 
   it should "detect expanded definitions when stitching together provables" in withMathematica { _ =>
     val defs = "g(x) ~> -x^2".asDeclaration
-    proveByS(
-      "p(x) ==> [{x'=g(y)}]p(x)".asSequent,
-      dC("x<=old(x)".asFormula)(1) < (
-        skip,
-        dIClose(1)
-      ),
-      defs,
-    ).subgoals.loneElement shouldBe "p(x_0), x_0=x ==> [{x'=-y^2 & true&x<=x_0}]p(x)".asSequent
+    proveByS("p(x) ==> [{x'=g(y)}]p(x)".asSequent, dC("x<=old(x)".asFormula)(1) < (skip, dIClose(1)), defs)
+      .subgoals
+      .loneElement shouldBe "p(x_0), x_0=x ==> [{x'=-y^2 & true&x<=x_0}]p(x)".asSequent
 
     proveByS("p(x) ==> [{x'=g(y)}]p(x)".asSequent, diffInvariant("x<=old(x)".asFormula)(1), defs)
       .subgoals
@@ -957,8 +929,11 @@ class SequentialInterpreterTests extends TacticTestBase {
     proveByS(
       "min(v,0)>=0, x_0>=0, x=x_0 ==> g(x)>=0 & [{x'=v}]g(x)>=g(x_0)".asSequent,
       andR(1) < (
-        skip, expandAllDefs(defs.substs) & EqualityTactics
-          .minmax(-1) & dIRule(1) < (QE, TactixLibrary.unfoldProgramNormalize & QE)
+        skip,
+        expandAllDefs(defs.substs) & EqualityTactics.minmax(-1) & dIRule(1) < (
+          QE,
+          TactixLibrary.unfoldProgramNormalize & QE,
+        ),
       ),
       defs,
     ).subgoals.loneElement shouldBe "min(v,0)>=0, x_0>=0, x=x_0 ==> 2*x>=0".asSequent
@@ -970,13 +945,9 @@ class SequentialInterpreterTests extends TacticTestBase {
       // which then in SequentialInterpreter.applySubDerivation cannot be merged with the parent (has x_0).
       // Parent has 2 open subgoals, but dIClose result provable only 1, and so as a symptom of the wrong return value of
       // applySubDerivation (see Interpreter.scala line 78) labels don't match
-      proveBy(
-        "p(x) ==> [{x'=g(y)}]p(x)".asSequent,
-        dC("x<=old(x)".asFormula)(1) < (
-          skip,
-          dIClose(1)
-        ),
-      ).subgoals.loneElement shouldBe "p(x_0), x_0=x ==> [{x'=-y^2 & true&x<=x_0}]p(x)".asSequent
+      proveBy("p(x) ==> [{x'=g(y)}]p(x)".asSequent, dC("x<=old(x)".asFormula)(1) < (skip, dIClose(1)))
+        .subgoals
+        .loneElement shouldBe "p(x_0), x_0=x ==> [{x'=-y^2 & true&x<=x_0}]p(x)".asSequent
   }
 
   "Using" should "keep mentioned and abbreviate unmentioned formulas" in withMathematica { _ =>
@@ -1006,7 +977,7 @@ class SequentialInterpreterTests extends TacticTestBase {
       "x>0 | x>y, y=0 | y>0 ==> x>0".asSequent,
       Using("x>0 | x>y".asFormula :: Nil, SaturateTactic(orL(Symbol("L")))) < (
         Using("x>0".asFormula :: "x>0".asFormula :: Nil, id),
-        skip
+        skip,
       ),
     ).subgoals.loneElement shouldBe "x>y, y=0 | y>0 ==> x>0".asSequent
   }

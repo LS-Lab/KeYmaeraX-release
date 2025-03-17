@@ -6,12 +6,9 @@
 /**
  * Differential Dynamic Logic pretty printer in concrete KeYmaera X notation.
  *
- * @author
- *   Andre Platzer
- * @see
- *   [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
- * @note
- *   Code Review 2016-08-02
+ * @author Andre Platzer
+ * @see [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
+ * @note Code Review 2016-08-02
  */
 package org.keymaerax.parser
 
@@ -28,8 +25,7 @@ import scala.collection.mutable.ListBuffer
 /**
  * Default KeYmaera X Pretty Printer formats differential dynamic logic expressions
  *
- * @see
- *   [[org.keymaerax.parser.KeYmaeraXPrecedencePrinter]]
+ * @see [[org.keymaerax.parser.KeYmaeraXPrecedencePrinter]]
  */
 object KeYmaeraXPrettyPrinter extends KeYmaeraXPrecedencePrinter {
 
@@ -40,8 +36,7 @@ object KeYmaeraXPrettyPrinter extends KeYmaeraXPrecedencePrinter {
 /**
  * KeYmaera X Pretty Printer without contract checking
  *
- * @see
- *   [[org.keymaerax.parser.KeYmaeraXPrecedencePrinter]]
+ * @see [[org.keymaerax.parser.KeYmaeraXPrecedencePrinter]]
  */
 object KeYmaeraXNoContractPrettyPrinter extends KeYmaeraXPrecedencePrinter {
 
@@ -124,10 +119,8 @@ trait BasePrettyPrinter extends PrettyPrinter {
  *   val fml1 = Imply(True, Box(Assign(Variable("x"), Number(1)), GreaterEqual(Variable("x"), Number(0))))
  *   val fml1str = pp(fml1)
  *   }}}
- * @author
- *   Andre Platzer
- * @see
- *   [[org.keymaerax.parser.KeYmaeraXPrinter.fullPrinter]]
+ * @author Andre Platzer
+ * @see [[org.keymaerax.parser.KeYmaeraXPrinter.fullPrinter]]
  */
 object FullPrettyPrinter extends BasePrettyPrinter {
 
@@ -144,10 +137,7 @@ object FullPrettyPrinter extends BasePrettyPrinter {
     case f: Function => f.asString
   }
 
-  /**
-   * @note
-   *   The extra space disambiguates x<-7 as in x < (-7) from x REVIMPLY 7 as well as x<-(x^2) from x REVIMPLY ...
-   */
+  /** @note The extra space disambiguates x<-7 as in x < (-7) from x REVIMPLY 7 as well as x<-(x^2) from x REVIMPLY ... */
   private val LEXSPACE: String = " "
 
   private def pp(term: Term): String = term match {
@@ -247,14 +237,10 @@ object FullPrettyPrinter extends BasePrettyPrinter {
  *   val fml1 = Imply(True, Box(Assign(Variable("x"), Number(1)), GreaterEqual(Variable("x"), Number(0))))
  *   val fml1str = pp(fml1)
  *   }}}
- * @author
- *   Andre Platzer
- * @see
- *   [[org.keymaerax.parser]]
- * @see
- *   [[http://keymaeraX.org/doc/dL-grammar.md Grammar]]
- * @see
- *   [[https://github.com/LS-Lab/KeYmaeraX-release/wiki/KeYmaera-X-Syntax-and-Informal-Semantics Wiki]]
+ * @author Andre Platzer
+ * @see [[org.keymaerax.parser]]
+ * @see [[http://keymaeraX.org/doc/dL-grammar.md Grammar]]
+ * @see [[https://github.com/LS-Lab/KeYmaeraX-release/wiki/KeYmaera-X-Syntax-and-Informal-Semantics Wiki]]
  */
 class KeYmaeraXPrinter extends BasePrettyPrinter {
 
@@ -275,9 +261,8 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
   private[parser] val negativeBrackets = !OpSpec.negativeNumber
 
   /**
-   * @note
-   *   The extra space disambiguates `x<-7` as in `x < (-7)` from `x REVIMPLY 7` as well as `x<-(x^2)` from `x REVIMPLY
-   *   ...`
+   * @note The extra space disambiguates `x<-7` as in `x < (-7)` from `x REVIMPLY 7` as well as `x<-(x^2)` from `x
+   *   REVIMPLY ...`
    */
   private val LEXSPACE: String = " "
 
@@ -468,63 +453,55 @@ object FullPrettyPrinter0 extends KeYmaeraXPrinter {
 /**
  * KeYmaera X Printer base class formatting based on parentheses skipping decisions.
  *
- * @author
- *   Andre Platzer
+ * @author Andre Platzer
  */
 abstract class KeYmaeraXSkipPrinter extends KeYmaeraXPrinter {
-  protected override def wrapChild(t: UnaryComposite, childPrint: String): String =
+  override protected def wrapChild(t: UnaryComposite, childPrint: String): String =
     if (skipParens(t)) childPrint else "(" + childPrint + ")"
-  protected override def wrapChild(t: Quantified, childPrint: String): String =
+  override protected def wrapChild(t: Quantified, childPrint: String): String =
     if (skipParens(t)) childPrint else "(" + childPrint + ")"
-  protected override def wrapChild(t: Modal, childPrint: String): String =
+  override protected def wrapChild(t: Modal, childPrint: String): String =
     if (skipParens(t)) childPrint else "(" + childPrint + ")"
 
-  protected override def wrapLeft(t: BinaryComposite, leftPrint: String): String =
+  override protected def wrapLeft(t: BinaryComposite, leftPrint: String): String =
     if (skipParensLeft(t)) leftPrint else "(" + leftPrint + ")"
-  protected override def wrapRight(t: BinaryComposite, rightPrint: String): String =
+  override protected def wrapRight(t: BinaryComposite, rightPrint: String): String =
     if (skipParensRight(t)) rightPrint else "(" + rightPrint + ")"
 
-  protected override def pwrapLeft(t: BinaryComposite /*Differential/Program*/, leftPrint: String): String =
+  override protected def pwrapLeft(t: BinaryComposite /*Differential/Program*/, leftPrint: String): String =
     if (skipParensLeft(t)) leftPrint else "{" + leftPrint + "}"
-  protected override def pwrapRight(t: BinaryComposite /*Differential/Program*/, rightPrint: String): String =
+  override protected def pwrapRight(t: BinaryComposite /*Differential/Program*/, rightPrint: String): String =
     if (skipParensRight(t)) rightPrint else "{" + rightPrint + "}"
 
   /**
    * Whether parentheses around `t.child` can be skipped because they are implicit.
-   * @see
-   *   [[wrapChild()]]
+   * @see [[wrapChild()]]
    */
   protected def skipParens(t: UnaryComposite): Boolean
 
   /**
    * Whether parentheses around `t.child` can be skipped because they are implicit.
-   * @see
-   *   [[wrapChild()]]
+   * @see [[wrapChild()]]
    */
   protected def skipParens(t: Quantified): Boolean
 
   /**
    * Whether parentheses around `t.child` can be skipped because they are implicit.
-   * @see
-   *   [[wrapChild()]]
+   * @see [[wrapChild()]]
    */
   protected def skipParens(t: Modal): Boolean
 
   /**
    * Whether parentheses around `t.left` can be skipped because they are implicit.
-   * @note
-   *   Based on (seemingly redundant) inequality comparisons since equality incompatible with comparison ==
-   * @see
-   *   [[wrapLeft()]]
+   * @note Based on (seemingly redundant) inequality comparisons since equality incompatible with comparison ==
+   * @see [[wrapLeft()]]
    */
   protected def skipParensLeft(t: BinaryComposite): Boolean
 
   /**
    * Whether parentheses around `t.right` can be skipped because they are implicit.
-   * @note
-   *   Based on (seemingly redundant) inequality comparisons since equality incompatible with comparison ==
-   * @see
-   *   [[wrapRight()]]
+   * @note Based on (seemingly redundant) inequality comparisons since equality incompatible with comparison ==
+   * @see [[wrapRight()]]
    */
   protected def skipParensRight(t: BinaryComposite): Boolean
 
@@ -534,19 +511,16 @@ abstract class KeYmaeraXSkipPrinter extends KeYmaeraXPrinter {
  * Precedence-based: KeYmaera X Pretty Printer formats differential dynamic logic expressions with compact brackets in
  * KeYmaera X notation according to the concrete syntax of differential dynamic logic with explicit statement end `;`
  * operator.
- * @author
- *   Andre Platzer
- * @todo
- *   Augment with ensures postconditions that check correct reparse non-recursively.
- * @see
- *   [[http://keymaeraX.org/doc/dL-grammar.md Grammar]]
+ * @author Andre Platzer
+ * @todo Augment with ensures postconditions that check correct reparse non-recursively.
+ * @see [[http://keymaeraX.org/doc/dL-grammar.md Grammar]]
  */
 class KeYmaeraXPrecedencePrinter extends KeYmaeraXSkipPrinter {
 
   /** @inheritdoc */
-  protected override def skipParens(t: UnaryComposite): Boolean =
-    if (OpSpec.negativeNumber && t.isInstanceOf[Term]) op(t.child) <= op(t) && !leftMostLeaf(t.child)
-      .exists(_.isInstanceOf[Number])
+  override protected def skipParens(t: UnaryComposite): Boolean =
+    if (OpSpec.negativeNumber && t.isInstanceOf[Term]) op(t.child) <= op(t) &&
+    !leftMostLeaf(t.child).exists(_.isInstanceOf[Number])
     else op(t.child) <= op(t)
 
   @tailrec
@@ -557,25 +531,23 @@ class KeYmaeraXPrecedencePrinter extends KeYmaeraXSkipPrinter {
   }
 
   /** @inheritdoc */
-  protected override def skipParens(t: Quantified): Boolean = op(t.child) <= op(t)
+  override protected def skipParens(t: Quantified): Boolean = op(t.child) <= op(t)
 
   /** @inheritdoc */
-  protected override def skipParens(t: Modal): Boolean = op(t.child) <= op(t)
+  override protected def skipParens(t: Modal): Boolean = op(t.child) <= op(t)
 
   /**
    * Whether parentheses around `t.left` can be skipped because they are implied.
-   * @note
-   *   Based on (seemingly redundant) inequality comparisons since equality incompatible with comparison ==
+   * @note Based on (seemingly redundant) inequality comparisons since equality incompatible with comparison ==
    */
-  protected override def skipParensLeft(t: BinaryComposite): Boolean = op(t.left) < op(t) ||
+  override protected def skipParensLeft(t: BinaryComposite): Boolean = op(t.left) < op(t) ||
     op(t.left) <= op(t) && op(t).assoc == LeftAssociative && op(t.left).assoc == LeftAssociative
 
   /**
    * Whether parentheses around `t.right` can be skipped because they are implied.
-   * @note
-   *   Based on (seemingly redundant) inequality comparisons since equality incompatible with comparison ==
+   * @note Based on (seemingly redundant) inequality comparisons since equality incompatible with comparison ==
    */
-  protected override def skipParensRight(t: BinaryComposite): Boolean = op(t.right) < op(t) ||
+  override protected def skipParensRight(t: BinaryComposite): Boolean = op(t.right) < op(t) ||
     op(t.right) <= op(t) && op(t).assoc == RightAssociative && op(t.right).assoc == RightAssociative
 
 }
@@ -585,26 +557,24 @@ class KeYmaeraXPrecedencePrinter extends KeYmaeraXSkipPrinter {
  * brackets in KeYmaera X notation according and extra space weighted according to the concrete syntax of differential
  * dynamic logic with explicit statement end `;` operator.
  *
- * @author
- *   Andre Platzer
- * @see
- *   [[http://keymaeraX.org/doc/dL-grammar.md Grammar]]
+ * @author Andre Platzer
+ * @see [[http://keymaeraX.org/doc/dL-grammar.md Grammar]]
  */
 @deprecated("Use PrettierPrinter instead")
 class KeYmaeraXWeightedPrettyPrinter extends KeYmaeraXPrecedencePrinter {
 
   // eloquent space if no parentheses
-  protected override def wrapChild(t: Modal, childPrint: String): String =
+  override protected def wrapChild(t: Modal, childPrint: String): String =
     if (skipParens(t)) " " + childPrint else "(" + childPrint + ")"
 
-  protected override def wrapLeft(t: BinaryComposite, leftPrint: String): String =
+  override protected def wrapLeft(t: BinaryComposite, leftPrint: String): String =
     if (skipParensLeft(t)) spaceLeft(t, leftPrint) else spaceLeft(t, "(" + leftPrint + ")")
-  protected override def wrapRight(t: BinaryComposite, rightPrint: String): String =
+  override protected def wrapRight(t: BinaryComposite, rightPrint: String): String =
     if (skipParensRight(t)) spaceRight(t, rightPrint) else spaceRight(t, "(" + rightPrint + ")")
 
-  protected override def pwrapLeft(t: BinaryComposite /*Differential/Program*/, leftPrint: String): String =
+  override protected def pwrapLeft(t: BinaryComposite /*Differential/Program*/, leftPrint: String): String =
     if (skipParensLeft(t)) spaceLeft(t, leftPrint) else spaceLeft(t, "{" + leftPrint + "}")
-  protected override def pwrapRight(t: BinaryComposite /*Differential/Program*/, rightPrint: String): String =
+  override protected def pwrapRight(t: BinaryComposite /*Differential/Program*/, rightPrint: String): String =
     if (skipParensRight(t)) spaceRight(t, rightPrint) else spaceRight(t, "{" + rightPrint + "}")
 
   protected def spaceLeft(t: BinaryComposite, leftPrint: String): String =
@@ -671,7 +641,7 @@ class KeYmaeraXOmitInterpretationPrettyPrinter extends KeYmaeraXPrecedencePrinte
         "\t@ " + expr.getClass.getSimpleName,
     )
 
-  protected override def pp(q: PosInExpr, term: Term): String = term match {
+  override protected def pp(q: PosInExpr, term: Term): String = term match {
     case FuncOf(Function(n, i, _, _, Some(_)), Nothing) => emit(q, n + i.map("_" + _).getOrElse("") + "()")
     case FuncOf(Function(n, i, d, _, Some(_)), arg) =>
       if (d.isInstanceOf[Tuple]) emit(q, n + i.map("_" + _).getOrElse("") + pp(q ++ 0, arg))

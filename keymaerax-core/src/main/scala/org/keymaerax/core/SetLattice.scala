@@ -5,10 +5,8 @@
 
 /**
  * Set Lattices are lattice of finite or cofinite sets.
- * @author
- *   smitsch
- * @note
- *   Code Review: 2020-02-17
+ * @author smitsch
+ * @note Code Review: 2020-02-17
  */
 package org.keymaerax.core
 
@@ -19,12 +17,9 @@ import scala.collection.immutable
 /**
  * Lattice of sets, i.e. the lattice of sets that also includes bottom, top and near-top elements.
  *
- * @tparam A
- *   Type of elements in the set
- * @author
- *   smitsch
- * @author
- *   Andre Platzer
+ * @tparam A Type of elements in the set
+ * @author smitsch
+ * @author Andre Platzer
  */
 sealed trait SetLattice[A] {
 
@@ -146,10 +141,8 @@ object SetLattice {
   /**
    * Symbols and differential symbols of set lattice sl. Will leave all Function and ProgramConst and
    * DifferentialProgramConst in sl untouched but add DifferentialSymbol for all Variables in sl.
-   * @param sl
-   *   A SetLattice of NamedSymbols.
-   * @return
-   *   sl ++ sl' where sl' is the lattice containing the primes of the variables in sl.
+   * @param sl A SetLattice of NamedSymbols.
+   * @return sl ++ sl' where sl' is the lattice containing the primes of the variables in sl.
    */
   def extendToDifferentialSymbols(sl: SetLattice[Variable]): SetLattice[Variable] = sl match {
     case FiniteSet(set) => FiniteSet(extendToDifferentialSymbols(set))
@@ -167,10 +160,8 @@ object SetLattice {
   /**
    * Symbols and differential symbols of set.
    *
-   * @param set
-   *   A Set of NamedSymbols.
-   * @return
-   *   set ++ set' where set' is the set containing the primes of the variables in `set`.
+   * @param set A Set of NamedSymbols.
+   * @return set ++ set' where set' is the set containing the primes of the variables in `set`.
    */
   def extendToDifferentialSymbols(set: Set[Variable]): Set[Variable] =
     // @note assumes that only real variables occur
@@ -180,14 +171,10 @@ object SetLattice {
 /**
  * A finite element of a lattice, represented as a finite set of concrete elements.
  *
- * @param set
- *   the concrete members of this finite element of a lattice
- * @tparam A
- *   Type of elements in the set
- * @note
- *   Implementation forwards to set.
- * @author
- *   Andre Platzer
+ * @param set the concrete members of this finite element of a lattice
+ * @tparam A Type of elements in the set
+ * @note Implementation forwards to set.
+ * @author Andre Platzer
  */
 private case class FiniteSet[A](set: immutable.Set[A]) extends SetLattice[A] {
   def isInfinite = false
@@ -218,14 +205,10 @@ private case class FiniteSet[A](set: immutable.Set[A]) extends SetLattice[A] {
  * program constant c, which in terms of fv/bv variables represents all possible symbols and thus is top, is tracked as
  * c in symbols).
  *
- * @param excluded
- *   The elements not included in top.
- * @param literally
- *   The specific symbols contained verbatim in the set, even if all except excluded are present.
- * @tparam A
- *   The type of elements.
- * @author
- *   smitsch
+ * @param excluded The elements not included in top.
+ * @param literally The specific symbols contained verbatim in the set, even if all except excluded are present.
+ * @tparam A The type of elements.
+ * @author smitsch
  */
 private case class CoFiniteSet[A](excluded: immutable.Set[A], literally: immutable.Set[A]) extends SetLattice[A] {
   def isInfinite = true

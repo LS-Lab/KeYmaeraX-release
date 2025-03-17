@@ -10,8 +10,7 @@ import scala.util.matching.Regex
 /**
  * Terminal symbols of the differential dynamic logic grammar.
  *
- * @author
- *   Andre Platzer
+ * @author Andre Platzer
  */
 sealed abstract class Terminal(val img: String) {
   override def toString: String = getClass.getSimpleName

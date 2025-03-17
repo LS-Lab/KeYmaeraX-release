@@ -22,10 +22,8 @@ import scala.language.postfixOps
 /**
  * Uniform substitution clash test dummies.
  *
- * @author
- *   Andre Platzer
- * @author
- *   smitsch
+ * @author Andre Platzer
+ * @author smitsch
  */
 @SummaryTest @UsualTest @USubstTest @CheckinTest @nowarn("msg=Exhaustivity analysis reached max recursion depth")
 @nowarn("msg=match may not be exhaustive")
@@ -1420,15 +1418,19 @@ class USubstTests extends TacticTestBase {
     "f()".asTerm ~>> "2*x+y".asTerm shouldBe SubstitutionPair("f()".asTerm, "2*x+y".asTerm)
     "f(x)".asTerm ~>> "2*x+y".asTerm shouldBe SubstitutionPair("f(._0)".asTerm, "2*._0+y".asTerm)
     "f(x,y)".asTerm ~>> "2*x+y".asTerm shouldBe SubstitutionPair("f(._0,._1)".asTerm, "2*._0+._1".asTerm)
-    "f(x,(y,z))".asTerm ~>> "2*x+y^z"
-      .asTerm shouldBe SubstitutionPair("f(._0,(._1,._2))".asTerm, "2*._0+._1^._2".asTerm)
+    "f(x,(y,z))".asTerm ~>> "2*x+y^z".asTerm shouldBe SubstitutionPair(
+      "f(._0,(._1,._2))".asTerm,
+      "2*._0+._1^._2".asTerm,
+    )
   }
 
   it should "create substitutions for predicates" in {
     "p()".asFormula ~>> "2*x>y".asFormula shouldBe SubstitutionPair("p()".asFormula, "2*x>y".asFormula)
     "p(x)".asFormula ~>> "2*x>y".asFormula shouldBe SubstitutionPair("p(._0)".asFormula, "2*._0>y".asFormula)
     "p(x,y)".asFormula ~>> "2*x>y".asFormula shouldBe SubstitutionPair("p(._0,._1)".asFormula, "2*._0>._1".asFormula)
-    "p(x,(y,z))".asFormula ~>> "2*x>y&z=3"
-      .asFormula shouldBe SubstitutionPair("p(._0,(._1,._2))".asFormula, "2*._0>._1&._2=3".asFormula)
+    "p(x,(y,z))".asFormula ~>> "2*x>y&z=3".asFormula shouldBe SubstitutionPair(
+      "p(._0,(._1,._2))".asFormula,
+      "2*._0>._1&._2=3".asFormula,
+    )
   }
 }

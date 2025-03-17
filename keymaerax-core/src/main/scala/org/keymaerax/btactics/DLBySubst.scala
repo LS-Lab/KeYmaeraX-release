@@ -134,9 +134,7 @@ private object DLBySubst {
     constructor = TacticConstructor0.create()(() => abstractionb),
   )
 
-  /**
-   * Safe abstraction checks to not lose information from tests and evolution domain constraints before it abstracts.
-   */
+  /** Safe abstraction checks to not lose information from tests and evolution domain constraints before it abstracts. */
   val safeabstractionb: DependentPositionTactic = ("safeabstractionb").by { (pos: Position, seq: Sequent) =>
     // internal automation support
     seq.sub(pos) match {
@@ -172,16 +170,17 @@ private object DLBySubst {
   }
 
   @Derivation
-  val safeabstractionbInfo: PositionTacticInfo = PositionTacticInfo
-    .create(name = "safeabstractionb", constructor = TacticConstructor0.create()(() => safeabstractionb))
+  val safeabstractionbInfo: PositionTacticInfo = PositionTacticInfo.create(
+    name = "safeabstractionb",
+    constructor = TacticConstructor0.create()(() => safeabstractionb),
+  )
 
   /**
    * Introduces a self assignment `[x:=x;]p(||)` in front of `p(||)`.
-   * @param x
-   *   The self-assigned variable.
+   * @param x The self-assigned variable.
    */
-  def stutter(x: Variable): DependentPositionWithAppliedInputTactic = "stutter"
-    .byWithInputs(List(x), (pos: Position) => stutterFw(x)(pos))
+  def stutter(x: Variable): DependentPositionWithAppliedInputTactic =
+    "stutter".byWithInputs(List(x), (pos: Position) => stutterFw(x)(pos))
 
   @Derivation
   val stutterInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
@@ -323,12 +322,11 @@ private object DLBySubst {
    *   -------------------------------------------------------------- assignEquality(1, 1::Nil)
    *   x=2   |- [y:=2;][x:=x+1;][{x:=x+1;}*]x>0
    *   }}}
-   * @author
-   *   Andre Platzer
+   * @author Andre Platzer
    * @incontext
    */
-  private[btactics] val assignEquality: BuiltInPositionTactic = "assignEquality"
-    .by { (provable: ProvableSig, pos: Position) =>
+  private[btactics] val assignEquality: BuiltInPositionTactic =
+    "assignEquality".by { (provable: ProvableSig, pos: Position) =>
       ProofRuleTactics.requireOneSubgoal(provable, "DLBySubst.assignEqualityFw")
       val sequent = provable.subgoals.head
       val (expand: (ProvableSig => ProvableSig), assign: (ProvableSig => ProvableSig)) = sequent.sub(pos) match {
@@ -422,8 +420,8 @@ private object DLBySubst {
   )
 
   /** Equality assignment to a fresh variable. @see assignEquality @incontext */
-  private[btactics] val assigndEquality: BuiltInPositionTactic = "assigndEquality"
-    .by { (provable: ProvableSig, pos: Position) =>
+  private[btactics] val assigndEquality: BuiltInPositionTactic =
+    "assigndEquality".by { (provable: ProvableSig, pos: Position) =>
       ProofRuleTactics.requireOneSubgoal(provable, "DLBySubst.assigndEquality")
       val sequent = provable.subgoals.head
       sequent.sub(pos) match {
@@ -462,10 +460,8 @@ private object DLBySubst {
   )
 
   /**
-   * @see
-   *   [[TactixLibrary.generalize()]]
-   * @todo
-   *   same for diamonds by the dual of K
+   * @see [[TactixLibrary.generalize()]]
+   * @todo same for diamonds by the dual of K
    */
   def generalize(c: Formula, isGame: Boolean = false): DependentPositionTactic =
     anon((pos: Position, sequent: Sequent) =>
@@ -530,12 +526,9 @@ private object DLBySubst {
     )
 
   /**
-   * @see
-   *   [[TactixLibrary.postCut()]]
-   * @todo
-   *   same for diamonds by the dual of K
-   * @note
-   *   Uses K modal modus ponens, which is unsound for hybrid games.
+   * @see [[TactixLibrary.postCut()]]
+   * @todo same for diamonds by the dual of K
+   * @note Uses K modal modus ponens, which is unsound for hybrid games.
    */
   def postCut(C: Formula): DependentPositionWithAppliedInputTactic = "postCut".byWithInputs(
     List(C),
@@ -580,9 +573,9 @@ private object DLBySubst {
    * Expand definitions in non-loop formulas as preparation for [[loop]], which searches preconditions for constants to
    * preserve but cannot look up definitions.
    */
-  private def expandNonloop: BelleExpr = SaturateTactic(alphaRule) &
-    SaturateTactic(anon((seq: Sequent) => { ??? }) & SaturateTactic(alphaRule)) &
-    DebuggingTactics.print("Loop expanded")
+  private def expandNonloop: BelleExpr = SaturateTactic(alphaRule) & SaturateTactic(anon((seq: Sequent) => {
+    ???
+  }) & SaturateTactic(alphaRule)) & DebuggingTactics.print("Loop expanded")
 
   /** @see [[TactixLibrary.loop]] */
   def loop(invariant: Formula, pre: BelleExpr = SaturateTactic(alphaRule)): DependentPositionTactic = inputanon {
@@ -668,10 +661,11 @@ private object DLBySubst {
                         andR(pos) <
                           (
                             label(replaceTxWith(initCase)),
-                            (
-                              andR(pos) <
-                                (expandInit & SaturateTactic(andL(Symbol("L"))) & closeIdWith(pos), UnifyUSCalculus.nil)
-                            ) * constAntes.size &
+                            (andR(pos) <
+                              (
+                                expandInit & SaturateTactic(andL(Symbol("L"))) & closeIdWith(pos),
+                                UnifyUSCalculus.nil,
+                              )) * constAntes.size &
                               (andR(pos) < (notR(pos) & closeIdWith(Symbol("Llast")), UnifyUSCalculus.nil)) *
                               (constSuccs.size - 1) & notR(pos) & SaturateTactic(andL(Symbol("L"))) & close & done,
                           ),
@@ -759,8 +753,7 @@ private object DLBySubst {
    *   G |- [{a}*]p, D
    * }}}
    *
-   * @param invariant
-   *   The invariant.
+   * @param invariant The invariant.
    */
   def loopRule(J: Formula): DependentPositionWithAppliedInputTactic = "loopRule".byWithInputs(
     List(J),
@@ -793,8 +786,8 @@ private object DLBySubst {
   )
 
   /** @see [[TactixLibrary.throughout]] */
-  def throughout(J: Formula): DependentPositionWithAppliedInputTactic = "throughout"
-    .byWithInputs(List(J), throughout(J, SaturateTactic(alphaRule))(_: Position))
+  def throughout(J: Formula): DependentPositionWithAppliedInputTactic =
+    "throughout".byWithInputs(List(J), throughout(J, SaturateTactic(alphaRule))(_: Position))
 
   @Derivation
   val throughoutInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
@@ -840,8 +833,8 @@ private object DLBySubst {
   }
 
   /** [[TactixLibrary.con()]] */
-  def con(x: Variable, J: Formula): DependentPositionWithAppliedInputTactic = "con"
-    .byWithInputs(List(x, J), con(x, J, SaturateTactic(alphaRule))(_: Position))
+  def con(x: Variable, J: Formula): DependentPositionWithAppliedInputTactic =
+    "con".byWithInputs(List(x, J), con(x, J, SaturateTactic(alphaRule))(_: Position))
 
   @Derivation
   val conInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
@@ -850,8 +843,9 @@ private object DLBySubst {
     displayLevel = DisplayLevel.All,
     displayPremises = "Γ |- ∃x J(x) ;; x≤0, J(x) |- P ;; x>0, J(x) |- ⟨a⟩J(x-1)",
     displayConclusion = "Γ |- ⟨a<sup>*</sup>⟩P, Δ",
-    constructor = TacticConstructor2
-      .create(VariableArg("x", List("x")), FormulaArg("J(x)", List("x")))((x: Variable, J: Formula) => con(x, J)),
+    constructor = TacticConstructor2.create(VariableArg("x", List("x")), FormulaArg("J(x)", List("x")))(
+      (x: Variable, J: Formula) => con(x, J)
+    ),
   )
 
   @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
@@ -868,64 +862,62 @@ private object DLBySubst {
 
       pre &
         (
-          inputanon {
-            (pp, seq) =>
-              {
-                seq.sub(pp) match {
-                  case Some(Diamond(prg: Loop, _)) if !FormulaTools.dualFree(prg) => conRule(v, variant)(pos)
-                  case Some(d @ Diamond(prg @ Loop(a), p)) if FormulaTools.dualFree(prg) =>
-                    val ur = URename(Variable("x_", None, Real), v)
-                    val abv = StaticSemantics(a).bv
-                    val consts = constConditions(seq.ante, abv)
-                    val q =
-                      if (consts.size > 1) And(ur(variant), consts.reduceRight(And.apply))
-                      else if (consts.size == 1) And(ur(variant), consts.head)
-                      else And(ur(variant), True)
+          inputanon { (pp, seq) =>
+            {
+              seq.sub(pp) match {
+                case Some(Diamond(prg: Loop, _)) if !FormulaTools.dualFree(prg) => conRule(v, variant)(pos)
+                case Some(d @ Diamond(prg @ Loop(a), p)) if FormulaTools.dualFree(prg) =>
+                  val ur = URename(Variable("x_", None, Real), v)
+                  val abv = StaticSemantics(a).bv
+                  val consts = constConditions(seq.ante, abv)
+                  val q =
+                    if (consts.size > 1) And(ur(variant), consts.reduceRight(And.apply))
+                    else if (consts.size == 1) And(ur(variant), consts.head)
+                    else And(ur(variant), True)
 
-                    val x1 =
-                      Variable(
-                        ur.what.name,
-                        Some(ur.what.index.getOrElse(-1) + 1),
-                      ) // @note avoid clash with x_ when assignd uses assigndEquality
-                    val x2 = Variable(x1.name, Some(x1.index.get + 1)) // @note result after assigndEquality
-                    val v0 =
-                      Variable(v.name, Some(v.index.getOrElse(-1) + 1)) // @note want v__0 in result instead of x2
+                  val x1 =
+                    Variable(
+                      ur.what.name,
+                      Some(ur.what.index.getOrElse(-1) + 1),
+                    ) // @note avoid clash with x_ when assignd uses assigndEquality
+                  val x2 = Variable(x1.name, Some(x1.index.get + 1)) // @note result after assigndEquality
+                  val v0 = Variable(v.name, Some(v.index.getOrElse(-1) + 1)) // @note want v__0 in result instead of x2
 
-                    def closeConsts(pos: Position) = andR(pos) <
-                      (skip, onAll(andR(pos) < (id, skip)) * (consts.size - 1) & close)
-                    val splitConsts =
-                      if (consts.nonEmpty) andL(Symbol("Llast")) * consts.size else useAt(Ax.andTrue)(Symbol("Llast"))
+                  def closeConsts(pos: Position) = andR(pos) <
+                    (skip, onAll(andR(pos) < (id, skip)) * (consts.size - 1) & close)
+                  val splitConsts =
+                    if (consts.nonEmpty) andL(Symbol("Llast")) * consts.size else useAt(Ax.andTrue)(Symbol("Llast"))
 
-                    val abvVars = abv.toSet[Variable].filter(_.isInstanceOf[BaseVariable]).toList
-                    def stutterABV(pos: Position) =
-                      abvVars.map(stutter(_)(pos)).reduceOption[BelleExpr](_ & _).getOrElse(skip)
-                    def unstutterABV(pos: Position) = useAt(Ax.selfassignb)(pos) * abvVars.size
+                  val abvVars = abv.toSet[Variable].filter(_.isInstanceOf[BaseVariable]).toList
+                  def stutterABV(pos: Position) =
+                    abvVars.map(stutter(_)(pos)).reduceOption[BelleExpr](_ & _).getOrElse(skip)
+                  def unstutterABV(pos: Position) = useAt(Ax.selfassignb)(pos) * abvVars.size
 
-                    label(startTx) &
-                      cutR(Exists(ur.what :: Nil, q))(pp.checkSucc.top) <
-                      (
-                        stutter(ur.what)(pos ++ PosInExpr(0 :: 0 :: Nil)) & useAt(Ax.pexistsV)(pos) & closeConsts(pos) &
-                          assignb(pos ++ PosInExpr(0 :: Nil)) & uniformRename(ur) &
-                          label(replaceTxWith(BelleLabels.initCase)),
-                        cohide(pp) & implyR(1) &
-                          byUS(Ax.conflat) <
-                          (
-                            existsL(Symbol("Llast")) & andL(Symbol("Llast")) & splitConsts & uniformRename(ur) &
-                              label(replaceTxWith(BelleLabels.useCase)),
-                            stutter(ur.what)(1, 1 :: 1 :: 0 :: Nil) & useAt(Ax.pVd, PosInExpr(1 :: Nil))(1, 1 :: Nil) &
-                              assignb(1, 1 :: 0 :: 1 :: Nil) &
-                              stutterABV(SuccPosition.base0(0, PosInExpr(1 :: 0 :: Nil))) &
-                              useAt(Ax.pVd, PosInExpr(1 :: Nil))(1) &
-                              unstutterABV(SuccPosition.base0(0, PosInExpr(0 :: 1 :: Nil))) & splitConsts &
-                              closeConsts(SuccPos(0)) &
-                              (assignd(1, 1 :: Nil) & uniformRename(ur) |
-                                uniformRename(ur.what, x1) &
-                                assignd(1, 1 :: Nil) & boundRename(x1, v)(1, 1 :: Nil) & uniformRename(x2, v0)) &
-                              label(replaceTxWith(BelleLabels.indStep)),
-                          ),
-                      )
-                }
+                  label(startTx) &
+                    cutR(Exists(ur.what :: Nil, q))(pp.checkSucc.top) <
+                    (
+                      stutter(ur.what)(pos ++ PosInExpr(0 :: 0 :: Nil)) & useAt(Ax.pexistsV)(pos) & closeConsts(pos) &
+                        assignb(pos ++ PosInExpr(0 :: Nil)) & uniformRename(ur) &
+                        label(replaceTxWith(BelleLabels.initCase)),
+                      cohide(pp) & implyR(1) &
+                        byUS(Ax.conflat) <
+                        (
+                          existsL(Symbol("Llast")) & andL(Symbol("Llast")) & splitConsts & uniformRename(ur) &
+                            label(replaceTxWith(BelleLabels.useCase)),
+                          stutter(ur.what)(1, 1 :: 1 :: 0 :: Nil) & useAt(Ax.pVd, PosInExpr(1 :: Nil))(1, 1 :: Nil) &
+                            assignb(1, 1 :: 0 :: 1 :: Nil) &
+                            stutterABV(SuccPosition.base0(0, PosInExpr(1 :: 0 :: Nil))) &
+                            useAt(Ax.pVd, PosInExpr(1 :: Nil))(1) &
+                            unstutterABV(SuccPosition.base0(0, PosInExpr(0 :: 1 :: Nil))) & splitConsts &
+                            closeConsts(SuccPos(0)) &
+                            (assignd(1, 1 :: Nil) & uniformRename(ur) |
+                              uniformRename(ur.what, x1) &
+                              assignd(1, 1 :: Nil) & boundRename(x1, v)(1, 1 :: Nil) & uniformRename(x2, v0)) &
+                            label(replaceTxWith(BelleLabels.indStep)),
+                        ),
+                    )
               }
+            }
           }
         )(pos)
     })
@@ -938,10 +930,8 @@ private object DLBySubst {
    *   --------------------------------------------------------------------------
    *   G |- <{a}*>p, D
    * }}}
-   * @param J
-   *   The variant property or convergence property in terms of new variable `x`.
-   * @example
-   *   The variant J(x) ~> (x = z) is specified as x=="x".asVariable, variant == "x = z".asFormula
+   * @param J The variant property or convergence property in terms of new variable `x`.
+   * @example The variant J(x) ~> (x = z) is specified as x=="x".asVariable, variant == "x = z".asFormula
    */
   def conRule(x: Variable, J: Formula): DependentPositionWithAppliedInputTactic = "conRule".byWithInputs(
     List(x, J),
@@ -976,8 +966,9 @@ private object DLBySubst {
     displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ |- ∃x J(x) ;; x≤0, J(x) |- P ;; x>0, J(x) |- ⟨a⟩J(x-1)",
     displayConclusion = "Γ |- ⟨a<sup>*</sup>⟩P, Δ",
-    constructor = TacticConstructor2
-      .create(VariableArg("x"), FormulaArg("J", List("x")))((x: Variable, J: Formula) => conRule(x, J)),
+    constructor = TacticConstructor2.create(VariableArg("x"), FormulaArg("J", List("x")))((x: Variable, J: Formula) =>
+      conRule(x, J)
+    ),
   )
 
   /** @see [[TactixLibrary.discreteGhost()]] */
@@ -992,10 +983,9 @@ private object DLBySubst {
     displayLevel = DisplayLevel.Menu,
     displayPremises = "Γ |- [x:=e]P, Δ",
     displayConclusion = "Γ |- P, Δ",
-    constructor = TacticConstructor2
-      .create(TermArg("e"), OptionArg(VariableArg("x", List("x"))))((e: Term, x: scala.Option[Variable]) =>
-        discreteGhost(e, x)
-      ),
+    constructor = TacticConstructor2.create(TermArg("e"), OptionArg(VariableArg("x", List("x"))))(
+      (e: Term, x: scala.Option[Variable]) => discreteGhost(e, x)
+    ),
   )
 
   /** @see [[TactixLibrary.discreteGhost]] */
@@ -1072,8 +1062,8 @@ private object DLBySubst {
     val ghosts: List[((Term, Variable), BelleExpr)] = trms
       .zipWithIndex
       .map({ case (old, oi) =>
-        val (ghost: Variable, ghostPos: Option[Position], nextCandidate) = TacticHelper
-          .findSubst(old, freshOld, origSeq)
+        val (ghost: Variable, ghostPos: Option[Position], nextCandidate) =
+          TacticHelper.findSubst(old, freshOld, origSeq)
         freshOld = nextCandidate
         (
           old -> ghost,
@@ -1098,10 +1088,8 @@ private object DLBySubst {
    *         -------------------------assignbExists(e)(1)
    *         |- \exists t [x:=t;]x>=0
    *   }}}
-   * @param e
-   *   The right-hand side term of the assignment chosen as a witness for the existential quantifier.
-   * @return
-   *   The tactic.
+   * @param e The right-hand side term of the assignment chosen as a witness for the existential quantifier.
+   * @return The tactic.
    */
   def assignbExists(e: Term): DependentPositionWithAppliedInputTactic = "assignbExistsRule".byWithInputs(
     List(e),
@@ -1142,10 +1130,8 @@ private object DLBySubst {
    *         -------------------------assignbAll(e)(-1)
    *         \forall t [x:=t;]x>=0 |-
    *   }}}
-   * @param e
-   *   The right-hand side term of the assignment chosen as a witness for the universal quantifier.
-   * @return
-   *   The tactic.
+   * @param e The right-hand side term of the assignment chosen as a witness for the universal quantifier.
+   * @return The tactic.
    */
   def assignbAll(e: Term): DependentPositionWithAppliedInputTactic = "assignbAllRule".byWithInputs(
     List(e),

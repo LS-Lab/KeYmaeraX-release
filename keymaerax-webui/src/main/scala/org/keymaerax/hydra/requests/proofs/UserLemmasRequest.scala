@@ -13,8 +13,8 @@ import java.io.File
 
 class UserLemmasRequest(db: DBAbstraction, userId: String) extends UserRequest(userId, _ => true) with ReadRequest {
   def resultingResponse(): Response = {
-    def getLemma(model: Option[ModelPOJO]): Option[(String, Lemma)] = model
-      .flatMap(m => LemmaDBFactory.lemmaDB.get("user" + File.separator + m.name).map(m.name -> _))
+    def getLemma(model: Option[ModelPOJO]): Option[(String, Lemma)] =
+      model.flatMap(m => LemmaDBFactory.lemmaDB.get("user" + File.separator + m.name).map(m.name -> _))
     val proofs = db
       .getProofsForUser(userId)
       .filterNot(_._1.temporary)

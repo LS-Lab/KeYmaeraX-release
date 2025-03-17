@@ -13,8 +13,7 @@ import scala.collection.mutable.ListBuffer
 
 /**
  * Tools for testing code generation.
- * @author
- *   Stefan Mitsch
+ * @author Stefan Mitsch
  */
 object CodeGenTestTools {
 

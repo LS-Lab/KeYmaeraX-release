@@ -622,21 +622,21 @@ class ScriptedRequestTests extends TacticTestBase {
       proofSession().defs.decls.keySet should contain(Name("x0", None))
       proofSession().defs.decls(Name("x0", None)) shouldBe Signature(None, Real, None, Right(None), UnknownLocation)
       inside(new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponse(t)) {
-        case AgendaAwesomeResponse(_, _, _, leaves, _, _, _, _) => leaves
-            .flatMap(_.goal) should contain theSameElementsInOrderAs List(
-            "x>=0, \\exists x0 x0=x ==> [{x'=1}]x>=0".asSequent,
-            "x>=0 ==> [{x'=1}]x>=0, \\exists x0 x0=x".asSequent,
-          )
+        case AgendaAwesomeResponse(_, _, _, leaves, _, _, _, _) => leaves.flatMap(_.goal) should
+            contain theSameElementsInOrderAs List(
+              "x>=0, \\exists x0 x0=x ==> [{x'=1}]x>=0".asSequent,
+              "x>=0 ==> [{x'=1}]x>=0, \\exists x0 x0=x".asSequent,
+            )
       }
 
       tacticRunner("(1,0)", existsL(-2) & dC("x>=x0".asFormula)(1))
       inside(new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponse(t)) {
-        case AgendaAwesomeResponse(_, _, _, leaves, _, _, _, _) => leaves
-            .flatMap(_.goal) should contain theSameElementsInOrderAs List(
-            "x>=0 ==> [{x'=1}]x>=0, \\exists x0 x0=x".asSequent,
-            "x>=0, x0=x ==> [{x'=1 & true&x>=x0}]x>=0".asSequent,
-            "x>=0, x0=x ==> [{x'=1}]x>=x0".asSequent,
-          )
+        case AgendaAwesomeResponse(_, _, _, leaves, _, _, _, _) => leaves.flatMap(_.goal) should
+            contain theSameElementsInOrderAs List(
+              "x>=0 ==> [{x'=1}]x>=0, \\exists x0 x0=x".asSequent,
+              "x>=0, x0=x ==> [{x'=1 & true&x>=x0}]x>=0".asSequent,
+              "x>=0, x0=x ==> [{x'=1}]x>=x0".asSequent,
+            )
       }
 
       tacticRunner("(2,1)", dIRule(1))
@@ -1003,18 +1003,19 @@ class ScriptedRequestTests extends TacticTestBase {
       val userName = "opr"
       db.db.createUser(userName, "", "1")
       val t = SessionManager.token(SessionManager.add(db.db.getUser(userName).get))
-      val content = """Theorem "Theorem 1"
-                      |Definitions
-                      |  HP a ::= { {x:=2;}*@invariant(x=2) };
-                      |End.
-                      |ProgramVariables Real x; End.
-                      |Problem
-                      |  x>=1 -> [{ x:=x+1; a; }*@invariant(x>=0)]x>=-1
-                      |End.
-                      |Tactic "Proof"
-                      |  auto
-                      |End.
-                      |End.""".stripMargin
+      val content =
+        """Theorem "Theorem 1"
+          |Definitions
+          |  HP a ::= { {x:=2;}*@invariant(x=2) };
+          |End.
+          |ProgramVariables Real x; End.
+          |Problem
+          |  x>=1 -> [{ x:=x+1; a; }*@invariant(x>=0)]x>=-1
+          |End.
+          |Tactic "Proof"
+          |  auto
+          |End.
+          |End.""".stripMargin
       inside(new UploadArchiveRequest(db.db, userName, content, None).getResultingResponse(t)) {
         case ModelUploadResponse(Some(id), None) => inside(
             new CreateModelTacticProofRequest(db.db, userName, id).getResultingResponse(t)

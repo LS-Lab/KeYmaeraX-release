@@ -27,8 +27,7 @@ import scala.collection.immutable._
  *   {{{
  *   LinearMatcher.unify("p(f())<->[x:=f()]p(x)".asFormula, "(2*x)^2>=2*x<->[x:=2*x;]x^2>=x".asFormula)
  *   }}}
- * @author
- *   Andre Platzer
+ * @author Andre Platzer
  */
 object LinearMatcher extends SchematicUnificationMatch {
   override protected def unifier(e1: Expression, e2: Expression, us: List[SubstRepl]): Subst = {

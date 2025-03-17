@@ -21,10 +21,8 @@ import scala.concurrent.duration.Duration
  *   - https://scala-slick.org/doc/3.2.3/code-generation.html#customization
  *   - https://github.com/slick/slick/blob/v3.2.3/doc/code/CodeGenerator.scala#L36-L71
  *
- * @author
- *   nfulton
- * @author
- *   Joscha Mennicken
+ * @author nfulton
+ * @author Joscha Mennicken
  */
 object SqliteTableGenerator {
 
@@ -43,8 +41,7 @@ object SqliteTableGenerator {
          * This is admittedly cryptic and hacky. If you are confused, read the Tables.scala file output by the
          * generator. */
         override def code = {
-          if (name == "_Id") { super.code.replaceFirst("O.PrimaryKey", "O.PrimaryKey, O.AutoInc") }
-          else { super.code }
+          if (name == "_Id") { super.code.replaceFirst("O.PrimaryKey", "O.PrimaryKey, O.AutoInc") } else { super.code }
         }
 
         // Yet another hack:
@@ -53,8 +50,7 @@ object SqliteTableGenerator {
         // This restores the previous behaviour so old databases containing string values
         // like "true" and "false" are not broken.
         override def rawType =
-          if (name == "userexecuted" || name == "childrenrecorded") { "String" }
-          else { super.rawType }
+          if (name == "userexecuted" || name == "childrenrecorded") { "String" } else { super.rawType }
       }
     }
   }

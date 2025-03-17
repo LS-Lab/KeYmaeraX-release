@@ -9,8 +9,7 @@ import org.keymaerax.parser.{Location, Region, UnknownLocation}
 
 /**
  * Prints the model with the problematic portion underlined and a message displayed.
- * @author
- *   Nathan Fulton
+ * @author Nathan Fulton
  */
 //@todo : @deprecated("This should be replaced with a proper pretty-printer that takes a bellexpr instead of a string and handles all locations properly", "4.1b2")
 private[keymaerax] object HackyInlineErrorMsgPrinter {

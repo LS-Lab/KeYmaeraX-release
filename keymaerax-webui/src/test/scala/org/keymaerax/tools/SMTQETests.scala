@@ -17,10 +17,8 @@ import org.scalatest.prop.TableDrivenPropertyChecks._
 /**
  * Tests Z3 on SMT-Lib format input. Created by ran on 3/27/15.
  *
- * @author
- *   Ran Ji
- * @author
- *   Stefan Mitsch
+ * @author Ran Ji
+ * @author Stefan Mitsch
  */
 class SMTQETests extends TacticTestBase {
   KeYmaeraXTool.init()

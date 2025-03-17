@@ -14,8 +14,7 @@ import org.keymaerax.info.Os
  *   - `[[org.keymaerax.tools.ext.Z3]]` - Z3 interface for real arithmetic.
  *   - `[[org.keymaerax.tools.qe.SMTConverter]]` - SMT converter for real arithmetic.
  *
- * @todo
- *   Stub. Describe for real.
+ * @todo Stub. Describe for real.
  */
 package object tools {
 

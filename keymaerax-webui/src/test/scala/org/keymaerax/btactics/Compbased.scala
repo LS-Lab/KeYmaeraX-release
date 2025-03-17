@@ -32,8 +32,7 @@ import scala.language.postfixOps
 
 /**
  * Component-based proving test cases (FASE).
- * @author
- *   Stefan Mitsch
+ * @author Stefan Mitsch
  */
 @SlowTest @nowarn("cat=deprecation&origin=org.keymaerax.btactics.TactixLibrary.master")
 class Compbased extends TacticTestBase {
@@ -276,8 +275,9 @@ class Compbased extends TacticTestBase {
       "==> (0<=sopost&sopost<=S())&true&(((t0post<=tpost&t=t0post)&sopost=sopost)&po+sopost*tpost=popost+sopost*t)&po=po0post"
         .asSequent
 
-    val (equalities, inequalities) =
-      FormulaTools.conjuncts(monitor.subgoals.loneElement.succ.loneElement).partition(_.isInstanceOf[Equal])
+    val (equalities, inequalities) = FormulaTools
+      .conjuncts(monitor.subgoals.loneElement.succ.loneElement)
+      .partition(_.isInstanceOf[Equal])
     val orderedMonitorFml = inequalities.reduceRightOption(And.apply) match {
       case Some(ineqs) => equalities.lastOption match {
           case Some(lastEq) => equalities.updated(equalities.size - 1, And(lastEq, ineqs)).reduceRight(And.apply)
@@ -436,26 +436,28 @@ class Compbased extends TacticTestBase {
   }
 
   it should "prove compatibility" in withMathematica { _ =>
-    val s = ArchiveParser
-      .parseAsFormula(getClass.getResourceAsStream("/examples/casestudies/components/robix/compatibility.kyx"))
+    val s = ArchiveParser.parseAsFormula(
+      getClass.getResourceAsStream("/examples/casestudies/components/robix/compatibility.kyx")
+    )
     proveBy(s, master()) shouldBe Symbol("proved")
   }
 
   it should "prove monolithic model" in withMathematica { _ =>
-    val s = ArchiveParser
-      .parseAsFormula(getClass.getResourceAsStream("/examples/casestudies/components/robix/system.kyx"))
+    val s =
+      ArchiveParser.parseAsFormula(getClass.getResourceAsStream("/examples/casestudies/components/robix/system.kyx"))
 
-    val invariant = """v >= 0
-                      | & dx^2+dy^2 = 1
-                      | & xo = xor & yo = yor
-                      | & (v = 0 | abs(x-xo) > v^2 / (2*B()) + V()*(v/B())
-                      |          | abs(y-yo) > v^2 / (2*B()) + V()*(v/B()))""".stripMargin.asFormula
+    val invariant =
+      """v >= 0
+        | & dx^2+dy^2 = 1
+        | & xo = xor & yo = yor
+        | & (v = 0 | abs(x-xo) > v^2 / (2*B()) + V()*(v/B())
+        |          | abs(y-yo) > v^2 / (2*B()) + V()*(v/B()))""".stripMargin.asFormula
 
     def di(a: String): DependentPositionTactic = DifferentialEquationCalculus.diffInvariant(
       "0<=t".asFormula :: "dx^2 + dy^2 = 1".asFormula :: s"v = old(v) + $a*t".asFormula ::
         s"-t * (v - $a/2*t) <= x - old(x) & x - old(x) <= t * (v - $a/2*t)".asFormula ::
-        s"-t * (v - $a/2*t) <= y - old(y) & y - old(y) <= t * (v - $a/2*t)"
-          .asFormula :: "-t * V() <= xo - old(xo) & xo - old(xo) <= t * V()".asFormula ::
+        s"-t * (v - $a/2*t) <= y - old(y) & y - old(y) <= t * (v - $a/2*t)".asFormula ::
+        "-t * V() <= xo - old(xo) & xo - old(xo) <= t * V()".asFormula ::
         "-t * V() <= yo - old(yo) & yo - old(yo) <= t * V()".asFormula :: Nil
     )
 
@@ -504,8 +506,9 @@ class Compbased extends TacticTestBase {
   }
 
   "Multiport local lane control" should "prove the leader component" in withMathematica { _ =>
-    val fml = ArchiveParser
-      .parseAsFormula(getClass.getResourceAsStream("/examples/casestudies/components/llc/multiport_leader.kyx"))
+    val fml = ArchiveParser.parseAsFormula(
+      getClass.getResourceAsStream("/examples/casestudies/components/llc/multiport_leader.kyx")
+    )
     proveBy(fml, master()) shouldBe Symbol("proved")
   }
 
@@ -522,8 +525,9 @@ class Compbased extends TacticTestBase {
   }
 
   it should "prove compatibility" in withMathematica { _ =>
-    val s = ArchiveParser
-      .parseAsFormula(getClass.getResourceAsStream("/examples/casestudies/components/llc/multiport_compatibility.kyx"))
+    val s = ArchiveParser.parseAsFormula(
+      getClass.getResourceAsStream("/examples/casestudies/components/llc/multiport_compatibility.kyx")
+    )
     proveBy(s, master()) shouldBe Symbol("proved")
   }
 
@@ -540,20 +544,23 @@ class Compbased extends TacticTestBase {
   }
 
   "ETCS" should "prove RBC component" in withMathematica { _ =>
-    val s = ArchiveParser
-      .parseAsFormula(getClass.getResourceAsStream("/examples/casestudies/components/etcs/multiport_rbc.kyx"))
+    val s = ArchiveParser.parseAsFormula(
+      getClass.getResourceAsStream("/examples/casestudies/components/etcs/multiport_rbc.kyx")
+    )
     proveBy(s, master()) shouldBe Symbol("proved")
   }
 
   it should "prove train component" in withMathematica { _ =>
-    val s = ArchiveParser
-      .parseAsFormula(getClass.getResourceAsStream("/examples/casestudies/components/etcs/multiport_train.kyx"))
+    val s = ArchiveParser.parseAsFormula(
+      getClass.getResourceAsStream("/examples/casestudies/components/etcs/multiport_train.kyx")
+    )
     proveBy(s, master()) shouldBe Symbol("proved")
   }
 
   it should "prove compatibility" in withMathematica { _ =>
-    val s = ArchiveParser
-      .parseAsFormula(getClass.getResourceAsStream("/examples/casestudies/components/etcs/multiport_compatibility.kyx"))
+    val s = ArchiveParser.parseAsFormula(
+      getClass.getResourceAsStream("/examples/casestudies/components/etcs/multiport_compatibility.kyx")
+    )
     proveBy(s, master()) shouldBe Symbol("proved")
   }
 

@@ -43,10 +43,8 @@ import scala.util.{Failure, Success, Try}
 
 /**
  * Implementation: Tactics that execute and use the output of tools. Also contains tactics for pre-processing sequents.
- * @author
- *   Nathan Fulton
- * @author
- *   Stefan Mitsch
+ * @author Nathan Fulton
+ * @author Stefan Mitsch
  */
 private object ToolTactics extends Logging {
   private val namespace = "tooltactics"
@@ -138,8 +136,8 @@ private object ToolTactics extends Logging {
   }
 
   @Derivation
-  val printCexInfo: PlainTacticInfo = PlainTacticInfo
-    .create(name = "printCex", constructor = TacticConstructor0.create()(() => printCex))
+  val printCexInfo: PlainTacticInfo =
+    PlainTacticInfo.create(name = "printCex", constructor = TacticConstructor0.create()(() => printCex))
 
   /** Assert that there is no counter example. skip if none, error if there is. */
   // was  "assertNoCEX"
@@ -562,12 +560,9 @@ private object ToolTactics extends Logging {
   /**
    * Syntactic approx. of degree of variable x in term t
    *
-   * @param t
-   *   the term t
-   * @param x
-   *   the variable x to compute the degree
-   * @return
-   *   the degree
+   * @param t the term t
+   * @param x the variable x to compute the degree
+   * @return the degree
    */
   def varDegree(t: Term, x: Variable): Int = {
     val tx = termDegs(t)
@@ -637,8 +632,7 @@ private object ToolTactics extends Logging {
 
   /**
    * Performs QE and allows the goal to be reduced to something that isn't necessarily true.
-   * @note
-   *   You probably want to use fullQE most of the time, because partialQE will destroy the structure of the sequent
+   * @note You probably want to use fullQE most of the time, because partialQE will destroy the structure of the sequent
    */
   // was "pQE"
   def partialQE(qeTool: => QETacticTool, reformatAssumptions: Boolean = true): BelleExpr = anon((s: Sequent) => {
@@ -828,27 +822,35 @@ private object ToolTactics extends Logging {
               // @note Exception reports variable unifications and function symbol unifications swapped
               if (ex.input.isInstanceOf[FuncOf] && !ex.shape.isInstanceOf[FuncOf]) {
                 FormulaTools.posOf(e, ex.shape) match {
-                  case Some(pp) => TactixLibrary.transform(ex.input)(pos.topLevel ++ pp) &
-                      DebuggingTactics
-                        .assertE(expandTo, "Unexpected edit result", new TacticInapplicableFailure(_))(pos) |
-                      TactixLibrary.transform(expandTo)(pos) &
-                      DebuggingTactics
-                        .assertE(expandTo, "Unexpected edit result", new TacticInapplicableFailure(_))(pos)
+                  case Some(pp) => TactixLibrary.transform(ex.input)(pos.topLevel ++ pp) & DebuggingTactics.assertE(
+                      expandTo,
+                      "Unexpected edit result",
+                      new TacticInapplicableFailure(_),
+                    )(pos) | TactixLibrary.transform(expandTo)(pos) & DebuggingTactics.assertE(
+                      expandTo,
+                      "Unexpected edit result",
+                      new TacticInapplicableFailure(_),
+                    )(pos)
                   case _ => TactixLibrary.transform(expandTo)(pos) &
-                      DebuggingTactics
-                        .assertE(expandTo, "Unexpected edit result", new TacticInapplicableFailure(_))(pos)
+                      DebuggingTactics.assertE(expandTo, "Unexpected edit result", new TacticInapplicableFailure(_))(
+                        pos
+                      )
                 }
               } else {
                 FormulaTools.posOf(e, ex.input) match {
-                  case Some(pp) => TactixLibrary.transform(ex.shape)(pos.topLevel ++ pp) &
-                      DebuggingTactics
-                        .assertE(expandTo, "Unexpected edit result", new TacticInapplicableFailure(_))(pos) |
-                      TactixLibrary.transform(expandTo)(pos) &
-                      DebuggingTactics
-                        .assertE(expandTo, "Unexpected edit result", new TacticInapplicableFailure(_))(pos)
+                  case Some(pp) => TactixLibrary.transform(ex.shape)(pos.topLevel ++ pp) & DebuggingTactics.assertE(
+                      expandTo,
+                      "Unexpected edit result",
+                      new TacticInapplicableFailure(_),
+                    )(pos) | TactixLibrary.transform(expandTo)(pos) & DebuggingTactics.assertE(
+                      expandTo,
+                      "Unexpected edit result",
+                      new TacticInapplicableFailure(_),
+                    )(pos)
                   case _ => TactixLibrary.transform(expandTo)(pos) &
-                      DebuggingTactics
-                        .assertE(expandTo, "Unexpected edit result", new TacticInapplicableFailure(_))(pos)
+                      DebuggingTactics.assertE(expandTo, "Unexpected edit result", new TacticInapplicableFailure(_))(
+                        pos
+                      )
                 }
               }
           }
@@ -1036,19 +1038,21 @@ private object ToolTactics extends Logging {
     ).fact
 
     def pushIn(remainder: PosInExpr): DependentPositionTactic = anon((pp: Position, ss: Sequent) =>
-      (ss.sub(pp) match {
-        case Some(Imply(left: BinaryCompositeFormula, right: BinaryCompositeFormula))
-            if left.getClass == right.getClass && left.left == right.left =>
-          useAt(propPushLeftIn(left.reapply), PosInExpr(1 :: Nil))(pp)
-        case Some(Imply(left: BinaryCompositeFormula, right: BinaryCompositeFormula))
-            if left.getClass == right.getClass && left.right == right.right =>
-          useAt(propPushRightIn(left.reapply), PosInExpr(1 :: Nil))(pp)
-        case Some(Imply(Box(a, _), Box(b, _))) if a == b => useAt(Ax.K, PosInExpr(1 :: Nil))(pp)
-        case Some(Imply(Forall(lv, _), Forall(rv, _))) if lv == rv => useAt(Ax.allDist)(pp)
-        case Some(Imply(Exists(lv, _), Exists(rv, _))) if lv == rv => useAt(existsDistribute, PosInExpr(1 :: Nil))(pp)
-        case Some(Imply(_, _)) => useAt(implyFact, PosInExpr(1 :: Nil))(pos)
-        case _ => skip
-      }) & (if (remainder.pos.isEmpty) skip else pushIn(remainder.child)(pp ++ PosInExpr(remainder.head :: Nil)))
+      (
+        ss.sub(pp) match {
+          case Some(Imply(left: BinaryCompositeFormula, right: BinaryCompositeFormula))
+              if left.getClass == right.getClass && left.left == right.left =>
+            useAt(propPushLeftIn(left.reapply), PosInExpr(1 :: Nil))(pp)
+          case Some(Imply(left: BinaryCompositeFormula, right: BinaryCompositeFormula))
+              if left.getClass == right.getClass && left.right == right.right =>
+            useAt(propPushRightIn(left.reapply), PosInExpr(1 :: Nil))(pp)
+          case Some(Imply(Box(a, _), Box(b, _))) if a == b => useAt(Ax.K, PosInExpr(1 :: Nil))(pp)
+          case Some(Imply(Forall(lv, _), Forall(rv, _))) if lv == rv => useAt(Ax.allDist)(pp)
+          case Some(Imply(Exists(lv, _), Exists(rv, _))) if lv == rv => useAt(existsDistribute, PosInExpr(1 :: Nil))(pp)
+          case Some(Imply(_, _)) => useAt(implyFact, PosInExpr(1 :: Nil))(pos)
+          case _ => skip
+        }
+      ) & (if (remainder.pos.isEmpty) skip else pushIn(remainder.child)(pp ++ PosInExpr(remainder.head :: Nil)))
     )
 
     val key =

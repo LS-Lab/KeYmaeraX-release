@@ -140,8 +140,9 @@ class ToolTacticsTests extends TacticTestBase {
         .asSequent
     proveBy(
       s,
-      TactixLibrary
-        .transform("abs(x_0-xo_1)>v_0^2/(2*b())+V()*v_0/b()+(A()/b()+1)*(A()/2*t^2+t*(v_0+V()))".asFormula)(-7),
+      TactixLibrary.transform("abs(x_0-xo_1)>v_0^2/(2*b())+V()*v_0/b()+(A()/b()+1)*(A()/2*t^2+t*(v_0+V()))".asFormula)(
+        -7
+      ),
     ).subgoals.loneElement shouldBe
       "A()>=0, b()>0, ep()>0, V()>=0, vxo^2+vyo^2<=V()^2, r!=0, abs(x_0-xo_1)>v_0^2/(2*b())+V()*v_0/b()+(A()/b()+1)*(A()/2*t^2+t*(v_0+V())), v_0>=0, -t*(v-A()/2*t)<=y-y_0, y-y_0<=t*(v-A()/2*t), -t*(v-A()/2*t)<=x-x_0, x-x_0<=t*(v-A()/2*t), v=v_0+A()*t, -t*V()<=yo-yo_1, yo-yo_1<=t*V(), -t*V()<=xo-xo_1, xo-xo_1<=t*V(), dx^2+dy^2=1, t>=0, t<=ep(), v>=0, v>0\n  ==>  abs(x-xo)>v^2/(2*b())+V()*v/b(), abs(y-yo)>v^2/(2*b())+V()*v/b()"
         .asSequent
@@ -312,11 +313,12 @@ class ToolTacticsTests extends TacticTestBase {
 
   it should "abbreviate and expand and transform" in withQE { _ =>
     withDatabase { db =>
-      val content = """ArchiveEntry "Test"
-                      |Definitions import kyx.math.abs; Real g; End.
-                      |ProgramVariables Real x; End.
-                      |Problem 2*g*abs(x)=37+4 End.
-                      |End.""".stripMargin
+      val content =
+        """ArchiveEntry "Test"
+          |Definitions import kyx.math.abs; Real g; End.
+          |ProgramVariables Real x; End.
+          |Problem 2*g*abs(x)=37+4 End.
+          |End.""".stripMargin
       val (proofId, provable) = db.proveByWithProofId(content, edit("abbrv(2*g())*expand(abs(x))=41".asFormula)(1))
       provable.subgoals.loneElement shouldBe "abbrv=2*g(), x>=0&abs_=x | x<0&abs_=-x ==> abbrv*abs_=41".asSequent
       db.extractTactic(proofId) shouldBe

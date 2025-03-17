@@ -23,10 +23,8 @@ import scala.collection.immutable._
 
 /**
  * Converts [[com.wolfram.jlink.Expr]] to [[Expression]].
- * @author
- *   Nathan Fulton
- * @author
- *   Stefan Mitsch
+ * @author Nathan Fulton
+ * @author Stefan Mitsch
  */
 object MathematicaToKeYmaera extends MathematicaToKeYmaera
 class MathematicaToKeYmaera extends M2KConverter[KExpr] {
@@ -214,8 +212,9 @@ class MathematicaToKeYmaera extends M2KConverter[KExpr] {
       require(exprs.length % 2 == 1, "Expected pairs of expressions separated by operators")
       if (exprs.length == 1) Nil
       // @note Instead of importing from a newly created Mathematica expression, could also copy the comparison conversion again
-      else disposeAfter(MathematicaOpSpec(exprs(1))(exprs(0) :: exprs(2) :: Nil), convert)
-        .asInstanceOf[ComparisonFormula] ::
+      else disposeAfter(MathematicaOpSpec(exprs(1))(exprs(0) :: exprs(2) :: Nil), convert).asInstanceOf[
+        ComparisonFormula
+      ] ::
         // keep right-child exprs(2) around because that's the left-child for the subsequent inequality if any
         extractInequalities(exprs.tail.tail)
     }

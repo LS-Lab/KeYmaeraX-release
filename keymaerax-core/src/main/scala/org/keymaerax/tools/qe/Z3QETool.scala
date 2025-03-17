@@ -12,13 +12,10 @@ import org.keymaerax.tools.{Tool, ToolOperationManagement}
 
 /**
  * Z3 trusted quantifier elimination tool.
- * @see
- *   [[org.keymaerax.btactics.Z3ToolProvider]] to obtain instances of Z3 that are properly initialized and
+ * @see [[org.keymaerax.btactics.Z3ToolProvider]] to obtain instances of Z3 that are properly initialized and
  *   installed/updated. Created by smitsch on 4/27/15.
- * @author
- *   Ran Ji
- * @author
- *   Stefan Mitsch
+ * @author Ran Ji
+ * @author Stefan Mitsch
  */
 final class Z3QETool extends Tool with QETool with ToolOperationManagement {
   // Z3 is a trusted tool. Do not extend this class with other tool interfaces. Extend ext.Z3 instead.

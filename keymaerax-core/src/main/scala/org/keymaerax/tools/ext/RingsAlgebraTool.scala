@@ -277,8 +277,8 @@ class RingsLibrary(terms: Iterable[Term]) {
       val pdve = p.dv.exponents
       p.dv.exponents(d) > 0
     }
-    def mapToKeep(keep: Monomial[Rational[BigInteger]] => Boolean): Ring = p
-      .mapTerms(Q, { p => if (keep(p)) p else p.setCoefficient(Rational(0)(Z)) })
+    def mapToKeep(keep: Monomial[Rational[BigInteger]] => Boolean): Ring =
+      p.mapTerms(Q, { p => if (keep(p)) p else p.setCoefficient(Rational(0)(Z)) })
     val poly = mapToKeep(keep)
     val rest = mapToKeep(!keep(_))
     (poly, rest)
@@ -352,30 +352,30 @@ class RingsAlgebraTool extends Tool with AlgebraTool {
   override val name: String = "RingsAlgebra"
 
   /** @inheritdoc */
-  final override def shutdown(): Unit = {}
+  override final def shutdown(): Unit = {}
 
   /** @inheritdoc */
-  final override def restart(): Unit = {}
+  override final def restart(): Unit = {}
 
   /** @inheritdoc */
-  final override def isInitialized: Boolean = true
+  override final def isInitialized: Boolean = true
 
   /** @inheritdoc */
-  final override def cancel(): Boolean = true
+  override final def cancel(): Boolean = true
 
   /** @inheritdoc */
-  final override def quotientRemainder(term: Term, div: Term, x: Variable): (Term, Term) = {
+  override final def quotientRemainder(term: Term, div: Term, x: Variable): (Term, Term) = {
     new RingsLibrary(x :: List(term, div)).quotientRemainder(term, div, x)
   }
 
   /** @inheritdoc */
-  final override def groebnerBasis(polynomials: List[Term]): List[Term] = {
+  override final def groebnerBasis(polynomials: List[Term]): List[Term] = {
     if (polynomials.isEmpty) return List()
     new RingsLibrary(polynomials).groebnerBasis(polynomials)
   }
 
   /** @inheritdoc */
-  final override def polynomialReduce(polynomial: Term, GB: List[Term]): (List[Term], Term) = {
+  override final def polynomialReduce(polynomial: Term, GB: List[Term]): (List[Term], Term) = {
     new RingsLibrary(polynomial :: GB).polynomialReduce(polynomial, GB)
   }
 

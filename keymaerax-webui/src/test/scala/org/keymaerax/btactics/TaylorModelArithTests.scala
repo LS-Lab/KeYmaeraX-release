@@ -37,8 +37,14 @@ class TaylorModelArithTests extends TacticTestBase {
   lazy val x0 = PolynomialArithV2.ofTerm("x0()".asTerm)
   lazy val y0 = PolynomialArithV2.ofTerm("y0()".asTerm)
   lazy val tm1 = TaylorModelArith.TM("x".asTerm, x0 + y0, "-0.01".asTerm, "0.02".asTerm, context3, QE)
-  lazy val tm2 = TaylorModelArith
-    .TM("y".asTerm, PolynomialArithV2.Const(BigDecimal("0.5")) * x0 - y0, "0".asTerm, "0.1".asTerm, context3, QE)
+  lazy val tm2 = TaylorModelArith.TM(
+    "y".asTerm,
+    PolynomialArithV2.Const(BigDecimal("0.5")) * x0 - y0,
+    "0".asTerm,
+    "0.1".asTerm,
+    context3,
+    QE,
+  )
   lazy val third = TaylorModelArith.Exact(PolynomialArithV2.ofTerm("1/3".asTerm), context3)
   lazy val tm3 = third *! tm1
   lazy val tm100000 = TaylorModelArith.Exact(PolynomialArithV2.ofTerm("0.000001".asTerm), context3) *! tm1
@@ -179,8 +185,14 @@ class TaylorModelArithTests extends TacticTestBase {
 
   it should "drop empty interval" in withMathematica { qeTool =>
     val context = IndexedSeq("x = 1.4 + 0.15 * e0".asFormula)
-    val x = TaylorModelArith
-      .TM("x".asTerm, PolynomialArithV2.ofTerm("1.4 + 0.15 * e0".asTerm), Number(0), Number(0), context, QE)
+    val x = TaylorModelArith.TM(
+      "x".asTerm,
+      PolynomialArithV2.ofTerm("1.4 + 0.15 * e0".asTerm),
+      Number(0),
+      Number(0),
+      context,
+      QE,
+    )
     x.dropEmptyInterval.get.conclusion.succ.loneElement shouldBe "x=0+1.4/1*1+0+0.15/1*(1*e0^1)+0".asFormula
   }
 
@@ -209,10 +221,16 @@ class TaylorModelArithTests extends TacticTestBase {
         QE,
       )
       .approx
-    val x0 = TaylorModelArith
-      .TM("x0()".asTerm, PolynomialArithV2.ofTerm("1/100*y0()".asTerm), Number(0), Number(0.0001), context, QE)
-    val y0 = TaylorModelArith
-      .TM("y0()".asTerm, PolynomialArithV2.ofTerm("12.34".asTerm), Number(0), Number(0), context, QE)
+    val x0 = TaylorModelArith.TM(
+      "x0()".asTerm,
+      PolynomialArithV2.ofTerm("1/100*y0()".asTerm),
+      Number(0),
+      Number(0.0001),
+      context,
+      QE,
+    )
+    val y0 =
+      TaylorModelArith.TM("y0()".asTerm, PolynomialArithV2.ofTerm("12.34".asTerm), Number(0), Number(0), context, QE)
     val xFml =
       "\\exists err_ (x=0.625*y0()^2+0.2*x0()*y0()+0.3333*x0()^2+err_&(-0.000000000)<=err_&err_<=0.000033334)".asFormula
     x.prettyPrv.conclusion.succ(0) shouldBe xFml
@@ -266,10 +284,22 @@ class TaylorModelArithTests extends TacticTestBase {
     ("t = 0, x = 1.4 + 0.15 * r0, y = 2.4 + 0.05 * r1, r0 = e0, r1 = e1, -1 <= e0, e0 <= 1, -1 <= e1, e1 <= 1," +
       "-1 <= r0, r0 <= 1, -1 <= r1, r1 <= 1").split(',').map(_.asFormula).toIndexedSeq
   val vdpProgram = "{x' = y, y' = (1 - x^2)*y - x,t'=1}".asDifferentialProgram
-  lazy val vdpX = TaylorModelArith
-    .TM("x".asTerm, PolynomialArithV2.ofTerm("1.4 + 0.15 * r0".asTerm), Number(0), Number(0), vdpContext, QE)
-  lazy val vdpY = TaylorModelArith
-    .TM("y".asTerm, PolynomialArithV2.ofTerm("2.4 + 0.05 * r1".asTerm), Number(0), Number(0), vdpContext, QE)
+  lazy val vdpX = TaylorModelArith.TM(
+    "x".asTerm,
+    PolynomialArithV2.ofTerm("1.4 + 0.15 * r0".asTerm),
+    Number(0),
+    Number(0),
+    vdpContext,
+    QE,
+  )
+  lazy val vdpY = TaylorModelArith.TM(
+    "y".asTerm,
+    PolynomialArithV2.ofTerm("2.4 + 0.05 * r1".asTerm),
+    Number(0),
+    Number(0),
+    vdpContext,
+    QE,
+  )
   def vdpLemmas(order: Int) = new TaylorModelArith.TemplateLemmas(vdpProgram, order)
 
   "timeStepLemma" should "van der Pol" in withMathematica { qeTool =>
@@ -278,10 +308,10 @@ class TaylorModelArithTests extends TacticTestBase {
       val vdp = vdpLemmas(3)
       val x = vdpX
       val y = vdpY
-      val r0 = TaylorModelArith
-        .TM("r0".asTerm, PolynomialArithV2.ofTerm("e0".asTerm), Number(0), Number(0), context, QE)
-      val r1 = TaylorModelArith
-        .TM("r1".asTerm, PolynomialArithV2.ofTerm("e1".asTerm), Number(0), Number(0), context, QE)
+      val r0 =
+        TaylorModelArith.TM("r0".asTerm, PolynomialArithV2.ofTerm("e0".asTerm), Number(0), Number(0), context, QE)
+      val r1 =
+        TaylorModelArith.TM("r1".asTerm, PolynomialArithV2.ofTerm("e1".asTerm), Number(0), Number(0), context, QE)
       val t = proveBy(Sequent(context, IndexedSeq("t = 0".asFormula)), id)
       val res = new vdp.TimeStep(Seq(x, y), Seq(r0, r1), t, 0.01).timeStepLemma
       // println(new KeYmaeraXPrettierPrinter(100).stringify(res.conclusion.succ.loneElement))
@@ -324,13 +354,13 @@ class TaylorModelArithTests extends TacticTestBase {
       val vdp = vdpLemmas(1)
       val x = vdpX
       val y = vdpY
-      val r0 = TaylorModelArith
-        .TM("r0".asTerm, PolynomialArithV2.ofTerm("e0".asTerm), Number(0), Number(0), context, QE)
-      val r1 = TaylorModelArith
-        .TM("r1".asTerm, PolynomialArithV2.ofTerm("e1".asTerm), Number(0), Number(0), context, QE)
+      val r0 =
+        TaylorModelArith.TM("r0".asTerm, PolynomialArithV2.ofTerm("e0".asTerm), Number(0), Number(0), context, QE)
+      val r1 =
+        TaylorModelArith.TM("r1".asTerm, PolynomialArithV2.ofTerm("e1".asTerm), Number(0), Number(0), context, QE)
       val t = proveBy(Sequent(context, IndexedSeq("t = 0".asFormula)), id)
-      val (res, tmIvls, rIvls, (tmEqs, rEqs, t1Eq)) = new vdp.TimeStep(Seq(x, y), Seq(r0, r1), t, 0.01)
-        .timeStepLemma("Safe(t, y, x)".asFormula)
+      val (res, tmIvls, rIvls, (tmEqs, rEqs, t1Eq)) =
+        new vdp.TimeStep(Seq(x, y), Seq(r0, r1), t, 0.01).timeStepLemma("Safe(t, y, x)".asFormula)
       // println(new KeYmaeraXPrettierPrinter(100).stringify(res))
       val contextE =
         ("r0=e0, r1=e1, (-1)<=e0, e0<=1, (-1)<=e1, e1<=1, (-1)<=r0, r0<=1, (-1)<=r1, r1<=1," +
@@ -362,8 +392,10 @@ class TaylorModelArithTests extends TacticTestBase {
   "TM partition" should "partition" in withMathematica { _ =>
     import PolynomialArithV2._
     import TaylorModelArith._
-    val (l, r, newElemEq) = ((tm1 + Exact(ofInt(42), tm1.context)) ^ 3)
-      .partition("fresh".asVariable, ((n: BigDecimal, d: BigDecimal, pp: PowerProduct) => pp.degree == 0))
+    val (l, r, newElemEq) = ((tm1 + Exact(ofInt(42), tm1.context)) ^ 3).partition(
+      "fresh".asVariable,
+      ((n: BigDecimal, d: BigDecimal, pp: PowerProduct) => pp.degree == 0),
+    )
     l.prettyPrv.conclusion.succ(0) shouldBe "\\exists err_ ((x+42)^3=74080+fresh+err_&0<=err_&err_<=0)".asFormula
     r.prettyPrv.conclusion.succ(0) shouldBe
       "\\exists err_ (fresh=5292*y0()+5292*x0()+126*y0()^2+252*x0()*y0()+126*x0()^2+y0()^3+3*x0()*y0()^2+3*x0()^2*y0()+x0()^3+err_&(-50.098)<=err_&err_<=124.22)"
@@ -375,23 +407,24 @@ class TaylorModelArithTests extends TacticTestBase {
   "identityPrecondition" should "precondition" in withMathematica { _ =>
     import PolynomialArithV2._
     import TaylorModelArith._
-    val context = """(-1) <= e0, e0 <= 1, (-1) <= e1, e1 <= 1, t = 0.01,
-                    |   \exists err_
-                    |   (
-                    |     x = 1.4238123046 + 0.000497600 * r1 + 0.14994210 * r0 + err_ &
-                    |     (-8724) * 10^(-9) <= err_ & err_ <= 4131 * 10^(-9)
-                    |   ),
-                    |   \exists err_
-                    |   (
-                    |     y =
-                    |     2.362222245 + 0.049486204 * r1 + -0.011533035 * r0 + -0.0002100 * r0 * r1 +
-                    |     -0.0005400 * r0^2 +
-                    |     err_ &
-                    |     (-3991) * 10^(-8) <= err_ & err_ <= 1096 * 10^(-7)
-                    |   ),
-                    |   \exists err_ (r0 = 0.9*e0 + err_ & -0.1 <= err_ & err_ <= 0.1),
-                    |   \exists err_ (r1 = 0.8*e1 + err_ & -0.2 <= err_ & err_ <= 0.2)
-                    |   """.stripMargin.split(',').map(_.asFormula).toIndexedSeq
+    val context =
+      """(-1) <= e0, e0 <= 1, (-1) <= e1, e1 <= 1, t = 0.01,
+        |   \exists err_
+        |   (
+        |     x = 1.4238123046 + 0.000497600 * r1 + 0.14994210 * r0 + err_ &
+        |     (-8724) * 10^(-9) <= err_ & err_ <= 4131 * 10^(-9)
+        |   ),
+        |   \exists err_
+        |   (
+        |     y =
+        |     2.362222245 + 0.049486204 * r1 + -0.011533035 * r0 + -0.0002100 * r0 * r1 +
+        |     -0.0005400 * r0^2 +
+        |     err_ &
+        |     (-3991) * 10^(-8) <= err_ & err_ <= 1096 * 10^(-7)
+        |   ),
+        |   \exists err_ (r0 = 0.9*e0 + err_ & -0.1 <= err_ & err_ <= 0.1),
+        |   \exists err_ (r1 = 0.8*e1 + err_ & -0.2 <= err_ & err_ <= 0.2)
+        |   """.stripMargin.split(',').map(_.asFormula).toIndexedSeq
     val x = TM(
       "x".asTerm,
       ofTerm("1.4238123046 + 0.000497600 * r1 + 0.14994210 * r0".asTerm),
@@ -445,10 +478,10 @@ class TaylorModelArithTests extends TacticTestBase {
       val vdp = vdpLemmas(1)
       val x = vdpX
       val y = vdpY
-      val r0 = TaylorModelArith
-        .TM("r0".asTerm, PolynomialArithV2.ofTerm("e0".asTerm), Number(0), Number(0), context, QE)
-      val r1 = TaylorModelArith
-        .TM("r1".asTerm, PolynomialArithV2.ofTerm("e1".asTerm), Number(0), Number(0), context, QE)
+      val r0 =
+        TaylorModelArith.TM("r0".asTerm, PolynomialArithV2.ofTerm("e0".asTerm), Number(0), Number(0), context, QE)
+      val r1 =
+        TaylorModelArith.TM("r1".asTerm, PolynomialArithV2.ofTerm("e1".asTerm), Number(0), Number(0), context, QE)
       val t = proveBy(Sequent(context, IndexedSeq("t = 0".asFormula)), id)
       val prv = proveBy(
         Sequent(context, IndexedSeq(Box(ODESystem(vdpProgram, True), "y < 3 & x < 3 & t >= 0".asFormula))),
@@ -461,8 +494,9 @@ class TaylorModelArithTests extends TacticTestBase {
       xs.forall(_.context == context1) shouldBe true
       rs.forall(_.context == context1) shouldBe true
       xs.map(_.prettyPrv.conclusion.succ(0)) shouldBe
-        List("\\exists err_ (x=1.424+r0+err_&0<=err_&err_<=0)", "\\exists err_ (y=2.362+r1+err_&0<=err_&err_<=0)")
-          .map(_.asFormula)
+        List("\\exists err_ (x=1.424+r0+err_&0<=err_&err_<=0)", "\\exists err_ (y=2.362+r1+err_&0<=err_&err_<=0)").map(
+          _.asFormula
+        )
       rs.map(_.prettyPrv.conclusion.succ(0)) shouldBe List(
         "\\exists err_ (r0=0.15*e0+err_&(-0.001020)<=err_&err_<=0.0006286)",
         "\\exists err_ (r1=0.05*e1+err_&(-0.01371)<=err_&err_<=0.01354)",
@@ -483,10 +517,10 @@ class TaylorModelArithTests extends TacticTestBase {
       println("... initialized.")
       val x = vdpX
       val y = vdpY
-      val r0 = TaylorModelArith
-        .TM("r0".asTerm, PolynomialArithV2.ofTerm("e0".asTerm), Number(0), Number(0), context, QE)
-      val r1 = TaylorModelArith
-        .TM("r1".asTerm, PolynomialArithV2.ofTerm("e1".asTerm), Number(0), Number(0), context, QE)
+      val r0 =
+        TaylorModelArith.TM("r0".asTerm, PolynomialArithV2.ofTerm("e0".asTerm), Number(0), Number(0), context, QE)
+      val r1 =
+        TaylorModelArith.TM("r1".asTerm, PolynomialArithV2.ofTerm("e1".asTerm), Number(0), Number(0), context, QE)
       val t = proveBy(Sequent(context, IndexedSeq("t = 0".asFormula)), id)
       val prv = proveBy(
         Sequent(context, IndexedSeq(Box(ODESystem(vdpProgram, True), "y < 3 & x < 3 & t >= 0".asFormula))),

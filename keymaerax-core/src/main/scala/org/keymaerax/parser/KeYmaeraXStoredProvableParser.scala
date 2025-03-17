@@ -13,19 +13,15 @@ import scala.collection.mutable.ListBuffer
 
 /**
  * Parses provable strings in the format stored by [[org.keymaerax.core.Provable.toStorageString()]].
- * @author
- *   Stefan Mitsch
+ * @author Stefan Mitsch
  */
 object KeYmaeraXStoredProvableParser extends (String => immutable.List[Sequent]) {
 
   /**
    * Returns the sequents parsed from `input`.
-   * @param input
-   *   The contents of the stored provable
-   * @return
-   *   A list of sequents.
-   * @throws ParseException
-   *   When input cannot be parsed.
+   * @param input The contents of the stored provable
+   * @return A list of sequents.
+   * @throws ParseException When input cannot be parsed.
    */
   def apply(input: String): immutable.List[Sequent] =
     try { parseProvable(KeYmaeraXLexer.inMode(input, StoredProvableMode)) }
@@ -37,10 +33,8 @@ object KeYmaeraXStoredProvableParser extends (String => immutable.List[Sequent])
 
   /**
    * Parses the token stream `input` into a list of sequents.
-   * @param input
-   *   Token stream.
-   * @return
-   *   A list of sequents.
+   * @param input Token stream.
+   * @return A list of sequents.
    */
   private def parseProvable(input: TokenStream): immutable.List[Sequent] = {
     require(
@@ -68,9 +62,7 @@ object KeYmaeraXStoredProvableParser extends (String => immutable.List[Sequent])
     formulaTokens.map(ts => KeYmaeraXParser.formulaTokenParser(ts :+ Token(EOF))).toIndexedSeq
   } ensures (r => r.size == (if (input.isEmpty) 0 else 1) + input.count(_.tok == FORMULA_SEPARATOR))
 
-  /**
-   * Splits `tokens` into sub-streams at boundaries satisfying `pred`. The boundary token is removed from the result.
-   */
+  /** Splits `tokens` into sub-streams at boundaries satisfying `pred`. The boundary token is removed from the result. */
   private def split(tokens: TokenStream, pred: Token => Boolean): List[TokenStream] = {
     var rest = tokens
     val result: ListBuffer[TokenStream] = ListBuffer.empty

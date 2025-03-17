@@ -26,17 +26,12 @@ case class Name(name: String, index: Option[Int] = None) {
 /**
  * Signature is a domain sort, codomain sort, argument names, expression used as interpretation, location that starts
  * the declaration. The signature of a function/predicate/program symbol.
- * @param domain
- *   the source domain required as an argument (if any).
- * @param codomain
- *   the resulting target domain.
- * @param arguments
- *   the list of named arguments (and their sorts which are compatible with `domain`).
- * @param interpretation
- *   Left(implicitly) defined interpreted symbol, or uninterpreted symbol if Right(None), or Right(explicitly) defined
- *   interpreted symbols.
- * @param loc
- *   the location in the model archive file where this was declared.
+ * @param domain the source domain required as an argument (if any).
+ * @param codomain the resulting target domain.
+ * @param arguments the list of named arguments (and their sorts which are compatible with `domain`).
+ * @param interpretation Left(implicitly) defined interpreted symbol, or uninterpreted symbol if Right(None), or
+ *   Right(explicitly) defined interpreted symbols.
+ * @param loc the location in the model archive file where this was declared.
  */
 //@todo check whether domain sort is compatible with sorts of arguments
 case class Signature(
@@ -215,8 +210,9 @@ case class Declaration(decls: Map[Name, Signature]) {
   def elaborateToFunctions[T <: Expression](expr: T, taboo: Set[Function] = Set.empty): T =
     try { expr.elaborateToFunctions(asNamedSymbols.toSet -- taboo).asInstanceOf[T] }
     catch {
-      case ex: ElaborationError => (BuiltinSymbols.all.asNamedSymbols.toSet -- taboo)
-          .find(n => n.name == ex.v.name && n.index == ex.v.index) match {
+      case ex: ElaborationError => (BuiltinSymbols.all.asNamedSymbols.toSet -- taboo).find(n =>
+          n.name == ex.v.name && n.index == ex.v.index
+        ) match {
           case Some(f) => throw ParseException(
               "Name " + ex.v + " has builtin meaning as an interpreted function " + f.prettyString +
                 ", so cannot be used as a variable",
@@ -327,9 +323,7 @@ case class Declaration(decls: Map[Name, Signature]) {
     SubstitutionPair(what, repl)
   }
 
-  /**
-   * All symbols of this declaration used (transitively) from `e`, except when explicitly quantified symbols or `taboo`.
-   */
+  /** All symbols of this declaration used (transitively) from `e`, except when explicitly quantified symbols or `taboo`. */
   def project(e: List[Expression], taboo: Set[Name] = Set.empty): Declaration = {
     val syms = e.flatMap(_.baseSymbols).map(s => Name(s.name, s.index)).toSet -- taboo
     Declaration(decls.flatMap({
@@ -544,7 +538,7 @@ case class ParsedArchiveEntry(
 }
 
 trait ArchiveParser extends (String => List[ParsedArchiveEntry]) {
-  final override def apply(input: String): List[ParsedArchiveEntry] = parse(input)
+  override final def apply(input: String): List[ParsedArchiveEntry] = parse(input)
   final def parse(input: String): List[ParsedArchiveEntry] = parse(input, parseTactics = true)
   @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   final def parse(input: String, parseTactics: Boolean): List[ParsedArchiveEntry] = {
@@ -552,8 +546,9 @@ trait ArchiveParser extends (String => List[ParsedArchiveEntry]) {
       if (e.defs.decls.isEmpty) ArchiveParser.elaborate(e.copy(defs = ArchiveParser.declarationsOf(e.model)))
       else ArchiveParser.elaborate(e)
     )
-    result
-      .foreach(_.annotations.foreach({ case (p: Program, f: Formula) => GlobalState.parser.annotationListener(p, f) }))
+    result.foreach(
+      _.annotations.foreach({ case (p: Program, f: Formula) => GlobalState.parser.annotationListener(p, f) })
+    )
     result
   }
   protected def doParse(input: String, parseTactics: Boolean): List[ParsedArchiveEntry]
@@ -564,13 +559,13 @@ trait ArchiveParser extends (String => List[ParsedArchiveEntry]) {
     file.split('#').toList match {
       case fileName :: Nil =>
         val src = Source.fromFile(fileName, org.keymaerax.core.ENCODING)
-        try { parse(src.mkString) }
-        finally { src.close() }
+        try { parse(src.mkString) } finally { src.close() }
       case fileName :: entryName :: Nil =>
         val src = Source.fromFile(fileName, org.keymaerax.core.ENCODING)
         try {
-          getEntry(entryName, src.mkString)
-            .getOrElse(throw new IllegalArgumentException("Unknown archive entry " + entryName)) :: Nil
+          getEntry(entryName, src.mkString).getOrElse(
+            throw new IllegalArgumentException("Unknown archive entry " + entryName)
+          ) :: Nil
         } finally { src.close() }
     }
   }
@@ -726,8 +721,9 @@ object ArchiveParser extends ArchiveParser {
     // elaborate model and check
     val elaboratedModel =
       try {
-        elaboratedDefs
-          .implicitSubst(elaboratedDefs.elaborateToSystemConsts(elaboratedDefs.elaborateToFunctions(entry.model)))
+        elaboratedDefs.implicitSubst(
+          elaboratedDefs.elaborateToSystemConsts(elaboratedDefs.elaborateToFunctions(entry.model))
+        )
       } catch { case ex: AssertionError => throw ParseException(ex.getMessage, ex) }
     val fullyExpandedModel =
       try { elaboratedDefs.exhaustiveSubst(elaboratedModel) }
@@ -785,8 +781,7 @@ object ArchiveParser extends ArchiveParser {
 
   /**
    * Checks that uses in `problem` match the declarations.
-   * @throws [[ParseException]]
-   *   on use-def mismatch.
+   * @throws [[ParseException]] on use-def mismatch.
    */
   private def checkUseDefMatch(problem: Expression, defs: Declaration): Unit = {
     // check that definitions and use match
@@ -821,12 +816,10 @@ object ArchiveParser extends ArchiveParser {
 
   /**
    * Elaborates to functions in annotations.
-   * @param annotations
-   *   the annotations to elaborate
-   * @param defs
-   *   lists functions to elaborate to
-   * @throws [[ParseException]]
-   *   if annotations are not formulas, not attached to programs, or type analysis of annotations fails
+   * @param annotations the annotations to elaborate
+   * @param defs lists functions to elaborate to
+   * @throws [[ParseException]] if annotations are not formulas, not attached to programs, or type analysis of
+   *   annotations fails
    */
   private def elaborateAnnotations(
       annotations: List[(Expression, Expression)],
@@ -963,15 +956,11 @@ object ArchiveParser extends ArchiveParser {
 
   /**
    * Type analysis of expression according to the given type declarations decls
-   * @param name
-   *   the entry name (for error messages)
-   * @param d
-   *   the type declarations known from the context (e.g., as parsed from the Definitions and ProgramVariables block of
-   *   an entry)
-   * @param expr
-   *   the expression to analyze
-   * @throws [[org.keymaerax.parser.ParseException]]
-   *   if the type analysis fails.
+   * @param name the entry name (for error messages)
+   * @param d the type declarations known from the context (e.g., as parsed from the Definitions and ProgramVariables
+   *   block of an entry)
+   * @param expr the expression to analyze
+   * @throws [[org.keymaerax.parser.ParseException]] if the type analysis fails.
    */
   def typeAnalysis(name: String, d: Declaration, expr: Expression): Boolean = {
     StaticSemantics
@@ -1004,7 +993,8 @@ object ArchiveParser extends ArchiveParser {
                   loc,
                 )
               case (_, None) => throw ParseException.typeDeclError(
-                  s"$name: ${f.prettyString} declared as a variable of sort ${f.sort} but used as a function with arguments.",
+                  s"$name: ${f.prettyString} declared as a variable of sort ${f
+                      .sort} but used as a function with arguments.",
                   "no arguments",
                   "function with arguments",
                   loc,
@@ -1021,7 +1011,8 @@ object ArchiveParser extends ArchiveParser {
             val (declaredSort, declLoc) = d.decls.get(Name(x.name, x.index)) match {
               case Some(Signature(None, sort, _, _, loc)) => (sort, loc)
               case Some(Signature(Some(domain), sort, _, _, loc)) => throw ParseException.typeDeclError(
-                  s"$name: ${x.name} was declared as a function but must be a variable when it is assigned to or has a differential equation.",
+                  s"$name: ${x
+                      .name} was declared as a function but must be a variable when it is assigned to or has a differential equation.",
                   x.prettyString + ": " + domain + "->" + sort + " Function",
                   "Real " + x.prettyString,
                   loc,

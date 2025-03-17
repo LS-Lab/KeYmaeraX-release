@@ -18,20 +18,16 @@ import scala.annotation.nowarn
  * single-pass matcher that is defined by sweeping uniform matching.
  *
  * Sweeping Uniform Matching is provably sound and is fast but not necessarily complete.
- * @note
- *   Central recursive unification implementation.
- * @author
- *   Andre Platzer
- * @see
- *   [[SchematicUnificationMatch]]
- * @note
- *   a more comprehensive unification matcher would be found when jointly abstracting replacements at join conflicts if
- *   those have a joint lattice sup/inf.
+ * @note Central recursive unification implementation.
+ * @author Andre Platzer
+ * @see [[SchematicUnificationMatch]]
+ * @note a more comprehensive unification matcher would be found when jointly abstracting replacements at join conflicts
+ *   if those have a joint lattice sup/inf.
  */
 abstract class UniformMatching extends BaseMatcher {
 
   /** Create a (generalized) substitution from the given representation `subs`. */
-  protected override def Subst(subs: List[SubstRepl]): Subst =
+  override protected def Subst(subs: List[SubstRepl]): Subst =
     if (false) RenUSubst(subs) else new FastURenAboveUSubst(subs)
   // new URenAboveUSubst(subs)
 
@@ -288,10 +284,8 @@ abstract class UniformMatching extends BaseMatcher {
 
   /**
    * unifyVar(x1,e2) gives a unifier making x1 equal to e2 unless it already is.
-   * @return
-   *   unifyVar(x1,x2)={x1~>x2} if x2 is a variable other than x1. unifyVar(x1,x1)={}
-   * @throws UnificationException
-   *   if e2 is not a variable
+   * @return unifyVar(x1,x2)={x1~>x2} if x2 is a variable other than x1. unifyVar(x1,x1)={}
+   * @throws UnificationException if e2 is not a variable
    */
   // @todo should this be protected for checking both are BaseVariables right away?
   protected def unifyVar(x1: Variable, e2: Expression): List[SubstRepl] =
@@ -303,10 +297,8 @@ abstract class UniformMatching extends BaseMatcher {
 
   /**
    * unifyVar(x1',e2) gives a unifier making x1' equal to e2 unless it already is.
-   * @return
-   *   unifyVar(x1',x2')={x1~>x2} if x2' is a differential variable other than x1' unifyVar(x1',x1')={}
-   * @throws UnificationException
-   *   if e2 is not a differential variable
+   * @return unifyVar(x1',x2')={x1~>x2} if x2' is a differential variable other than x1' unifyVar(x1',x1')={}
+   * @throws UnificationException if e2 is not a differential variable
    */
   protected def unifyVar(xp1: DifferentialSymbol, e2: Expression): List[SubstRepl] =
     if (xp1 == e2) id
@@ -317,9 +309,8 @@ abstract class UniformMatching extends BaseMatcher {
 
   /**
    * DotTerms of different "colors" for components of a Tuple, uncolored DotTerm for non-Tuples
-   * @example
-   *   coloredDotsTerm(Real) = • coloredDotsTerm(Real*Real) = (•_1, •_2) coloredDotsTerm(Real*Real*Real) = (•_1, •_2,
-   *   •_3)
+   * @example coloredDotsTerm(Real) = • coloredDotsTerm(Real*Real) = (•_1, •_2) coloredDotsTerm(Real*Real*Real) = (•_1,
+   *   •_2, •_3)
    */
   def coloredDotsTerm(s: Sort, color: Int = 1): Term = {
     def coloredDotsTermWithIndex(s: Sort, color: Int): (Int, Term) = s match {
@@ -366,7 +357,7 @@ abstract class UniformMatching extends BaseMatcher {
 }
 
 class UniformMatcher extends UniformMatching {
-  protected override def unify(s1: Sequent, s2: Sequent): List[SubstRepl] =
+  override protected def unify(s1: Sequent, s2: Sequent): List[SubstRepl] =
     if (!(s1.ante.length == s2.ante.length && s1.succ.length == s2.succ.length)) ununifiable(s1, s2)
     else {
       val joinFolder = (u1: List[SubstRepl], f1: Formula, f2: Formula) => join(u1, unify(f1, f2))

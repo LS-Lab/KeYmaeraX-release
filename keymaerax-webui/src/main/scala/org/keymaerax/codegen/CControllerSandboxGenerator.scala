@@ -16,12 +16,9 @@ import scala.collection.mutable.ListBuffer
 /**
  * Generates a controller sandbox from a hybrid program without loops and ODEs. A controller sandbox safeguards control
  * decisions with a controller monitor by switching to a fallback controller upon controller monitor violation.
- * @param monitorKind
- *   How to evaluate monitors, either "boolean" or "metric".
- * @param logEval
- *   Whether or not to generate code that logs reasons for why terms/formulas have their value
- * @author
- *   Stefan Mitsch
+ * @param monitorKind How to evaluate monitors, either "boolean" or "metric".
+ * @param logEval Whether or not to generate code that logs reasons for why terms/formulas have their value
+ * @author Stefan Mitsch
  */
 class CControllerSandboxGenerator(val monitorKind: String, val logEval: Boolean, defs: Declaration)
     extends CodeGenerator {
@@ -79,7 +76,9 @@ class CControllerSandboxGenerator(val monitorKind: String, val logEval: Boolean,
            |#include <stdio.h>
            |#include <stdarg.h>
            |#include <stdlib.h>
-           |${if (logEval) new CExpressionLogPrettyPrinter().printOperators else ""}
+           |${
+            if (logEval) new CExpressionLogPrettyPrinter().printOperators else ""
+          }
            |$declarations
            |$fallbackCode
            |${monitorCode.toString.trim}

@@ -15,10 +15,8 @@ import org.scalatest.{BeforeAndAfterAll, PrivateMethodTester}
 
 /**
  * Tests for ContEvolve -> NFContEvolve refactoring. Created by nfulton on 1/2/15.
- * @author
- *   Nathan Fulton
- * @author
- *   Stefan Mitsch
+ * @author Nathan Fulton
+ * @author Stefan Mitsch
  */
 class DifferentialParserTests extends AnyFlatSpec with Matchers with PrivateMethodTester with BeforeAndAfterAll {
   override def beforeAll(): Unit = {
@@ -136,9 +134,7 @@ class DifferentialParserTests extends AnyFlatSpec with Matchers with PrivateMeth
     "(-f())' = 5".asFormula shouldBe Equal(Differential(Neg(f)), Number(5))
   }
 
-  /**
-   * This test just makes sure that we parse boxes in the expected way, because that's necessary for the system axioms.
-   */
+  /** This test just makes sure that we parse boxes in the expected way, because that's necessary for the system axioms. */
   "The formula parser" should "parse [x:=1;][x:=1;]1=1 as Box(program, Box(program, formula))" in {
     "[x:=1;][x:=1;]1=1".asFormula shouldBe Box(Assign(x, one), Box(Assign(x, one), Equal(one, one)))
   }

@@ -12,12 +12,9 @@ import org.keymaerax.core._
  * converted to Provables by the [[ProofChecker]].
  *
  * Created by nfulton on 10/15/15.
- * @see
- *   [[ProofChecker]]
- * @author
- *   Nathan Fulton
- * @author
- *   Brandon Bohrer
+ * @see [[ProofChecker]]
+ * @author Nathan Fulton
+ * @author Brandon Bohrer
  */
 sealed abstract class ProofTerm {
 

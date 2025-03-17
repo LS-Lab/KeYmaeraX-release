@@ -56,20 +56,13 @@ case class TemplatePOJO(
 /**
  * Data object for models.
  *
- * @param modelId
- *   Identifies the model.
- * @param userId
- *   Identifies the user.
- * @param name
- *   The name of the model.
- * @param date
- *   The creation date.
- * @param keyFile
- *   The model file content.
- * @param description
- *   The description of the model.
- * @param pubLink
- *   Link to additional information (paper) on the model.
+ * @param modelId Identifies the model.
+ * @param userId Identifies the user.
+ * @param name The name of the model.
+ * @param date The creation date.
+ * @param keyFile The model file content.
+ * @param description The description of the model.
+ * @param pubLink Link to additional information (paper) on the model.
  */
 case class ModelPOJO(
     modelId: Int,
@@ -97,36 +90,24 @@ case class ModelPOJO(
 /**
  * Data object for users.
  *
- * @param userName
- *   Identifies the user.
- * @param level
- *   The user's learner level.
+ * @param userName Identifies the user.
+ * @param level The user's learner level.
  */
 class UserPOJO(val userName: String, val level: Int)
 
 /**
  * Data object for proofs.
  *
- * @param proofId
- *   Identifies the proof.
- * @param modelId
- *   Identifies the model; if defined, model formula must agree with provable's conclusion
- * @param name
- *   The proof name.
- * @param description
- *   A proof description.
- * @param date
- *   The creation date.
- * @param stepCount
- *   The number of proof steps in the proof.
- * @param closed
- *   Indicates whether the proof is closed (finished proof) or not (partial proof).
- * @param provableId
- *   Refers to a provable whose conclusion to prove.
- * @param temporary
- *   Indicates whether or not the proof is temporary.
- * @param tactic
- *   The tactic to recreate the proof.
+ * @param proofId Identifies the proof.
+ * @param modelId Identifies the model; if defined, model formula must agree with provable's conclusion
+ * @param name The proof name.
+ * @param description A proof description.
+ * @param date The creation date.
+ * @param stepCount The number of proof steps in the proof.
+ * @param closed Indicates whether the proof is closed (finished proof) or not (partial proof).
+ * @param provableId Refers to a provable whose conclusion to prove.
+ * @param temporary Indicates whether or not the proof is temporary.
+ * @param tactic The tactic to recreate the proof.
  */
 case class ProofPOJO(
     proofId: Int,
@@ -400,24 +381,20 @@ trait DBAbstraction {
   /**
    * Adds an execution step to an existing execution
    *
-   * @note
-   *   Implementations should enforce additional invariants -- never insert when branches or alt orderings overlap.
+   * @note Implementations should enforce additional invariants -- never insert when branches or alt orderings overlap.
    */
   def addExecutionStep(step: ExecutionStepPOJO): Int
 
   /** Truncate the execution trace at the beginning of alternativeTo and replace it with trace. */
   def addAlternative(alternativeTo: Int, inputProvable: ProvableSig, trace: ExecutionTrace): Unit
 
-  /**
-   * Return the sequence of steps that led to the current state of the proof. Loading a trace with provables is slow.
-   */
+  /** Return the sequence of steps that led to the current state of the proof. Loading a trace with provables is slow. */
   def getExecutionTrace(proofID: Int, withProvables: Boolean = true): ExecutionTrace
 
   /**
    * Return a list of all finished execution steps in the current history of the execution, in the order in which they
    * occurred.
-   * @note
-   *   For most purposes, getExecutionTrace is more convenient, but slower.
+   * @note For most purposes, getExecutionTrace is more convenient, but slower.
    */
   def getExecutionSteps(executionId: Int): List[ExecutionStepPOJO]
 

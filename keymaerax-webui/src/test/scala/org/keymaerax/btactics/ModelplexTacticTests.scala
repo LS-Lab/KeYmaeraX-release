@@ -34,10 +34,8 @@ import scala.language.postfixOps
 /**
  * Created by smitsch on 3/8/15.
  *
- * @author
- *   Stefan Mitsch
- * @author
- *   Ran Ji
+ * @author Stefan Mitsch
+ * @author Ran Ji
  */
 @SlowTest
 class ModelplexTacticTests extends TacticTestBase {
@@ -79,8 +77,8 @@ class ModelplexTacticTests extends TacticTestBase {
     val result = TactixLibrary.proveBy(modelplexInput, modelPlex(1))
     result.subgoals.loneElement shouldBe "==> xpost=1".asSequent
 
-    val monitorCorrectnessConjecture = ModelPlex
-      .createMonitorCorrectnessConjecture(List(Variable("x")), ModelPlexKind.Ctrl, ListMap.empty)(model)
+    val monitorCorrectnessConjecture =
+      ModelPlex.createMonitorCorrectnessConjecture(List(Variable("x")), ModelPlexKind.Ctrl, ListMap.empty)(model)
     println("Correctness conjecture " + monitorCorrectnessConjecture.prettyString)
     proveBy(
       monitorCorrectnessConjecture,
@@ -314,9 +312,11 @@ class ModelplexTacticTests extends TacticTestBase {
         |}""".stripMargin
     )(after being whiteSpaceRemoved)
 
-    val monitorCode = (
-      new CGenerator(new CMonitorGenerator(Symbol("resist"), Declaration(Map.empty)), True, Declaration(Map.empty))
-    )(testProg2.subgoals.head.succ.head, stateVars.toSet, inputs, "Monitor")
+    val monitorCode = (new CGenerator(
+      new CMonitorGenerator(Symbol("resist"), Declaration(Map.empty)),
+      True,
+      Declaration(Map.empty),
+    ))(testProg2.subgoals.head.succ.head, stateVars.toSet, inputs, "Monitor")
 
     val codeFileContent =
       s"""#include <stdio.h>
@@ -526,8 +526,8 @@ class ModelplexTacticTests extends TacticTestBase {
       .filter(_.isInstanceOf[BaseVariable])
       .toList
 
-    val ModelPlexConjecture(init, modelMonitorInput, assumptions) = ModelPlex
-      .createMonitorSpecificationConjecture(model, allVars, unobservable)
+    val ModelPlexConjecture(init, modelMonitorInput, assumptions) =
+      ModelPlex.createMonitorSpecificationConjecture(model, allVars, unobservable)
     println("Monitor specification: " + modelMonitorInput.prettyString)
 
     Configuration.set(Configuration.Keys.MATHEMATICA_QE_METHOD, "Resolve", saveToFile = false)
@@ -539,8 +539,12 @@ class ModelplexTacticTests extends TacticTestBase {
     val opt1Result = timed(
       proveBy(
         foResult,
-        ModelPlex
-          .optimizationOneWithSearch(Some(tool), assumptions, unobservable.keySet.toList, Some(ModelPlex.mxSimplify))(1),
+        ModelPlex.optimizationOneWithSearch(
+          Some(tool),
+          assumptions,
+          unobservable.keySet.toList,
+          Some(ModelPlex.mxSimplify),
+        )(1),
       ),
       "Opt. 1",
     )
@@ -681,8 +685,9 @@ class ModelplexTacticTests extends TacticTestBase {
 
       val ModelPlexConjecture(_, modelplexInput, assumptions) = createMonitorSpecificationConjecture(
         model,
-        List("x", "y", "v", "a", "dx", "dy", "w", "r", "xo", "yo", "vxo", "vyo", "t", "beta", "visDeg")
-          .map(_.asVariable),
+        List("x", "y", "v", "a", "dx", "dy", "w", "r", "xo", "yo", "vxo", "vyo", "t", "beta", "visDeg").map(
+          _.asVariable
+        ),
         ListMap.empty,
       )
 
@@ -1100,8 +1105,8 @@ class ModelplexTacticTests extends TacticTestBase {
     val ModelPlexConjecture(init, modelplexInput, assumptions) =
       createMonitorSpecificationConjecture(model, ctrlMonitorStateVars, ListMap.empty)
 
-    val monitorTactic = DebuggingTactics
-      .print("Deriving Monitor") & ModelPlex.controllerMonitorByChase(1) & DebuggingTactics.print("Chased") &
+    val monitorTactic = DebuggingTactics.print("Deriving Monitor") & ModelPlex.controllerMonitorByChase(1) &
+      DebuggingTactics.print("Chased") &
       ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1) &
       DebuggingTactics.print("Monitor Result")
     val ctrlMonitorResult = proveBy(modelplexInput, monitorTactic)
@@ -1112,8 +1117,11 @@ class ModelplexTacticTests extends TacticTestBase {
     /* Generate C code for controller monitor */
     val reassociatedCtrlMonitorFml = FormulaTools.reassociate(ctrlMonitorFml)
     proveBy(Equiv(ctrlMonitorFml, reassociatedCtrlMonitorFml), TactixLibrary.prop) shouldBe Symbol("proved")
-    val ctrlMonitorProg =
-      proveBy(reassociatedCtrlMonitorFml, ModelPlex.chaseToTests(combineTests = false)(1) * 2).subgoals.head.succ.head
+    val ctrlMonitorProg = proveBy(reassociatedCtrlMonitorFml, ModelPlex.chaseToTests(combineTests = false)(1) * 2)
+      .subgoals
+      .head
+      .succ
+      .head
     CPrettyPrinter.printer = new CExpressionPlainPrettyPrinter(printDebugOut = false)
     val ctrlInputs = CodeGenerator.getInputs(ctrlMonitorProg)
     val ctrlMonitorCode = (
@@ -1251,10 +1259,10 @@ class ModelplexTacticTests extends TacticTestBase {
     val model = entry.defs.exhaustiveSubst(entry.model.asInstanceOf[Formula])
 
     val stateVars = List("xg", "yg", "v", "a", "t", "vl", "vh", "k").map(_.asVariable.asInstanceOf[BaseVariable])
-    val ModelPlexConjecture(_, modelplexInput, assumptions) = ModelPlex
-      .createMonitorSpecificationConjecture(model, stateVars, ListMap.empty)
-    val ctrlTactic = DebuggingTactics
-      .print("Deriving Ctrl Monitor") & ModelPlex.controllerMonitorByChase(1) & DebuggingTactics.print("Chased") &
+    val ModelPlexConjecture(_, modelplexInput, assumptions) =
+      ModelPlex.createMonitorSpecificationConjecture(model, stateVars, ListMap.empty)
+    val ctrlTactic = DebuggingTactics.print("Deriving Ctrl Monitor") & ModelPlex.controllerMonitorByChase(1) &
+      DebuggingTactics.print("Chased") &
       ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1) &
       DebuggingTactics.print("Ctrl Monitor Result")
     val ctrlResult = proveBy(modelplexInput, ctrlTactic)
@@ -1279,8 +1287,8 @@ class ModelplexTacticTests extends TacticTestBase {
         .asFormula
     val expectedEvolutionDomain = And("v>=0&t<=T()".asFormula, diffCuts)
 
-    val nonlinearModelApprox = ModelPlex
-      .createNonlinearModelApprox("Waypoint", entry.tactics.head._3, entry.defs)(model)
+    val nonlinearModelApprox =
+      ModelPlex.createNonlinearModelApprox("Waypoint", entry.tactics.head._3, entry.defs)(model)
     val Imply(
       init,
       Box(
@@ -1296,12 +1304,13 @@ class ModelplexTacticTests extends TacticTestBase {
     nondetPlant shouldBe "t:=*;v:=*;xg:=*;yg:=*;".asProgram
     evolDomain shouldBe expectedEvolutionDomain
 
-    val modelMonitorStateVars = List("xg", "yg", "v", "a", "t", "vl", "vh", "k", "t_0", "v_0", "xg_0", "yg_0")
-      .map(_.asVariable.asInstanceOf[BaseVariable])
+    val modelMonitorStateVars = List("xg", "yg", "v", "a", "t", "vl", "vh", "k", "t_0", "v_0", "xg_0", "yg_0").map(
+      _.asVariable.asInstanceOf[BaseVariable]
+    )
     val ModelPlexConjecture(monitorInit, modelMonitorInput, assumptions) = ModelPlex
       .createMonitorSpecificationConjecture(nonlinearModelApprox._1, modelMonitorStateVars, ListMap.empty)
-    val monitorTactic = DebuggingTactics
-      .print("Deriving Monitor") & ModelPlex.controllerMonitorByChase(1) & DebuggingTactics.print("Chased") &
+    val monitorTactic = DebuggingTactics.print("Deriving Monitor") & ModelPlex.controllerMonitorByChase(1) &
+      DebuggingTactics.print("Chased") &
       ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1) &
       DebuggingTactics.print("Monitor Result")
 
@@ -1313,10 +1322,13 @@ class ModelplexTacticTests extends TacticTestBase {
         .asFormula
 
     /* Derive a controller monitor (monitor only controller, use right after control decision) */
-    val ctrlMonitorStateVars = List("xg", "yg", "v", "a", "t", "vl", "vh", "k")
-      .map(_.asVariable.asInstanceOf[BaseVariable])
-    val ModelPlexConjecture(_, ctrlMonitorInput, _) = ModelPlex
-      .createMonitorSpecificationConjecture(Imply(init, Box(Loop(ctrl), safe)), ctrlMonitorStateVars, ListMap.empty)
+    val ctrlMonitorStateVars =
+      List("xg", "yg", "v", "a", "t", "vl", "vh", "k").map(_.asVariable.asInstanceOf[BaseVariable])
+    val ModelPlexConjecture(_, ctrlMonitorInput, _) = ModelPlex.createMonitorSpecificationConjecture(
+      Imply(init, Box(Loop(ctrl), safe)),
+      ctrlMonitorStateVars,
+      ListMap.empty,
+    )
     val ctrlMonitorResult = proveBy(ctrlMonitorInput, monitorTactic)
     val ctrlMonitorFml = ctrlMonitorResult.subgoals.head.succ.head
     ctrlMonitorFml shouldBe
@@ -1324,10 +1336,13 @@ class ModelplexTacticTests extends TacticTestBase {
         .asFormula
 
     /* Derive a plant monitor (monitor only physics, use right after plant/before controller) */
-    val plantMonitorStateVars = List("xg", "yg", "v", "t", "t_0", "v_0", "xg_0", "yg_0")
-      .map(_.asVariable.asInstanceOf[BaseVariable])
-    val ModelPlexConjecture(_, plantMonitorInput, _) = ModelPlex
-      .createMonitorSpecificationConjecture(Imply(init, Box(Loop(plant), safe)), plantMonitorStateVars, ListMap.empty)
+    val plantMonitorStateVars =
+      List("xg", "yg", "v", "t", "t_0", "v_0", "xg_0", "yg_0").map(_.asVariable.asInstanceOf[BaseVariable])
+    val ModelPlexConjecture(_, plantMonitorInput, _) = ModelPlex.createMonitorSpecificationConjecture(
+      Imply(init, Box(Loop(plant), safe)),
+      plantMonitorStateVars,
+      ListMap.empty,
+    )
     val plantMonitorResult = proveBy(plantMonitorInput, monitorTactic)
     val plantMonitorFml = plantMonitorResult.subgoals.head.succ.head
     plantMonitorFml shouldBe
@@ -1337,12 +1352,17 @@ class ModelplexTacticTests extends TacticTestBase {
     /* Generate C code for controller monitor */
     val reassociatedCtrlMonitorFml = FormulaTools.reassociate(ctrlMonitorFml)
     proveBy(Equiv(ctrlMonitorFml, reassociatedCtrlMonitorFml), TactixLibrary.prop) shouldBe Symbol("proved")
-    val ctrlMonitorProg =
-      proveBy(reassociatedCtrlMonitorFml, ModelPlex.chaseToTests(combineTests = false)(1) * 2).subgoals.head.succ.head
+    val ctrlMonitorProg = proveBy(reassociatedCtrlMonitorFml, ModelPlex.chaseToTests(combineTests = false)(1) * 2)
+      .subgoals
+      .head
+      .succ
+      .head
     val ctrlInputs = CodeGenerator.getInputs(ctrlMonitorProg)
-    val ctrlMonitorCode = (
-      new CGenerator(new CMonitorGenerator(Symbol("resist"), entry.defs), monitorInit, entry.defs)
-    )(ctrlMonitorProg, ctrlMonitorStateVars.toSet, ctrlInputs, "Monitor")
+    val ctrlMonitorCode = (new CGenerator(
+      new CMonitorGenerator(Symbol("resist"), entry.defs),
+      monitorInit,
+      entry.defs,
+    ))(ctrlMonitorProg, ctrlMonitorStateVars.toSet, ctrlInputs, "Monitor")
     // @todo update expected code
     ctrlMonitorCode._1.trim shouldBe
       "/**************************\n * Monitor.c\n * Generated by KeYmaera X\n **************************/\n\n#include <math.h>\n#include <stdbool.h>\n\ntypedef struct parameters {\n  long double A;\n  long double B;\n  long double T;\n  long double eps;\n} parameters;\n\ntypedef struct state {\n  long double a;\n  long double k;\n  long double t;\n  long double v;\n  long double vh;\n  long double vl;\n  long double xg;\n  long double yg;\n} state;\n\ntypedef struct input input;\n\ntypedef struct verdict { int id; long double val; } verdict;"
@@ -1352,12 +1372,17 @@ class ModelplexTacticTests extends TacticTestBase {
     /* Generate C code for plant monitor */
     val reassociatedPlantMonitorFml = FormulaTools.reassociate(plantMonitorFml)
     proveBy(Equiv(plantMonitorFml, reassociatedPlantMonitorFml), TactixLibrary.prop) shouldBe Symbol("proved")
-    val plantMonitorProg =
-      proveBy(reassociatedPlantMonitorFml, ModelPlex.chaseToTests(combineTests = false)(1) * 2).subgoals.head.succ.head
+    val plantMonitorProg = proveBy(reassociatedPlantMonitorFml, ModelPlex.chaseToTests(combineTests = false)(1) * 2)
+      .subgoals
+      .head
+      .succ
+      .head
     val plantInputs = CodeGenerator.getInputs(plantMonitorProg)
-    val plantMonitorCode = (
-      new CGenerator(new CMonitorGenerator(Symbol("resist"), entry.defs), monitorInit, entry.defs)
-    )(plantMonitorProg, plantMonitorStateVars.toSet, plantInputs, "Monitor")
+    val plantMonitorCode = (new CGenerator(
+      new CMonitorGenerator(Symbol("resist"), entry.defs),
+      monitorInit,
+      entry.defs,
+    ))(plantMonitorProg, plantMonitorStateVars.toSet, plantInputs, "Monitor")
     // @todo update expected code
     plantMonitorCode._1.trim shouldBe
       "/**************************\n * Monitor.c\n * Generated by KeYmaera X\n **************************/\n\n#include <math.h>\n#include <stdbool.h>\n\ntypedef struct parameters {\n  long double A;\n  long double B;\n  long double T;\n  long double a;\n  long double eps;\n  long double k;\n  long double vh;\n  long double vl;\n} parameters;\n\ntypedef struct state {\n  long double t;\n  long double t_0;\n  long double v;\n  long double v_0;\n  long double xg;\n  long double xg_0;\n  long double yg;\n  long double yg_0;\n} state;\n\ntypedef struct input input;\n\ntypedef struct verdict { int id; long double val; } verdict;"
@@ -1374,10 +1399,10 @@ class ModelplexTacticTests extends TacticTestBase {
     val model = entry.expandedModel.asInstanceOf[Formula]
 
     val stateVars = List("acc", "d", "jpb", "m", "st", "t", "v", "z").map(_.asVariable.asInstanceOf[BaseVariable])
-    val ModelPlexConjecture(init, modelplexInput, assumptions) = ModelPlex
-      .createMonitorSpecificationConjecture(model, stateVars, ListMap.empty)
-    val ctrlTactic = DebuggingTactics
-      .print("Deriving Ctrl Monitor") & ModelPlex.controllerMonitorByChase(1) & DebuggingTactics.print("Chased") &
+    val ModelPlexConjecture(init, modelplexInput, assumptions) =
+      ModelPlex.createMonitorSpecificationConjecture(model, stateVars, ListMap.empty)
+    val ctrlTactic = DebuggingTactics.print("Deriving Ctrl Monitor") & ModelPlex.controllerMonitorByChase(1) &
+      DebuggingTactics.print("Chased") &
       ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1) &
       DebuggingTactics.print("Ctrl Monitor Result")
     val ctrlResult = proveBy(modelplexInput, ctrlTactic)
@@ -1390,8 +1415,11 @@ class ModelplexTacticTests extends TacticTestBase {
     CPrettyPrinter.printer = new CExpressionPlainPrettyPrinter(printDebugOut = false)
     val reassociatedCtrlMonitorFml = FormulaTools.reassociate(ctrlMonitorFml)
     // proveBy(Equiv(ctrlMonitorFml, reassociatedCtrlMonitorFml), TactixLibrary.prop) shouldBe 'proved
-    val ctrlMonitorProg =
-      proveBy(reassociatedCtrlMonitorFml, ModelPlex.chaseToTests(combineTests = false)(1) * 2).subgoals.head.succ.head
+    val ctrlMonitorProg = proveBy(reassociatedCtrlMonitorFml, ModelPlex.chaseToTests(combineTests = false)(1) * 2)
+      .subgoals
+      .head
+      .succ
+      .head
     val ctrlInputs = CodeGenerator.getInputs(ctrlMonitorProg)
     val ctrlMonitorCode = (
       new CGenerator(new CMonitorGenerator(Symbol("resist"), entry.defs), init, entry.defs)

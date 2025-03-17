@@ -12,8 +12,7 @@ import scala.annotation.nowarn
 /**
  * Sign arithmetic.
  *
- * @author
- *   Stefan Mitsch
+ * @author Stefan Mitsch
  */
 object Sign extends Enumeration {
   type Sign = Value

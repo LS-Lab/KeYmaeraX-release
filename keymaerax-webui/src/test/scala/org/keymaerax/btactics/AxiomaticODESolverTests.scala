@@ -25,10 +25,8 @@ import scala.collection.immutable._
 
 /**
  * Tests the axiomatic ODE solver.
- * @author
- *   Nathan Fulton
- * @author
- *   Stefan Mitsch
+ * @author Nathan Fulton
+ * @author Stefan Mitsch
  */
 class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   private val dgc = PrivateMethod[BuiltInPositionTactic](Symbol("DGC"))
@@ -595,21 +593,22 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
 
   "ODE Solver" should "not exploit soundness bugs" in withMathematica { _ =>
     try {
-      val model = """Functions.
-                    |  R b.
-                    |  R m.
-                    |End.
-                    |
-                    |ProgramVariables.
-                    |  R x.
-                    |  R v.
-                    |  R a.
-                    |End.
-                    |
-                    |Problem.
-                    |  x<=m & b>0 -> [a:=-b; {x'=v,v'=a & v>=0}]x<=m
-                    |End.
-                    |""".stripMargin
+      val model =
+        """Functions.
+          |  R b.
+          |  R m.
+          |End.
+          |
+          |ProgramVariables.
+          |  R x.
+          |  R v.
+          |  R a.
+          |End.
+          |
+          |Problem.
+          |  x<=m & b>0 -> [a:=-b; {x'=v,v'=a & v>=0}]x<=m
+          |End.
+          |""".stripMargin
       val problem: Formula = ArchiveParser.parseAsFormula(model)
 
       val t: BelleExpr = implyR(1) & HilbertCalculus.composeb(1) & HilbertCalculus.assignb(1) &

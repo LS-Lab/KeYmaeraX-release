@@ -195,8 +195,9 @@ class PythonExpressionPrettyPrinter(printDebugOut: Boolean) extends (CExpression
         case _ => false
       })
       s"""verdicts = [
-         | ${atomicDisjuncts.map(print).mkString(",\n ")}${if (atomicDisjuncts.nonEmpty && complexDisjuncts.nonEmpty) ","
-        else ""}
+         | ${atomicDisjuncts.map(print).mkString(",\n ")}${
+          if (atomicDisjuncts.nonEmpty && complexDisjuncts.nonEmpty) "," else ""
+        }
          | ${complexDisjuncts.map(d => s"Or${uniqueName(d)}($PRE, $CURR, $PARAMS)").mkString(",\n ")}
          |]
          |nonMeasureZeroVerdicts = filter(lambda v: v.id != 0, verdicts)
@@ -209,8 +210,9 @@ class PythonExpressionPrettyPrinter(printDebugOut: Boolean) extends (CExpression
         case _ => false
       })
       s"""verdicts = [
-         | ${atomicConjuncts.map(print).mkString(",\n ")}${if (atomicConjuncts.nonEmpty && complexConjuncts.nonEmpty) ","
-        else ""}
+         | ${atomicConjuncts.map(print).mkString(",\n ")}${
+          if (atomicConjuncts.nonEmpty && complexConjuncts.nonEmpty) "," else ""
+        }
          | ${complexConjuncts.map(d => s"And${uniqueName(d)}($PRE, $CURR, $PARAMS)").mkString(",\n ")}
          |]
          |nonMeasureZeroVerdicts = filter(lambda v: v.id != 0, verdicts)

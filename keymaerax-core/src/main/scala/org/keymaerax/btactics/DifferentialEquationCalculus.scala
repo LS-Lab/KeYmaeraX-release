@@ -35,32 +35,21 @@ import scala.collection.immutable.*
  * Provides the elementary derived proof rules for differential equations from Figure 11.20 and Figure 12.9 in
  * [[org.keymaerax.Bibliography.Platzer18 Logical Foundations of Cyber-Physical Systems]].
  *
- * @author
- *   Andre Platzer
- * @author
- *   Stefan Mitsch
- * @see
- *   [[org.keymaerax.Bibliography.Platzer18 Logical Foundations of Cyber-Physical Systems]]
+ * @author Andre Platzer
+ * @author Stefan Mitsch
+ * @see [[org.keymaerax.Bibliography.Platzer18 Logical Foundations of Cyber-Physical Systems]]
  * @see
  *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
- * @see
- *   [[org.keymaerax.Bibliography.LicsPlatzer12a Logics of dynamical systems]]
- * @see
- *   [[org.keymaerax.Bibliography.LicsPlatzer12b The complete proof theory of hybrid systems]]
- * @see
- *   [[org.keymaerax.core.AxiomBase]]
- * @see
- *   [[org.keymaerax.btactics.Ax]]
- * @see
- *   [[TactixLibrary]]
- * @todo
- *   \@Tactic only partially implemented so far
+ * @see [[org.keymaerax.Bibliography.LicsPlatzer12a Logics of dynamical systems]]
+ * @see [[org.keymaerax.Bibliography.LicsPlatzer12b The complete proof theory of hybrid systems]]
+ * @see [[org.keymaerax.core.AxiomBase]]
+ * @see [[org.keymaerax.btactics.Ax]]
+ * @see [[TactixLibrary]]
+ * @todo \@Tactic only partially implemented so far
  */
 object DifferentialEquationCalculus {
 
-  /**
-   * ***************************************************************** Differential Equation Proof Rules
-   */
+  /** ***************************************************************** Differential Equation Proof Rules */
 
   // differential equation elementary derived proof rules
 
@@ -108,17 +97,14 @@ object DifferentialEquationCalculus {
   /**
    * DW: Differential Weakening uses evolution domain constraint so `[{x'=f(x)&q(x)}]p(x)` reduces to `\forall x
    * (q(x)->p(x))`.
-   * @note
-   *   FV(post)/\BV(x'=f(x)) subseteq FV(q(x)) usually required to have a chance to succeed.
-   * @see
-   *   [[HilbertCalculus.DW]]
+   * @note FV(post)/\BV(x'=f(x)) subseteq FV(q(x)) usually required to have a chance to succeed.
+   * @see [[HilbertCalculus.DW]]
    */
   lazy val dW: DependentPositionTactic = DifferentialTactics.diffWeaken
 
   /**
    * Same as dW but preserves information about the initial conditions
-   * @see
-   *   [[dW]]
+   * @see [[dW]]
    */
   lazy val dWPlus: DependentPositionTactic = DifferentialTactics.diffWeakenPlus
 
@@ -160,19 +146,16 @@ object DifferentialEquationCalculus {
    *   --------------------------------------------------dC("v>=0".asFormula, "x>=old(x)".asFormula)(1)
    *          x>0, v>=0 |- [{x'=v,v'=1}]x>=0
    *   }}}
-   * @param R
-   *   the formula that will be cut into the differential equation (in that order if it is a list). The formulas are
-   *   typically shown to be differential invariants subsequently. They can use old(x) and old(y) etc. to refer to the
-   *   initial values of x and y, respectively.
-   * @note
-   *   dC is often needed when FV(post) depend on BV(ode) that are not in FV(constraint).
-   * @see
-   *   [[HilbertCalculus.DC]]
+   * @param R the formula that will be cut into the differential equation (in that order if it is a list). The formulas
+   *   are typically shown to be differential invariants subsequently. They can use old(x) and old(y) etc. to refer to
+   *   the initial values of x and y, respectively.
+   * @note dC is often needed when FV(post) depend on BV(ode) that are not in FV(constraint).
+   * @see [[HilbertCalculus.DC]]
    */
   def dC(R: Formula): DependentPositionWithAppliedInputTactic = dC(List(R))
 
-  def dC(R: List[Formula]): DependentPositionWithAppliedInputTactic = "dC"
-    .byWithInputs(List(R), (pos: Position) => DifferentialTactics.diffCut(R)(pos))
+  def dC(R: List[Formula]): DependentPositionWithAppliedInputTactic =
+    "dC".byWithInputs(List(R), (pos: Position) => DifferentialTactics.diffCut(R)(pos))
 
   @Derivation
   val dCInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
@@ -202,8 +185,7 @@ object DifferentialEquationCalculus {
    *   x>=5 |- [{x'=2}]x>=5
    *   }}}
    * @incontext
-   * @see
-   *   [[HilbertCalculus.DI]]
+   * @see [[HilbertCalculus.DI]]
    */
   def dIRule: DependentPositionTactic = "dIRule".forward(DifferentialTactics.diffInd(Symbol("diffInd")))
 
@@ -242,8 +224,7 @@ object DifferentialEquationCalculus {
    *   x>=5 |- [x:=x+1;][{x'=2}]x>=5
    *   }}}
    * @incontext
-   * @see
-   *   [[HilbertCalculus.DI]]
+   * @see [[HilbertCalculus.DI]]
    */
   def dIClose: DependentPositionTactic = "dIClose".forward(DifferentialTactics.diffInd(Symbol("cex")))
 
@@ -315,8 +296,7 @@ object DifferentialEquationCalculus {
    *   )
    *   }}}
    * @incontext
-   * @see
-   *   [[HilbertCalculus.DI]]
+   * @see [[HilbertCalculus.DI]]
    */
   def dI(auto: Symbol = Symbol("full")): DependentPositionTactic = DifferentialTactics.diffInd(auto)
 
@@ -344,13 +324,10 @@ object DifferentialEquationCalculus {
    * G |- [x'=f(x)&q(x)]p(x), D
    * }}}
    *
-   * @note
-   *   Uses QE to prove p(x) <-> \exists y. r(x,y)
-   * @param ghost
-   *   the extra differential equation for an extra variable y to ghost in of the form y'=a*y+b or y'=a*y or y'=b or
-   *   y'=a*y-b
-   * @param r
-   *   the optional equivalent new postcondition to prove that can mention y; keeps p(x) if omitted.
+   * @note Uses QE to prove p(x) <-> \exists y. r(x,y)
+   * @param ghost the extra differential equation for an extra variable y to ghost in of the form y'=a*y+b or y'=a*y or
+   *   y'=b or y'=a*y-b
+   * @param r the optional equivalent new postcondition to prove that can mention y; keeps p(x) if omitted.
    * @example
    *   {{{
    *   proveBy("x>0->[{x'=-x}]x>0".asFormula, implyR(1) &
@@ -387,8 +364,8 @@ object DifferentialEquationCalculus {
     displayContextPremises = "Γ |- C( ∃y [x'=f(x),E & Q]G ), Δ",
     displayContextConclusion = "Γ |- C( [x'=f(x) & Q]P ), Δ",
     revealInternalSteps = true,
-    constructor = TacticConstructor2
-      .create(ExpressionArg("E", List("y", "x", "y'")), OptionArg(FormulaArg("G", List("y"))))(dG),
+    constructor =
+      TacticConstructor2.create(ExpressionArg("E", List("y", "x", "y'")), OptionArg(FormulaArg("G", List("y"))))(dG),
   )
 
   def dGold(y: Variable, t1: Term, t2: Term, p: Option[Formula]): DependentPositionWithAppliedInputTactic = "dGold"
@@ -401,10 +378,12 @@ object DifferentialEquationCalculus {
     displayNameLong = Some("Differential Ghost"),
     displayPremises = "Γ |- ∃y [{x'=f(x),y′=a(x)*y+b(x) & Q}]P, Δ",
     displayConclusion = "Γ |- [{x'=f(x) & Q}]P, Δ",
-    constructor = TacticConstructor4
-      .create(VariableArg("y", List("y")), TermArg("a(x)"), TermArg("b(x)"), OptionArg(FormulaArg("P", List("y"))))(
-        dGold
-      ),
+    constructor = TacticConstructor4.create(
+      VariableArg("y", List("y")),
+      TermArg("a(x)"),
+      TermArg("b(x)"),
+      OptionArg(FormulaArg("P", List("y"))),
+    )(dGold),
   )
 
   // more DI/DC/DG variants
@@ -433,16 +412,15 @@ object DifferentialEquationCalculus {
    *   ---------------------------------------------------diffInvariant("v>=0".asFormula, "x>old(x)".asFormula)(1)
    *          x>0, v>=0 |- [{x'=v,v'=1}]x>=0
    *   }}}
-   * @param invariants
-   *   The differential invariants to cut in as evolution domain constraint.
-   * @see
-   *   [[dC]]
-   * @see
-   *   [[dI]]
+   * @param invariants The differential invariants to cut in as evolution domain constraint.
+   * @see [[dC]]
+   * @see [[dI]]
    */
   // NB: Annotate diffInvariant(Formula) rather than DifferentialTactics.diffInvariant(List[Formula]) for compatibility
-  def diffInvariant(invariant: Formula): DependentPositionWithAppliedInputTactic = "diffInvariant"
-    .byWithInputs(List(invariant), (pos: Position) => DifferentialTactics.diffInvariant(List(invariant))(pos))
+  def diffInvariant(invariant: Formula): DependentPositionWithAppliedInputTactic = "diffInvariant".byWithInputs(
+    List(invariant),
+    (pos: Position) => DifferentialTactics.diffInvariant(List(invariant))(pos),
+  )
 
   @Derivation
   val diffInvariantInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
@@ -490,12 +468,10 @@ object DifferentialEquationCalculus {
    * ---------------------------------------------- dR
    * G|- [x'=f(x)&Q]P, D
    * }}}
-   * @param formula
-   *   the formula R to refine Q to
-   * @param hide
-   *   whether to keep the extra succedents (D) around (default true), which makes position management easier
+   * @param formula the formula R to refine Q to
+   * @param hide whether to keep the extra succedents (D) around (default true), which makes position management easier
    */
-  def dR(formula: Formula, hide: Boolean = true): DependentPositionTactic = DifferentialTactics
-    .diffRefine(formula, hide)
+  def dR(formula: Formula, hide: Boolean = true): DependentPositionTactic =
+    DifferentialTactics.diffRefine(formula, hide)
 
 }

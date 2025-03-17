@@ -15,11 +15,9 @@ import org.keymaerax.tools.{ConversionException, Tool, ToolExecutionException, T
 /**
  * Z3 quantifier elimination tool for tactics.
  *
- * @see
- *   [[org.keymaerax.btactics.Z3ToolProvider]] to obtain instances of Z3 that are properly initialized and
+ * @see [[org.keymaerax.btactics.Z3ToolProvider]] to obtain instances of Z3 that are properly initialized and
  *   installed/updated.
- * @author
- *   Stefan Mitsch
+ * @author Stefan Mitsch
  */
 final class Z3 extends Tool with QETacticTool with SimplificationTool with ToolOperationManagement {
 
@@ -86,11 +84,7 @@ final class Z3 extends Tool with QETacticTool with SimplificationTool with ToolO
     val (varDec, smt) = DefaultSMTConverter.generateSMT(expr)
     val smtCode = varDec + "(simplify " + smt + ")"
     val z3Output = z3.runZ3Smt(smtCode, "z3simplify", getOperationTimeout)
-    if (z3Output.contains("!")) expr
-    else {
-      try { parser(z3Output) }
-      catch { case _: ConversionException => expr }
-    }
+    if (z3Output.contains("!")) expr else { try { parser(z3Output) } catch { case _: ConversionException => expr } }
   }
 
   /** @inheritdoc */

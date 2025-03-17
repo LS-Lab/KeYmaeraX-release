@@ -15,8 +15,7 @@ package org.keymaerax.lemma
  *   }}}
  *
  * Created by smitsch on 9/1/15.
- * @author
- *   Stefan Mitsch
+ * @author Stefan Mitsch
  */
 object LemmaDBFactory {
 

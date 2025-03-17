@@ -49,14 +49,11 @@ object Z3Installer extends Logging {
   /**
    * We store the last version of KeYmaera X that updated the Z3 binary, and copy over Z3 every time we notice a new
    * version of KeYmaera X is installed.
-   * @todo
-   *   We should probably check the Z3 version instead but...
+   * @todo We should probably check the Z3 version instead but...
    */
   def versionFile(z3TempDir: String): File = new File(z3TempDir + File.separator + "z3v")
 
-  /**
-   * Returns the KeYmaera X version that supplied the currently installed Z3, or [[None]] if it could not be determined.
-   */
+  /** Returns the KeYmaera X version that supplied the currently installed Z3, or [[None]] if it could not be determined. */
   def installedFromKyxVersion(z3TempDir: String): Option[VersionNumber] = {
     if (versionFile(z3TempDir).exists()) {
       val source = scala.io.Source.fromFile(versionFile(z3TempDir))

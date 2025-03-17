@@ -27,10 +27,8 @@ import scala.sys.process._
  * The link may be used synchronously or asynchronously. Multiple MathematicaLinks may be created by instantiating
  * multiple copies of implementing classes (depends on license).
  *
- * @author
- *   Nathan Fulton
- * @author
- *   Stefan Mitsch
+ * @author Nathan Fulton
+ * @author Stefan Mitsch
  */
 trait MathematicaLink {
 
@@ -39,16 +37,14 @@ trait MathematicaLink {
 
   /**
    * Runs command `cmd` converting back with `m2k` using tool `executor`, with Mathematica exception checking.
-   * @ensures
-   *   cmd is freed and should not ever be used again.
+   * @ensures cmd is freed and should not ever be used again.
    */
   def run[T](cmd: () => T, executor: ToolExecutor): T
 
   /**
    * Cancels the current request.
    *
-   * @return
-   *   True if job is successfully cancelled, or False if the new status is unknown.
+   * @return True if job is successfully cancelled, or False if the new status is unknown.
    */
   def cancel(): Boolean
 }
@@ -61,20 +57,16 @@ trait KeYmaeraMathematicaBridge[T] {
 
   /**
    * Runs Mathematica command `cmd`, with Mathematica exception checking.
-   * @ensures
-   *   cmd is freed and should not ever be used again.
+   * @ensures cmd is freed and should not ever be used again.
    */
   def run(cmd: MExpr): (String, T)
 }
 
 /**
  * Base class for Mathematica bridges. Running commands is synchronized.
- * @param link
- *   The Mathematica link for executing commands.
- * @param k2m
- *   Converts KeYmaeraX->Mathematica.
- * @param m2k
- *   Converts Mathematica->KeYmaera X.
+ * @param link The Mathematica link for executing commands.
+ * @param k2m Converts KeYmaeraX->Mathematica.
+ * @param m2k Converts Mathematica->KeYmaera X.
  */
 abstract class BaseKeYmaeraMathematicaBridge[T](
     val link: MathematicaLink,
@@ -104,8 +96,8 @@ abstract class BaseKeYmaeraMathematicaBridge[T](
   override def run(cmd: MExpr): (String, T) = run(cmd, m2k)
 
   /** Run `cmd` with a local converter back from Mathematica. */
-  private[tools] def runUnchecked[S](cmd: String, localm2k: M2KConverter[S]): (String, S) = link
-    .runUnchecked(memoryConstrained(timeConstrained(cmd)), localm2k)
+  private[tools] def runUnchecked[S](cmd: String, localm2k: M2KConverter[S]): (String, S) =
+    link.runUnchecked(memoryConstrained(timeConstrained(cmd)), localm2k)
 
   /** Run `cmd` with a local converter back from Mathematica. */
   private[tools] def run[S](cmd: MExpr, localm2k: M2KConverter[S]): (String, S) = {
@@ -145,10 +137,8 @@ abstract class BaseKeYmaeraMathematicaBridge[T](
 
 /**
  * A link to Mathematica using the JLink interface.
- * @author
- *   Nathan Fulton
- * @author
- *   Stefan Mitsch
+ * @author Nathan Fulton
+ * @author Stefan Mitsch
  */
 class JLinkMathematicaLink(val engineName: String) extends MathematicaLink with Logging {
   // @note using strings to be robust in case Wolfram decides to switch from current major:Double/minor:Int
@@ -184,12 +174,10 @@ class JLinkMathematicaLink(val engineName: String) extends MathematicaLink with 
 
   /**
    * Initializes the connection to Mathematica.
-   * @param linkName
-   *   The name of the link to use (platform-dependent, see Mathematica documentation, or a port number if on TCPIP)
-   * @return
-   *   true if initialization was successful
-   * @note
-   *   Must be called before first use of ml
+   * @param linkName The name of the link to use (platform-dependent, see Mathematica documentation, or a port number if
+   *   on TCPIP)
+   * @return true if initialization was successful
+   * @note Must be called before first use of ml
    */
   def init(linkName: String, jlinkLibDir: Option[String], tcpip: String, remainingTrials: Int = 5): Boolean = {
     this.linkName = linkName
@@ -369,14 +357,10 @@ class JLinkMathematicaLink(val engineName: String) extends MathematicaLink with 
   /**
    * Runs the command and then halts program execution until answer is returned.
    *
-   * @param cmd
-   *   The Mathematica command.
-   * @param m2k
-   *   The converter Mathematica->KeYmaera X
-   * @tparam T
-   *   The exact KeYmaera X expression type expected as result.
-   * @return
-   *   The result, as string and as KeYmaera X expression.
+   * @param cmd The Mathematica command.
+   * @param m2k The converter Mathematica->KeYmaera X
+   * @tparam T The exact KeYmaera X expression type expected as result.
+   * @return The result, as string and as KeYmaera X expression.
    */
   def runUnchecked[T](cmd: String, m2k: M2KConverter[T]): (String, T) = {
     if (ml == null) throw new IllegalStateException("No MathKernel set")
@@ -390,16 +374,11 @@ class JLinkMathematicaLink(val engineName: String) extends MathematicaLink with 
   /**
    * Runs a Mathematica command on the specified executor, converts the result back with converter.
    *
-   * @param cmd
-   *   The command to run. Disposed as a result of this method.
-   * @param executor
-   *   Executes commands (scheduled).
-   * @tparam T
-   *   The exact KeYmaera X expression type expected as result.
-   * @return
-   *   The result, as string and as KeYmaera X expression.
-   * @ensures
-   *   cmd is freed and should not ever be used again.
+   * @param cmd The command to run. Disposed as a result of this method.
+   * @param executor Executes commands (scheduled).
+   * @tparam T The exact KeYmaera X expression type expected as result.
+   * @return The result, as string and as KeYmaera X expression.
+   * @ensures cmd is freed and should not ever be used again.
    */
   override def run[T](cmd: () => T, executor: ToolExecutor): T = {
     if (ml == null) throw new IllegalStateException("No MathKernel set")
@@ -531,8 +510,7 @@ class JLinkMathematicaLink(val engineName: String) extends MathematicaLink with 
 
 /**
  * A link to Wolfram Engine via WolframScript.
- * @author
- *   Stefan Mitsch
+ * @author Stefan Mitsch
  */
 class WolframScript extends MathematicaLink with Logging {
   // @note using strings to be robust in case Wolfram decides to switch from current major:Double/minor:Int
@@ -550,10 +528,8 @@ class WolframScript extends MathematicaLink with Logging {
 
   /**
    * Initializes the connection to Wolfram Engine.
-   * @return
-   *   true if initialization was successful
-   * @note
-   *   Must be called before first use of [[run]]
+   * @return true if initialization was successful
+   * @note Must be called before first use of [[run]]
    */
   def init(remainingTrials: Int = 5): Boolean = {
     try {
@@ -629,14 +605,10 @@ class WolframScript extends MathematicaLink with Logging {
   /**
    * Runs the command and then halts program execution until answer is returned.
    *
-   * @param cmd
-   *   The WolframScript command.
-   * @param m2k
-   *   The converter Mathematica->KeYmaera X
-   * @tparam T
-   *   The exact KeYmaera X expression type expected as result.
-   * @return
-   *   The result, as string and as KeYmaera X expression.
+   * @param cmd The WolframScript command.
+   * @param m2k The converter Mathematica->KeYmaera X
+   * @tparam T The exact KeYmaera X expression type expected as result.
+   * @return The result, as string and as KeYmaera X expression.
    */
   def runUnchecked[T](cmd: String, m2k: M2KConverter[T]): (String, T) = {
     wolframProcess.synchronized {
@@ -648,16 +620,11 @@ class WolframScript extends MathematicaLink with Logging {
   /**
    * Runs a Mathematica command on the specified executor.
    *
-   * @param cmd
-   *   The command to run. Disposed as a result of this method.
-   * @param executor
-   *   Executes commands (scheduled).
-   * @tparam T
-   *   The exact KeYmaera X expression type expected as result.
-   * @return
-   *   The result, as string and as KeYmaera X expression.
-   * @ensures
-   *   cmd is freed and should not ever be used again.
+   * @param cmd The command to run. Disposed as a result of this method.
+   * @param executor Executes commands (scheduled).
+   * @tparam T The exact KeYmaera X expression type expected as result.
+   * @return The result, as string and as KeYmaera X expression.
+   * @ensures cmd is freed and should not ever be used again.
    */
   override def run[T](cmd: () => T, executor: ToolExecutor): T = {
     val taskId = executor.schedule(_ => { wolframProcess.synchronized { cmd() } })
@@ -784,8 +751,7 @@ class WolframScript extends MathematicaLink with Logging {
     val f = Future(blocking(p.exitValue()))
     val exitVal =
       try { Await.result(f, duration.Duration.Inf) }
-      catch { case _: InterruptedException => p.destroy() }
-      finally { wolframProcess = None }
+      catch { case _: InterruptedException => p.destroy() } finally { wolframProcess = None }
 
     val rs = result.toString
     if (exitVal == 0) {

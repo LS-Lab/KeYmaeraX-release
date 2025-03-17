@@ -27,12 +27,9 @@ import scala.collection.immutable._
  * An Axiomatic ODE solver. Current limitations:
  *   - No support for explicit-form diamond ODEs/box ODEs in context: `<{x'=0*x+1}>P, ![{x'=0*x+1}]P`
  *
- * @see
- *   Page 25 in http://arxiv.org/abs/1503.01981 for a high-level sketch.
- * @author
- *   Nathan Fulton
- * @author
- *   Stefan Mitsch
+ * @see Page 25 in http://arxiv.org/abs/1503.01981 for a high-level sketch.
+ * @author Nathan Fulton
+ * @author Stefan Mitsch
  */
 object AxiomaticODESolver {
   private val ODE_DEBUGGER = false
@@ -217,7 +214,8 @@ object AxiomaticODESolver {
             ._1
         )
         .filterNot(f => f == True || f == False) // @todo improve DI
-        .reduceOption(And.apply).getOrElse(True)
+        .reduceOption(And.apply)
+        .getOrElse(True)
 
       // @note do not simplify dependent formulas in postcondition, since diamond solver relies on duplicated formulas
       val simpSol =
@@ -313,8 +311,9 @@ object AxiomaticODESolver {
         simplifier(odePosAfterInitialVals ++ PosInExpr(0 :: 1 :: Nil)),
         DebuggingTactics.debug("AFTER simplifying evolution domain 2", ODE_DEBUGGER),
         RepeatTactic(DifferentialTactics.inverseDiffGhost(odePosAfterInitialVals), osize),
-        DebuggingTactics
-          .assert((s, p) => odeSize(s.apply(p)) == 1, "ODE should only have time.")(odePosAfterInitialVals),
+        DebuggingTactics.assert((s, p) => odeSize(s.apply(p)) == 1, "ODE should only have time.")(
+          odePosAfterInitialVals
+        ),
         DebuggingTactics.debug("AFTER all inverse diff ghosts", ODE_DEBUGGER),
         UnifyUSCalculus.useAt(Ax.DS)(odePosAfterInitialVals),
         DebuggingTactics.debug("AFTER DS&", ODE_DEBUGGER),
@@ -371,13 +370,12 @@ object AxiomaticODESolver {
       val currRhs = odes.find(_.xp.x == curr).get.e
       val incoming = odes.filter(ode => myFreeVars(currRhs).contains(ode.xp.x)).map(_.xp.x)
       if (incoming.exists(active.contains)) throw new Cycle
-      val (vis, sorted) = incoming
-        .foldLeft[(Set[Variable], List[Variable])]((visited + curr, acc))({ case ((vis2, acc2), x) =>
-          dfsLoop(odes, vis2, active + curr, x, acc2) match {
+      val (vis, sorted) = incoming.foldLeft[(Set[Variable], List[Variable])]((visited + curr, acc))({
+        case ((vis2, acc2), x) => dfsLoop(odes, vis2, active + curr, x, acc2) match {
             case Some(xx) => xx
             case _ => (vis2, acc2)
           }
-        })
+      })
       Some(vis, curr :: sorted)
     }
   }
@@ -539,8 +537,8 @@ object AxiomaticODESolver {
   }
 
   @nowarn("msg=match may not be exhaustive")
-  def odeSolverPreconds(ord: List[Variable]): DependentPositionTactic = TacticFactory
-    .anon((pos: Position, s: Sequent) => {
+  def odeSolverPreconds(ord: List[Variable]): DependentPositionTactic = TacticFactory.anon(
+    (pos: Position, s: Sequent) => {
       val (ode: DifferentialProgram, dom: Formula, post: Formula) = s.sub(pos) match {
         case Some(Box(ODESystem(o, q), p)) => (o, q, p)
         case Some(sub) => throw new TacticInapplicableFailure(
@@ -567,7 +565,8 @@ object AxiomaticODESolver {
         DebuggingTactics.debug("After Canonicalization"),
         bv.foldLeft[BelleExpr](Idioms.nil)((a, b) => a & DLBySubst.discreteGhost(b, None, assignInContext = false)(pos)),
       )
-    })
+    }
+  )
 
   // endregion
 
@@ -577,8 +576,7 @@ object AxiomaticODESolver {
    * Rewrites `[{c}]p` to `[{c, t'=1}]p`. The positional argument should point to the location of c, NOT the location of
    * the box. This tactic should work at any top-level position and also in any context.
    *
-   * @note
-   *   If we want an initial value for time (`kyxtime:=0`) then this is the place to add that functionality.
+   * @note If we want an initial value for time (`kyxtime:=0`) then this is the place to add that functionality.
    */
   val addTimeVar: DependentPositionTactic = TacticFactory.anon((pos: Position, s: Sequent) => {
     s.sub(pos ++ PosInExpr(0 :: Nil)) match {
@@ -605,8 +603,8 @@ object AxiomaticODESolver {
   // region Cut in solutions
 
   // was solDC
-  def cutInSoln(odeSize: Int, diffArg: Term = Variable("kyxtime")): DependentPositionTactic =
-    anon((pos: Position, s: Sequent) => {
+  def cutInSoln(odeSize: Int, diffArg: Term = Variable("kyxtime")): DependentPositionTactic = anon(
+    (pos: Position, s: Sequent) => {
       val system: ODESystem = s.sub(pos) match {
         case Some(Box(x: ODESystem, _)) => x
         case Some(e) =>
@@ -650,7 +648,8 @@ object AxiomaticODESolver {
       })
 
       sortedSolutions.foldRight[BelleExpr](nil)((soln, tactic) => cutAndProveFml(soln, odeSize + 1)(pos) & tactic)
-    })
+    }
+  )
 
   /** Augment ODE with formula `cut`, consider context of size `contextSize` when proving with DI. */
   def cutAndProveFml(cut: Formula, contextSize: Int = 0): DependentPositionTactic =
@@ -704,12 +703,9 @@ object AxiomaticODESolver {
     })
 
   /**
-   * @param v
-   *   A variable occurring in the odes program.
-   * @param system
-   *   An ode system.
-   * @return
-   *   true if the program does not already contain an = constraint (a.k.a. sol'n) for v in the evolution domain.
+   * @param v A variable occurring in the odes program.
+   * @param system An ode system.
+   * @return true if the program does not already contain an = constraint (a.k.a. sol'n) for v in the evolution domain.
    */
   def isSolved(v: Variable, system: ODESystem): Boolean = {
     // Variables that don't occur in the ODE are trivially already solved

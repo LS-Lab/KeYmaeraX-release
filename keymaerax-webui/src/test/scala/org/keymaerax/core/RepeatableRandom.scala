@@ -22,10 +22,8 @@ import scala.collection.immutable._
  *   val rand = randRoot.nextFormulaEpisode()
  * }}}
  *
- * @author
- *   Andre Platzer
- * @param seed
- *   the random seed, for repeatable random testing purposes.
+ * @author Andre Platzer
+ * @param seed the random seed, for repeatable random testing purposes.
  */
 class RepeatableRandom(val seed: Long = new Random().nextLong()) {
 //  println("regenerate by RepeatableRandom(" + seed + "L)")

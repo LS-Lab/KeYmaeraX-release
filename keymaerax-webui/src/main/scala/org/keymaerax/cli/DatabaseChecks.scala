@@ -45,8 +45,7 @@ object DatabaseChecks extends Logging {
 
   /**
    * Kills the current process and shows an error message if the current database is deprecated.
-   * @todo
-   *   similar behavior for the cache
+   * @todo similar behavior for the cache
    */
   def exitIfDeprecated(): Unit = {
     val dbVersion = SQLite.versionOf(SQLite.ProdDB)

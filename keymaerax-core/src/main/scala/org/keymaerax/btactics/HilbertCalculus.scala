@@ -33,34 +33,21 @@ import scala.collection.mutable.ListBuffer
  * Provides the axioms and axiomatic proof rules from Figure 2 and Figure 3 in
  * [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]].
  *
- * @author
- *   Andre Platzer
- * @author
- *   Stefan Mitsch
+ * @author Andre Platzer
+ * @author Stefan Mitsch
  * @see
  *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
- * @see
- *   [[org.keymaerax.Bibliography.Platzer18 Logical Foundations of Cyber-Physical Systems]]
- * @see
- *   [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
- * @see
- *   [[org.keymaerax.Bibliography.ToclPlatzer15 Differential game logic]]
- * @see
- *   [[org.keymaerax.Bibliography.LicsPlatzer12a Logics of dynamical systems]]
- * @see
- *   [[org.keymaerax.Bibliography.LicsPlatzer12b The complete proof theory of hybrid systems]]
- * @see
- *   [[HilbertCalculus.stepAt]]
- * @see
- *   [[HilbertCalculus.derive]]
- * @see
- *   [[org.keymaerax.core.AxiomBase]]
- * @see
- *   [[org.keymaerax.btactics.Ax]]
- * @see
- *   [[TactixLibrary]]
- * @Tactic
- *   completed
+ * @see [[org.keymaerax.Bibliography.Platzer18 Logical Foundations of Cyber-Physical Systems]]
+ * @see [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
+ * @see [[org.keymaerax.Bibliography.ToclPlatzer15 Differential game logic]]
+ * @see [[org.keymaerax.Bibliography.LicsPlatzer12a Logics of dynamical systems]]
+ * @see [[org.keymaerax.Bibliography.LicsPlatzer12b The complete proof theory of hybrid systems]]
+ * @see [[HilbertCalculus.stepAt]]
+ * @see [[HilbertCalculus.derive]]
+ * @see [[org.keymaerax.core.AxiomBase]]
+ * @see [[org.keymaerax.btactics.Ax]]
+ * @see [[TactixLibrary]]
+ * @Tactic completed
  */
 object HilbertCalculus {
   import TacticFactory.*
@@ -75,20 +62,17 @@ object HilbertCalculus {
   /**
    * Make the canonical simplifying proof step at the indicated position except when a decision needs to be made (e.g.
    * invariants for loops or for differential equations). Using the canonical [[AxIndex]].
-   * @author
-   *   Andre Platzer
-   * @note
-   *   Efficient source-level indexing implementation.
-   * @see
-   *   [[AxIndex]]
+   * @author Andre Platzer
+   * @note Efficient source-level indexing implementation.
+   * @see [[AxIndex]]
    */
   val stepAt: DependentPositionTactic = "stepAt".forward(UnifyUSCalculus.stepAt(AxIndex.axiomFor))
   // = UnifyUSCalculus.stepAt(AxIndex.axiomFor)
   // = anon {(pos:Position) => UnifyUSCalculus.stepAt(AxIndex.axiomFor)(pos)}
 
   @Derivation
-  val stepAtInfo: PositionTacticInfo = PositionTacticInfo
-    .create(name = "stepAt", constructor = TacticConstructor0.create()(() => stepAt))
+  val stepAtInfo: PositionTacticInfo =
+    PositionTacticInfo.create(name = "stepAt", constructor = TacticConstructor0.create()(() => stepAt))
 
   //
   // axiomatic rules
@@ -103,12 +87,9 @@ object HilbertCalculus {
    *   G |- [a]p(||), D
    * }}}
    * This rule is a special case of rule [[monb]] with p(x)=True by [[boxTrue]].
-   * @note
-   *   Unsound for hybrid games
-   * @see
-   *   [[monb]] with p(x)=True
-   * @see
-   *   [[boxTrue]]
+   * @note Unsound for hybrid games
+   * @see [[monb]] with p(x)=True
+   * @see [[boxTrue]]
    */
   val G: DependentPositionTactic = "G".by { (pos: Position) => SequentCalculus.cohideR(pos) & DLBySubst.G }
 
@@ -128,8 +109,7 @@ object HilbertCalculus {
    *   ---------------------------------
    *   \forall x p(x) |- \forall x q(x)
    * }}}
-   * @see
-   *   [[UnifyUSCalculus.CMon()]]
+   * @see [[UnifyUSCalculus.CMon()]]
    */
   // @todo flexibilize via cohide2 first
   lazy val monall: BuiltInTactic = "monall".by { US(Ax.monallrule.provable).result _ }
@@ -149,8 +129,7 @@ object HilbertCalculus {
    *   ------------------- M[.]
    *   [a]p(x) |- [a]q(x)
    * }}}
-   * @see
-   *   [[UnifyUSCalculus.CMon()]]
+   * @see [[UnifyUSCalculus.CMon()]]
    */
   // @todo flexibilize via cohide2 first
   lazy val monb: BuiltInTactic = "monb".by { US(Ax.monbaxiom.provable).result _ }
@@ -170,8 +149,7 @@ object HilbertCalculus {
    *   ------------------- M
    *   ⟨a⟩p(x) |- ⟨a⟩q(x)
    * }}}
-   * @see
-   *   [[UnifyUSCalculus.CMon()]]
+   * @see [[UnifyUSCalculus.CMon()]]
    */
   // @todo flexibilize via cohide2 first
   lazy val mond: BuiltInTactic = "mond".by { US(Ax.mondrule.provable).result _ }
@@ -241,19 +219,15 @@ object HilbertCalculus {
    *   -----------------------------------------------------------------assignb(1, 1::Nil)
    *   |- [y:=2;][x:=1;][{x:=x+1;}*]x>0
    *   }}}
-   * @see
-   *   [[DLBySubst.assignEquality]]
+   * @see [[DLBySubst.assignEquality]]
    */
   lazy val assignb: BuiltInPositionTactic = "assignb".by { (pr: ProvableSig, pos: Position) =>
-    if (INTERNAL)
-      try { useAt(Ax.assignbAxiom)(pos)(pr) }
-      catch { case _: Throwable => useAt(Ax.selfassignb)(pos)(pr) }
+    if (INTERNAL) try { useAt(Ax.assignbAxiom)(pos)(pr) } catch { case _: Throwable => useAt(Ax.selfassignb)(pos)(pr) }
     else
       try { useAt(Ax.assignbAxiom)(pos)(pr) }
       catch {
         case _: Throwable =>
-          try { useAt(Ax.selfassignb)(pos)(pr) }
-          catch { case _: Throwable => DLBySubst.assignEquality(pos)(pr) }
+          try { useAt(Ax.selfassignb)(pos)(pr) } catch { case _: Throwable => DLBySubst.assignEquality(pos)(pr) }
       }
   }
 
@@ -340,8 +314,8 @@ object HilbertCalculus {
 
   lazy val assigndDual: BuiltInPositionTactic = UnifyUSCalculus.useAt(Ax.assignDual2)
 
-  lazy val assignbDual: BuiltInPositionTactic = "assignbDual"
-    .forward(UnifyUSCalculus.useAt(Ax.assignDual2, PosInExpr(1 :: Nil)))
+  lazy val assignbDual: BuiltInPositionTactic =
+    "assignbDual".forward(UnifyUSCalculus.useAt(Ax.assignDual2, PosInExpr(1 :: Nil)))
 
   @Derivation
   val assignbDualInfo: PositionTacticInfo = PositionTacticInfo.create(
@@ -356,20 +330,16 @@ object HilbertCalculus {
 //  def loop(invariant: Formula) = I(invariant)
   /**
    * K: modal modus ponens (hybrid systems)
-   * @note
-   *   Use with care since limited to hybrid systems. Use [[monb]] instead.
-   * @see
-   *   [[monb]]
-   * @see
-   *   [[mond]]
+   * @note Use with care since limited to hybrid systems. Use [[monb]] instead.
+   * @see [[monb]]
+   * @see [[mond]]
    */
   lazy val K: BuiltInPositionTactic = useAt(Ax.K)
 
   /**
    * V: vacuous box `[a]p()` will be discarded and replaced by `p()` provided program `a` does not change values of
    * postcondition `p()`.
-   * @note
-   *   Unsound for hybrid games
+   * @note Unsound for hybrid games
    */
   lazy val V: BuiltInPositionTactic = useAt(Ax.V)
 
@@ -392,8 +362,7 @@ object HilbertCalculus {
    * G |- [x'=f(x)&Q]P, D
    * }}}
    * @incontext
-   * @see
-   *   [[DifferentialEquationCalculus.dW()]]
+   * @see [[DifferentialEquationCalculus.dW()]]
    */
   lazy val DW: BuiltInPositionTactic = useAt(Ax.DW)
 
@@ -419,8 +388,7 @@ object HilbertCalculus {
    * G |- A->[x'=f(x)&Q]P, D
    * }}}
    * @incontext
-   * @see
-   *   [[DifferentialEquationCalculus.dC()]]
+   * @see [[DifferentialEquationCalculus.dC()]]
    */
   def DC(invariant: Formula): DependentPositionWithAppliedInputTactic = "DC".byWithInputs(
     List(invariant),
@@ -494,8 +462,7 @@ object HilbertCalculus {
   /**
    * DI: Differential Invariants are used for proving a formula to be an invariant of a differential equation.
    * `[x'=f(x)&q(x)]p(x)` reduces to `q(x) -> p(x) & [x'=f(x)]p(x)'`.
-   * @see
-   *   [[DifferentialEquationCalculus.dI()]]
+   * @see [[DifferentialEquationCalculus.dI()]]
    */
   lazy val DI: BuiltInPositionTactic = useAt(Ax.DI)
 
@@ -586,10 +553,8 @@ object HilbertCalculus {
   /**
    * Derive the differential expression at the indicated position (Hilbert computation deriving the answer by proof) to
    * get rid of the differential operators.
-   * @example
-   *   When applied at 1::Nil, turns [{x'=22}](2*x+x*y>=5)' into [{x'=22}]2*x'+x'*y+x*y'>=0
-   * @see
-   *   [[UnifyUSCalculus.chase]]
+   * @example When applied at 1::Nil, turns [{x'=22}](2*x+x*y>=5)' into [{x'=22}]2*x'+x'*y+x*y'>=0
+   * @see [[UnifyUSCalculus.chase]]
    */
   lazy val derive: BuiltInPositionTactic = "derive".by { (pr: ProvableSig, pos: Position) =>
     ProofRuleTactics.requireOneSubgoal(pr, "derive")
@@ -690,8 +655,7 @@ object HilbertCalculus {
 
   /**
    * allDist: distribute `\forall x p(x) -> \forall x q(x)` by replacing it with `\forall x (p(x)->q(x))`.
-   * @see
-   *   [[allDistElim]]
+   * @see [[allDistElim]]
    */
   lazy val allDist: BuiltInPositionTactic = useAt(Ax.allDist)
 
@@ -709,11 +673,9 @@ object HilbertCalculus {
  * There is rarely a reason to use these separate axioms, since [[HilbertCalculus.derive]] already uses the appropriate
  * differential axiom as needed.
  *
- * @see
- *   Figure 3 in
+ * @see Figure 3 in
  *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
- * @see
- *   [[HilbertCalculus.derive]]
+ * @see [[HilbertCalculus.derive]]
  */
 object Derive {
   import TacticFactory.*

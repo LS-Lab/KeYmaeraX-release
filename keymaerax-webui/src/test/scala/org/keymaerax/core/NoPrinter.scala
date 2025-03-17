@@ -12,8 +12,7 @@ import org.scalatest.matchers.should.Matchers
 /**
  * Tests printing for no pretty printer.
  *
- * @author
- *   Andre Platzer
+ * @author Andre Platzer
  */
 class NoPrinter extends AnyFlatSpec with Matchers {
   val randomTrials = 4000

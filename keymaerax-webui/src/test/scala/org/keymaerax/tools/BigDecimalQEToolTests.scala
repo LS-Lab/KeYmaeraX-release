@@ -16,8 +16,7 @@ import org.scalatest.LoneElement._
 
 /**
  * Tests for trustworthy BigDecimal computations
- * @author
- *   Fabian Immler
+ * @author Fabian Immler
  */
 class BigDecimalQEToolTests extends TacticTestBase {
 

@@ -51,8 +51,7 @@ import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 
 /**
  * Tests the DLBelleParser.
- * @author
- *   James Gallicchio
+ * @author James Gallicchio
  */
 class DLBelleParserTests
     extends AnyFlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll with MockFactory {
@@ -219,15 +218,15 @@ class DLBelleParserTests
   it should "parse substitutions" in {
     val dot = DotTerm(Real, Some(0))
     // @todo re-enable dots without index when explicitly phrased (.)?
-    parse("""US("J(.) ~> .>=0")""") shouldBe
-      UnifyUSCalculus
-        .USX(List(SubstitutionPair(PredOf(Function("J", None, Real, Bool), dot), GreaterEqual(dot, Number(0)))))
-    parse("""US("J(x) ~> x>=0")""") shouldBe
-      UnifyUSCalculus
-        .USX(List(SubstitutionPair(PredOf(Function("J", None, Real, Bool), dot), GreaterEqual(dot, Number(0)))))
-    parse("""US("(J(.) ~> .>=0)")""") shouldBe
-      UnifyUSCalculus
-        .USX(List(SubstitutionPair(PredOf(Function("J", None, Real, Bool), dot), GreaterEqual(dot, Number(0)))))
+    parse("""US("J(.) ~> .>=0")""") shouldBe UnifyUSCalculus.USX(List(
+      SubstitutionPair(PredOf(Function("J", None, Real, Bool), dot), GreaterEqual(dot, Number(0)))
+    ))
+    parse("""US("J(x) ~> x>=0")""") shouldBe UnifyUSCalculus.USX(List(
+      SubstitutionPair(PredOf(Function("J", None, Real, Bool), dot), GreaterEqual(dot, Number(0)))
+    ))
+    parse("""US("(J(.) ~> .>=0)")""") shouldBe UnifyUSCalculus.USX(List(
+      SubstitutionPair(PredOf(Function("J", None, Real, Bool), dot), GreaterEqual(dot, Number(0)))
+    ))
     parse("""US("f(.) ~> 2+.")""") shouldBe
       UnifyUSCalculus.USX(List(SubstitutionPair(FuncOf(Function("f", None, Real, Real), dot), Plus(Number(2), dot))))
     parse("""US("f(y) ~> 2+y")""") shouldBe

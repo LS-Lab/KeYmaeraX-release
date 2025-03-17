@@ -118,8 +118,8 @@ case class Options(
 ) {
 
   /** Helper function to make updating command-specific options easier. */
-  private def updateCommand[C <: Command](update: C => C): Options = this
-    .copy(command = Some(update(this.command.get.asInstanceOf[C])))
+  private def updateCommand[C <: Command](update: C => C): Options =
+    this.copy(command = Some(update(this.command.get.asInstanceOf[C])))
 
   def toToolConfig: ToolConfiguration = ToolConfiguration(
     tool = this.tool,

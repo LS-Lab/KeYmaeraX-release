@@ -19,10 +19,8 @@ import scala.collection.immutable._
 /**
  * Testing unifier and its limits.
  *
- * @author
- *   Andre Platzer
- * @see
- *   [[UnificationMatch]]
+ * @author Andre Platzer
+ * @see [[UnificationMatch]]
  */
 @SummaryTest @UsualTest
 class UnificationMatchTest extends SystemTestBase {
@@ -264,9 +262,9 @@ class UnificationMatchTest extends SystemTestBase {
 
   // @todo split this test case
 
-  private val semanticRenaming = UnificationMatch("quark(||)".asPlainFormula, "quarks=6".asPlainFormula)
-    .isInstanceOf[URenAboveUSubst] || UnificationMatch("quark(||)".asPlainFormula, "quarks=6".asPlainFormula)
-    .isInstanceOf[FastURenAboveUSubst]
+  private val semanticRenaming =
+    UnificationMatch("quark(||)".asPlainFormula, "quarks=6".asPlainFormula).isInstanceOf[URenAboveUSubst] ||
+      UnificationMatch("quark(||)".asPlainFormula, "quarks=6".asPlainFormula).isInstanceOf[FastURenAboveUSubst]
 
   "New unification match" should "unify renaming and instance 3*f(x)>2 and 5*x>2" in {
     shouldMatch(

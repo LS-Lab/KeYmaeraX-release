@@ -869,8 +869,10 @@ class SwitchedSystemsTests extends TacticTestBase {
 
     val u = Variable("u_")
 
-    val lexp =
-      lyaps.zipWithIndex.map(fi => And(Equal(u, Number(fi._2)), Less(Times(fi._1, exp), w))).reduceLeft(Or.apply)
+    val lexp = lyaps
+      .zipWithIndex
+      .map(fi => And(Equal(u, Number(fi._2)), Less(Times(fi._1, exp), w)))
+      .reduceLeft(Or.apply)
 
     val invariant = And(And("s_>=0".asFormula, Less(normsq, epssq)), lexp)
 

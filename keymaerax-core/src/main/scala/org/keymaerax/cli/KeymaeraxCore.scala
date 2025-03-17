@@ -80,8 +80,11 @@ object KeymaeraxCore extends Logging {
     }
 
     for (value <- options.jlinkinterface) {
-      Configuration
-        .set(Configuration.Keys.JLINK_USE_EXPR_INTERFACE, (value == JlinkInterface.Expr).toString, saveToFile = false)
+      Configuration.set(
+        Configuration.Keys.JLINK_USE_EXPR_INTERFACE,
+        (value == JlinkInterface.Expr).toString,
+        saveToFile = false,
+      )
     }
 
     for (value <- options.qemethod) {
@@ -193,8 +196,9 @@ object KeymaeraxCore extends Logging {
   def exit(status: Int): Nothing = { shutdownProver(); sys.exit(status) }
 
   /** Reads configuration from keymaerax.conf. */
-  def toolConfigFromFile(defaultTool: ToolName.Value): ToolConfiguration = ToolConfiguration
-    .config(Configuration.getString(Configuration.Keys.QE_TOOL).map(ToolName.parse).getOrElse(defaultTool))
+  def toolConfigFromFile(defaultTool: ToolName.Value): ToolConfiguration = ToolConfiguration.config(
+    Configuration.getString(Configuration.Keys.QE_TOOL).map(ToolName.parse).getOrElse(defaultTool)
+  )
 
   /** Combines tool configurations, favoring primary configuration over secondary configuration. */
   def combineToolConfigs(primary: ToolConfiguration, secondary: ToolConfiguration): ToolConfiguration =
@@ -215,8 +219,9 @@ object KeymaeraxCore extends Logging {
 
   /** Initializes Mathematica from command line options, if present; else from default config */
   private def initMathematica(options: ToolConfiguration): Unit = {
-    ToolProvider
-      .setProvider(MultiToolProvider(MathematicaToolProvider(mathematicaConfig(options)) :: Z3ToolProvider() :: Nil))
+    ToolProvider.setProvider(MultiToolProvider(
+      MathematicaToolProvider(mathematicaConfig(options)) :: Z3ToolProvider() :: Nil
+    ))
     if (!ToolProvider.isInitialized)
       throw new ProverSetupException("Failed to initialize Mathematica; the license may be expired")
   }
@@ -224,8 +229,9 @@ object KeymaeraxCore extends Logging {
   /** Initializes Wolfram Engine from command line options. */
   private def initWolframEngine(options: ToolConfiguration): Unit = {
     Configuration.set(Configuration.Keys.MATH_LINK_TCPIP, "true", saveToFile = false)
-    ToolProvider
-      .setProvider(MultiToolProvider(WolframEngineToolProvider(mathematicaConfig(options)) :: Z3ToolProvider() :: Nil))
+    ToolProvider.setProvider(MultiToolProvider(
+      WolframEngineToolProvider(mathematicaConfig(options)) :: Z3ToolProvider() :: Nil
+    ))
     if (!ToolProvider.isInitialized) throw new ProverSetupException(
       "Failed to initialize Wolfram Engine; the license may be expired (try starting Wolfram Engine from the command line to renew the license)"
     )
@@ -233,16 +239,15 @@ object KeymaeraxCore extends Logging {
 
   /** Initializes Wolfram Script from command line options. */
   private def initWolframScript(options: ToolConfiguration): Unit = {
-    ToolProvider
-      .setProvider(MultiToolProvider(WolframScriptToolProvider(mathematicaConfig(options)) :: Z3ToolProvider() :: Nil))
+    ToolProvider.setProvider(MultiToolProvider(
+      WolframScriptToolProvider(mathematicaConfig(options)) :: Z3ToolProvider() :: Nil
+    ))
     if (!ToolProvider.isInitialized) throw new ProverSetupException(
       "Failed to initialize Wolfram Script; the license may be expired (try starting Wolfram Script from the command line to renew the license)"
     )
   }
 
-  /**
-   * Reads the mathematica configuration from command line options, if specified, otherwise from default configuration.
-   */
+  /** Reads the mathematica configuration from command line options, if specified, otherwise from default configuration. */
   private def mathematicaConfig(options: ToolConfiguration): ToolConfiguration = {
     assert(
       options.mathKernel.isDefined == options.jlinkLibDir.isDefined,

@@ -33,8 +33,7 @@ import scala.util.Try
 /**
  * Basic differential equation proving technology tests [[org.keymaerax.btactics.DifferentialTactics]],
  * [[org.keymaerax.btactics.TactixLibrary.DW]], and [[org.keymaerax.btactics.TactixLibrary.DC]]
- * @see
- *   [[ContinuousInvariantTests]]
+ * @see [[ContinuousInvariantTests]]
  */
 @SummaryTest @UsualTest @nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
 @nowarn("cat=deprecation&origin=org.keymaerax.btactics.TactixLibrary.master")
@@ -440,14 +439,15 @@ class DifferentialTests extends TacticTestBase {
   }
 
   it should "prove x >= 0 & y >= 0 & z >= 0 -> [{x'=y, y'=z, z'=x^2 & y >=0}]x>=0" in withQE { _ =>
-    val input = """ArchiveEntry "Test"
-                  |ProgramVariables Real x, y, z; End.
-                  |Problem
-                  |  x >= 0 & y >= 0 & z >= 0
-                  |  ->
-                  |  [{x'=y, y'=z, z'=x^2 & y >=0}]x>=0
-                  |End.
-                  |End.""".stripMargin
+    val input =
+      """ArchiveEntry "Test"
+        |ProgramVariables Real x, y, z; End.
+        |Problem
+        |  x >= 0 & y >= 0 & z >= 0
+        |  ->
+        |  [{x'=y, y'=z, z'=x^2 & y >=0}]x>=0
+        |End.
+        |End.""".stripMargin
     proveBy(ArchiveParser.parseAsFormula(input), implyR(1) & dI(Symbol("full"))(1)) shouldBe Symbol("proved")
   }
 
@@ -1171,10 +1171,7 @@ class DifferentialTests extends TacticTestBase {
     // @note delayed provable ultimately resolves once all the differentials are gone
     val fullResult = TactixLibrary.proveBy(
       "x+y>=0 ==> [{x'=5}]x+y>=0".asSequent,
-      dI(Symbol("none"))(1) < (
-        id,
-        DifferentialTactics.DE(1) & abstractionb(1) & allR(1) & cohideR(1) & by(result)
-      ),
+      dI(Symbol("none"))(1) < (id, DifferentialTactics.DE(1) & abstractionb(1) & allR(1) & cohideR(1) & by(result)),
     )
     fullResult shouldBe Symbol("proved")
     fullResult.conclusion shouldBe "x+y>=0 ==> [{x'=5}]x+y>=0".asSequent
@@ -1548,27 +1545,25 @@ class DifferentialTests extends TacticTestBase {
   it should "use facts preserved by dC when transforming postcondition" in withMathematica { _ =>
     proveBy(
       "==> [b:=1;][{x'=v}]x>b".asSequent,
-      dC("b=1".asFormula)(1, 1 :: Nil) < (
-        dG("z'=v".asDifferentialProgram, Some("x/b>1".asFormula))(1, 1 :: Nil),
-        skip
-      ),
+      dC("b=1".asFormula)(1, 1 :: Nil) < (dG("z'=v".asDifferentialProgram, Some("x/b>1".asFormula))(1, 1 :: Nil), skip),
     ).subgoals should contain theSameElementsInOrderAs ("==> [b:=1;]\\exists z [{x'=v,z'=v&true&b=1}]x/b>1".asSequent ::
       "==> [b:=1;][{x'=v}]b=1".asSequent :: Nil)
   }
 
   it should "expand definitions to avoid singularities" in withMathematica { _ =>
     val defs = "g() ~> 9 :: p() ~> 1 :: nil".asDeclaration
-    val s = """9>0,
-              |1>0,
-              |T()>0,
-              |m() < -(9/1)^(1/2),
-              |t=0,
-              |v>-(9/1)^(1/2),
-              |x>=0,
-              |v < 0
-              |==>
-              |[{x'=v,v'=-9+1*v^2,t'=1 & t<=T() & x>=0 & v < 0}]v>-(9/1)^(1/2)
-              |""".stripMargin.asSequent
+    val s =
+      """9>0,
+        |1>0,
+        |T()>0,
+        |m() < -(9/1)^(1/2),
+        |t=0,
+        |v>-(9/1)^(1/2),
+        |x>=0,
+        |v < 0
+        |==>
+        |[{x'=v,v'=-9+1*v^2,t'=1 & t<=T() & x>=0 & v < 0}]v>-(9/1)^(1/2)
+        |""".stripMargin.asSequent
     proveBy(
       s,
       dG("y'=(-1/2*p()*(v-(g()/p())^(1/2)))*y".asDifferentialProgram, Some("y^2*(v+(g()/p())^(1/2))=1".asFormula))(1),
@@ -2343,10 +2338,7 @@ class DifferentialTests extends TacticTestBase {
     val res = proveBy(
       "a=1,b()=2 ==> x>=0,y>=0,[{x'=a,y'=b()}](x<=0&y<0)".asSequent,
       DifferentialTactics.dCClosure(true)(3)
-        < (
-          QE,
-          skip
-        ),
+        < (QE, skip),
     )
     res.subgoals.loneElement shouldBe
       "a=1, b()=2 ==> x>=0, y>=0, [{x'=a,y'=b()&true&0-x>=0&0-y>=0}](0-x>0&0-y>0)".asSequent
@@ -2356,10 +2348,7 @@ class DifferentialTests extends TacticTestBase {
     val result = proveBy(
       "a=1,b()=2 ==> x>=0,y>=0,[{x'=a,y'=b()}](f(x,y)>1)".asSequent,
       DifferentialTactics.dCClosure(true)(3)
-        < (
-          skip,
-          skip
-        ),
+        < (skip, skip),
     )
 
     result.subgoals should have size 2

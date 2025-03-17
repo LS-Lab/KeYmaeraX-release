@@ -8,8 +8,7 @@ package org.keymaerax.btactics.macros
 /**
  * Render a sequent as a list of antecedent UI strings and a list of succedent UI strings.
  *
- * @param isClosed
- *   true to indicate that this sequent is closed so (*) star.
+ * @param isClosed true to indicate that this sequent is closed so (*) star.
  */
 case class DisplaySequent(ante: List[String], succ: List[String], isClosed: Boolean = false)
 

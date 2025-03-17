@@ -16,33 +16,22 @@ trait MathematicaCommandRunner {
 
   /**
    * Runs Mathematica command `cmd`, converts the result into KeYmaera X with the converter `m2k`.
-   * @param cmd
-   *   The Mathematica command.
-   * @param m2k
-   *   The converter from Mathematica back to KeYmaera X.
-   * @return
-   *   The result string and the converted result.
-   * @tparam T
-   *   The KeYmaera X expression type.
-   * @throws MathematicaComputationTimedOutException
-   *   if the computation timed out in Mathematica
-   * @throws MathematicaComputationAbortedException
-   *   if the computation was aborted inside Mathematica
-   * @throws ConversionException
-   *   if the conversion back from Mathematica (using `converter`) fails
-   * @throws ToolExecutionException
-   *   if the command execution fails or no-ops or returns an unexpected answer format
-   * @throws ToolCommunicationException
-   *   if the communication with the tool fails or the tool is not in a proper state
-   * @ensures
-   *   cmd is freed and should not ever be used again.
+   * @param cmd The Mathematica command.
+   * @param m2k The converter from Mathematica back to KeYmaera X.
+   * @return The result string and the converted result.
+   * @tparam T The KeYmaera X expression type.
+   * @throws MathematicaComputationTimedOutException if the computation timed out in Mathematica
+   * @throws MathematicaComputationAbortedException if the computation was aborted inside Mathematica
+   * @throws ConversionException if the conversion back from Mathematica (using `converter`) fails
+   * @throws ToolExecutionException if the command execution fails or no-ops or returns an unexpected answer format
+   * @throws ToolCommunicationException if the communication with the tool fails or the tool is not in a proper state
+   * @ensures cmd is freed and should not ever be used again.
    */
   def run[T](cmd: MExpr, m2k: M2KConverter[T]): (String, T)
 
   /**
    * Cancels the current request.
-   * @return
-   *   True if command is successfully cancelled, or False if the new status is unknown.
+   * @return True if command is successfully cancelled, or False if the new status is unknown.
    */
   def cancel(): Boolean
 }
@@ -63,7 +52,7 @@ abstract class BaseMathematicaCommandRunner extends MathematicaCommandRunner {
   var memoryLimit: Long = MEMORY_LIMIT_OFF
 
   /** @inheritdoc */
-  final override def run[T](cmd: MExpr, m2k: M2KConverter[T]): (String, T) =
+  override final def run[T](cmd: MExpr, m2k: M2KConverter[T]): (String, T) =
     doRun(memoryConstrained(timeConstrained(cmd)), m2k)
 
   /** @see [[run]] */
@@ -102,8 +91,8 @@ case class JLinkMathematicaCommandRunner(ml: KernelLink) extends BaseMathematica
       val indexedCmd = MathematicaOpSpec.list(MathematicaOpSpec.long(queryIndex), cmd)
 
       // Check[expr, err, messages] evaluates expr, if one of the specified messages is generated, returns err
-      val checkErrorMsgCmd = MathematicaOpSpec
-        .check(indexedCmd, MathematicaOpSpec.exception.op /*, checkedMessagesExpr*/ )
+      val checkErrorMsgCmd =
+        MathematicaOpSpec.check(indexedCmd, MathematicaOpSpec.exception.op /*, checkedMessagesExpr*/ )
 
       disposeAfter(
         checkErrorMsgCmd,
@@ -147,10 +136,8 @@ case class JLinkMathematicaCommandRunner(ml: KernelLink) extends BaseMathematica
   private def dispatch(cmd: Expr): Unit = {
     ensureKernel()
 
-    try {
-      if (useExprInterface) { ml.evaluate(cmd) }
-      else { ml.evaluate(cmd.toString) }
-    } catch { case ex: MathLinkException => throw MathematicaMathlinkException(s"Error executing command $cmd", ex) }
+    try { if (useExprInterface) { ml.evaluate(cmd) } else { ml.evaluate(cmd.toString) } }
+    catch { case ex: MathLinkException => throw MathematicaMathlinkException(s"Error executing command $cmd", ex) }
   }
 
   /** Wait for an answer and return its expression. */
@@ -168,24 +155,15 @@ case class JLinkMathematicaCommandRunner(ml: KernelLink) extends BaseMathematica
   /**
    * Blocks and returns the answer (as string and as KeYmaera X expression).
    *
-   * @param cmdIdx
-   *   The expected command index to avoid returning stale answers.
-   * @param converter
-   *   Converts Mathematica expressions back to KeYmaera X expressions.
-   * @param ctx
-   *   The context for error messages in exceptions.
-   * @tparam T
-   *   The exact KeYmaera X expression type expected as result.
-   * @throws MathematicaComputationTimedOutException
-   *   if the computation timed out in Mathematica
-   * @throws MathematicaComputationAbortedException
-   *   if the computation was aborted inside Mathematica
-   * @throws ToolExecutionException
-   *   if the command execution fails or no-ops or returns an unexpected answer format
-   * @throws ConversionException
-   *   if the conversion back from Mathematica (using `converter`) fails
-   * @return
-   *   The result as string and converted to the expected result type.
+   * @param cmdIdx The expected command index to avoid returning stale answers.
+   * @param converter Converts Mathematica expressions back to KeYmaera X expressions.
+   * @param ctx The context for error messages in exceptions.
+   * @tparam T The exact KeYmaera X expression type expected as result.
+   * @throws MathematicaComputationTimedOutException if the computation timed out in Mathematica
+   * @throws MathematicaComputationAbortedException if the computation was aborted inside Mathematica
+   * @throws ToolExecutionException if the command execution fails or no-ops or returns an unexpected answer format
+   * @throws ConversionException if the conversion back from Mathematica (using `converter`) fails
+   * @return The result as string and converted to the expected result type.
    */
   private def getAnswer[T](cmdIdx: Long, converter: MExpr => T, ctx: Expr): (String, T) = disposeAfter(
     await(ctx),

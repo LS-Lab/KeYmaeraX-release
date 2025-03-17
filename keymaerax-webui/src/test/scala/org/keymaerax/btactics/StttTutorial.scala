@@ -30,8 +30,7 @@ import scala.language.postfixOps
 /**
  * Tutorial test cases.
  *
- * @author
- *   Stefan Mitsch
+ * @author Stefan Mitsch
  */
 @SlowTest @nowarn("cat=deprecation&origin=org.keymaerax.btactics.TactixLibrary.master")
 class StttTutorial extends TacticTestBase {
@@ -99,12 +98,14 @@ class StttTutorial extends TacticTestBase {
 
   "Example 1a" should "be provable" in withQE { _ =>
     withDatabase { db =>
-      val modelContent =
-        Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example1a.kyx")).mkString
+      val modelContent = Source
+        .fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example1a.kyx"))
+        .mkString
       val tactic = implyR(Symbol("_")) & SaturateTactic(andL(Symbol("_"))) & dC("v>=0".asFormula)(1) & Idioms.<(
-        dC("x>=old(x)".asFormula)(1) &
-          Idioms
-            .<(dW(1) & SaturateTactic(alphaRule) & exhaustiveEqL2R(Symbol("L"), "x0=x_0".asFormula) & prop, dI()(1)),
+        dC("x>=old(x)".asFormula)(1) & Idioms.<(
+          dW(1) & SaturateTactic(alphaRule) & exhaustiveEqL2R(Symbol("L"), "x0=x_0".asFormula) & prop,
+          dI()(1),
+        ),
         dI()(1),
       )
 
@@ -114,8 +115,9 @@ class StttTutorial extends TacticTestBase {
 
   it should "be provable with multi-arg invariant" in withQE { _ =>
     withDatabase { _ =>
-      val modelContent =
-        Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example1a.kyx")).mkString
+      val modelContent = Source
+        .fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example1a.kyx"))
+        .mkString
       val tactic = implyR(Symbol("_")) & SaturateTactic(andL(Symbol("_"))) &
         diffInvariant("v>=0".asFormula :: "x>=old(x)".asFormula :: Nil)(1) & dW(1) & SaturateTactic(alphaRule) &
         exhaustiveEqL2R(Symbol("L"), "x0=x_0".asFormula) & prop
@@ -513,8 +515,9 @@ class StttTutorial extends TacticTestBase {
         hideL(Symbol("L"), "c<=ep()".asFormula) & hideL(Symbol("L"), "r!=0".asFormula)
 
       val tactic = implyR(Symbol("R")) & SaturateTactic(andL(Symbol("L"))) &
-        HybridProgramCalculus
-          .loop("v >= 0 & dx^2+dy^2 = 1 & r != 0 & abs(y-ly()) + v^2/(2*b()) < lw()".asFormula)(Symbol("R")) <
+        HybridProgramCalculus.loop("v >= 0 & dx^2+dy^2 = 1 & r != 0 & abs(y-ly()) + v^2/(2*b()) < lw()".asFormula)(
+          Symbol("R")
+        ) <
         (
           print("Base case") & speculativeQE, // @todo speculativeQE with Z3 fails but QE works
           print("Use case") & speculativeQE,
@@ -555,8 +558,9 @@ class StttTutorial extends TacticTestBase {
         hideL(Symbol("L"), "c<=ep()".asFormula) & hideL(Symbol("L"), "r!=0".asFormula)
 
       val tactic = implyR(Symbol("R")) & SaturateTactic(andL(Symbol("L"))) &
-        HybridProgramCalculus
-          .loop("v >= 0 & dx^2+dy^2 = 1 & r != 0 & abs(y-ly()) + v^2/(2*b()) < lw()".asFormula)(Symbol("R")) <
+        HybridProgramCalculus.loop("v >= 0 & dx^2+dy^2 = 1 & r != 0 & abs(y-ly()) + v^2/(2*b()) < lw()".asFormula)(
+          Symbol("R")
+        ) <
         (
           print("Base case") & speculativeQE,
           print("Use case") & speculativeQE,

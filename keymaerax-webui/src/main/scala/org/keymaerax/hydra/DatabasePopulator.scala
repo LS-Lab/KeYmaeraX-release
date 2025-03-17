@@ -20,8 +20,7 @@ import scala.util.Try
 
 /**
  * Populates the database from a JSON collection of models and tactics.
- * @author
- *   Stefan Mitsch
+ * @author Stefan Mitsch
  */
 object DatabasePopulator extends Logging {
 

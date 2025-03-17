@@ -12,8 +12,7 @@ import scala.annotation.{nowarn, tailrec}
 /**
  * Tactics for simplifying arithmetic by analysing the signs of variables in formulas.
  *
- * @author
- *   Stefan Mitsch
+ * @author Stefan Mitsch
  */
 object SignAnalysis {
 

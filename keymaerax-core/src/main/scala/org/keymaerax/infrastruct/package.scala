@@ -25,10 +25,8 @@ import scala.collection.immutable
  *   - [[ExpressionTraversal ExpressionTraversal]] generic functionality for traversing expressions for analysis or
  *     transformation.
  *
- * @author
- *   Andre Platzer
- * @see
- *   [[org.keymaerax.btactics.UnifyUSCalculus]]
+ * @author Andre Platzer
+ * @see [[org.keymaerax.btactics.UnifyUSCalculus]]
  */
 package object infrastruct {
 

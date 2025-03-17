@@ -20,8 +20,7 @@ import scala.collection.immutable
 
 /**
  * Stores lemmas without user-defined name.
- * @author
- *   Stefan Mitsch
+ * @author Stefan Mitsch
  */
 object AnonymousLemmas {
   private val lemmaDB = LemmaDBFactory.lemmaDB
@@ -46,8 +45,8 @@ object AnonymousLemmas {
    * Remembers a lemma (returns previously proven lemma or proves fresh if non-existent). Does not forward definitions
    * to `t`!
    */
-  def remember(s: Sequent, t: BelleExpr, namespace: String): Lemma = find(s, namespace)
-    .getOrElse(store(TactixLibrary.proveBy(s, t), namespace))
+  def remember(s: Sequent, t: BelleExpr, namespace: String): Lemma =
+    find(s, namespace).getOrElse(store(TactixLibrary.proveBy(s, t), namespace))
 
   /** Remembers a lemma (returns previously proven lemma or proves fresh if non-existent). */
   def remember(p: ProvableSig, t: BelleExpr, namespace: String): Lemma = {

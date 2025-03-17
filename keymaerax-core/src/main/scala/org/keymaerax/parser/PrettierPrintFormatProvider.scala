@@ -10,7 +10,5 @@ import org.keymaerax.core.Expression
 /** Uses the [[KeYmaeraXPrettierPrinter]] to provide formatting for expression `e` fitting into `margin`. */
 case class PrettierPrintFormatProvider(e: Expression, margin: Int)
     extends PrettyPrintFormatProvider(new KeYmaeraXPrettierPrinter(margin)(e), s => s) {
-  override def print(next: String): String =
-    try { super.print(next) }
-    catch { case _: Throwable => next }
+  override def print(next: String): String = try { super.print(next) } catch { case _: Throwable => next }
 }

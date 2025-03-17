@@ -15,8 +15,7 @@ import scala.collection.immutable._
 
 /**
  * Advocatus Test when substituting systems instead of single differential equations.
- * @author
- *   Andre Platzer
+ * @author Andre Platzer
  */
 @AdvocatusTest
 class SystemSubstituterTest extends TacticTestBase {

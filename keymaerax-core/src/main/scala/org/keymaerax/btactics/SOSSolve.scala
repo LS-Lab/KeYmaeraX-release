@@ -53,10 +53,12 @@ object SOSSolve {
 
   private lazy val zeroGtOne = AnonymousLemmas.remember("1 > 0".asFormula, QE & done)
   private lazy val sosPosIntro = AnonymousLemmas.remember("x_() > 0 -> x_() + y_()^2 > 0".asFormula, QE & done)
-  private lazy val sosPosCoeffIntro = AnonymousLemmas
-    .remember("((c_() > 0<->true) & x_() > 0) -> x_() + c_()*y_()^2 > 0".asFormula, QE & done)
-  private lazy val sosPosRatCoeffIntro = AnonymousLemmas
-    .remember("(((c_() > 0 & d_() > 0)<->true) & x_() > 0) -> x_() + c_()/d_()*y_()^2 > 0".asFormula, QE & done)
+  private lazy val sosPosCoeffIntro =
+    AnonymousLemmas.remember("((c_() > 0<->true) & x_() > 0) -> x_() + c_()*y_()^2 > 0".asFormula, QE & done)
+  private lazy val sosPosRatCoeffIntro = AnonymousLemmas.remember(
+    "(((c_() > 0 & d_() > 0)<->true) & x_() > 0) -> x_() + c_()/d_()*y_()^2 > 0".asFormula,
+    QE & done,
+  )
   private def sosPosTac: DependentTactic = anon { (seq: Sequent) =>
     require(seq.succ.length == 1, "sosPosTac requires exactly one succedent")
     require(seq.ante.isEmpty, "sosPosTac requires empty antecedent")
@@ -77,8 +79,8 @@ object SOSSolve {
     }
   }
 
-  private lazy val plusEqZeroIntro = AnonymousLemmas
-    .remember("(p_() = 0 & q_() = 0) -> p_() + q_() = 0".asFormula, QE & done)
+  private lazy val plusEqZeroIntro =
+    AnonymousLemmas.remember("(p_() = 0 & q_() = 0) -> p_() + q_() = 0".asFormula, QE & done)
   private lazy val timesEqZeroIntro = AnonymousLemmas.remember("p_() = 0 -> c_()*p_() = 0".asFormula, QE & done)
   private def eqZeroTac: DependentTactic = anon { (seq: Sequent) =>
     require(seq.succ.length == 1, "eqZeroTac requires exactly one succedent")
@@ -90,8 +92,8 @@ object SOSSolve {
     }
   }
 
-  lazy val witnessSOSLemma = AnonymousLemmas
-    .remember("(sos_() > 0 & sos_() = comb_() & comb_() = 0) -> false".asFormula, QE & done)
+  lazy val witnessSOSLemma =
+    AnonymousLemmas.remember("(sos_() > 0 & sos_() = comb_() & comb_() = 0) -> false".asFormula, QE & done)
 
   case class SOSSolveAborted() extends BelleProofSearchControl("sossolve aborted")
   case class SOSSolveNoSOS() extends BelleProofSearchControl("sossolve did not find sos")
@@ -277,8 +279,9 @@ object SOSSolve {
     case _ => ???
   }
 
-  def naturalExponentCheck(seq: Sequent): Option[Term] = (seq.ante ++ seq.succ)
-    .collectFirst(scala.Function.unlift(naturalExponentCheck))
+  def naturalExponentCheck(seq: Sequent): Option[Term] = (seq.ante ++ seq.succ).collectFirst(
+    scala.Function.unlift(naturalExponentCheck)
+  )
 
   def naturalExponentCheck: DependentTactic = anon { (seq: Sequent) =>
     naturalExponentCheck(seq) match {

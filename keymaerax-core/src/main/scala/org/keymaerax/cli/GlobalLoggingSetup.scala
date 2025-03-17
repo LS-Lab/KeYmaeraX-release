@@ -15,8 +15,8 @@ object GlobalLoggingSetup {
   /**
    * Configure the global logging according to the current [[Configuration]].
    *
-   * @param verbosity
-   *   How much to log. A verbosity of 0 is the default, while higher values make the output increasingly more verbose.
+   * @param verbosity How much to log. A verbosity of 0 is the default, while higher values make the output increasingly
+   *   more verbose.
    */
   def configureLogger(verbosity: Int = 0): Unit = {
     val configUri = verbosity match {

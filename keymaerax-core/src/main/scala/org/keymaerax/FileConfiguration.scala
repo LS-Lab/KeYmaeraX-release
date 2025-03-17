@@ -32,8 +32,8 @@ object FileConfiguration extends Configuration {
     }
   }
 
-  private val CONFIG_PATH: String = System
-    .getProperty("CONFIG_PATH", KEYMAERAX_HOME_PATH + File.separator + "keymaerax.conf")
+  private val CONFIG_PATH: String =
+    System.getProperty("CONFIG_PATH", KEYMAERAX_HOME_PATH + File.separator + "keymaerax.conf")
   private val DEFAULT_CONFIG_PATH: String = "/default.conf"
 
   // @note initializes the home directory

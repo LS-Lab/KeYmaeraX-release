@@ -14,8 +14,7 @@ import org.keymaerax.parser.Declaration
 /**
  * Returns a UUID whose status can be queried at a later time ({complete: true/false[, proves: true/false]}.
  *
- * @see
- *   CheckValidationRequest - calling this with the returned UUID should give the status of proof checking.
+ * @see CheckValidationRequest - calling this with the returned UUID should give the status of proof checking.
  */
 class ValidateProofRequest(db: DBAbstraction, model: Formula, proof: BelleExpr, defs: Declaration)
     extends Request with ReadRequest {

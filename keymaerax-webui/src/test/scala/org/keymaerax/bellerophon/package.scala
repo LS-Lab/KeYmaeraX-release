@@ -10,7 +10,6 @@ package org.keymaerax
  *
  * Tests of specific tactics implemented in Bellerophon should be defined in separate packages.
  *
- * @author
- *   Nathan Fulton
+ * @author Nathan Fulton
  */
 package object bellerophon {}

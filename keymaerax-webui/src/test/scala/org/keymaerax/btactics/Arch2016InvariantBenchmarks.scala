@@ -12,8 +12,7 @@ import org.keymaerax.tags.{IgnoreInBuildTest, SlowTest}
 /**
  * These are all translated by hand from the supplementary material of "Benchmarks for Non-linear Continuous System
  * Safety Verification" http://verivital.com/hyst/benchmark-nonlinear/
- * @author
- *   Nathan Fulton
+ * @author Nathan Fulton
  */
 @SlowTest @IgnoreInBuildTest // test runs forever, queues up and ruins all builds
 class Arch2016InvariantBenchmarks extends TacticTestBase {

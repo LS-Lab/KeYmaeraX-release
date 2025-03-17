@@ -15,8 +15,7 @@ import org.scalatest.matchers.should.Matchers
 
 /**
  * Random Provable constructions
- * @author
- *   Andre Platzer
+ * @author Andre Platzer
  */
 class RandomProvableTest extends AnyFlatSpec with Matchers {
   Configuration.setConfiguration(FileConfiguration)

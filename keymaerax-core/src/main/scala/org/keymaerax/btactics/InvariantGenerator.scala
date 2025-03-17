@@ -43,24 +43,22 @@ case class Invariant(formula: Formula, hint: Option[InvariantHint] = None)
 /**
  * Invariant generator.
  *
- * @author
- *   Stefan Mitsch
+ * @author Stefan Mitsch
  */
 trait InvariantGenerator {
 
   /**
    * Generate multiple [[Invariant]]s to try. Results do not necessarily have to be deterministic.
    *
-   * @author
-   *   Stefan Mitsch
+   * @author Stefan Mitsch
    */
   def generate(sequent: Sequent, position: Position, declaration: Declaration): LazyList[Invariant]
 }
 
 /** Generator always providing a fixed list of [[Invariant]]s as output. */
 case class FixedGenerator(list: List[Invariant]) extends InvariantGenerator {
-  override def generate(sequent: Sequent, position: Position, declaration: Declaration): LazyList[Invariant] = list
-    .to(LazyList)
+  override def generate(sequent: Sequent, position: Position, declaration: Declaration): LazyList[Invariant] =
+    list.to(LazyList)
 }
 
 object ConfigurableGenerator {
@@ -81,8 +79,7 @@ object ConfigurableGenerator {
 
 /**
  * Map-based generator providing output according to the fixed map `products` according to its program or whole formula.
- * @author
- *   Stefan Mitsch
+ * @author Stefan Mitsch
  */
 class ConfigurableGenerator(var products: Map[Expression, Seq[Invariant]] = Map[Expression, Seq[Invariant]]())
     extends InvariantGenerator {
@@ -94,9 +91,7 @@ class ConfigurableGenerator(var products: Map[Expression, Seq[Invariant]] = Map[
       case None => Nil.to(LazyList)
     }
 
-  /**
-   * Finds products that match the program `prg` either literally, or if ODE then without evolution domain constraint.
-   */
+  /** Finds products that match the program `prg` either literally, or if ODE then without evolution domain constraint. */
   private def findPrgProducts(prg: Program): LazyList[Invariant] = prg match {
     case sys @ ODESystem(ode, _) =>
       val odeProducts = products.find({
@@ -156,22 +151,18 @@ class ConfigurableGenerator(var products: Map[Expression, Seq[Invariant]] = Map[
 /**
  * Invariant generators and differential invariant generators.
  *
- * @author
- *   Andre Platzer
- * @see
- *   [[TactixLibrary.invSupplier]]
+ * @author Andre Platzer
+ * @see [[TactixLibrary.invSupplier]]
  * @see
  *   [[org.keymaerax.Bibliography.ItpPlatzer12 A differential operator approach to equational differential invariants]]
- * @see
- *   [[org.keymaerax.Bibliography.FmsdPlatzerC09 Computing differential invariants of hybrid systems as fixedpoints]]
+ * @see [[org.keymaerax.Bibliography.FmsdPlatzerC09 Computing differential invariants of hybrid systems as fixedpoints]]
  */
 object InvariantGenerator extends Logging {
 
   /**
    * A relevance filtering tool for dependency-optimized invariant and differential invariant generation based on the
    * candidates from `generator`.
-   * @author
-   *   Andre Platzer
+   * @author Andre Platzer
    */
   @nowarn("msg=match may not be exhaustive")
   def relevanceFilter(generator: InvariantGenerator, analyzeMissing: Boolean): InvariantGenerator =
@@ -221,8 +212,7 @@ object InvariantGenerator extends Logging {
   /**
    * A relevance filtering tool for dependency-optimized invariant and differential invariant generation based on the
    * candidates from `generator`.
-   * @author
-   *   Andre Platzer
+   * @author Andre Platzer
    */
   @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def sortedRelevanceFilter(generator: InvariantGenerator): InvariantGenerator = (sequent, pos, defs) => {
@@ -297,8 +287,7 @@ object InvariantGenerator extends Logging {
 
   /**
    * A differential invariant generator.
-   * @author
-   *   Andre Platzer
+   * @author Andre Platzer
    */
   lazy val differentialInvariantGenerator: InvariantGenerator = (sequent, pos, defs) =>
     (TactixLibrary.invSupplier.generate(sequent, pos, defs) #:::
@@ -307,16 +296,14 @@ object InvariantGenerator extends Logging {
 
   /**
    * A more expensive extended differential invariant generator.
-   * @author
-   *   Andre Platzer
+   * @author Andre Platzer
    */
   lazy val extendedDifferentialInvariantGenerator: InvariantGenerator = (sequent, pos, defs) =>
     sortedRelevanceFilter(inverseCharacteristicDifferentialInvariantGenerator).generate(sequent, pos, defs).distinct
 
   /**
    * A loop invariant generator.
-   * @author
-   *   Andre Platzer
+   * @author Andre Platzer
    */
   lazy val loopInvariantGenerator: InvariantGenerator = (sequent, pos, defs) =>
     (TactixLibrary.invSupplier.generate(sequent, pos, defs) #::: sortedRelevanceFilter(loopInvariantCandidates)
@@ -324,8 +311,7 @@ object InvariantGenerator extends Logging {
 
   /**
    * A simplistic differential invariant candidate generator.
-   * @author
-   *   Andre Platzer
+   * @author Andre Platzer
    */
   lazy val differentialInvariantCandidates: InvariantGenerator = (sequent, pos, defs) =>
     // @note be careful to not evaluate entire stream by sorting/filtering etc.
@@ -336,29 +322,29 @@ object InvariantGenerator extends Logging {
 
   /**
    * A simplistic loop invariant candidate generator.
-   * @author
-   *   Andre Platzer
+   * @author Andre Platzer
    */
   lazy val loopInvariantCandidates: InvariantGenerator = simpleInvariantCandidates
 
   /**
    * A simplistic invariant and differential invariant candidate generator.
-   * @author
-   *   Andre Platzer
+   * @author Andre Platzer
    */
   lazy val simpleInvariantCandidates: InvariantGenerator = (sequent, pos, defs) => {
     def combinedAssumptions(loop: Loop, post: Formula): List[Formula] = {
       val anteConjuncts = defs.exhaustiveSubst(sequent).ante.toList.flatMap(FormulaTools.conjuncts)
       val postConjuncts = FormulaTools.conjuncts(post)
       val loopBV = StaticSemantics.boundVars(loop)
-      val combined = anteConjuncts
-        .filter(fml => !postConjuncts.contains(fml) && !StaticSemantics.freeVars(fml).intersect(loopBV).isEmpty)
+      val combined = anteConjuncts.filter(fml =>
+        !postConjuncts.contains(fml) && !StaticSemantics.freeVars(fml).intersect(loopBV).isEmpty
+      )
       val anteInvCandidate = combined.reduceRightOption(And.apply).getOrElse(True)
       // @todo pre -> post counterexample is not strong enough to indicate what to filter (need to consult loop body).
       if (ToolProvider.cexTool().isDefined) {
         // @note used to be Imply, now filter only duplicate information
-        postConjuncts
-          .filter(fml => fml.isFOL && TactixLibrary.findCounterExample(Equiv(anteInvCandidate, fml)).isDefined) match {
+        postConjuncts.filter(fml =>
+          fml.isFOL && TactixLibrary.findCounterExample(Equiv(anteInvCandidate, fml)).isDefined
+        ) match {
           case Nil => combined
           case missingPost => missingPost ++ combined
         }
@@ -467,8 +453,9 @@ object InvariantGenerator extends Logging {
         .flatMap((inv: Term) => {
           val initial = algebra.polynomialReduce(inv, GB)._2
           // @todo could check that it's not a tautology using RCF
-          List(Equal(inv, initial), GreaterEqual(inv, initial), LessEqual(inv, initial))
-            .filter(cand => !evos.contains(cand))
+          List(Equal(inv, initial), GreaterEqual(inv, initial), LessEqual(inv, initial)).filter(cand =>
+            !evos.contains(cand)
+          )
         })
         .map(Invariant(_))
         .distinct
@@ -478,8 +465,7 @@ object InvariantGenerator extends Logging {
   /**
    * A cached invariant generator based on the candidates from `generator` that also remembers answers to speed up
    * computations.
-   * @author
-   *   Andre Platzer
+   * @author Andre Platzer
    */
   def cached(generator: InvariantGenerator): InvariantGenerator = {
     val cache: scala.collection.mutable.Map[Box, LazyList[Invariant]] = new scala.collection.mutable.LinkedHashMap()

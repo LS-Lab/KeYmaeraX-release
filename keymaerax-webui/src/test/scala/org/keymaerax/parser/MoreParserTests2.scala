@@ -744,25 +744,24 @@ class MoreParserTests2 extends AnyFlatSpec with Matchers with BeforeAndAfterEach
     )
   }
 
-  it should
-    "elaborate uppercase names to unit predicationals and lower case names to nullary predicates in lax mode" in {
-      parser("P") shouldBe Variable("P")
-      parser("p") shouldBe Variable("p")
-      parser("[a;]P(||)") shouldBe Box(ProgramConst("a"), UnitPredicational("P", AnyArg))
-      KeYmaeraXParser.laxParser("[a;]P") shouldBe parser("[a;]P(||)")
-      the[ParseException] thrownBy KeYmaeraXParser.strictParser("[a;]P") should have message
-        """1:6 Expected a Formula but got the Term P
-          |Found:    ] at 1:6 to EOF$
-          |Expected: Formula""".stripMargin
-      parser("[a;]p(||)") shouldBe Box(ProgramConst("a"), UnitPredicational("p", AnyArg))
-      parser("[a;]p()") shouldBe Box(ProgramConst("a"), PredOf(Function("p", None, Unit, Bool), Nothing))
-      KeYmaeraXParser.laxParser("[a;]p") shouldBe parser("[a;]p()")
-      the[ParseException] thrownBy KeYmaeraXParser.strictParser("[a;]p") should have message
-        """1:6 Expected a Formula but got the Term p
-          |Found:    ] at 1:6 to EOF$
-          |Expected: Formula""".stripMargin
-      parser("[a;]P()") shouldBe Box(ProgramConst("a"), PredOf(Function("P", None, Unit, Bool), Nothing))
-    }
+  it should "elaborate uppercase names to unit predicationals and lower case names to nullary predicates in lax mode" in {
+    parser("P") shouldBe Variable("P")
+    parser("p") shouldBe Variable("p")
+    parser("[a;]P(||)") shouldBe Box(ProgramConst("a"), UnitPredicational("P", AnyArg))
+    KeYmaeraXParser.laxParser("[a;]P") shouldBe parser("[a;]P(||)")
+    the[ParseException] thrownBy KeYmaeraXParser.strictParser("[a;]P") should have message
+      """1:6 Expected a Formula but got the Term P
+        |Found:    ] at 1:6 to EOF$
+        |Expected: Formula""".stripMargin
+    parser("[a;]p(||)") shouldBe Box(ProgramConst("a"), UnitPredicational("p", AnyArg))
+    parser("[a;]p()") shouldBe Box(ProgramConst("a"), PredOf(Function("p", None, Unit, Bool), Nothing))
+    KeYmaeraXParser.laxParser("[a;]p") shouldBe parser("[a;]p()")
+    the[ParseException] thrownBy KeYmaeraXParser.strictParser("[a;]p") should have message
+      """1:6 Expected a Formula but got the Term p
+        |Found:    ] at 1:6 to EOF$
+        |Expected: Formula""".stripMargin
+    parser("[a;]P()") shouldBe Box(ProgramConst("a"), PredOf(Function("P", None, Unit, Bool), Nothing))
+  }
 
   it should "parse DG snippets" in {
     parser("[{x'=2,c{|y_|}}]x=99") shouldBe Box(

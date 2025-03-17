@@ -19,8 +19,7 @@ import scala.collection.immutable._
 
 /**
  * Tests for Interval Arithmetic
- * @author
- *   Fabian Immler
+ * @author Fabian Immler
  */
 object IntervalArithmeticV2Tests {
   def timing[B](s: String)(f: () => B): B = {
@@ -101,8 +100,8 @@ class IntervalArithmeticV2Tests extends TacticTestBase {
       proveBounds(5)(qeTool)(assms)(true)(BoundMap(), BoundMap(), ssa.unfoldMap)(List(ssa.expression))
   }
 
-  val xyz_bounds = IndexedSeq("(-10) <= f(x)", "f(x) <= 1", "(-3) <= x", "x <= (-1)", "2 <= c()", "c() <= 4")
-    .map(_.asFormula)
+  val xyz_bounds =
+    IndexedSeq("(-10) <= f(x)", "f(x) <= 1", "(-3) <= x", "x <= (-1)", "2 <= c()", "c() <= 4").map(_.asFormula)
 
   "intervalCutTerms" should "work with all supported operations" in withMathematica { _ =>
     val res = proveBy(
@@ -285,8 +284,10 @@ class IntervalArithmeticV2Tests extends TacticTestBase {
   }
 
   "proveBinop" should "prove binary operations" in withMathematica { qeTool =>
-    val (res, _, _) = IntervalArithmeticV2
-      .proveBinop(qeTool)(10)(IndexedSeq())(Plus.apply)("0.1".asTerm, "0.3".asTerm)("0.4".asTerm, "0.8".asTerm)
+    val (res, _, _) = IntervalArithmeticV2.proveBinop(qeTool)(10)(IndexedSeq())(Plus.apply)("0.1".asTerm, "0.3".asTerm)(
+      "0.4".asTerm,
+      "0.8".asTerm,
+    )
     res shouldBe Symbol("proved")
     res.conclusion.succ.loneElement shouldBe
       "\\forall i1_ \\forall i2_ (0.1<=i1_&i1_<=0.3&0.4<=i2_&i2_<=0.8->5*10^(-1)<=i1_+i2_&i1_+i2_<=11*10^(-1))"

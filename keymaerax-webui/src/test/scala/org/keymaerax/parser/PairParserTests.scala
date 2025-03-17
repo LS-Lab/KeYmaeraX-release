@@ -21,8 +21,7 @@ import scala.collection.immutable._
 /**
  * Tests the parser on pairs of strings that are expected to parse the same.
  *
- * @author
- *   Andre Platzer
+ * @author Andre Platzer
  */
 @SummaryTest
 class PairParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterAll {
@@ -376,9 +375,7 @@ class PairParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterAll {
     ("x", "x"),
   )
 
-  /**
-   * Formula cases: Left string is expected to parse like the right string parses, or not at all if right==unparseable
-   */
+  /** Formula cases: Left string is expected to parse like the right string parses, or not at all if right==unparseable */
   private val expectedParseFormula: immutable.List[(String, String)] = List(
     ("p()->q()->r()", "p()->(q()->r())"),
     // @todo bad error message ("(p() <-> q()) <- (q() -> p()')", "((p()) <-> (q())) <- ((q()) -> ((p())'))"),
@@ -790,9 +787,7 @@ class PairParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterAll {
 
   )
 
-  /**
-   * Program cases: Left string is expected to parse like the right string parses, or not at all if right==unparseable
-   */
+  /** Program cases: Left string is expected to parse like the right string parses, or not at all if right==unparseable */
   private val expectedParseProgram: immutable.List[(String, String)] = List(
     ("x:=x+1;", "x:=(x+1);"),
     ("x:=2*x;", "x:=(2*x);"),

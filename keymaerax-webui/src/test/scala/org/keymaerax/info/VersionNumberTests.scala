@@ -12,12 +12,9 @@ import org.scalatest.matchers.should.Matchers
 /**
  * Tests version number parsing and comparisons.
  *
- * @author
- *   Stefan Mitsch
- * @author
- *   Nathan Fulton
- * @author
- *   Joscha Mennicken
+ * @author Stefan Mitsch
+ * @author Nathan Fulton
+ * @author Joscha Mennicken
  */
 @CheckinTest
 class VersionNumberTests extends AnyFlatSpec with Matchers {

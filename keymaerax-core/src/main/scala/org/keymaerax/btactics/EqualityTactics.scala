@@ -47,8 +47,7 @@ private object EqualityTactics {
    *   --------------------------------exhaustiveEqR2L(-1)
    *   x=2, x+y=7 |- x+1<y, [x:=3;]x>0
    *   }}}
-   * @return
-   *   The tactic.
+   * @return The tactic.
    */
   val exhaustiveEqL2R: BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
     ProofRuleTactics.requireOneSubgoal(provable, "exhaustiveEqL2R")
@@ -147,8 +146,9 @@ private object EqualityTactics {
               val bv = boundAt(topFml, pos.inExpr ++ p)
               bv.intersect(rhsFv).isEmpty && bv.intersect(lhsFv).isEmpty
             })
-            val (replaced, dotted) = freeRhsPos
-              .foldLeft((f, f))({ case ((fml, d), pp) => (fml.replaceAt(pp, rhs), d.replaceAt(pp, DotTerm())) })
+            val (replaced, dotted) = freeRhsPos.foldLeft((f, f))({ case ((fml, d), pp) =>
+              (fml.replaceAt(pp, rhs), d.replaceAt(pp, DotTerm()))
+            })
             if (pos.isTopLevel) (Imply(eq, Equiv(f, replaced)), dotted)
             else (
               Imply(eq, Equiv(sequent(pos.top), sequent(pos.top).replaceAt(pos.inExpr, replaced))),
@@ -268,8 +268,8 @@ private object EqualityTactics {
   }
 
   @Derivation
-  val applyEqualitiesInfo: PlainTacticInfo = PlainTacticInfo
-    .create(name = "applyEqualities", constructor = TacticConstructor0.create()(() => applyEqualities))
+  val applyEqualitiesInfo: PlainTacticInfo =
+    PlainTacticInfo.create(name = "applyEqualities", constructor = TacticConstructor0.create()(() => applyEqualities))
 
   /**
    * Rewrites free occurrences of the right-hand side of an equality into the left-hand side exhaustively.
@@ -279,8 +279,7 @@ private object EqualityTactics {
    *   --------------------------------exhaustiveEqR2L(-1)
    *   2=x, x+y=7 |- x+1<y, [x:=3;]x>0
    *   }}}
-   * @return
-   *   The tactic.
+   * @return The tactic.
    */
   val exhaustiveEqR2L: BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
     ProofRuleTactics.requireOneSubgoal(provable, "exhaustiveqR2L")
@@ -322,10 +321,8 @@ private object EqualityTactics {
    *   ---------------------------------------------abbrv("max(c,d)".asTerm, Some("e".asVariable))
    *         max(c, d) <= 7 |- [c:=2;]max(c, d) >= 2
    *   }}}
-   * @param abbrvV
-   *   The abbreviation. If None, the tactic picks a name based on the top-level operator of the term.
-   * @return
-   *   The tactic.
+   * @param abbrvV The abbreviation. If None, the tactic picks a name based on the top-level operator of the term.
+   * @return The tactic.
    */
   def abbrv(t: Term, abbrvV: Option[Variable]): BuiltInTactic = anon { (provable: ProvableSig) =>
     ProofRuleTactics.requireOneSubgoal(provable, "abbrv")
@@ -369,10 +366,8 @@ private object EqualityTactics {
    *   ---------------------------------------abbrvAt("min(x,y)".asTerm, Some("z".asVariable)(1,1::Nil)
    *   |- [x:=2;]min(x,y) <= 2
    *   }}}
-   * @param x
-   *   The abbreviation. If None, the tactic picks a name based on the top-level operator of the term.
-   * @return
-   *   The tactic.
+   * @param x The abbreviation. If None, the tactic picks a name based on the top-level operator of the term.
+   * @return The tactic.
    */
   def abbrvAt(e: Term, x: scala.Option[Variable]): DependentPositionWithAppliedInputTactic = "abbrvAt".byWithInputs(
     List(e, x),
@@ -420,8 +415,9 @@ private object EqualityTactics {
   @Derivation
   val abbrvAtInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
     name = "abbrvAt",
-    constructor = TacticConstructor2
-      .create(TermArg("e"), OptionArg(VariableArg("x")))((e: Term, x: scala.Option[Variable]) => abbrvAt(e, x)),
+    constructor = TacticConstructor2.create(TermArg("e"), OptionArg(VariableArg("x")))(
+      (e: Term, x: scala.Option[Variable]) => abbrvAt(e, x)
+    ),
   )
 
   /**
@@ -432,8 +428,7 @@ private object EqualityTactics {
    *   ---------------------------------------abs(1, 0::Nil)
    *                               |- abs(x)=5
    *   }}}
-   * @return
-   *   The tactic.
+   * @return The tactic.
    */
   val abs: BuiltInPositionTactic = "absExp".by { (provable: ProvableSig, pos: Position) =>
     ProofRuleTactics.requireOneSubgoal(provable, "abs")
@@ -575,8 +570,8 @@ private object EqualityTactics {
   }
 
   @Derivation
-  val absAtInfo: PositionTacticInfo = PositionTacticInfo
-    .create(name = "absAt", constructor = TacticConstructor0.create()(() => absAt))
+  val absAtInfo: PositionTacticInfo =
+    PositionTacticInfo.create(name = "absAt", constructor = TacticConstructor0.create()(() => absAt))
 
   /**
    * Expands min/max function.
@@ -586,8 +581,7 @@ private object EqualityTactics {
    *   ------------------------------------------max(1, 0::Nil)
    *                               |- max(x,y)=5
    *   }}}
-   * @return
-   *   The tactic.
+   * @return The tactic.
    */
   val minmax: BuiltInPositionTactic = "minmax".by { (provable: ProvableSig, pos: Position) =>
     ProofRuleTactics.requireOneSubgoal(provable, "minmax")
@@ -742,8 +736,8 @@ private object EqualityTactics {
   }
 
   @Derivation
-  val minmaxAtInfo: PositionTacticInfo = PositionTacticInfo
-    .create(name = "minmaxAt", constructor = TacticConstructor0.create()(() => minmaxAt))
+  val minmaxAtInfo: PositionTacticInfo =
+    PositionTacticInfo.create(name = "minmaxAt", constructor = TacticConstructor0.create()(() => minmaxAt))
 
   private def protectPos(tac: BuiltInPositionTactic): BuiltInPositionTactic =
     anon { (provable: ProvableSig, pos: Position) =>
@@ -811,6 +805,6 @@ private object EqualityTactics {
   }
 
   @Derivation
-  val expandAllAtInfo: PositionTacticInfo = PositionTacticInfo
-    .create(name = "expandAllAt", constructor = TacticConstructor0.create()(() => expandAllAt))
+  val expandAllAtInfo: PositionTacticInfo =
+    PositionTacticInfo.create(name = "expandAllAt", constructor = TacticConstructor0.create()(() => expandAllAt))
 }

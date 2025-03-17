@@ -14,8 +14,7 @@ import javax.crypto.spec.PBEKeySpec
 
 /**
  * Password generation and checking using PBKDF2. Based on security advice from OWASP web security project.
- * @see
- *   www.owasp.org Created by bbohrer on 12/29/15.
+ * @see www.owasp.org Created by bbohrer on 12/29/15.
  */
 object Password {
   /* Make a basic effort to confound timing attacks based on short-circuiting string comparisons. This is the

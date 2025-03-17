@@ -18,8 +18,7 @@ import org.keymaerax.bellerophon.{
 /**
  * Default labels used by the KeYmaera X tactics. Other labels can be used by the user, but this list of labels makes it
  * easier to match.
- * @author
- *   aplatzer
+ * @author aplatzer
  */
 object BelleLabels {
 

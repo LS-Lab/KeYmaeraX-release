@@ -20,12 +20,9 @@ import org.scalatest.matchers.{MatchResult, Matcher}
 
 /**
  * Tests the DL archive parser.
- * @author
- *   Stefan Mitsch
- * @author
- *   Andre Platzer
- * @author
- *   James Gallicchio
+ * @author Stefan Mitsch
+ * @author Andre Platzer
+ * @author James Gallicchio
  */
 class DLArchiveParserTests extends TacticTestBase {
 
@@ -46,10 +43,11 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   "Archive parser" should "parse a model only entry" in {
-    val input = """ArchiveEntry "Entry 1"
-                  | ProgramVariables Real x; Real y; End.
-                  | Problem x>y -> x>=y End.
-                  |End.""".stripMargin
+    val input =
+      """ArchiveEntry "Entry 1"
+        | ProgramVariables Real x; Real y; End.
+        | Problem x>y -> x>=y End.
+        |End.""".stripMargin
     val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
     entry.kind shouldBe "theorem"
@@ -64,10 +62,11 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "parse a model with entry ID" in {
-    val input = """ArchiveEntry b01_8entry1_and_more_underscores : "Entry 1"
-                  | ProgramVariables Real x; Real y; End.
-                  | Problem x>y -> x>=y End.
-                  |End.""".stripMargin
+    val input =
+      """ArchiveEntry b01_8entry1_and_more_underscores : "Entry 1"
+        | ProgramVariables Real x; Real y; End.
+        | Problem x>y -> x>=y End.
+        |End.""".stripMargin
     val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
     entry.kind shouldBe "theorem"
@@ -81,10 +80,11 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "parse a model with entry ID repeated at end" in {
-    val input = """ArchiveEntry b01_entry1 : "Entry 1"
-                  | ProgramVariables Real x; Real y; End.
-                  | Problem x>y -> x>=y End.
-                  |End b01_entry1.""".stripMargin
+    val input =
+      """ArchiveEntry b01_entry1 : "Entry 1"
+        | ProgramVariables Real x; Real y; End.
+        | Problem x>y -> x>=y End.
+        |End b01_entry1.""".stripMargin
     val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
     entry.kind shouldBe "theorem"
@@ -98,12 +98,13 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "parse simple function declaration" in {
-    val input = """
-                  |ArchiveEntry "Entry 1"
-                  | Definitions Real f(); End.
-                  | ProgramVariables Real x; End.
-                  | Problem x>=0 -> f()>0 End.
-                  |End.
+    val input =
+      """
+        |ArchiveEntry "Entry 1"
+        | Definitions Real f(); End.
+        | ProgramVariables Real x; End.
+        | Problem x>=0 -> f()>0 End.
+        |End.
       """.stripMargin
     val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
@@ -120,12 +121,13 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "parse simple function definition" in {
-    val input = """
-                  |ArchiveEntry "Entry 1"
-                  | Definitions Real f() = (1); End.
-                  | ProgramVariables Real x; End.
-                  | Problem x>=0 -> f()>0 End.
-                  |End.
+    val input =
+      """
+        |ArchiveEntry "Entry 1"
+        | Definitions Real f() = (1); End.
+        | ProgramVariables Real x; End.
+        | Problem x>=0 -> f()>0 End.
+        |End.
       """.stripMargin
     val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
@@ -142,12 +144,13 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "parse simple predicate declaration" in {
-    val input = """
-                  |ArchiveEntry "Entry 1"
-                  | Definitions Bool p(Real x); End.
-                  | ProgramVariables Real x; End.
-                  | Problem p(x) & x>0 -> [x:=x+1;]p(x) End.
-                  |End.
+    val input =
+      """
+        |ArchiveEntry "Entry 1"
+        | Definitions Bool p(Real x); End.
+        | ProgramVariables Real x; End.
+        | Problem p(x) & x>0 -> [x:=x+1;]p(x) End.
+        |End.
       """.stripMargin
     val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
@@ -170,12 +173,13 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "parse simple nullary predicate definition" in {
-    val input = """
-                  |ArchiveEntry "Entry 1"
-                  | Definitions Bool p() <-> (2>1); End.
-                  | ProgramVariables Real x; End.
-                  | Problem p() & x>0 -> [x:=x+1;]p() End.
-                  |End.
+    val input =
+      """
+        |ArchiveEntry "Entry 1"
+        | Definitions Bool p() <-> (2>1); End.
+        | ProgramVariables Real x; End.
+        | Problem p() & x>0 -> [x:=x+1;]p() End.
+        |End.
       """.stripMargin
     val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
@@ -226,10 +230,11 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "detect a missing tactic name" in {
-    val input = """ArchiveEntry "Test"
-                  |Problem 1+1=2 End.
-                  |Tactic notatactic End.
-                  |End.""".stripMargin
+    val input =
+      """ArchiveEntry "Test"
+        |Problem 1+1=2 End.
+        |Tactic notatactic End.
+        |End.""".stripMargin
     the[ParseException] thrownBy parse(input) should have message
       """3:18 Error parsing atomicTactic at 3:8
         |Found:    " End." at 3:18
@@ -238,12 +243,13 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "parse simple nullary predicate definition with multiple variables" in {
-    val input = """
-                  |ArchiveEntry "Entry 1"
-                  | Definitions Bool p() <-> (2>1); End.
-                  | ProgramVariables Real x; Real y; End.
-                  | Problem p() & x>0 -> [x:=x+y;]p() End.
-                  |End.
+    val input =
+      """
+        |ArchiveEntry "Entry 1"
+        | Definitions Bool p() <-> (2>1); End.
+        | ProgramVariables Real x; Real y; End.
+        | Problem p() & x>0 -> [x:=x+y;]p() End.
+        |End.
       """.stripMargin
     val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
@@ -261,12 +267,13 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "parse simple unary predicate definition" in {
-    val input = """
-                  |ArchiveEntry "Entry 1"
-                  | Definitions Bool p(Real x) <-> (x>1); End.
-                  | ProgramVariables Real x; End.
-                  | Problem p(x) & x>0 -> [x:=x+1;]p(x) End.
-                  |End.
+    val input =
+      """
+        |ArchiveEntry "Entry 1"
+        | Definitions Bool p(Real x) <-> (x>1); End.
+        | ProgramVariables Real x; End.
+        | Problem p(x) & x>0 -> [x:=x+1;]p(x) End.
+        |End.
       """.stripMargin
     val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
@@ -289,12 +296,13 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "FEATURE_REQUEST: parse simple program declaration before variables" taggedAs TodoTest in {
-    val input = """
-                  |ArchiveEntry "Entry 1"
-                  | Definitions HP a; End.
-                  | ProgramVariables Real x; End.
-                  | Problem x!=0 -> [a;]x>1 End.
-                  |End.
+    val input =
+      """
+        |ArchiveEntry "Entry 1"
+        | Definitions HP a; End.
+        | ProgramVariables Real x; End.
+        | Problem x!=0 -> [a;]x>1 End.
+        |End.
       """.stripMargin
     val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
@@ -320,18 +328,20 @@ class DLArchiveParserTests extends TacticTestBase {
       new DLBelleParser(BellePrettyPrinter, ReflectiveExpressionBuilder(_, _, Some(FixedGenerator(List.empty)), _))
     )
     DLParser.runParser(archiveParser.progDef(_))("HP a ::= { x:=x+1; };") shouldBe (
-      Name("a", None), Signature(Some(Unit), Trafo, None, Right(Some("x:=x+1;".asProgram)), Region(1, 1, 1, 21))
+      Name("a", None),
+      Signature(Some(Unit), Trafo, None, Right(Some("x:=x+1;".asProgram)), Region(1, 1, 1, 21)),
     )
     DLParser.runParser(implicit p => archiveParser.definitions(Declaration(Map.empty)))(
       "Definitions HP a ::= { x:=x+1; }; End."
     ) shouldBe Declaration(
       Map(Name("a", None) -> Signature(Some(Unit), Trafo, None, Right(Some("x:=x+1;".asProgram)), Region(1, 12, 1, 34)))
     )
-    val input = """ArchiveEntry "Entry 1"
-                  | Definitions HP a ::= { x:=x+1; }; End.
-                  | ProgramVariables Real x; End.
-                  | Problem x!=0 -> [a;]x>1 End.
-                  |End.
+    val input =
+      """ArchiveEntry "Entry 1"
+        | Definitions HP a ::= { x:=x+1; }; End.
+        | ProgramVariables Real x; End.
+        | Problem x!=0 -> [a;]x>1 End.
+        |End.
       """.stripMargin
     val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
@@ -351,12 +361,13 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "parse simple program definition assignment before variables" in {
-    val input = """
-                  |ArchiveEntry "Entry 1"
-                  | Definitions HP a ::= { x:=x+1; }; End.
-                  | ProgramVariables Real x; End.
-                  | Problem x!=0 -> [a;]x>1 End.
-                  |End.
+    val input =
+      """
+        |ArchiveEntry "Entry 1"
+        | Definitions HP a ::= { x:=x+1; }; End.
+        | ProgramVariables Real x; End.
+        | Problem x!=0 -> [a;]x>1 End.
+        |End.
       """.stripMargin
     val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
@@ -373,12 +384,13 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "parse simple program definition test before variables" in {
-    val input = """
-                  |ArchiveEntry "Entry 1"
-                  | Definitions HP a ::= { ?x>1; }; End.
-                  | ProgramVariables Real x; End.
-                  | Problem x!=0 -> [a;]x>1 End.
-                  |End.
+    val input =
+      """
+        |ArchiveEntry "Entry 1"
+        | Definitions HP a ::= { ?x>1; }; End.
+        | ProgramVariables Real x; End.
+        | Problem x!=0 -> [a;]x>1 End.
+        |End.
       """.stripMargin
     val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
@@ -395,12 +407,13 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "parse simple program definition ODE before variables" in {
-    val input = """
-                  |ArchiveEntry "Entry 1"
-                  | Definitions HP a ::= { {x'=5} }; End.
-                  | ProgramVariables Real x; End.
-                  | Problem x!=0 -> [a;]x>1 End.
-                  |End.
+    val input =
+      """
+        |ArchiveEntry "Entry 1"
+        | Definitions HP a ::= { {x'=5} }; End.
+        | ProgramVariables Real x; End.
+        | Problem x!=0 -> [a;]x>1 End.
+        |End.
       """.stripMargin
     val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
@@ -417,12 +430,13 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "parse simple program definition compose assign before variables" in {
-    val input = """
-                  |ArchiveEntry "Entry 1"
-                  | Definitions HP a ::= { x:=x+1;?x>1; }; End.
-                  | ProgramVariables Real x; End.
-                  | Problem x!=0 -> [a;]x>1 End.
-                  |End.
+    val input =
+      """
+        |ArchiveEntry "Entry 1"
+        | Definitions HP a ::= { x:=x+1;?x>1; }; End.
+        | ProgramVariables Real x; End.
+        | Problem x!=0 -> [a;]x>1 End.
+        |End.
       """.stripMargin
     val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
@@ -439,12 +453,13 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "parse simple program definition compose before variables" in {
-    val input = """
-                  |ArchiveEntry "Entry 1"
-                  | Definitions HP a ::= { ?x>1;x:=x+1; }; End.
-                  | ProgramVariables Real x; End.
-                  | Problem x!=0 -> [a;]x>1 End.
-                  |End.
+    val input =
+      """
+        |ArchiveEntry "Entry 1"
+        | Definitions HP a ::= { ?x>1;x:=x+1; }; End.
+        | ProgramVariables Real x; End.
+        | Problem x!=0 -> [a;]x>1 End.
+        |End.
       """.stripMargin
     val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
@@ -502,11 +517,12 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "complain when variable and function have same name" in {
-    val input = """ArchiveEntry "Entry 1"
-                  | Definitions Real x() = 2; End.
-                  | ProgramVariables Real x; End.
-                  | Problem x=1 -> x<=x() End.
-                  |End.""".stripMargin
+    val input =
+      """ArchiveEntry "Entry 1"
+        | Definitions Real x() = 2; End.
+        | ProgramVariables Real x; End.
+        | Problem x=1 -> x<=x() End.
+        |End.""".stripMargin
     the[ParseException] thrownBy parse(input) should (have message
       """<somewhere> Semantic analysis error
         |semantics: Expect unique names_index that identify a unique type.
@@ -522,11 +538,12 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "give useful error messages on semantic analysis" in {
-    val input = """ArchiveEntry "Test"
-                  |Definitions Real one = 1; End.
-                  |ProgramVariables /* Real x; */ End.
-                  |Problem x>0 -> [x:=x+1;]x>1 End.
-                  |End.""".stripMargin
+    val input =
+      """ArchiveEntry "Test"
+        |Definitions Real one = 1; End.
+        |ProgramVariables /* Real x; */ End.
+        |Problem x>0 -> [x:=x+1;]x>1 End.
+        |End.""".stripMargin
     the[ParseException] thrownBy parse(input) should have message
       """<somewhere> type analysis: Test: undefined symbol x
         |Found:    undefined symbol x at <somewhere>
@@ -535,11 +552,12 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "give useful error messages on semantic analysis (2)" in {
-    val input = """ArchiveEntry "Test"
-                  |Definitions Real f; End.
-                  |ProgramVariables Real x,y; End.
-                  |Problem x -> [x:=1+f;]x>f End. /* uses x as predicate and variable */
-                  |End.""".stripMargin
+    val input =
+      """ArchiveEntry "Test"
+        |Definitions Real f; End.
+        |ProgramVariables Real x,y; End.
+        |Problem x -> [x:=1+f;]x>f End. /* uses x as predicate and variable */
+        |End.""".stripMargin
     the[ParseException] thrownBy parse(input) should have message
       """<somewhere> Semantic analysis error
         |semantics: Expect unique names_index that identify a unique type.
@@ -549,12 +567,13 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "parse simple definitions after variables" in {
-    val input = """
-                  |ArchiveEntry "Entry 1"
-                  | ProgramVariables Real x; End.
-                  | Definitions Real f() = (1); End.
-                  | Problem f()>0 & x>=0 -> [x:=x+1;]f()>0 End.
-                  |End.
+    val input =
+      """
+        |ArchiveEntry "Entry 1"
+        | ProgramVariables Real x; End.
+        | Definitions Real f() = (1); End.
+        | Problem f()>0 & x>=0 -> [x:=x+1;]f()>0 End.
+        |End.
       """.stripMargin
     val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
@@ -571,10 +590,11 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "parse import definitions" in {
-    val input = """ArchiveEntry "Entry 1"
-                  | Definitions import kyx.math.exp; End.
-                  | Problem exp(1) >= 0 End.
-                  |End.""".stripMargin
+    val input =
+      """ArchiveEntry "Entry 1"
+        | Definitions import kyx.math.exp; End.
+        | Problem exp(1) >= 0 End.
+        |End.""".stripMargin
     val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
     entry.defs should beDecl(Declaration(Map(
@@ -598,10 +618,11 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "parse import definitions wildcard" in {
-    val input = """ArchiveEntry "Entry 1"
-                  | Definitions import kyx.math.*; End.
-                  | Problem exp(1) >= 0 End.
-                  |End.""".stripMargin
+    val input =
+      """ArchiveEntry "Entry 1"
+        | Definitions import kyx.math.*; End.
+        | Problem exp(1) >= 0 End.
+        |End.""".stripMargin
     val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
     entry.defs.decls.keySet should contain theSameElementsAs Set(
@@ -625,13 +646,14 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "parse forward definitions to interpreted functions" in {
-    val input = """ArchiveEntry "Entry 1"
-                  | Definitions
-                  |   import kyx.math.abs;
-                  |   Real myAbs(Real x) = abs(x);
-                  | End.
-                  | Problem myAbs(-1) >= 0 End.
-                  |End.""".stripMargin
+    val input =
+      """ArchiveEntry "Entry 1"
+        | Definitions
+        |   import kyx.math.abs;
+        |   Real myAbs(Real x) = abs(x);
+        | End.
+        | Problem myAbs(-1) >= 0 End.
+        |End.""".stripMargin
     val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
     entry.defs.decls.keySet should contain theSameElementsAs Set(Name("abs"), Name("myAbs"))
@@ -639,15 +661,16 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "parse multiple forward definitions to interpreted functions (with constants)" in {
-    val input = """ArchiveEntry "Entry 1"
-                  | Definitions
-                  |   import kyx.math.abs;
-                  |   Real C;
-                  |   Real myAbs(Real x) = abs(x*C);
-                  |   Real myOtherAbs(Real x) = myAbs(x+C);
-                  | End.
-                  | Problem myOtherAbs(-1) >= 0 End.
-                  |End.""".stripMargin
+    val input =
+      """ArchiveEntry "Entry 1"
+        | Definitions
+        |   import kyx.math.abs;
+        |   Real C;
+        |   Real myAbs(Real x) = abs(x*C);
+        |   Real myOtherAbs(Real x) = myAbs(x+C);
+        | End.
+        | Problem myOtherAbs(-1) >= 0 End.
+        |End.""".stripMargin
     val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
     entry.defs.decls.keySet should contain theSameElementsAs Set(
@@ -699,12 +722,13 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "accept ODEs without extra braces" in {
-    val input = """
-                  |ArchiveEntry "Entry 1"
-                  | ProgramVariables Real x; Real t; End.
-                  | Definitions HP a ::= { x'=x, t'=1 & x<=2 }; End.
-                  | Problem [a;]x<=2 End.
-                  |End.
+    val input =
+      """
+        |ArchiveEntry "Entry 1"
+        | ProgramVariables Real x; Real t; End.
+        | Definitions HP a ::= { x'=x, t'=1 & x<=2 }; End.
+        | Problem [a;]x<=2 End.
+        |End.
       """.stripMargin
     val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
@@ -728,10 +752,11 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "parse definitions without parentheses" in {
-    val input = """ArchiveEntry "Entry 1"
-                  | Definitions Real f() = 5; Bool p(Real x) <-> x>0; End.
-                  | Problem p(f()) End.
-                  |End.""".stripMargin
+    val input =
+      """ArchiveEntry "Entry 1"
+        | Definitions Real f() = 5; Bool p(Real x) <-> x>0; End.
+        | Problem p(f()) End.
+        |End.""".stripMargin
     val entry = parse(input).loneElement
 
     entry.name shouldBe "Entry 1"
@@ -754,10 +779,11 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "parse comma-separated variable declarations" in {
-    val input = """ArchiveEntry "Entry 1"
-                  | ProgramVariables Real x, y; End.
-                  | Problem x>y -> x>=y End.
-                  |End.""".stripMargin
+    val input =
+      """ArchiveEntry "Entry 1"
+        | ProgramVariables Real x, y; End.
+        | Problem x>y -> x>=y End.
+        |End.""".stripMargin
     val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
     entry.kind shouldBe "theorem"
@@ -787,10 +813,11 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "parse a problem without variables" in {
-    val input = """ArchiveEntry "Entry 1"
-                  | Definitions Real f(); End.
-                  | Problem f()>0 End.
-                  |End.""".stripMargin
+    val input =
+      """ArchiveEntry "Entry 1"
+        | Definitions Real f(); End.
+        | Problem f()>0 End.
+        |End.""".stripMargin
     val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
     entry.kind shouldBe "theorem"
@@ -804,10 +831,11 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "allow comma-separated simple function definitions" in {
-    val input = """ArchiveEntry "Entry 1"
-                  | Definitions Real f(), g; End.
-                  | Problem f()>g() End.
-                  |End.""".stripMargin
+    val input =
+      """ArchiveEntry "Entry 1"
+        | Definitions Real f(), g; End.
+        | Problem f()>g() End.
+        |End.""".stripMargin
     val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
     entry.kind shouldBe "theorem"
@@ -822,10 +850,11 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "allow comma-separated simple predicate definitions" in {
-    val input = """ArchiveEntry "Entry 1"
-                  | Definitions Bool p(), q(); End.
-                  | Problem p() & q() End.
-                  |End.""".stripMargin
+    val input =
+      """ArchiveEntry "Entry 1"
+        | Definitions Bool p(), q(); End.
+        | Problem p() & q() End.
+        |End.""".stripMargin
     val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
     entry.kind shouldBe "theorem"
@@ -840,10 +869,11 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "parse a problem that uses the built-in interpreted functions" in {
-    val input = """ArchiveEntry "Entry 1"
-                  | Definitions import kyx.math.abs; End.
-                  | Problem abs(-5)>0 End.
-                  |End.""".stripMargin
+    val input =
+      """ArchiveEntry "Entry 1"
+        | Definitions import kyx.math.abs; End.
+        | Problem abs(-5)>0 End.
+        |End.""".stripMargin
     val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
     entry.kind shouldBe "theorem"
@@ -854,11 +884,12 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "parse shared built-in interpreted functions" in {
-    val input = """Definitions import kyx.math.abs; End.
-                  |
-                  |ArchiveEntry "Entry 1"
-                  | Problem abs(-5)>0 End.
-                  |End.""".stripMargin
+    val input =
+      """Definitions import kyx.math.abs; End.
+        |
+        |ArchiveEntry "Entry 1"
+        | Problem abs(-5)>0 End.
+        |End.""".stripMargin
     val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
     entry.kind shouldBe "theorem"
@@ -872,10 +903,11 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "parse an annotation that uses the reserved function symbol old" in {
-    val input = """ArchiveEntry "Entry 1"
-                  | ProgramVariables Real x; End.
-                  | Problem [{x:=x;}*@invariant(old(x)=x)]x=x End.
-                  |End.""".stripMargin
+    val input =
+      """ArchiveEntry "Entry 1"
+        | ProgramVariables Real x; End.
+        | Problem [{x:=x;}*@invariant(old(x)=x)]x=x End.
+        |End.""".stripMargin
     val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
     entry.kind shouldBe "theorem"
@@ -887,9 +919,10 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "parse a problem with neither definitions nor variables" in {
-    val input = """ArchiveEntry "Entry 1"
-                  | Problem false -> true End.
-                  |End.""".stripMargin
+    val input =
+      """ArchiveEntry "Entry 1"
+        | Problem false -> true End.
+        |End.""".stripMargin
     val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
     entry.kind shouldBe "theorem"
@@ -901,8 +934,9 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "not parse a plain problem format" in {
-    val input = """ProgramVariables Real x; Real y; End.
-                  |Problem x>y -> x>=y End.
+    val input =
+      """ProgramVariables Real x; Real y; End.
+        |Problem x>y -> x>=y End.
       """.stripMargin
     the[ParseException] thrownBy parse(input).loneElement should have message
       """1:1 Error parsing archiveStart at 1:1
@@ -924,13 +958,14 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "refuse mixed plain and named entries" in {
-    val input = """ProgramVariables Real x; Real y; End.
-                  |Problem x>y -> x>=y End.
-                  |
-                  |ArchiveEntry "Entry 2"
-                  |  ProgramVariables Real x; End.
-                  |  Problem x>0 End.
-                  |End.
+    val input =
+      """ProgramVariables Real x; Real y; End.
+        |Problem x>y -> x>=y End.
+        |
+        |ArchiveEntry "Entry 2"
+        |  ProgramVariables Real x; End.
+        |  Problem x>0 End.
+        |End.
       """.stripMargin
     the[ParseException] thrownBy parse(input) should have message
       """1:1 Error parsing archiveStart at 1:1
@@ -940,11 +975,12 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "detect duplicate variable definitions" in {
-    val input = """
-                  |ArchiveEntry "Entry 1"
-                  | ProgramVariables Real x; Real x; Real y; End.
-                  | Problem x>y -> x>=y End.
-                  |End.
+    val input =
+      """
+        |ArchiveEntry "Entry 1"
+        | ProgramVariables Real x; Real x; Real y; End.
+        | Problem x>y -> x>=y End.
+        |End.
       """.stripMargin
     the[ParseException] thrownBy parse(input) should have message
       """3:43 Error parsing programVariables at 3:2
@@ -954,12 +990,13 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "detect duplicate function names" in {
-    val input = """
-                  |ArchiveEntry "Entry 1"
-                  | Definitions Real f() = 1; Real f() = 2; End.
-                  | ProgramVariables Real x; Real y; End.
-                  | Problem x>y -> x>=y End.
-                  |End.
+    val input =
+      """
+        |ArchiveEntry "Entry 1"
+        | Definitions Real f() = 1; Real f() = 2; End.
+        | ProgramVariables Real x; Real y; End.
+        | Problem x>y -> x>=y End.
+        |End.
       """.stripMargin
     the[ParseException] thrownBy parse(input) should have message
       """3:37 Error parsing definitions at 3:2
@@ -969,12 +1006,13 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "detect duplicate predicate names" in {
-    val input = """
-                  |ArchiveEntry "Entry 1"
-                  | Definitions Bool p() <-> 1>0; Bool p() <-> 2>1; End.
-                  | ProgramVariables Real x; Real y; End.
-                  | Problem p() -> x>=y End.
-                  |End.
+    val input =
+      """
+        |ArchiveEntry "Entry 1"
+        | Definitions Bool p() <-> 1>0; Bool p() <-> 2>1; End.
+        | ProgramVariables Real x; Real y; End.
+        | Problem p() -> x>=y End.
+        |End.
       """.stripMargin
     the[ParseException] thrownBy parse(input) should have message
       """3:41 Error parsing definitions at 3:2
@@ -984,12 +1022,13 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "detect duplicate program names" in {
-    val input = """
-                  |ArchiveEntry "Entry 1"
-                  | Definitions HP a ::= { ?true; }; HP a ::= { ?false; }; End.
-                  | ProgramVariables Real x; Real y; End.
-                  | Problem [a;]true End.
-                  |End.
+    val input =
+      """
+        |ArchiveEntry "Entry 1"
+        | Definitions HP a ::= { ?true; }; HP a ::= { ?false; }; End.
+        | ProgramVariables Real x; Real y; End.
+        | Problem [a;]true End.
+        |End.
       """.stripMargin
     the[ParseException] thrownBy parse(input) should have message
       """3:57 Error parsing definitions at 3:2
@@ -999,11 +1038,12 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "detect duplicate definitions (1)" in {
-    val input = """ArchiveEntry "Entry 1"
-                  | Definitions Real x; End.
-                  | ProgramVariables Real x; End.
-                  | Problem x^2>=0 End.
-                  |End.
+    val input =
+      """ArchiveEntry "Entry 1"
+        | Definitions Real x; End.
+        | ProgramVariables Real x; End.
+        | Problem x^2>=0 End.
+        |End.
       """.stripMargin
     the[ParseException] thrownBy parse(input) should have message
       """3:27 Error parsing programVariables at 3:2
@@ -1013,13 +1053,14 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "detect duplicate definitions (2)" in {
-    val input = """ArchiveEntry "Entry 1"
-                  | Definitions Real x; End.
-                  | ProgramVariables Real y; End.
-                  | Definitions Real z; End.
-                  | ProgramVariables Real x; End.
-                  | Problem x^2>=0 End.
-                  |End.
+    val input =
+      """ArchiveEntry "Entry 1"
+        | Definitions Real x; End.
+        | ProgramVariables Real y; End.
+        | Definitions Real z; End.
+        | ProgramVariables Real x; End.
+        | Problem x^2>=0 End.
+        |End.
       """.stripMargin
     the[ParseException] thrownBy parse(input) should have message
       """5:27 Error parsing programVariables at 5:2
@@ -1029,12 +1070,13 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "detect duplicate definitions (3)" in {
-    val input = """ArchiveEntry "Entry 1"
-                  | Definitions Real x; End.
-                  | ProgramVariables Real y; End.
-                  | Definitions Real y; End.
-                  | Problem x^2>=0 End.
-                  |End.
+    val input =
+      """ArchiveEntry "Entry 1"
+        | Definitions Real x; End.
+        | ProgramVariables Real y; End.
+        | Definitions Real y; End.
+        | Problem x^2>=0 End.
+        |End.
       """.stripMargin
     the[ParseException] thrownBy parse(input) should have message
       """4:20 Error parsing definitions at 4:2
@@ -1044,12 +1086,13 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "detect duplicate definitions (4)" in {
-    val input = """ArchiveEntry "Entry 1"
-                  | Definitions Real x; End.
-                  | ProgramVariables Real y; End.
-                  | Definitions Real x; End.
-                  | Problem x^2>=0 End.
-                  |End.
+    val input =
+      """ArchiveEntry "Entry 1"
+        | Definitions Real x; End.
+        | ProgramVariables Real y; End.
+        | Definitions Real x; End.
+        | Problem x^2>=0 End.
+        |End.
       """.stripMargin
     the[ParseException] thrownBy parse(input) should have message
       """4:20 Error parsing definitions at 4:2
@@ -1059,11 +1102,12 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "detect duplicate definitions (5)" in {
-    val input = """ArchiveEntry "Entry 1"
-                  | ProgramVariables Real x; End.
-                  | ProgramVariables Real x; End.
-                  | Problem x^2>=0 End.
-                  |End.
+    val input =
+      """ArchiveEntry "Entry 1"
+        | ProgramVariables Real x; End.
+        | ProgramVariables Real x; End.
+        | Problem x^2>=0 End.
+        |End.
       """.stripMargin
     the[ParseException] thrownBy parse(input) should have message
       """3:27 Error parsing programVariables at 3:2
@@ -1073,12 +1117,13 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "complain about undeclared variables in unused program definitions" in {
-    val input = """ArchiveEntry "Test"
-                  |Definitions HP a ::= { y:=y+1; }; End.
-                  |ProgramVariables Real x; End.
-                  |Problem [x:=1;]x>=0 End.
-                  |End.
-                  |""".stripMargin
+    val input =
+      """ArchiveEntry "Test"
+        |Definitions HP a ::= { y:=y+1; }; End.
+        |ProgramVariables Real x; End.
+        |Problem [x:=1;]x>=0 End.
+        |End.
+        |""".stripMargin
     the[ParseException] thrownBy parse(input) should have message
       """2:12 Definition a uses undefined symbol(s) y. Please add arguments or define as functions/predicates/programs
         |Found:    <unknown> at 2:12 to 2:34
@@ -1086,14 +1131,15 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "FEATURE_REQUEST: combine program variables and bound variables in formula when filtering" taggedAs TodoTest in {
-    val input = """SharedDefinitions
-                  |  Real one = 1;
-                  |  HP contincy ::= { {y'=one} };
-                  |End.
-                  |
-                  |Theorem "Universally quantifies y"
-                  |  Problem \forall y [contincy;]y>=old(y) End.
-                  |End.""".stripMargin
+    val input =
+      """SharedDefinitions
+        |  Real one = 1;
+        |  HP contincy ::= { {y'=one} };
+        |End.
+        |
+        |Theorem "Universally quantifies y"
+        |  Problem \forall y [contincy;]y>=old(y) End.
+        |End.""".stripMargin
     val result = parse(input).loneElement
     result.fileContent shouldBe
       """SharedDefinitions
@@ -1111,12 +1157,13 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "complain about undeclared variables in unused function definitions" in {
-    val input = """ArchiveEntry "Test"
-                  |Definitions Real f() = y+1; End.
-                  |ProgramVariables Real x; End.
-                  |Problem [x:=1;]x>=0 End.
-                  |End.
-                  |""".stripMargin
+    val input =
+      """ArchiveEntry "Test"
+        |Definitions Real f() = y+1; End.
+        |ProgramVariables Real x; End.
+        |Problem [x:=1;]x>=0 End.
+        |End.
+        |""".stripMargin
     the[ParseException] thrownBy parse(input) should have message
       """2:17 Definition f uses undefined symbol(s) y. Please add arguments or define as functions/predicates/programs
         |Found:    <unknown> at 2:17 to 2:21
@@ -1124,12 +1171,13 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "elaborate to builtin interpreted symbols" in {
-    val input = """ArchiveEntry "Test"
-                  |Definitions import kyx.math.e; End.
-                  |ProgramVariables Real x; End.
-                  |Problem x>=0 -> e^x>=1 End.
-                  |End.
-                  |""".stripMargin
+    val input =
+      """ArchiveEntry "Test"
+        |Definitions import kyx.math.e; End.
+        |ProgramVariables Real x; End.
+        |Problem x>=0 -> e^x>=1 End.
+        |End.
+        |""".stripMargin
     parse(input).head.model shouldBe Imply(
       GreaterEqual(Variable("x"), Number(0)),
       GreaterEqual(Power(FuncOf(InterpretedSymbols.E, Nothing), Variable("x")), Number(1)),
@@ -1137,12 +1185,13 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "elaborate to builtin interpreted symbols in definitions" in {
-    val input = """ArchiveEntry "Test"
-                  |Definitions import kyx.math.e; Real f(Real x) = e^x; End.
-                  |ProgramVariables Real x; End.
-                  |Problem x>=0 -> f(x)>=1 End.
-                  |End.
-                  |""".stripMargin
+    val input =
+      """ArchiveEntry "Test"
+        |Definitions import kyx.math.e; Real f(Real x) = e^x; End.
+        |ProgramVariables Real x; End.
+        |Problem x>=0 -> f(x)>=1 End.
+        |End.
+        |""".stripMargin
     val entry = parse(input).head
     entry.defs.decls(Name("f")).interpretation shouldBe Right(
       Some(Power(FuncOf(InterpretedSymbols.E, Nothing), Variable("x")))
@@ -1150,47 +1199,51 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "not elaborate in unused shared program definitions" in {
-    val input = """Definitions HP a ::= { y:=y+1; }; End.
-                  |ArchiveEntry "Test"
-                  |Definitions Real y; End.
-                  |ProgramVariables Real x; End.
-                  |Problem y=1 -> [x:=y;]x>=0 End.
-                  |End.
-                  |""".stripMargin
+    val input =
+      """Definitions HP a ::= { y:=y+1; }; End.
+        |ArchiveEntry "Test"
+        |Definitions Real y; End.
+        |ProgramVariables Real x; End.
+        |Problem y=1 -> [x:=y;]x>=0 End.
+        |End.
+        |""".stripMargin
     parse(input).head.model shouldBe "y()=1 -> [x:=y();]x>=0".asFormula
   }
 
   it should "elaborate in used shared program definitions" in {
-    val input = """Definitions HP a ::= { x:=y; }; End.
-                  |ArchiveEntry "Test"
-                  |Definitions Real y; End.
-                  |ProgramVariables Real x; End.
-                  |Problem y=1 -> [a;]x>=0 End.
-                  |End.
-                  |""".stripMargin
+    val input =
+      """Definitions HP a ::= { x:=y; }; End.
+        |ArchiveEntry "Test"
+        |Definitions Real y; End.
+        |ProgramVariables Real x; End.
+        |Problem y=1 -> [a;]x>=0 End.
+        |End.
+        |""".stripMargin
     parse(input).head.expandedModel shouldBe "y()=1 -> [x:=y();]x>=0".asFormula
   }
 
   it should "elaborate in transitively used shared program definitions" in {
-    val input = """Definitions HP a ::= { x:=y; }; End.
-                  |ArchiveEntry "Test"
-                  |Definitions HP b ::= { a; }; Real y; End.
-                  |ProgramVariables Real x; End.
-                  |Problem y=1 -> [b;]x>=0 End.
-                  |End.
-                  |""".stripMargin
+    val input =
+      """Definitions HP a ::= { x:=y; }; End.
+        |ArchiveEntry "Test"
+        |Definitions HP b ::= { a; }; Real y; End.
+        |ProgramVariables Real x; End.
+        |Problem y=1 -> [b;]x>=0 End.
+        |End.
+        |""".stripMargin
     parse(input).head.expandedModel shouldBe "y()=1 -> [x:=y();]x>=0".asFormula
   }
 
   it should "report when elaborating in used shared program definitions is impossible" in {
     // @todo better error message
-    val input = """Definitions HP a ::= { x:=y; }; HP b ::= { y:=y+1; }; End.
-                  |ArchiveEntry "Test"
-                  |Definitions Real y; End.
-                  |ProgramVariables Real x; End.
-                  |Problem y=1 -> [a;b;]x>=0 End.
-                  |End.
-                  |""".stripMargin
+    val input =
+      """Definitions HP a ::= { x:=y; }; HP b ::= { y:=y+1; }; End.
+        |ArchiveEntry "Test"
+        |Definitions Real y; End.
+        |ProgramVariables Real x; End.
+        |Problem y=1 -> [a;b;]x>=0 End.
+        |End.
+        |""".stripMargin
     the[ParseException] thrownBy parse(input) should have message
       """<somewhere> Unable to elaborate to function symbols: Elaboration tried replacing y in literal bound occurrence inside y:=y+1;
         |Found:    <unknown> at <somewhere>
@@ -1198,12 +1251,13 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "not elaborate to program constants when definitions contain duals" in {
-    val input = """
-                  |ArchiveEntry "Entry 1"
-                  | Definitions Real y(); HP ctrl ::= { x:=x+1;^@ }; End.
-                  | ProgramVariables Real x; End.
-                  | Problem x>y -> [ctrl;]x>=y End.
-                  |End.
+    val input =
+      """
+        |ArchiveEntry "Entry 1"
+        | Definitions Real y(); HP ctrl ::= { x:=x+1;^@ }; End.
+        | ProgramVariables Real x; End.
+        | Problem x>y -> [ctrl;]x>=y End.
+        |End.
       """.stripMargin
     val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
@@ -1220,17 +1274,18 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "parse a list of model and tactic entries" in withTactics {
-    val input = """ArchiveEntry "Entry 1"
-                  | ProgramVariables Real x; Real y; End.
-                  | Problem x>y -> x>=y End.
-                  |End.
-                  |
-                  |ArchiveEntry "Entry 2"
-                  |  Definitions Real x(); End.
-                  |  ProgramVariables Real y; End.
-                  |  Problem x()>=y -> x()>=y End.
-                  |  Tactic "Prop Proof" prop End.
-                  |End.
+    val input =
+      """ArchiveEntry "Entry 1"
+        | ProgramVariables Real x; Real y; End.
+        | Problem x>y -> x>=y End.
+        |End.
+        |
+        |ArchiveEntry "Entry 2"
+        |  Definitions Real x(); End.
+        |  ProgramVariables Real y; End.
+        |  Problem x()>=y -> x()>=y End.
+        |  Tactic "Prop Proof" prop End.
+        |End.
       """.stripMargin
     val entries = parse(input)
     entries should have size 2
@@ -1267,27 +1322,28 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "parse a list of mixed entries, lemmas, and theorems" in withTactics {
-    val input = """ArchiveEntry "Entry 1"
-                  | ProgramVariables Real x; Real y; End.
-                  | Problem x>y -> x>=y End.
-                  |End.
-                  |
-                  |Lemma "Entry 2"
-                  |  Definitions Real x(); End.
-                  |  ProgramVariables Real y; End.
-                  |  Problem x()>=y -> x()>=y End.
-                  |  Tactic "Prop Proof" prop End.
-                  |End.
-                  |
-                  |Theorem "Entry 3"
-                  |  ProgramVariables Real x; End.
-                  |  Problem x>3 -> x>=3 End.
-                  |End.
-                  |
-                  |ArchiveEntry "Entry 4"
-                  |  ProgramVariables Real x; End.
-                  |  Problem x>4 -> x>=4 End.
-                  |End.
+    val input =
+      """ArchiveEntry "Entry 1"
+        | ProgramVariables Real x; Real y; End.
+        | Problem x>y -> x>=y End.
+        |End.
+        |
+        |Lemma "Entry 2"
+        |  Definitions Real x(); End.
+        |  ProgramVariables Real y; End.
+        |  Problem x()>=y -> x()>=y End.
+        |  Tactic "Prop Proof" prop End.
+        |End.
+        |
+        |Theorem "Entry 3"
+        |  ProgramVariables Real x; End.
+        |  Problem x>3 -> x>=3 End.
+        |End.
+        |
+        |ArchiveEntry "Entry 4"
+        |  ProgramVariables Real x; End.
+        |  Problem x>4 -> x>=4 End.
+        |End.
       """.stripMargin
     val entries = parse(input)
     entries should have size 4
@@ -1349,27 +1405,28 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "parse a list of mixed entries, lemmas, and theorems, whose names are again entry/lemma/theorem" in withTactics {
-    val input = """ArchiveEntry "Entry 1"
-                  | ProgramVariables Real x; Real y; End.
-                  | Problem x>y -> x>=y End.
-                  |End.
-                  |
-                  |Lemma "Lemma 2: Some Entry"
-                  |  Definitions Real x(); End.
-                  |  ProgramVariables Real y; End.
-                  |  Problem x()>=y -> x()>=y End.
-                  |  Tactic "Prop Proof of Lemma 2" prop End.
-                  |End.
-                  |
-                  |Theorem "Theorem 1: Some Entry"
-                  |  ProgramVariables Real x; End.
-                  |  Problem x>3 -> x>=3 End.
-                  |End.
-                  |
-                  |ArchiveEntry "ArchiveEntry 4: Name"
-                  |  ProgramVariables Real x; End.
-                  |  Problem x>4 -> x>=4 End.
-                  |End.
+    val input =
+      """ArchiveEntry "Entry 1"
+        | ProgramVariables Real x; Real y; End.
+        | Problem x>y -> x>=y End.
+        |End.
+        |
+        |Lemma "Lemma 2: Some Entry"
+        |  Definitions Real x(); End.
+        |  ProgramVariables Real y; End.
+        |  Problem x()>=y -> x()>=y End.
+        |  Tactic "Prop Proof of Lemma 2" prop End.
+        |End.
+        |
+        |Theorem "Theorem 1: Some Entry"
+        |  ProgramVariables Real x; End.
+        |  Problem x>3 -> x>=3 End.
+        |End.
+        |
+        |ArchiveEntry "ArchiveEntry 4: Name"
+        |  ProgramVariables Real x; End.
+        |  Problem x>4 -> x>=4 End.
+        |End.
       """.stripMargin
     val entries = parse(input)
     entries should have size 4
@@ -1431,11 +1488,12 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "parse a lemma entry" in {
-    val input = """
-                  |Lemma "Entry 1"
-                  | ProgramVariables Real x; Real y; End.
-                  | Problem x>y -> x>=y End.
-                  |End.
+    val input =
+      """
+        |Lemma "Entry 1"
+        | ProgramVariables Real x; Real y; End.
+        | Problem x>y -> x>=y End.
+        |End.
       """.stripMargin
     val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
@@ -1450,11 +1508,12 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "parse a theorem entry" in {
-    val input = """
-                  |Theorem "Entry 1"
-                  | ProgramVariables Real x; Real y; End.
-                  | Problem x>y -> x>=y End.
-                  |End.
+    val input =
+      """
+        |Theorem "Entry 1"
+        | ProgramVariables Real x; Real y; End.
+        | Problem x>y -> x>=y End.
+        |End.
       """.stripMargin
     val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
@@ -1469,16 +1528,17 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "split blocks by whole word only (lemma used in tactic)" in withTactics {
-    val input = """Lemma "Entry 1"
-                  | ProgramVariables Real x; Real y; End.
-                  | Problem x>y -> x>=y End.
-                  |End.
-                  |
-                  |Theorem "Entry 2"
-                  | ProgramVariables Real x; Real y; End.
-                  | Problem x>y -> x>=y End.
-                  | Tactic "Proof Entry 2" useLemma("Entry 1") End.
-                  |End.""".stripMargin
+    val input =
+      """Lemma "Entry 1"
+        | ProgramVariables Real x; Real y; End.
+        | Problem x>y -> x>=y End.
+        |End.
+        |
+        |Theorem "Entry 2"
+        | ProgramVariables Real x; Real y; End.
+        | Problem x>y -> x>=y End.
+        | Tactic "Proof Entry 2" useLemma("Entry 1") End.
+        |End.""".stripMargin
     val entries = parse(input)
     entries should have size 2
 
@@ -1515,13 +1575,14 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "parse meta information" in {
-    val input = """Lemma "Entry 1"
-                  | Description "The description of entry 1".
-                  | Title "A short entry 1 title".
-                  | Link "https://web.keymaerax.org/show/entry1".
-                  | ProgramVariables Real x; Real y; End.
-                  | Problem x>y -> y<x End.
-                  |End.""".stripMargin
+    val input =
+      """Lemma "Entry 1"
+        | Description "The description of entry 1".
+        | Title "A short entry 1 title".
+        | Link "https://web.keymaerax.org/show/entry1".
+        | ProgramVariables Real x; Real y; End.
+        | Problem x>y -> y<x End.
+        |End.""".stripMargin
     val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
     entry.kind shouldBe "lemma"
@@ -1546,14 +1607,15 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "parse meta information at beginning or end" in {
-    val input = """Lemma "Entry 1"
-                  | Description "The description of entry 1".
-                  | Link "https://web.keymaerax.org/show/entry1".
-                  | ProgramVariables Real x; Real y; End.
-                  | Problem x>y -> y<x End.
-                  | Title "A short entry 1 title".
-                  | Illustration "https://lfcps.org/example.png".
-                  |End.""".stripMargin
+    val input =
+      """Lemma "Entry 1"
+        | Description "The description of entry 1".
+        | Link "https://web.keymaerax.org/show/entry1".
+        | ProgramVariables Real x; Real y; End.
+        | Problem x>y -> y<x End.
+        | Title "A short entry 1 title".
+        | Illustration "https://lfcps.org/example.png".
+        |End.""".stripMargin
     val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
     entry.kind shouldBe "lemma"
@@ -1589,22 +1651,25 @@ class DLArchiveParserTests extends TacticTestBase {
     }
 
     val tanh = {
-      val fns = ODEToInterpreted
-        .fromProgram(GlobalState.parser.programParser("{{tanh:=0; x:=0;}; {tanh'=1-tanh^2,x'=1}}"), "x".asVariable)
+      val fns = ODEToInterpreted.fromProgram(
+        GlobalState.parser.programParser("{{tanh:=0; x:=0;}; {tanh'=1-tanh^2,x'=1}}"),
+        "x".asVariable,
+      )
       fns(0)
     }
 
-    val input = """
-                  |ArchiveEntry "Entry 1"
-                  | Definitions
-                  |   implicit Real sin1(Real t), cos1(Real t) =
-                  |     {{sin1:=0; t:=0; cos1:=1;}; {t'=1, sin1'=cos1, cos1'=-sin1}};
-                  |   implicit Real tanh(Real x) =
-                  |     {{tanh:=0;}; {tanh'=1-tanh^2}};
-                  | End.
-                  | ProgramVariables Real y; End.
-                  | Problem (sin1(y))^2 + (cos1(y))^2 = 1 & tanh(y)^2>=0 End.
-                  |End.
+    val input =
+      """
+        |ArchiveEntry "Entry 1"
+        | Definitions
+        |   implicit Real sin1(Real t), cos1(Real t) =
+        |     {{sin1:=0; t:=0; cos1:=1;}; {t'=1, sin1'=cos1, cos1'=-sin1}};
+        |   implicit Real tanh(Real x) =
+        |     {{tanh:=0;}; {tanh'=1-tanh^2}};
+        | End.
+        | ProgramVariables Real y; End.
+        | Problem (sin1(y))^2 + (cos1(y))^2 = 1 & tanh(y)^2>=0 End.
+        |End.
       """.stripMargin
     val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
@@ -1646,16 +1711,17 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "disallow redefinition of builtins" in {
-    val input = """
-                  |ArchiveEntry "Entry"
-                  | Definitions
-                  |   import kyx.math.exp;
-                  |   implicit Real exp(Real t) =
-                  |     {{exp:=1;}; {exp'=exp}};
-                  | End.
-                  | ProgramVariables Real y; End.
-                  | Problem exp(y) > 0 End.
-                  |End.
+    val input =
+      """
+        |ArchiveEntry "Entry"
+        | Definitions
+        |   import kyx.math.exp;
+        |   implicit Real exp(Real t) =
+        |     {{exp:=1;}; {exp'=exp}};
+        | End.
+        | ProgramVariables Real y; End.
+        | Problem exp(y) > 0 End.
+        |End.
       """.stripMargin
     the[ParseException] thrownBy parse(input) should have message
       """7:2 Error parsing definitions at 3:2
@@ -1666,20 +1732,23 @@ class DLArchiveParserTests extends TacticTestBase {
 
   it should "allow explicit initial times" in {
     {
-      val fns = ODEToInterpreted
-        .fromProgram(GlobalState.parser.programParser("{{s:=-2;exp1:=1;}; {s'=1,exp1'=exp1}}"), "s".asVariable)
+      val fns = ODEToInterpreted.fromProgram(
+        GlobalState.parser.programParser("{{s:=-2;exp1:=1;}; {s'=1,exp1'=exp1}}"),
+        "s".asVariable,
+      )
       fns(0)
     }
 
-    val input = """
-                  |ArchiveEntry "Entry"
-                  | Definitions
-                  |   implicit Real exp1(Real s) =
-                  |     {{s:=-2;exp1:=1;}; {s'=1,exp1'=exp1}};
-                  | End.
-                  | ProgramVariables Real y; End.
-                  | Problem exp1(y) > 0 End.
-                  |End.
+    val input =
+      """
+        |ArchiveEntry "Entry"
+        | Definitions
+        |   implicit Real exp1(Real s) =
+        |     {{s:=-2;exp1:=1;}; {s'=1,exp1'=exp1}};
+        | End.
+        | ProgramVariables Real y; End.
+        | Problem exp1(y) > 0 End.
+        |End.
       """.stripMargin
 
     val entry = parse(input).loneElement
@@ -1700,20 +1769,21 @@ class DLArchiveParserTests extends TacticTestBase {
 
   it should "parse in order" in {
 
-    val input = """
-                  |ArchiveEntry "Entry"
-                  | Definitions
-                  |   import kyx.math.exp;
-                  |   implicit Real exp1(Real s) =
-                  |     {{s:=0;exp1:=exp(1);}; {s'=1,exp1'=exp1}};
-                  |   Real foo = 5;
-                  |   implicit Real exp2(Real s) =
-                  |     {{s:=exp1(foo);exp2:=0;}; {s'=1,exp2'=exp1(s)+exp2}};
-                  |
-                  | End.
-                  | ProgramVariables Real y; End.
-                  | Problem exp2(y) > 0 End.
-                  |End.
+    val input =
+      """
+        |ArchiveEntry "Entry"
+        | Definitions
+        |   import kyx.math.exp;
+        |   implicit Real exp1(Real s) =
+        |     {{s:=0;exp1:=exp(1);}; {s'=1,exp1'=exp1}};
+        |   Real foo = 5;
+        |   implicit Real exp2(Real s) =
+        |     {{s:=exp1(foo);exp2:=0;}; {s'=1,exp2'=exp1(s)+exp2}};
+        |
+        | End.
+        | ProgramVariables Real y; End.
+        | Problem exp2(y) > 0 End.
+        |End.
       """.stripMargin
 
     val entry = parse(input).loneElement
@@ -1752,15 +1822,16 @@ class DLArchiveParserTests extends TacticTestBase {
 
   it should "parse expanded" in {
 
-    val input = """
-                  |ArchiveEntry "Entry"
-                  | Definitions
-                  |   implicit Real exp1(Real s) =
-                  |     {{s:=0;exp1:=1;}; {s'=1,exp1'=exp1}};
-                  | End.
-                  | ProgramVariables Real y; End.
-                  | Problem exp1(y) > 0 End.
-                  |End.
+    val input =
+      """
+        |ArchiveEntry "Entry"
+        | Definitions
+        |   implicit Real exp1(Real s) =
+        |     {{s:=0;exp1:=1;}; {s'=1,exp1'=exp1}};
+        | End.
+        | ProgramVariables Real y; End.
+        | Problem exp1(y) > 0 End.
+        |End.
       """.stripMargin
 
     val entry = parse(input).loneElement
@@ -1770,14 +1841,15 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "fail to parse implicit function multi-variate definitions" in {
-    val input = """
-                  |ArchiveEntry "Entry 1"
-                  | Definitions
-                  |   implicit Real saddle(Real x, Real y) = {saddle:=0;x:=0;y:=0;}{x'=1,y'=1,saddle=2x-2y};
-                  | End.
-                  | ProgramVariables Real x; End.
-                  | Problem saddle(0,0) = 0 -> saddle(x,0) = x*x End.
-                  |End.
+    val input =
+      """
+        |ArchiveEntry "Entry 1"
+        | Definitions
+        |   implicit Real saddle(Real x, Real y) = {saddle:=0;x:=0;y:=0;}{x'=1,y'=1,saddle=2x-2y};
+        | End.
+        | ProgramVariables Real x; End.
+        | Problem saddle(0,0) = 0 -> saddle(x,0) = x*x End.
+        |End.
       """.stripMargin
     assertThrows[ParseException](parse(input))
   }

@@ -42,11 +42,8 @@ object DerivationInfoAugmentors {
       )
       derivedAxiomDB
         .get(lemmaName)
-        .getOrElse(
-          throw new IllegalArgumentException(
-            s"Lemma $lemmaName for derived axiom/rule ${info.canonicalName} should have been added already"
-          )
-        )
+        .getOrElse(throw new IllegalArgumentException(s"Lemma $lemmaName for derived axiom/rule ${info
+            .canonicalName} should have been added already"))
         .fact
     }
 

@@ -23,10 +23,8 @@ import scala.language.postfixOps
 
 /**
  * Tests BelleExpr pretty printing, for expected string representation plus roundtrip identity with parser.
- * @author
- *   Nathan Fulton
- * @author
- *   Stefan Mitsch
+ * @author Nathan Fulton
+ * @author Stefan Mitsch
  */
 @UsualTest
 class BTacticPrettyPrinterTests extends TacticTestBase {

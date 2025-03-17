@@ -23,8 +23,7 @@ import org.keymaerax.tags.CaseStudyTest
  *   - the tactic pretty-prints to something reasonable
  *   - the tactic proves the property at hand.
  *
- * @author
- *   Nathan Fulton
+ * @author Nathan Fulton
  */
 @CaseStudyTest
 class ICCPSTutorial extends TacticTestBase {

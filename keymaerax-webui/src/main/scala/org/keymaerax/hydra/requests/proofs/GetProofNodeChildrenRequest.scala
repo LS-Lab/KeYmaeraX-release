@@ -15,14 +15,10 @@ import scala.collection.immutable.{::, Nil}
 /**
  * Gets the children of a proof node (browse a proof from root to leaves).
  *
- * @param db
- *   Access to the database.
- * @param userId
- *   Identifies the user.
- * @param proofId
- *   Identifies the proof.
- * @param nodeId
- *   Identifies the proof node.
+ * @param db Access to the database.
+ * @param userId Identifies the user.
+ * @param proofId Identifies the proof.
+ * @param nodeId Identifies the proof node.
  */
 class GetProofNodeChildrenRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String)
     extends UserProofRequest(db, userId, proofId) with ReadRequest {

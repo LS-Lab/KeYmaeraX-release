@@ -37,10 +37,8 @@ import scala.language.postfixOps
  * Very simple positive unit tests for the Bellerophon parser. Useful for TDD and bug isolation but probably not so
  * useful for anything else.
  *
- * @note
- *   It may be useful to turn on BelleParser.DEBUG if you're actually debugging.
- * @author
- *   Nathan Fulton
+ * @note It may be useful to turn on BelleParser.DEBUG if you're actually debugging.
+ * @author Nathan Fulton
  */
 @UsualTest
 class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3")) {
@@ -115,31 +113,36 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
   }
 
   it should "parse a built-in argument with a searchy position locator" in {
-    tacticParser("boxAnd('L==\"[x:=2;](x>0&x>1)\")") shouldBe (round trip HilbertCalculus
-      .boxAnd(Find.FindLPlain("[x:=2;](x>0&x>1)".asFormula)))
+    tacticParser("boxAnd('L==\"[x:=2;](x>0&x>1)\")") shouldBe (round trip HilbertCalculus.boxAnd(
+      Find.FindLPlain("[x:=2;](x>0&x>1)".asFormula)
+    ))
   }
 
   it should "parse a built-in argument with a searchy sub-position locator" in {
-    tacticParser("boxAnd('L==\"[y:=3;]#[x:=2;](x>0&x>1)#\")") shouldBe (round trip HilbertCalculus
-      .boxAnd(Find.FindLPlain("[y:=3;][x:=2;](x>0&x>1)".asFormula, PosInExpr(1 :: Nil))))
+    tacticParser("boxAnd('L==\"[y:=3;]#[x:=2;](x>0&x>1)#\")") shouldBe (round trip HilbertCalculus.boxAnd(
+      Find.FindLPlain("[y:=3;][x:=2;](x>0&x>1)".asFormula, PosInExpr(1 :: Nil))
+    ))
     BellePrettyPrinter(
       tacticParser("boxAnd('L==\"[y:=3;]#[x:=2;](x>0&x>1)#\")")
     ) shouldBe "boxAnd('L==\"[y:=3;]#[x:=2;](x>0&x>1)#\")"
   }
 
   it should "parse a built-in argument with a searchy formula sub-position locator in new notation" in {
-    tacticParser("boxAnd('L==\"[y:=3;]#[x:=2;](x>0&x>1)#\")") shouldBe (round trip HilbertCalculus
-      .boxAnd(Find.FindLPlain("[y:=3;][x:=2;](x>0&x>1)".asFormula, PosInExpr(1 :: Nil))))
+    tacticParser("boxAnd('L==\"[y:=3;]#[x:=2;](x>0&x>1)#\")") shouldBe (round trip HilbertCalculus.boxAnd(
+      Find.FindLPlain("[y:=3;][x:=2;](x>0&x>1)".asFormula, PosInExpr(1 :: Nil))
+    ))
   }
 
   it should "parse a built-in argument with a searchy term sub-position locator in new notation" in {
-    tacticParser("simplify('L==\"[x:=2;](x>#0+0#&x>1)\")") shouldBe (round trip SimplifierV3
-      .simplify(Find.FindLPlain("[x:=2;](x>0+0&x>1)".asFormula, PosInExpr(1 :: 0 :: 1 :: Nil))))
+    tacticParser("simplify('L==\"[x:=2;](x>#0+0#&x>1)\")") shouldBe (round trip SimplifierV3.simplify(
+      Find.FindLPlain("[x:=2;](x>0+0&x>1)".asFormula, PosInExpr(1 :: 0 :: 1 :: Nil))
+    ))
   }
 
   it should "parse a built-in argument with a searchy program sub-position locator in new notation" in {
-    tacticParser("simplify('L==\"[#x:=2+0;#y:=3;](x>0&x>1)\")") shouldBe (round trip SimplifierV3
-      .simplify(Find.FindLPlain("[x:=2+0;y:=3;](x>0&x>1)".asFormula, PosInExpr(0 :: 0 :: Nil))))
+    tacticParser("simplify('L==\"[#x:=2+0;#y:=3;](x>0&x>1)\")") shouldBe (round trip SimplifierV3.simplify(
+      Find.FindLPlain("[x:=2+0;y:=3;](x>0&x>1)".asFormula, PosInExpr(0 :: 0 :: Nil))
+    ))
     BellePrettyPrinter(
       SimplifierV3.simplify(Find.FindLPlain("[x:=2+0;y:=3;](x>0&x>1)".asFormula, PosInExpr(0 :: 0 :: Nil)))
     ) shouldBe "simplify('L==\"[#x:=2+0;#y:=3;](x>0&x>1)\")"
@@ -147,49 +150,61 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
 
   it should "parse a built-in argument with a searchy term sub-position locator in new notation (term occurs thrice)" in {
     // tacticParser("simplify('L==\"[x:=#1+0#;](x>1+0&x>1+0)\")") shouldBe (round trip SimplifierV3.simplify(Find.FindLPlain("[x:=1+0;](x>1+0&x>1+0)".asFormula, PosInExpr(0::1::Nil))))
-    tacticParser("simplify('L==\"[x:=1+0;](x>#1+0#&x>1+0)\")") shouldBe (round trip SimplifierV3
-      .simplify(Find.FindLPlain("[x:=1+0;](x>1+0&x>1+0)".asFormula, PosInExpr(1 :: 0 :: 1 :: Nil))))
-    tacticParser("simplify('L==\"[x:=1+0;](x>1+0&x>#1+0#)\")") shouldBe (round trip SimplifierV3
-      .simplify(Find.FindLPlain("[x:=1+0;](x>1+0&x>1+0)".asFormula, PosInExpr(1 :: 1 :: 1 :: Nil))))
+    tacticParser("simplify('L==\"[x:=1+0;](x>#1+0#&x>1+0)\")") shouldBe (round trip SimplifierV3.simplify(
+      Find.FindLPlain("[x:=1+0;](x>1+0&x>1+0)".asFormula, PosInExpr(1 :: 0 :: 1 :: Nil))
+    ))
+    tacticParser("simplify('L==\"[x:=1+0;](x>1+0&x>#1+0#)\")") shouldBe (round trip SimplifierV3.simplify(
+      Find.FindLPlain("[x:=1+0;](x>1+0&x>1+0)".asFormula, PosInExpr(1 :: 1 :: 1 :: Nil))
+    ))
   }
 
   it should "correctly parenthesize postconditions with a searchy formula sub-position locator in new notation" in {
-    tacticParser("trueAnd('L==\"[x:=2;](#true&x>1#)\")") shouldBe (round trip UnifyUSCalculus
-      .useAt(Ax.trueAnd)(Find.FindLPlain("[x:=2;](true&x>1)".asFormula, PosInExpr(1 :: Nil))))
-    tacticParser("trueAnd('L==\"[x:=2;]#(true&x>1)#\")") shouldBe (round trip UnifyUSCalculus
-      .useAt(Ax.trueAnd)(Find.FindLPlain("[x:=2;](true&x>1)".asFormula, PosInExpr(1 :: Nil))))
+    tacticParser("trueAnd('L==\"[x:=2;](#true&x>1#)\")") shouldBe (round trip UnifyUSCalculus.useAt(Ax.trueAnd)(
+      Find.FindLPlain("[x:=2;](true&x>1)".asFormula, PosInExpr(1 :: Nil))
+    ))
+    tacticParser("trueAnd('L==\"[x:=2;]#(true&x>1)#\")") shouldBe (round trip UnifyUSCalculus.useAt(Ax.trueAnd)(
+      Find.FindLPlain("[x:=2;](true&x>1)".asFormula, PosInExpr(1 :: Nil))
+    ))
     // @note allow more concise notation with # forming parentheses
-    tacticParser("trueAnd('L==\"[x:=2;]#true&x>1#\")") shouldBe (round trip UnifyUSCalculus
-      .useAt(Ax.trueAnd)(Find.FindLPlain("[x:=2;](true&x>1)".asFormula, PosInExpr(1 :: Nil))))
-    tacticParser("trueAnd('L==\"(true&x>1)&[x:=2;]#true&x>1#\")") shouldBe (round trip UnifyUSCalculus
-      .useAt(Ax.trueAnd)(Find.FindLPlain("(true&x>1)&[x:=2;](true&x>1)".asFormula, PosInExpr(1 :: 1 :: Nil))))
+    tacticParser("trueAnd('L==\"[x:=2;]#true&x>1#\")") shouldBe (round trip UnifyUSCalculus.useAt(Ax.trueAnd)(
+      Find.FindLPlain("[x:=2;](true&x>1)".asFormula, PosInExpr(1 :: Nil))
+    ))
+    tacticParser("trueAnd('L==\"(true&x>1)&[x:=2;]#true&x>1#\")") shouldBe (round trip UnifyUSCalculus.useAt(
+      Ax.trueAnd
+    )(Find.FindLPlain("(true&x>1)&[x:=2;](true&x>1)".asFormula, PosInExpr(1 :: 1 :: Nil))))
   }
 
   it should "correctly parenthesize programs with a searchy formula sub-position locator in new notation" in {
-    tacticParser("chase('L==\"[{#x:=1; ++ x:=2;#};ode;]x>1\")") shouldBe (round trip UnifyUSCalculus
-      .chase(Find.FindLPlain("[{x:=1; ++ x:=2;};ode;]x>1".asFormula, PosInExpr(0 :: 0 :: Nil))))
-    tacticParser("chase('L==\"[#{x:=1; ++ x:=2;}#;ode;]x>1\")") shouldBe (round trip UnifyUSCalculus
-      .chase(Find.FindLPlain("[{x:=1; ++ x:=2;};ode;]x>1".asFormula, PosInExpr(0 :: 0 :: Nil))))
+    tacticParser("chase('L==\"[{#x:=1; ++ x:=2;#};ode;]x>1\")") shouldBe (round trip UnifyUSCalculus.chase(
+      Find.FindLPlain("[{x:=1; ++ x:=2;};ode;]x>1".asFormula, PosInExpr(0 :: 0 :: Nil))
+    ))
+    tacticParser("chase('L==\"[#{x:=1; ++ x:=2;}#;ode;]x>1\")") shouldBe (round trip UnifyUSCalculus.chase(
+      Find.FindLPlain("[{x:=1; ++ x:=2;};ode;]x>1".asFormula, PosInExpr(0 :: 0 :: Nil))
+    ))
     // @note allow more concise notation with # forming braces
-    tacticParser("chase('L==\"[#x:=1; ++ x:=2;#;ode;]x>1\")") shouldBe (round trip UnifyUSCalculus
-      .chase(Find.FindLPlain("[{x:=1; ++ x:=2;};ode;]x>1".asFormula, PosInExpr(0 :: 0 :: Nil))))
+    tacticParser("chase('L==\"[#x:=1; ++ x:=2;#;ode;]x>1\")") shouldBe (round trip UnifyUSCalculus.chase(
+      Find.FindLPlain("[{x:=1; ++ x:=2;};ode;]x>1".asFormula, PosInExpr(0 :: 0 :: Nil))
+    ))
     tacticParser("chase('L==\"[{x:=1; ++ x:=2;};#x:=1; ++ x:=2;#;ode;]x>1\")") shouldBe (round trip UnifyUSCalculus
       .chase(Find.FindLPlain("[{x:=1; ++ x:=2;};{x:=1; ++ x:=2;};ode;]x>1".asFormula, PosInExpr(0 :: 1 :: 0 :: Nil))))
   }
 
   it should "parse a built-in argument with a searchy unification position locator" in {
-    tacticParser("boxAnd('L~=\"[x:=2;](x>0&x>1)\")") shouldBe (round trip HilbertCalculus
-      .boxAnd(Find.FindLMatch("[x:=2;](x>0&x>1)".asFormula)))
+    tacticParser("boxAnd('L~=\"[x:=2;](x>0&x>1)\")") shouldBe (round trip HilbertCalculus.boxAnd(
+      Find.FindLMatch("[x:=2;](x>0&x>1)".asFormula)
+    ))
   }
 
   it should "parse a built-in argument with a check position locator" in {
-    tacticParser("boxAnd(2==\"[x:=2;](x>0&x>1)\")") shouldBe (round trip HilbertCalculus
-      .boxAnd(Fixed(2, Nil, Some("[x:=2;](x>0&x>1)".asFormula))))
+    tacticParser("boxAnd(2==\"[x:=2;](x>0&x>1)\")") shouldBe (round trip HilbertCalculus.boxAnd(
+      Fixed(2, Nil, Some("[x:=2;](x>0&x>1)".asFormula))
+    ))
   }
 
   it should "parse a built-in argument with a unification check position locator" in {
-    tacticParser("boxAnd(2~=\"[x:=2;](x>0&x>1)\")") shouldBe (round trip HilbertCalculus
-      .boxAnd(Fixed(2, Nil, Some("[x:=2;](x>0&x>1)".asFormula), exact = false)))
+    tacticParser("boxAnd(2~=\"[x:=2;](x>0&x>1)\")") shouldBe (round trip HilbertCalculus.boxAnd(
+      Fixed(2, Nil, Some("[x:=2;](x>0&x>1)".asFormula), exact = false)
+    ))
   }
 
   it should "parse a built-in argument with a 'R position locator" in {
@@ -209,13 +224,15 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
   }
 
   it should "parse a built-in argument with a 'Llast subposition locator" in {
-    tacticParser("boxAnd('Llast.0.1)") shouldBe (round trip HilbertCalculus
-      .boxAnd(LastAnte(0, PosInExpr(0 :: 1 :: Nil))))
+    tacticParser("boxAnd('Llast.0.1)") shouldBe (round trip HilbertCalculus.boxAnd(
+      LastAnte(0, PosInExpr(0 :: 1 :: Nil))
+    ))
   }
 
   it should "parse a built-in tactic that takes a whole list of arguments" in {
-    tacticParser("diffInvariant(\"1=1\", 1)") shouldBe (round trip DifferentialEquationCalculus
-      .diffInvariant("1=1".asFormula)(1))
+    tacticParser("diffInvariant(\"1=1\", 1)") shouldBe (round trip DifferentialEquationCalculus.diffInvariant(
+      "1=1".asFormula
+    )(1))
   }
 
   it should "Parse a loop tactic and print it back out" in {
@@ -588,8 +605,10 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
 
   it should "work in the beginning of a branch" in {
     val tactic = tacticParser("andR(1) & <(?(id), ?(orR(1)))")
-    tactic shouldBe (round trip andR(1) & Idioms
-      .<(Idioms.?(SequentCalculus.id.asInstanceOf[BelleExpr]), Idioms.?(SequentCalculus.orR(1))))
+    tactic shouldBe (round trip andR(1) & Idioms.<(
+      Idioms.?(SequentCalculus.id.asInstanceOf[BelleExpr]),
+      Idioms.?(SequentCalculus.orR(1)),
+    ))
   }
 
   // endregion
@@ -612,15 +631,16 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
   }
 
   it should "work on tactic that caused original bug" in withMathematica { _ =>
-    val t = """implyR(1);
-              |loop("x<=m", 1); <(
-              |  QE,
-              |  QE,
-              |  composeb(1); choiceb(1); andR(1); <(
-              |    assignb(1); solve(1); nil,
-              |    testb(1); implyR(1); solve(1); nil
-              |  )
-              |)""".stripMargin
+    val t =
+      """implyR(1);
+        |loop("x<=m", 1); <(
+        |  QE,
+        |  QE,
+        |  composeb(1); choiceb(1); andR(1); <(
+        |    assignb(1); solve(1); nil,
+        |    testb(1); implyR(1); solve(1); nil
+        |  )
+        |)""".stripMargin
     tacticParser(t) shouldBe (round trip tacticParser(t))
   }
 
@@ -693,11 +713,12 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
   }
 
   it should "parse dI" in withMathematica { _ =>
-    val inner = """
-                  |DI(1) ; implyR(1) ; andR(1) ; <(
-                  |  QE,
-                  |  derive(1.1) ; DE(1) ; Dassignb(1.1) ; GV(1) ; QE
-                  |)
+    val inner =
+      """
+        |DI(1) ; implyR(1) ; andR(1) ; <(
+        |  QE,
+        |  derive(1.1) ; DE(1) ; Dassignb(1.1) ; GV(1) ; QE
+        |)
       """.stripMargin
     val tactic = tacticParser(s"""let ("a()=a") in ($inner)""")
     tactic shouldBe (round trip Let("a()".asTerm, "a".asTerm, round trip tacticParser(inner)))
@@ -705,8 +726,11 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
 
   it should "parse let as part of a larger tactic" in {
     val tactic = tacticParser("implyR(1) ; let (\"a()=a\") in (nil) ; id")
-    tactic shouldBe (round trip SequentCalculus
-      .implyR(1) & (Let("a()".asTerm, "a".asTerm, UnifyUSCalculus.nil) & SequentCalculus.id))
+    tactic shouldBe (round trip SequentCalculus.implyR(1) & (Let(
+      "a()".asTerm,
+      "a".asTerm,
+      UnifyUSCalculus.nil,
+    ) & SequentCalculus.id))
   }
 
   "def tactic parser" should "parse a simple example" in {
@@ -747,7 +771,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
     val tDef = DefTactic("t", HilbertCalculus.assignb(Symbol("R")))
     tactic shouldBe (round trip tDef & (andR(1) < (
       ApplyDefTactic(tDef) & (TactixLibrary.prop & TactixLibrary.done),
-      TactixLibrary.prop & OnAll(ApplyDefTactic(tDef))
+      TactixLibrary.prop & OnAll(ApplyDefTactic(tDef)),
     )))
   }
 
@@ -763,7 +787,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
     val tDef2 = DefTactic("t", TactixLibrary.unfoldProgramNormalize)
     tactic shouldBe (round trip tDef1 & (andR(1) < (
       ApplyDefTactic(tDef1) & (TactixLibrary.prop & TactixLibrary.done),
-      TactixLibrary.prop & (OnAll(tDef2 & ApplyDefTactic(tDef2)) & ApplyDefTactic(tDef1))
+      TactixLibrary.prop & (OnAll(tDef2 & ApplyDefTactic(tDef2)) & ApplyDefTactic(tDef1)),
     )))
   }
 
@@ -958,8 +982,9 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
   }
 
   it should "parse list formula arguments" in {
-    tacticParser("dC(\"x>0 :: y<1 :: nil\",1)") shouldBe (round trip DifferentialEquationCalculus
-      .dC("x>0".asFormula :: "y<1".asFormula :: Nil)(1))
+    tacticParser("dC(\"x>0 :: y<1 :: nil\",1)") shouldBe (round trip DifferentialEquationCalculus.dC(
+      "x>0".asFormula :: "y<1".asFormula :: Nil
+    )(1))
   }
 
   it should "parse term arguments" in {
@@ -967,8 +992,9 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
   }
 
   it should "parse substitution arguments" in {
-    tacticParser("US(\"init(x) ~> x=0\")") shouldBe (round trip UnifyUSCalculus
-      .USX(SubstitutionPair("init(._0)".asFormula, "._0=0".asFormula) :: Nil))
+    tacticParser("US(\"init(x) ~> x=0\")") shouldBe (round trip UnifyUSCalculus.USX(
+      SubstitutionPair("init(._0)".asFormula, "._0=0".asFormula) :: Nil
+    ))
   }
 
   it should "parse list substitution arguments" in {
@@ -981,17 +1007,20 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
   }
 
   it should "parse mixed arguments" in {
-    tacticParser("dG(\"{z'=-1*z+0}\",\"x*z^2=1\",1)") shouldBe (round trip DifferentialEquationCalculus
-      .dG("{z'=-1*z+0}".asProgram, Some("x*z^2=1".asFormula))(1))
+    tacticParser("dG(\"{z'=-1*z+0}\",\"x*z^2=1\",1)") shouldBe (round trip DifferentialEquationCalculus.dG(
+      "{z'=-1*z+0}".asProgram,
+      Some("x*z^2=1".asFormula),
+    )(1))
   }
 
   it should "parse predicates in locators" in {
     val defs = Declaration(
       Map(Name("p", None) -> Signature(Some(Real), Bool, Some(List((Name("x"), Real))), Right(None), UnknownLocation))
     )
-    tacticParser("hideL(1==\"p(x)\")", defs) shouldBe (
-      round trip (SequentCalculus.hideL(Fixed(1, Nil, Some("p(x)".asFormula))), defs)
-    )
+    tacticParser("hideL(1==\"p(x)\")", defs) shouldBe (round trip (
+      SequentCalculus.hideL(Fixed(1, Nil, Some("p(x)".asFormula))),
+      defs,
+    ))
   }
 
   it should "expand definitions when parsing arguments only when asked to" in {
@@ -1077,18 +1106,18 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
   // region New dG syntax
 
   "new dG syntax" should "round trip ghosts" in {
-    "dG(\"y'=1\", 1)".asTactic should (be(DifferentialEquationCalculus.dG("y'=1".asFormula, None)(1)) and (
-      print as "dG(\"y'=1\", 1)"
-    ) and (reparse fromPrint))
+    "dG(\"y'=1\", 1)".asTactic should (be(
+      DifferentialEquationCalculus.dG("y'=1".asFormula, None)(1)
+    ) and (print as "dG(\"y'=1\", 1)") and (reparse fromPrint))
     "dG(\"{y'=1}\", \"x*y=5\", 1)".asTactic should (be(
       DifferentialEquationCalculus.dG("{y'=1}".asProgram, Some("x*y=5".asFormula))(1)
     ) and (print as "dG(\"{y'=1}\", \"x*y=5\", 1)") and (reparse fromPrint))
     "dG(\"y'=0*y+1\", \"x*y^2=1\", 1)".asTactic should (be(
       DifferentialEquationCalculus.dG("y'=0*y+1".asFormula, Some("x*y^2=1".asFormula))(1)
     ) and (print as "dG(\"y'=0*y+1\", \"x*y^2=1\", 1)") and (reparse fromPrint))
-    "dG(\"y'=1/2*y\", 1)".asTactic should (be(DifferentialEquationCalculus.dG("y'=1/2*y".asFormula, None)(1)) and (
-      print as "dG(\"y'=1/2*y\", 1)"
-    ) and (reparse fromPrint))
+    "dG(\"y'=1/2*y\", 1)".asTactic should (be(
+      DifferentialEquationCalculus.dG("y'=1/2*y".asFormula, None)(1)
+    ) and (print as "dG(\"y'=1/2*y\", 1)") and (reparse fromPrint))
     "dG(\"{y'=1/2*y}\", \"x*y^2=1\", 1)".asTactic should (be(
       DifferentialEquationCalculus.dG("{y'=1/2*y}".asProgram, Some("x*y^2=1".asFormula))(1)
     ) and (print as "dG(\"{y'=1/2*y}\", \"x*y^2=1\", 1)") and (reparse fromPrint))

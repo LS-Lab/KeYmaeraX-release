@@ -61,10 +61,8 @@ import scala.collection.immutable.{List, Nil}
 /**
  * Vertical layout using an implementation based on Wadler's "A Prettier Printer"
  *
- * @author
- *   Fabian Immler
- * @see
- *   [[http://homepages.inf.ed.ac.uk/wadler/papers/prettier/prettier.pdf]]
+ * @author Fabian Immler
+ * @see [[http://homepages.inf.ed.ac.uk/wadler/papers/prettier/prettier.pdf]]
  */
 class KeYmaeraXPrettierPrinter(margin: Int) extends KeYmaeraXPrecedencePrinter {
 

@@ -69,10 +69,11 @@ object ODEInvariance extends Logging {
     implyR(1) &
       DifferentialEquationCalculus.dR("f(||)>0".asFormula)(1) < (
         cutL("1!=0 & f(||)>0".asFormula)(-1) < (
-          implyRi & byUS(Ax.Cont), hideR(1) & implyR(1) & andR(1) < (hideL(-1) & QE, id)
+          implyRi & byUS(Ax.Cont),
+          hideR(1) & implyR(1) & andR(1) < (hideL(-1) & QE, id),
         ),
         DW(1) & G(1) & useAt(Ax.flipGreater)(1, 0 :: Nil) &
-          useAt(Ax.flipGreaterEqual)(1, 1 :: Nil) & useAt(Ax.lessEqual)(1, 1 :: Nil) & prop
+          useAt(Ax.flipGreaterEqual)(1, 1 :: Nil) & useAt(Ax.lessEqual)(1, 1 :: Nil) & prop,
       ),
     namespace,
   )
@@ -82,10 +83,11 @@ object ODEInvariance extends Logging {
     implyR(1) &
       dR("f(||)>0".asFormula)(1) < (
         cutL("-(1)!=0 & f(||)>0".asFormula)(-1) < (
-          implyRi & byUS(Ax.Cont), hideR(1) & implyR(1) & andR(1) < (hideL(-1) & QE, id)
+          implyRi & byUS(Ax.Cont),
+          hideR(1) & implyR(1) & andR(1) < (hideL(-1) & QE, id),
         ),
         DW(1) & G(1) & useAt(Ax.flipGreater)(1, 0 :: Nil) &
-          useAt(Ax.flipGreaterEqual)(1, 1 :: Nil) & useAt(Ax.lessEqual)(1, 1 :: Nil) & prop
+          useAt(Ax.flipGreaterEqual)(1, 1 :: Nil) & useAt(Ax.lessEqual)(1, 1 :: Nil) & prop,
       ),
     namespace,
   )
@@ -138,12 +140,9 @@ object ODEInvariance extends Logging {
    * <x'=f(x)&Q>O & p*>=0 -> <x'=f(x)& p>=0 >O
    * }}}
    *
-   * @param ode
-   *   the ODE system
-   * @param p
-   *   the polynomial p
-   * @return
-   *   (p*>0, p*=0, rank)
+   * @param ode the ODE system
+   * @param p the polynomial p
+   * @return (p*>0, p*=0, rank)
    */
   def pStarGeq(ode: ODESystem, p: Term): (Formula, (Int, List[Term], List[List[Term]])) = {
     val (r, g, cofactors) = rank(ode, List(p))
@@ -175,12 +174,9 @@ object ODEInvariance extends Logging {
    * Given a formula f in normal form (conjunction/disjunction of >=0, >0 or =0), generates the formula f* This is
    * accompanied by an extra data structure that caches additional information at each step
    *
-   * @param ode
-   *   the ODE system
-   * @param f
-   *   the formula in semialgebraic normal form
-   * @return
-   *   `(f*, i)`
+   * @param ode the ODE system
+   * @param f the formula in semialgebraic normal form
+   * @return `(f*, i)`
    */
   def fStar(ode: ODESystem, f: Formula): (Formula, Inst) = {
     f match {
@@ -265,11 +261,11 @@ object ODEInvariance extends Logging {
                 diffInd(Symbol("diffInd"))(1) < (
                   useAt(geq)(1) & orR(1) & id,
                   cohideOnlyL(Symbol("Llast")) & SaturateTactic(Dassignb(1)) & implyRi &
-                    useAt(fastGeqCheck, PosInExpr(1 :: Nil))(1) & timeoutQE
+                    useAt(fastGeqCheck, PosInExpr(1 :: Nil))(1) & timeoutQE,
                 )
-              )(1) & done
-          )
-        )
+              )(1) & done,
+          ),
+        ),
     )
   })
 
@@ -286,10 +282,9 @@ object ODEInvariance extends Logging {
         )
     }
 
-    diffRefine(domainEqualities(sys.constraint).foldLeft(True: Formula)((f, g) => And(f, Equal(g, Number(0)))))(pos) < (
-      skip,
-      diffWeakenG(pos) & QE
-    )
+    diffRefine(
+      domainEqualities(sys.constraint).foldLeft(True: Formula)((f, g) => And(f, Equal(g, Number(0))))
+    )(pos) < (skip, diffWeakenG(pos) & QE)
   })
 
   // Helper tactic proving p*>0 -> <t'=1, x'=f(x)& p>=0> t!=0
@@ -300,7 +295,7 @@ object ODEInvariance extends Logging {
       // DebuggingTactics.print("start "+bound) &
       andL(-1) & lpstep(1) < (
         hideL(-2) & useAt(geq)(-1) & id,
-        hideL(-1) & implyL(-1) & <(id, hideL(-2) & lpgeq(bound - 1))
+        hideL(-1) & implyL(-1) & <(id, hideL(-2) & lpgeq(bound - 1)),
       )
 
   // Proves t_=0, <x'=f(x)&Q>t_!=0, P* |- <x'=f(x)&P>t_!=0
@@ -310,12 +305,12 @@ object ODEInvariance extends Logging {
       case DisjFml(l, r) => DebuggingTactics.debug("DISJ", doPrint = debugTactic) &
           orL(-3) < (
             useAt(refOrL, PosInExpr(1 :: Nil))(1) & lpclosed(l),
-            useAt(refOrR, PosInExpr(1 :: Nil))(1) & lpclosed(r)
+            useAt(refOrR, PosInExpr(1 :: Nil))(1) & lpclosed(r),
           )
       case ConjFml(l, r) => DebuggingTactics.debug("CONJ", doPrint = debugTactic) &
           andL(-3) & useAt(Ax.UniqIff, PosInExpr(1 :: Nil))(1) & andR(1) < (
             hideL(-4) & lpclosed(l),
-            hideL(-3) & lpclosed(r)
+            hideL(-3) & lpclosed(r),
           )
       case GeqFml(r, gs, cofs) => DebuggingTactics.debug(">= case, rank: " + r + " " + gs, doPrint = debugTactic) &
           (if (gs.isEmpty) { cohideOnlyL(-3) & lpgeq(r - 1) }
@@ -327,7 +322,7 @@ object ODEInvariance extends Logging {
                  implyRi()(-4, 1) & useAt(Ax.DRd, PosInExpr(1 :: Nil))(1) &
                  // Get rid of nasty constraints
                  refineToEqualities(1) &
-                 dgVdbx(cofs, gs)(1) & DW(1) & G(1) & timeoutQE & done
+                 dgVdbx(cofs, gs)(1) & DW(1) & G(1) & timeoutQE & done,
              )
            })
       case EqFml(_, gs, cofs) => DebuggingTactics.debug("= case", doPrint = debugTactic) &
@@ -352,16 +347,10 @@ object ODEInvariance extends Logging {
     val tac = inst match {
       case DisjFml(l, r) => DebuggingTactics.debug("DISJ", doPrint = debugTactic) &
           useAt(distOr, PosInExpr(1 :: Nil))(1) & // Distribute t_ = 0 disjunct in domain of progress fml
-          orL(-3) < (
-            useAt(refOrL, PosInExpr(1 :: Nil))(1) & lpgen(l),
-            useAt(refOrR, PosInExpr(1 :: Nil))(1) & lpgen(r)
-          )
+          orL(-3) < (useAt(refOrL, PosInExpr(1 :: Nil))(1) & lpgen(l), useAt(refOrR, PosInExpr(1 :: Nil))(1) & lpgen(r))
       case ConjFml(l, r) => DebuggingTactics.debug("CONJ", doPrint = debugTactic) &
           useAt(distAnd, PosInExpr(1 :: Nil))(1) & // Distribute t_ = 0 disjunct in domain of progress fml
-          andL(-3) & useAt(Ax.UniqIff, PosInExpr(1 :: Nil))(1) & andR(1) < (
-            hideL(-4) & lpgen(l),
-            hideL(-3) & lpgen(r)
-          )
+          andL(-3) & useAt(Ax.UniqIff, PosInExpr(1 :: Nil))(1) & andR(1) < (hideL(-4) & lpgen(l), hideL(-3) & lpgen(r))
       case GeqFml(r, gs, cofs) =>
         useAt(refOrL, PosInExpr(1 :: Nil))(1) & // drop t_ = 0 disjunct in domain of progress fml
           DebuggingTactics.debug(">= case, rank: " + r + " " + gs, doPrint = debugTactic) &
@@ -374,7 +363,7 @@ object ODEInvariance extends Logging {
                  implyRi()(-4, 1) & useAt(Ax.DRd, PosInExpr(1 :: Nil))(1) &
                  // Get rid of nasty constraints
                  refineToEqualities(1) &
-                 dgVdbx(cofs, gs)(1) & DW(1) & G(1) & timeoutQE & done
+                 dgVdbx(cofs, gs)(1) & DW(1) & G(1) & timeoutQE & done,
              )
            })
       case EqFml(_, gs, cofs) => DebuggingTactics.debug("= case", doPrint = debugTactic) &
@@ -488,15 +477,16 @@ object ODEInvariance extends Logging {
               implyR(1) &
               // Cut P*
               cutR(pf)(1) < (
-                hideL(-3) & tac22 & DebuggingTactics
-                  .debug("QE step", doPrint = debugTactic) & (prop & done | timeoutQE & done),
-                skip
+                hideL(-3) & tac22 & DebuggingTactics.debug("QE step", doPrint = debugTactic) & (
+                  prop & done | timeoutQE & done
+                ),
+                skip,
               ) & // Don't bother running the rest if QE fails
               hideL(-1) & DebuggingTactics.debug("Finish step", doPrint = debugTactic) & implyR(1) &
               tac23 &
               // At this point, the sequent should be EXACTLY the following (where P is rewritten back to semialgebraic normal form):
               // t_=0, <x'=f(x)&Q>t_!=0, P* |- <x'=f(x)&P>t_!=0
-              lpclosed(inst)
+              lpclosed(inst),
           ),
         DebuggingTactics.error("Inapplicable: t_ occurs"),
       )
@@ -535,10 +525,7 @@ object ODEInvariance extends Logging {
         )
     }
     val unlocked = GreaterEqual(Minus(p, Power(Minus(t, s), Number(2 * bound))), Number(0))
-    dR(unlocked)(1) < (
-      lpgeqUnlock(bound),
-      diffWeakenG(1) & byUS(boundPr)
-    )
+    dR(unlocked)(1) < (lpgeqUnlock(bound), diffWeakenG(1) & byUS(boundPr))
   })
 
   // Determines if a formula is of the special "recursive" rank one case
@@ -550,8 +537,7 @@ object ODEInvariance extends Logging {
       case cf: ComparisonFormula =>
         // findDbx
         val (pr, cofactor, rem) =
-          try { findDbx(ode, dom, cf, false) }
-          catch { case ex: ProofSearchFailure => return None }
+          try { findDbx(ode, dom, cf, false) } catch { case ex: ProofSearchFailure => return None }
         if (pr.isProved) // TODO: this should be keeping track of co-factors rather than throwing them away
           Some(f)
         else {
@@ -607,21 +593,12 @@ object ODEInvariance extends Logging {
       case And(l, r) => andL(-1) &
           DebuggingTactics.debug("state", doPrint = debugTactic) & dC(l)(1) &
           Idioms.doIfElse(_.subgoals.size == 2)(
-            <(
-              hideL(-1) & boxAnd(1) & andR(1) < (
-                DW(1) & G(1) & prop,
-                recRankOneTac(r)
-              ),
-              hideL(-2) & recRankOneTac(l),
-            ),
-            hideL(-1) & boxAnd(1) & andR(1) < (
-              DW(1) & G(1) & prop,
-              recRankOneTac(r)
-            ),
+            <(hideL(-1) & boxAnd(1) & andR(1) < (DW(1) & G(1) & prop, recRankOneTac(r)), hideL(-2) & recRankOneTac(l)),
+            hideL(-1) & boxAnd(1) & andR(1) < (DW(1) & G(1) & prop, recRankOneTac(r)),
           )
       case Or(l, r) => orL(-1) < (
           useAt(Ax.boxOrLeft, PosInExpr(1 :: Nil))(1) & recRankOneTac(l),
-          useAt(Ax.boxOrRight, PosInExpr(1 :: Nil))(1) & recRankOneTac(r)
+          useAt(Ax.boxOrRight, PosInExpr(1 :: Nil))(1) & recRankOneTac(r),
         )
       case _ => (diffInd()(1) | dgDbxAuto(1) | dgBarrier(1)) & done
     })
@@ -639,17 +616,15 @@ object ODEInvariance extends Logging {
    *
    * This tactic reorders conjunctions internally to try and find an order that works
    *
-   * @param doReorder
-   *   whether to reorder conjunctions
-   * @param skipClosed
-   *   whether to skip over closed invariants (this should be used if the outer tactic already tried sAIclosedPlus,
-   *   which is much faster than this one anyway) The option only applies if doReorder = true
+   * @param doReorder whether to reorder conjunctions
+   * @param skipClosed whether to skip over closed invariants (this should be used if the outer tactic already tried
+   *   sAIclosedPlus, which is much faster than this one anyway) The option only applies if doReorder = true
    * @see
    *   [[org.keymaerax.Bibliography.LicsPlatzerT18 Differential equation axiomatization: The impressive power of differential ghosts]]
    */
   // was "sAIR1"
-  def sAIRankOne(doReorder: Boolean = true, skipClosed: Boolean = true): DependentPositionTactic =
-    anon { (pos: Position, seq: Sequent) =>
+  def sAIRankOne(doReorder: Boolean = true, skipClosed: Boolean = true): DependentPositionTactic = anon {
+    (pos: Position, seq: Sequent) =>
       {
         if (!(pos.isTopLevel && pos.isSucc)) throw new IllFormedTacticApplicationException(
           "sAIRankOne: position " + pos + " must point to a top-level succedent position"
@@ -690,7 +665,7 @@ object ODEInvariance extends Logging {
             starter & cutR(f2)(pos) < (
               timeoutQE,
               cohideR(pos) & implyR(1) &
-                recRankOneTac(f2)
+                recRankOneTac(f2),
             )
           }
         } else {
@@ -711,11 +686,11 @@ object ODEInvariance extends Logging {
 
           starter & useAt(reorder)(pos ++ PosInExpr(1 :: Nil)) & cutR(f3)(pos) < (
             useAt(reorder, PosInExpr(1 :: Nil))(pos) & timeoutQE,
-            cohideR(pos) & implyR(1) & recRankOneTac(f3)
+            cohideR(pos) & implyR(1) & recRankOneTac(f3),
           )
         }
       }
-    }
+  }
 
   /**
    * Event stuck tactics: roughly, [x'=f(x)&Q]P might be true in a state if:
@@ -795,13 +770,9 @@ object ODEInvariance extends Logging {
           val equals = freeAtoms.map(f => Equal(f.xp.x, Variable(f.xp.x.name, Some(0)))).reduceRight(And.apply)
 
           // dC with old(.) moves the formula to the last position
-          dC(LessEqual(left, right))(pos) < (
-            dW(Symbol("Rlast")) & cutR(equals)(1) < (
-              QE & done,
-              QE
-            ),
-            diffInd(Symbol("full"))(Symbol("Rlast"))
-          )
+          dC(
+            LessEqual(left, right)
+          )(pos) < (dW(Symbol("Rlast")) & cutR(equals)(1) < (QE & done, QE), diffInd(Symbol("full"))(Symbol("Rlast")))
       }
     }
   })
@@ -854,7 +825,7 @@ object ODEInvariance extends Logging {
       )(-1) & DWd(-1) &
       cutL("<{c&(!q(||)|r(||))&q(||)}>!p(||)".asFormula)(-1) < (
         implyRi & useAt(Ax.DRd, PosInExpr(1 :: Nil))(1) & DW(1) & G(1) & prop,
-        cohideR(2) & implyR(1) & mond & prop
+        cohideR(2) & implyR(1) & mond & prop,
       ),
     namespace,
   )
@@ -892,9 +863,9 @@ object ODEInvariance extends Logging {
       }
 
     // Gross way of inserting time ODE in a stable way (copied from ODELiveness)
-    val timetac = cut(Exists(List(timevar), Equal(timevar, Number(0)))) < (
-      existsL(Symbol("Llast")), cohideR(Symbol("Rlast")) & QE
-    ) &
+    val timetac = cut(
+      Exists(List(timevar), Equal(timevar, Number(0)))
+    ) < (existsL(Symbol("Llast")), cohideR(Symbol("Rlast")) & QE) &
       vDG(timer)(pos)
 
     // set up the time variable
@@ -915,11 +886,8 @@ object ODEInvariance extends Logging {
               cutR(Diamond(
                 ODESystem(DifferentialProduct(timer, ode), Greater(Number(1), Number(0))),
                 NotEqual(timevar, Number(0)),
-              ))(1) < (
-                cohideR(1) & byUS(contAxTrue),
-                implyR(1) & implyR(1) & lpgen(inst)
-              )
-          )
+              ))(1) < (cohideR(1) & byUS(contAxTrue), implyR(1) & implyR(1) & lpgen(inst)),
+          ),
       )
   }
 
@@ -934,12 +902,9 @@ object ODEInvariance extends Logging {
 
   /**
    * Explicitly calculate the conjunctive rank of a list of polynomials (uses conjunctive optimization from SAS'14)
-   * @param ode
-   *   the ODESystem to use
-   * @param polys
-   *   the polynomials to compute rank for
-   * @return
-   *   the (conjunctive) rank, the Groebner basis closed under Lie derivation, and its cofactors (in that order)
+   * @param ode the ODESystem to use
+   * @param polys the polynomials to compute rank for
+   * @return the (conjunctive) rank, the Groebner basis closed under Lie derivation, and its cofactors (in that order)
    */
   def rank(ode: ODESystem, polys: List[Term]): (Int, List[Term], List[List[Term]]) = {
     val algTool = ToolProvider.algebraTool() match {
@@ -1018,18 +983,13 @@ object ODEInvariance extends Logging {
    * Gamma |- [x'=f(x)&Q]P
    * }}}
    *
-   * @param Gco
-   *   the cofactor matrix
-   * @param ps
-   *   the polynomial vector
-   * @param negate
-   *   implements vectorial darboux inequality instead
-   * @return
-   *   tactic implementing vdbx as described above
+   * @param Gco the cofactor matrix
+   * @param ps the polynomial vector
+   * @param negate implements vectorial darboux inequality instead
+   * @return tactic implementing vdbx as described above
    * @see
    *   [[org.keymaerax.Bibliography.LicsPlatzerT18 Differential equation axiomatization: The impressive power of differential ghosts]]
-   * @note
-   *   uses Dconstify and handles other constification internally instead of an external wrapper
+   * @note uses Dconstify and handles other constification internally instead of an external wrapper
    */
   private lazy val dbxCond: ProvableSig =
     remember("((-g_())*y_()+0)*(z_())^2 + y_()*(2*z_()^(2-1)*(g_()/2*z_()+0))=0".asFormula, QE, namespace).fact
@@ -1046,8 +1006,8 @@ object ODEInvariance extends Logging {
   private lazy val ghostLemLe = remember("dbxy_ > 0 & dbxy_ * pp() <= 0 -> pp() <= 0".asFormula, QE)
   private lazy val ghostLemGt = remember("dbxy_ > 0 & dbxy_ * pp() > 0 -> pp() > 0".asFormula, QE)
 
-  def dgVdbx(Gco: List[List[Term]], ps: List[Term], negate: Boolean = false): DependentPositionTactic =
-    anon { (pos: Position, seq: Sequent) =>
+  def dgVdbx(Gco: List[List[Term]], ps: List[Term], negate: Boolean = false): DependentPositionTactic = anon {
+    (pos: Position, seq: Sequent) =>
       {
         if (!(pos.isTopLevel && pos.isSucc)) throw new IllFormedTacticApplicationException(
           "dgVdbx: position " + pos + " must point to a top-level succedent position"
@@ -1170,12 +1130,12 @@ object ODEInvariance extends Logging {
                               hideR(1),
                               QE,
                               DebuggingTactics.done("Vdbx condition must be preserved"),
-                            )
-                          )
+                            ),
+                          ),
                         ),
-                      )
+                      ),
                     )
-                  )(pos)
+                  )(pos),
                 ),
                 SeqTactic(
                   DifferentialTactics.dG(dez, Some(pcz))(pos), // Introduce the dbx ghost
@@ -1188,14 +1148,14 @@ object ODEInvariance extends Logging {
                       useAt(dbxEqOne)(pos),
                       closeT,
                     ),
-                    cohideR(Symbol("Rlast")) & SaturateTactic(Dassignb(1)) & byUS(dbxCond)
+                    cohideR(Symbol("Rlast")) & SaturateTactic(Dassignb(1)) & byUS(dbxCond),
                   ),
-                )
+                ),
               ),
-            )
+            ),
           )
       }
-    }
+  }
 
   /**
    * Implements (conjunctive) differential radical invariants
@@ -1320,10 +1280,8 @@ object ODEInvariance extends Logging {
   /**
    * Pre-prove the symbolic lemmas for n-dimensional Cauchy Schwartz Note: this lemma proves pretty quickly e.g. for
    * n=10
-   * @param n
-   *   the dimension to use
-   * @return
-   *   the symbolic bound `(u.v)^2 <= (||u||||v||)^2`
+   * @param n the dimension to use
+   * @return the symbolic bound `(u.v)^2 <= (||u||||v||)^2`
    */
   @nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
   def cauchy_schwartz_bound(n: Int): ProvableSig = {
@@ -1346,7 +1304,8 @@ object ODEInvariance extends Logging {
       fml1,
       SaturateTactic(
         useAt(cauchy_schwartz_lem, PosInExpr(1 :: Nil))(1) & andR(1) < (
-          prove_sos_positive, andR(1) < (prove_sos_positive, skip)
+          prove_sos_positive,
+          andR(1) < (prove_sos_positive, skip),
         )
       ) & QE,
     )
@@ -1392,10 +1351,8 @@ object ODEInvariance extends Logging {
    * 2((Gp).p) >= -(1+sum_i ||G_i||^2) ||p||^2
    * }}}
    *
-   * @param n
-   *   the dimension to use
-   * @return
-   *   the symbolic bounds (||G||^2 + 1) ||p||^2 <= 2*((Gp).p) <= (||G||^2 + 1) ||p||^2
+   * @param n the dimension to use
+   * @return the symbolic bounds (||G||^2 + 1) ||p||^2 <= 2*((Gp).p) <= (||G||^2 + 1) ||p||^2
    */
   @nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
   def frobenius_subord_bound(n: Int): (ProvableSig, ProvableSig) = {
@@ -1537,10 +1494,7 @@ object ODEInvariance extends Logging {
     val vs = atomicListify(sys.ode).map(p => p.xp.x)
     val olds = vs.map(v => Equal(v, FuncOf(Function("old", None, Real, Real, None), v)))
 
-    dC(olds.reduce(And.apply))(pos) < (
-      skip,
-      dRI(pos)
-    )
+    dC(olds.reduce(And.apply))(pos) < (skip, dRI(pos))
   }
 
   @Derivation
@@ -1705,16 +1659,11 @@ object ODEInvariance extends Logging {
    * p>=0 & (p=0 -> (p'>=0 & (p'=0 -> ...) & (p=0&... -> p'^i >0)
    * }}}
    * Computes up to the rank if bound = None
-   * @param ode
-   *   the ODEs under consideration
-   * @param p
-   *   the polynomial p to generate p*>0
-   * @param bound
-   *   number of higher Lie derivatives to generate
-   * @param geq
-   *   generate for >= (or <= if false)
-   * @return
-   *   ( p*>0 )
+   * @param ode the ODEs under consideration
+   * @param p the polynomial p to generate p*>0
+   * @param bound number of higher Lie derivatives to generate
+   * @param geq generate for >= (or <= if false)
+   * @return ( p*>0 )
    */
   def pStar(ode: ODESystem, p: Term, bound: Option[Int], geq: Boolean = true): Formula = {
     val trueBound = bound match {
@@ -1738,14 +1687,10 @@ object ODEInvariance extends Logging {
   /**
    * Homomorphically extend pStar to max and min terms
    *
-   * @param ode
-   *   the ODEs under consideration
-   * @param p
-   *   the term p>=0 (including max/min terms)
-   * @param bound
-   *   number of higher Lie derivatives to generate
-   * @return
-   *   p*>0
+   * @param ode the ODEs under consideration
+   * @param p the term p>=0 (including max/min terms)
+   * @param bound number of higher Lie derivatives to generate
+   * @return p*>0
    */
   def pStarHom(ode: DifferentialProgram, p: Term, bound: Int): Formula = {
     p match {
@@ -1760,12 +1705,9 @@ object ODEInvariance extends Logging {
   /**
    * Computes the local progress formula f*. f* is assumed to consist of atomic comparisons normalized to have 0 on RHS
    * (<=0,>=0,<0,>0,=0,!=0), And, Or. Sub-formulas outside this grammar are ignored if strict = false.
-   * @param ode
-   *   the ODEs under consideration
-   * @param f
-   *   the formula f to compute f* for
-   * @param bound
-   *   optionally bounds the number of higher Lie derivatives that are considered
+   * @param ode the ODEs under consideration
+   * @param f the formula f to compute f* for
+   * @param bound optionally bounds the number of higher Lie derivatives that are considered
    * @return
    */
   def localProgressFml(ode: ODESystem, f: Formula, bound: Option[Int] = None): Formula = {
@@ -1858,12 +1800,12 @@ object ODEInvariance extends Logging {
       case Disj(l, r) => DebuggingTactics.debug("DISJ", doPrint = debugTactic) &
           orL(-2) < (
             useAt(refMaxL, PosInExpr(1 :: Nil))(1) & lpclosedPlus(l),
-            useAt(refMaxR, PosInExpr(1 :: Nil))(1) & lpclosedPlus(r)
+            useAt(refMaxR, PosInExpr(1 :: Nil))(1) & lpclosedPlus(r),
           )
       case Conj(l, r) => DebuggingTactics.debug("CONJ", doPrint = debugTactic) &
           andL(-2) & useAt(uniqMin, PosInExpr(0 :: Nil))(1) & andR(1) < (
             hideL(-3) & lpclosedPlus(l),
-            hideL(-2) & lpclosedPlus(r)
+            hideL(-2) & lpclosedPlus(r),
           )
       case Strict(bound) => DebuggingTactics.debug("Strict" + bound, doPrint = debugTactic) &
           hideL(-1) &
@@ -1897,13 +1839,11 @@ object ODEInvariance extends Logging {
    *   1. For polynomials p>=0 in the normalized form that are NOT rank 1, this tactic currently requires checks the
    *      progress formula (p*>0) up to a given bound, rather than p*>=0
    *
-   * @param bound
-   *   (default 1): the bound on higher Lie derivatives to check for strict inequality, i.e. for p>=0, this is generated
-   *   p>=0 & (p=0 -> (p'>=0 & (p'=0 -> ...p'^bound > 0 ...)) (i.e. the bound-th Lie derivative is required to be
-   *   strict)
-   * @return
-   *   closes the subgoal if P is indeed invariant, fails if P fails to normalize to f>=0 form, or if one of tactic
-   *   limitations is met
+   * @param bound (default 1): the bound on higher Lie derivatives to check for strict inequality, i.e. for p>=0, this
+   *   is generated p>=0 & (p=0 -> (p'>=0 & (p'=0 -> ...p'^bound > 0 ...)) (i.e. the bound-th Lie derivative is required
+   *   to be strict)
+   * @return closes the subgoal if P is indeed invariant, fails if P fails to normalize to f>=0 form, or if one of
+   *   tactic limitations is met
    * @see
    *   [[org.keymaerax.Bibliography.LicsPlatzerT18 Differential equation axiomatization: The impressive power of differential ghosts]]
    */
@@ -1966,28 +1906,29 @@ object ODEInvariance extends Logging {
 
       DebuggingTactics.debug("PRE", doPrint = debugTactic) &
         // @todo always check with doIfElse vs. trycatch space compatible exception?
-        starter & Idioms
-          .doIfElse(_.subgoals.forall(s => !StaticSemantics.symbols(s(pos.top)).contains("t_".asVariable)))(
-            useAt(Ax.RIclosedgeq)(pos) & andR(pos) < (
-              implyR(pos) & r1 & ?(id) & timeoutQE & done, // common case?
-              SeqTactic(
-                cohideR(pos),
-                composeb(1),
-                dW(1),
-                assignb(1),
-                implyR(1),
-                cutR(pf)(1) < (
-                  hideL(-3) & hideL(-2) & r2 & DebuggingTactics.debug("QE step", doPrint = debugTactic) & qetac & done,
-                  skip
-                ), // Don't bother running the rest if QE fails
-                cohide2(-3, 1),
-                DebuggingTactics.debug("Finish step", doPrint = debugTactic),
-                implyR(1),
-                lpclosedPlus(inst),
-              )
+        starter & Idioms.doIfElse(
+          _.subgoals.forall(s => !StaticSemantics.symbols(s(pos.top)).contains("t_".asVariable))
+        )(
+          useAt(Ax.RIclosedgeq)(pos) & andR(pos) < (
+            implyR(pos) & r1 & ?(id) & timeoutQE & done, // common case?
+            SeqTactic(
+              cohideR(pos),
+              composeb(1),
+              dW(1),
+              assignb(1),
+              implyR(1),
+              cutR(pf)(1) < (
+                hideL(-3) & hideL(-2) & r2 & DebuggingTactics.debug("QE step", doPrint = debugTactic) & qetac & done,
+                skip,
+              ), // Don't bother running the rest if QE fails
+              cohide2(-3, 1),
+              DebuggingTactics.debug("Finish step", doPrint = debugTactic),
+              implyR(1),
+              lpclosedPlus(inst),
             ),
-            DebuggingTactics.error("Inapplicable: t_ occurs"),
-          )
+          ),
+          DebuggingTactics.error("Inapplicable: t_ occurs"),
+        )
     }
   }
 
@@ -2123,11 +2064,9 @@ object ODEInvariance extends Logging {
    * G |- [x'=f(x)&Q]P
    * }}}
    *
-   * @param solveEnd
-   *   whether to continue with differential weaken and QE (see rule rendition above)
-   * @return
-   *   See the rule rendition above Special failure cases: 1) Linearity heuristic checks fail e.g.: x'=1+x^2-x^2 will be
-   *   treated as non-linear even though it is really linear
+   * @param solveEnd whether to continue with differential weaken and QE (see rule rendition above)
+   * @return See the rule rendition above Special failure cases: 1) Linearity heuristic checks fail e.g.: x'=1+x^2-x^2
+   *   will be treated as non-linear even though it is really linear
    */
   // TODO: hacky communication of global time marker for nilpotentSolve
   val nilpotentSolveTimeVar = "time_".asVariable
@@ -2194,8 +2133,8 @@ object ODEInvariance extends Logging {
 
     val cut = And(GreaterEqual(t, Number(0)), x.zip(sol).map(f => Equal(f._1, f._2)).reduceRight(And.apply))
 
-    val cutPrep = Range(0, s.length)
-      .map(i => timeSeries(t, s.drop(i)).map(t => simpWithTool(ToolProvider.simplifierTool(), t)))
+    val cutPrep =
+      Range(0, s.length).map(i => timeSeries(t, s.drop(i)).map(t => simpWithTool(ToolProvider.simplifierTool(), t)))
 
     val cuts = sL
       .zip(cutPrep)
@@ -2230,7 +2169,7 @@ object ODEInvariance extends Logging {
         // dRI('Rlast)
         cuts.foldLeft[BelleExpr](skip)((t, f) =>
           dC(f)(Symbol("Rlast")) < (t, diffInd(Symbol("full"))(Symbol("Rlast")))
-        ) & diffInd(Symbol("full"))(Symbol("Rlast"))
+        ) & diffInd(Symbol("full"))(Symbol("Rlast")),
 
         // this does the "let" once rather than on every dI -- doesn't help speed much
         // Dconstify(
@@ -2258,16 +2197,14 @@ object ODEInvariance extends Logging {
    *
    * @see
    *   [[org.keymaerax.Bibliography.VmcaiSogokonGJP16 A method for invariant generation for polynomial continuous systems]]
-   * @param p
-   *   the DDC polynomial
-   * @return
-   *   See the rule rendition above
+   * @param p the DDC polynomial
+   * @return See the rule rendition above
    */
 
   private lazy val trichotomy = remember("f_()=0 | (f_() > 0 | f_() < 0)".asFormula, QE, namespace)
 
-  def diffDivConquer(p: Term, cofactor: Option[Term] = None): DependentPositionTactic =
-    anon((pos: Position, seq: Sequent) => {
+  def diffDivConquer(p: Term, cofactor: Option[Term] = None): DependentPositionTactic = anon(
+    (pos: Position, seq: Sequent) => {
       if (!(pos.isTopLevel && pos.isSucc)) throw new IllFormedTacticApplicationException(
         "diffDivConquer: position " + pos + " must point to a top-level succedent position"
       )
@@ -2293,13 +2230,11 @@ object ODEInvariance extends Logging {
           /* p = 0*/
           dC(Equal(p, zero))(pos) < (skip, dbx),
           /* p > 0 | p < 0 */
-          orL(Symbol("Llast")) < (
-            dC(Greater(p, zero))(pos) < (skip, dbx),
-            dC(Less(p, zero))(pos) < (skip, dbx)
-          )
-        )
+          orL(Symbol("Llast")) < (dC(Greater(p, zero))(pos) < (skip, dbx), dC(Less(p, zero))(pos) < (skip, dbx)),
+        ),
       )
-    })
+    }
+  )
 
   lazy val dCClosure = DifferentialTactics.dCClosure(true)
 
@@ -2312,8 +2247,7 @@ object ODEInvariance extends Logging {
    * G |- [x'=f(x)&Q]P
    * }}}
    *
-   * @return
-   *   closes the subgoal if P is indeed invariant,
+   * @return closes the subgoal if P is indeed invariant,
    * @see
    *   [[org.keymaerax.Bibliography.LicsPlatzerT18 Differential equation axiomatization: The impressive power of differential ghosts]]
    */
@@ -2515,13 +2449,13 @@ object ODEInvariance extends Logging {
                       implyR(1),
                       andL(-1),
                       hideL(-2),
-                      dC(Greater(tvar, svar))(1) < (
-                        DW(1) & G(1) & implyR(1) & andL(-1) & hideL(-1) & QE, DifferentialTactics.dI(1)
-                      ),
+                      dC(
+                        Greater(tvar, svar)
+                      )(1) < (DW(1) & G(1) & implyR(1) & andL(-1) & hideL(-1) & QE, DifferentialTactics.dI(1)),
                     ),
-                    DifferentialTactics.dI(1)
+                    DifferentialTactics.dI(1),
                   ),
-                )
+                ),
               ),
               // backwards branch
               SeqTactic(
@@ -2575,7 +2509,7 @@ object ODEInvariance extends Logging {
                                   implyR(1),
                                   andL(-1),
                                   orL(-1) < (orL(-2) < (notL(-2) & id, id), id),
-                                )
+                                ),
                               ),
                               // (!Q)-* branch
                               cutR(rennqrlp)(1) < (
@@ -2597,11 +2531,11 @@ object ODEInvariance extends Logging {
                                   implyR(1),
                                   andL(-1),
                                   orL(-2) < (notL(-2) & id, id),
-                                )
-                              )
+                                ),
+                              ),
                             ),
                           ),
-                          ToolTactics.hideNonFOL & ?(QE & done)
+                          ToolTactics.hideNonFOL & ?(QE & done),
                         ),
                       ),
                       // useAt(Ax.UniqIff,PosInExpr(1::Nil))('Llast),
@@ -2611,7 +2545,7 @@ object ODEInvariance extends Logging {
                         useAt(Ax.Kd, PosInExpr(1 :: Nil))(1),
                         dW(1),
                         QE, // todo: can do manually
-                      )
+                      ),
                     ),
                   ),
                   SeqTactic(
@@ -2621,11 +2555,11 @@ object ODEInvariance extends Logging {
                     mond,
                     existstac,
                     andR(1) < (cohideR(1) & QE, id), // todo: maybe prove manually
-                  )
+                  ),
                 ),
-              )
+              ),
             ),
-          )
+          ),
         ),
         SeqTactic(
           dW(pos),
@@ -2659,17 +2593,16 @@ object ODEInvariance extends Logging {
                               implyR(1),
                               andL(-1),
                               hideL(-2),
-                              dC(Greater(tvar, svar))(1) < (
-                                DW(1) & G(1) & implyR(1) & andL(-1) & hideL(-1) & QE,
-                                DifferentialTactics.dI(1)
-                              ),
+                              dC(
+                                Greater(tvar, svar)
+                              )(1) < (DW(1) & G(1) & implyR(1) & andL(-1) & hideL(-1) & QE, DifferentialTactics.dI(1)),
                             ),
-                            cohideOnlyL(-2) & DifferentialTactics.dI(1)
-                          )
+                            cohideOnlyL(-2) & DifferentialTactics.dI(1),
+                          ),
                         ),
-                      )
+                      ),
                     ),
-                  )
+                  ),
                 )
               },
               implyR(1),
@@ -2701,13 +2634,13 @@ object ODEInvariance extends Logging {
                       implyR(1),
                       andL(-1),
                       (if (skipLock) orL(-1) < (orL(-2) < (notL(-2) & id, id), id) else orL(-2) < (notL(-2) & id, id)),
-                    )
+                    ),
                   ),
-                )
+                ),
               ),
-            )
+            ),
           ),
-        )
+        ),
       ),
     )
   })
@@ -2719,10 +2652,8 @@ object ODEInvariance extends Logging {
   /**
    * Get the correct instantiation of diff adjoints from a list of atomic ODEs
    *
-   * @param odels
-   *   the list of atomic ODEs
-   * @return
-   *   the instantiated axiom
+   * @param odels the list of atomic ODEs
+   * @return the instantiated axiom
    */
   def getDiffAdjInst(odels: List[AtomicODE]): ProvableSig = {
     val dim = odels.length
@@ -2770,8 +2701,9 @@ object ODEInvariance extends Logging {
     val fml = Imply(Box(sys, px), Box(ODESystem(ode2, sys.constraint), px))
 
     // stutter and bound rename
-    val sttac = (odeLHS zip xLHS)
-      .foldLeft(skip: BelleExpr)((t, v) => DLBySubst.stutter(v._1)(1) & boundRename(v._1, v._2)(1) & assignb(1) & t)
+    val sttac = (odeLHS zip xLHS).foldLeft(skip: BelleExpr)((t, v) =>
+      DLBySubst.stutter(v._1)(1) & boundRename(v._1, v._2)(1) & assignb(1) & t
+    )
 
     val normbound = xLHS.map(e => Times(e, e)).reduceLeft(Plus.apply)
     val renode = (odeLHS zip xLHS).foldLeft(ode2)((ode, v) => ode.replaceAll(v._1, v._2))
@@ -2801,7 +2733,7 @@ object ODEInvariance extends Logging {
                   SaturateTactic(exhaustiveEqL2R(hide = true)(Symbol("L"))),
                   QE,
                 ),
-                id
+                id,
               ),
               dC(eq)(1) < (
                 hideL(-2) & dC(px)(1) < (
@@ -2828,13 +2760,13 @@ object ODEInvariance extends Logging {
                       SaturateTactic(exhaustiveEqL2R(hide = true)(Symbol("L"))),
                       implyR(1),
                       id,
-                    )
-                  )
+                    ),
+                  ),
                 ),
-                id
-              )
+                id,
+              ),
             ),
-          )
+          ),
         ),
       ),
     )

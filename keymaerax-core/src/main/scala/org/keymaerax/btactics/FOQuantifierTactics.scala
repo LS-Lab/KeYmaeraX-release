@@ -454,12 +454,9 @@ protected object FOQuantifierTactics {
    *   ----------------existentialGenPosT(Variable("z"), PosInExpr(0::Nil) :: PosInExpr(1::Nil) :: Nil)(AntePosition(0))
    *       a+b = a+b |-
    *   }}}
-   * @param x
-   *   The new existentially quantified variable.
-   * @param where
-   *   Points to the term to generalize.
-   * @return
-   *   The tactic.
+   * @param x The new existentially quantified variable.
+   * @param where Points to the term to generalize.
+   * @return The tactic.
    */
   private[btactics] def existsGeneralize(x: Variable, where: List[PosInExpr]): BuiltInPositionTactic =
     anon { (provable: ProvableSig, pos: Position) =>
@@ -510,12 +507,9 @@ protected object FOQuantifierTactics {
 
   /**
    * Converse of all instantiate.
-   * @param x
-   *   The universally quantified variable to introduce.
-   * @param t
-   *   The term to generalize.
-   * @return
-   *   The position tactic.
+   * @param x The universally quantified variable to introduce.
+   * @param t The term to generalize.
+   * @return The position tactic.
    * @example
    *   {{{
    *   \forall z \forall x x^2 >= -z^2
@@ -584,12 +578,9 @@ protected object FOQuantifierTactics {
 
   /**
    * Converse of exists instantiate.
-   * @param x
-   *   The existentially quantified variable to introduce.
-   * @param t
-   *   The term to generalize.
-   * @return
-   *   The position tactic.
+   * @param x The existentially quantified variable to introduce.
+   * @param t The term to generalize.
+   * @return The position tactic.
    * @example
    *   {{{
    *   \exists z \exists x x^2 >= -z^2 |-
@@ -669,10 +660,8 @@ protected object FOQuantifierTactics {
    *   -------------------------------------------------universalClosure()
    *   |- x>0 & a=2 & z<5
    *   }}}
-   * @param order
-   *   The order of quantifiers.
-   * @return
-   *   The tactic.
+   * @param order The order of quantifiers.
+   * @return The tactic.
    */
   def universalClosure(order: List[Variable]): DependentPositionWithAppliedInputTactic = "universalClosure"
     .byWithInputs(List(order), { (pos: Position) => universalClosureFw(order)(pos) })
@@ -685,8 +674,8 @@ protected object FOQuantifierTactics {
     displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ |- \\forall order p(x,y,z), Δ",
     displayConclusion = "Γ |- p(x,y,z), Δ",
-    constructor = TacticConstructor1
-      .create(ListArg(VariableArg("order")))((order: List[Variable]) => universalClosure(order)),
+    constructor =
+      TacticConstructor1.create(ListArg(VariableArg("order")))((order: List[Variable]) => universalClosure(order)),
   )
 
   /** Builtin forward implementation of universalClosure. */

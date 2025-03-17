@@ -15,8 +15,7 @@ import org.scalatest.matchers.should.Matchers
 /**
  * Created by nfulton on 2/23/15.
  *
- * @author
- *   Nathan Fulton
+ * @author Nathan Fulton
  */
 class ArithmeticParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach {
 

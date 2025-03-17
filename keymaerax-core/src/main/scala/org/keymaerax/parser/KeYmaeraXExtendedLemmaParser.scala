@@ -27,10 +27,8 @@ import scala.collection.immutable
  * }}}
  *
  * Created by smitsch on 7/03/15. Modified by nfulton on 12/16/15 -- Lemmas are now more general.
- * @author
- *   Stefan Mitsch
- * @author
- *   Nathan Fulton
+ * @author Stefan Mitsch
+ * @author Nathan Fulton
  */
 object KeYmaeraXExtendedLemmaParser
     extends (String => (Option[String], Provable, immutable.List[Evidence])) with Logging {
@@ -40,10 +38,8 @@ object KeYmaeraXExtendedLemmaParser
 
   /**
    * Returns the lemma parsed from `inputWithPossibleBOM` after removing the BOM.
-   * @param inputWithPossibleBOM
-   *   The contents of the lemma file.
-   * @return
-   *   A lemma, with tool evidence (tool input/output) as occurring in the file.
+   * @param inputWithPossibleBOM The contents of the lemma file.
+   * @return A lemma, with tool evidence (tool input/output) as occurring in the file.
    */
   def apply(inputWithPossibleBOM: String): Lemma =
     try {
@@ -59,10 +55,8 @@ object KeYmaeraXExtendedLemmaParser
 
   /**
    * Parses the token stream `input` into a lemma.
-   * @param input
-   *   Token string for the lemma file.
-   * @return
-   *   A lemma (name, associated formula, and evidence).
+   * @param input Token string for the lemma file.
+   * @return A lemma (name, associated formula, and evidence).
    */
   def parseLemma(input: TokenStream): Lemma = {
     require(input.last.tok == EOF, "Token streams have to end in " + EOF)
@@ -105,10 +99,8 @@ object KeYmaeraXExtendedLemmaParser
 
   /**
    * Parses token stream `input` into a list of evidence. Returns the evidence and the remainder tokens.
-   * @param input
-   *   Token string for the lemma file.
-   * @return
-   *   A list of evidence (tool input/output) and the remainder tokens.
+   * @param input Token string for the lemma file.
+   * @return A list of evidence (tool input/output) and the remainder tokens.
    */
   @tailrec
   def parseAllEvidence(input: TokenStream, prevEvidence: List[Evidence] = Nil): (List[Evidence], TokenStream) = {

@@ -40,16 +40,11 @@ import scala.language.implicitConversions
  *   print(fml.sub(PosInExpr(1::0::1::Nil)))     // y:=0;
  *   print(fml.sub(PosInExpr(1::0::0::1::Nil)))  // 2*x+1
  *   }}}
- * @see
- *   [[org.keymaerax.btactics.TactixLibrary.positionOf()]]
- * @see
- *   [[Context.at()]]
- * @see
- *   [[Context.replaceAt()]]
- * @see
- *   [[Context.splitPos()]]
- * @see
- *   [[Augmentors]]
+ * @see [[org.keymaerax.btactics.TactixLibrary.positionOf()]]
+ * @see [[Context.at()]]
+ * @see [[Context.replaceAt()]]
+ * @see [[Context.splitPos()]]
+ * @see [[Augmentors]]
  */
 sealed case class PosInExpr(pos: List[Int] = Nil) {
   require(pos forall (_ >= 0), "all nonnegative positions")
@@ -105,16 +100,12 @@ object PosInExpr {
 
 /**
  * Position at which formula and subexpression of a a sequent to apply a tactic.
- * @TODO
- *   this position class will be unnecessary after removal of deprecated rules. Or rather: the PosInExpr part is
+ * @TODO this position class will be unnecessary after removal of deprecated rules. Or rather: the PosInExpr part is
  *   irrelevant for rules, merely for tactics. Thus simplify into just a positive or negative integer type with some
  *   antecedent/succedent accessor sugar for isAnte etc around.
- * @todo
- *   use AntePos and SuccPos directly instead of index etc.
- * @todo
- *   Position should essentially become a nice type-preserving name for a pair of a SeqPos and a PosInExpr.
- * @see
- *   [[org.keymaerax.core.SeqPos]]
+ * @todo use AntePos and SuccPos directly instead of index etc.
+ * @todo Position should essentially become a nice type-preserving name for a pair of a SeqPos and a PosInExpr.
+ * @see [[org.keymaerax.core.SeqPos]]
  */
 sealed trait Position {
 
@@ -151,8 +142,7 @@ sealed trait Position {
 
   /**
    * Top level position of this position
-   * @return
-   *   A position with the same index but on the top level (i.e., inExpr == HereP)
+   * @return A position with the same index but on the top level (i.e., inExpr == HereP)
    */
   def topLevel: TopPosition
 
@@ -200,8 +190,7 @@ object Position {
   /**
    * Converts signed positions to position data structures. `-1` is the first antecedent position, `1` the first
    * succedent position
-   * @see
-   *   [[infrastruct.PosInExpr]]
+   * @see [[infrastruct.PosInExpr]]
    */
   def apply(seqIdx: Int, inExpr: List[Int] = Nil): Position = SeqPos(seqIdx) match {
     case pos: AntePos => AntePosition(pos, PosInExpr(inExpr))
@@ -227,21 +216,19 @@ object Position {
 /** A position guaranteed to identify a top-level position */
 //@todo not sure if this trait is sticky meaning all returned guys will be like that. Especially with weird navigation cases.
 trait TopPosition extends Position {
-  final override def isTopLevel: Boolean = true
+  override final def isTopLevel: Boolean = true
 }
 
 /**
  * A position guaranteed to identify an antecedent position, so on the left-hand side of the sequent turnstile.
- * @see
- *   [[AntePos]]
- * @see
- *   [[Sequent]]
+ * @see [[AntePos]]
+ * @see [[Sequent]]
  */
 trait AntePosition extends Position {
-  final override def isAnte: Boolean = true
+  override final def isAnte: Boolean = true
   override def top: AntePos
-  final override def checkAnte: AntePosition = this
-  final override def checkSucc: SuccPosition =
+  override final def checkAnte: AntePosition = this
+  override final def checkSucc: SuccPosition =
     throw new IllegalArgumentException("Antecedent position was expected to be a succedent position: " + this)
   override def checkTop: AntePos =
     if (isTopLevel) top
@@ -256,17 +243,15 @@ trait AntePosition extends Position {
 
 /**
  * A position guaranteed to identify a succedent position, so on the right-hand side of the sequent turnstile.
- * @see
- *   [[SuccPos]]
- * @see
- *   [[Sequent]]
+ * @see [[SuccPos]]
+ * @see [[Sequent]]
  */
 trait SuccPosition extends Position {
-  final override def isAnte: Boolean = false
+  override final def isAnte: Boolean = false
   override def top: SuccPos
-  final override def checkAnte: AntePosition =
+  override final def checkAnte: AntePosition =
     throw new IllegalArgumentException("Succedent position was expected to be an antecedent position: " + this)
-  final override def checkSucc: SuccPosition = this
+  override final def checkSucc: SuccPosition = this
   override def checkTop: SuccPos =
     if (isTopLevel) top
     else throw new IllegalArgumentException("Position was expected to be a top-level position: " + this)
@@ -280,12 +265,12 @@ trait SuccPosition extends Position {
 
 /** A top-level antecedent position */
 trait TopAntePosition extends AntePosition with TopPosition {
-  final override def checkTop: AntePos = top
+  override final def checkTop: AntePos = top
 }
 
 /** A top-level succedent position */
 trait TopSuccPosition extends SuccPosition with TopPosition {
-  final override def checkTop: SuccPos = top
+  override final def checkTop: SuccPos = top
 }
 
 // Pseudo-Constructors

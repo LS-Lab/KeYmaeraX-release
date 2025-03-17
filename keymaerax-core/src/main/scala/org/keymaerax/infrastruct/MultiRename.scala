@@ -15,12 +15,10 @@ import scala.collection.immutable
  * and vice versa, for all (what,repl) in renames.
  *
  * Performs semantic renaming, i.e. leaves program constants etc. unmodified.
- * @param semantic
- *   `true` to also support program constants, predicationals etc and leaving them unmodified. 'false' to clash instead.
- * @author
- *   Andre Platzer
- * @see
- *   [[org.keymaerax.core.URename]]
+ * @param semantic `true` to also support program constants, predicationals etc and leaving them unmodified. 'false' to
+ *   clash instead.
+ * @author Andre Platzer
+ * @see [[org.keymaerax.core.URename]]
  */
 final case class MultiRename(rens: immutable.Seq[(Variable, Variable)], semantic: Boolean = true)
     extends (Expression => Expression) {
@@ -38,9 +36,7 @@ final case class MultiRename(rens: immutable.Seq[(Variable, Variable)], semantic
   )
 
   /** including transpositions */
-  private val renaming: immutable.Map[Variable, Variable] = {
-    rena ++ rena.map(sp => (sp._2, sp._1))
-  } ensures
+  private val renaming: immutable.Map[Variable, Variable] = { rena ++ rena.map(sp => (sp._2, sp._1)) } ensures
     (
       r => rena.forall(sp => r.get(sp._1) == Some(sp._2) && r.get(sp._2) == Some(sp._1)),
       "converse renamings are contained",

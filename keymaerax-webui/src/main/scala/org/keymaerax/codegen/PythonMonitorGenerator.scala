@@ -49,8 +49,7 @@ object PythonMonitorGenerator {
 
 /**
  * Generates a monitor from a ModelPlex expression.
- * @author
- *   Stefan Mitsch
+ * @author Stefan Mitsch
  */
 class PythonMonitorGenerator(conjunctionsAs: Symbol, defs: Declaration)
     extends MonitorGenerator(conjunctionsAs, defs, PythonPrettyPrinter, PythonMonitorGenerator.termContainer) {

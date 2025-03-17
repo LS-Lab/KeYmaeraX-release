@@ -13,10 +13,8 @@ import org.keymaerax.info.VersionNumber
  * Store and retrieve lemmas from a lemma database. Use [[org.keymaerax.lemma.LemmaDBFactory.lemmaDB]] to get an
  * instance of a lemma database.
  *
- * @author
- *   Stefan Mitsch
- * @see
- *   Lemma
+ * @author Stefan Mitsch
+ * @see Lemma
  * @example
  *   Storing and using a lemma
  *   {{{
@@ -43,10 +41,8 @@ trait LemmaDB {
 
   /**
    * Indicates whether or not this lemma DB contains a lemma with the specified ID.
-   * @param lemmaID
-   *   Identifies the lemma.
-   * @return
-   *   True, if this lemma DB contains a lemma with the specified ID; false otherwise.
+   * @param lemmaID Identifies the lemma.
+   * @return True, if this lemma DB contains a lemma with the specified ID; false otherwise.
    */
   def contains(lemmaID: LemmaID): Boolean
 
@@ -74,23 +70,17 @@ trait LemmaDB {
 
   /**
    * Adds a new lemma to this lemma DB, with a unique name or None, which will automatically assign a name.
-   * @param lemma
-   *   The lemma whose Provable will be inserted under its name.
-   * @return
-   *   Internal lemma identifier.
-   * @requires
-   *   if (lemma.name==Some(n)) then !contains(n)
-   * @ensures
-   *   contains(\result) && if (lemma.name==Some(n)) then \result==n (usually)
+   * @param lemma The lemma whose Provable will be inserted under its name.
+   * @return Internal lemma identifier.
+   * @requires if (lemma.name==Some(n)) then !contains(n)
+   * @ensures contains(\result) && if (lemma.name==Some(n)) then \result==n (usually)
    */
   def add(lemma: Lemma): LemmaID
 
   /**
    * Delete the lemma of the given identifier, throwing exceptions if that was unsuccessful.
-   * @param name
-   *   Identifies the lemma.
-   * @ensures
-   *   !contains(name)
+   * @param name Identifies the lemma.
+   * @ensures !contains(name)
    */
   def remove(name: LemmaID): Unit
 

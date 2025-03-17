@@ -24,8 +24,7 @@ import org.keymaerax.tags.UsualTest
 
 /**
  * Tests BelleExpr roundtrip identity of parser and pretty printer.
- * @author
- *   Stefan Mitsch
+ * @author Stefan Mitsch
  */
 @UsualTest
 class BelleParserRoundtripTests extends TacticTestBase {
@@ -76,19 +75,24 @@ class BelleParserRoundtripTests extends TacticTestBase {
   it should "input tactic dG" in withTactics {
     roundTrip(DifferentialEquationCalculus.dG("y'=0".asFormula, Some("1=1".asFormula))(1), """dG("y'=0", "1=1", 1)""")
     roundTrip(
-      DifferentialEquationCalculus
-        .dG(ODESystem(AtomicODE(DifferentialSymbol("x".asVariable), "5*x+2".asTerm), True), None)(1),
+      DifferentialEquationCalculus.dG(
+        ODESystem(AtomicODE(DifferentialSymbol("x".asVariable), "5*x+2".asTerm), True),
+        None,
+      )(1),
       """dG("{x'=5*x+2}", 1)""",
     )
     roundTrip(
-      DifferentialEquationCalculus
-        .dG(ODESystem(AtomicODE(DifferentialSymbol("x".asVariable), "5*x+2".asTerm), True), Some("x>0".asFormula))(1),
+      DifferentialEquationCalculus.dG(
+        ODESystem(AtomicODE(DifferentialSymbol("x".asVariable), "5*x+2".asTerm), True),
+        Some("x>0".asFormula),
+      )(1),
       """dG("{x'=5*x+2}", "x>0", 1)""",
     )
     // parsing from AtomicODE allowed to result in ODESystem, but will print as ODESystem (see roundtrip above)
-    belleParser("""dG("{x'=5*x+2}", 1)""") shouldBe
-      DifferentialEquationCalculus
-        .dG(ODESystem(AtomicODE(DifferentialSymbol("x".asVariable), "5*x+2".asTerm), True), None)(1)
+    belleParser("""dG("{x'=5*x+2}", 1)""") shouldBe DifferentialEquationCalculus.dG(
+      ODESystem(AtomicODE(DifferentialSymbol("x".asVariable), "5*x+2".asTerm), True),
+      None,
+    )(1)
   }
 
   it should "input tactic cut, cutL, cutR" in withTactics {

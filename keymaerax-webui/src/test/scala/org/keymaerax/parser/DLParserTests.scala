@@ -17,8 +17,7 @@ import scala.collection.mutable.ListBuffer
 
 /**
  * Tests the DL parser.
- * @author
- *   James Gallicchio
+ * @author James Gallicchio
  */
 class DLParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll with MockFactory {
   var parser = new DLParser

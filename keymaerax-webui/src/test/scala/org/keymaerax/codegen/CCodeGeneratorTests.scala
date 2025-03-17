@@ -22,10 +22,8 @@ import scala.io.Source
 
 /**
  * Tests the C++ ModelPlex code generator.
- * @author
- *   Ran Ji
- * @author
- *   Stefan Mitsch
+ * @author Ran Ji
+ * @author Stefan Mitsch
  */
 @IgnoreInBuildTest
 class CCodeGeneratorTests extends TacticTestBase {
@@ -171,8 +169,9 @@ class CCodeGeneratorTests extends TacticTestBase {
   }
 
   "variables" should "compile with index" in {
-    val paramDecls = """long double y_1;
-                       |  long double z;""".stripMargin
+    val paramDecls =
+      """long double y_1;
+        |  long double z;""".stripMargin
     val stateDecls = "long double x;"
     val monitor = generator("x*z-y_1>1".asFormula, Set(Variable("x")))
     monitor._1 + "\n\n" + monitor._2 should equal(
@@ -181,8 +180,9 @@ class CCodeGeneratorTests extends TacticTestBase {
   }
 
   it should "compile with index to MPFR" in {
-    val paramDecls = """long double y_1;
-                       |  long double z;""".stripMargin
+    val paramDecls =
+      """long double y_1;
+        |  long double z;""".stripMargin
     val stateDecls = "long double x;"
     CPrettyPrinter.printer = new CMpfrPrettyPrinter()
     val monitor = generator("x*z-y_1>1".asFormula, Set(Variable("x")))
@@ -257,8 +257,9 @@ class CCodeGeneratorTests extends TacticTestBase {
   }
 
   it should "compile neg int exp" in {
-    val paramDecls = """long double x;
-                       |  long double y;""".stripMargin
+    val paramDecls =
+      """long double x;
+        |  long double y;""".stripMargin
     val monitor = generator("(x+y)^-3>1".asFormula)
     monitor._1 + "\n\n" + monitor._2 should equal(expectedMonitor(
       "(1.0L)/(((params->x)+(params->y))*(((params->x)+(params->y))*((params->x)+(params->y)))) > 1.0L",
@@ -267,24 +268,27 @@ class CCodeGeneratorTests extends TacticTestBase {
   }
 
   it should "compile any exp" in {
-    val paramDecls = """long double x;
-                       |  long double y;""".stripMargin
+    val paramDecls =
+      """long double x;
+        |  long double y;""".stripMargin
     val monitor = generator("x^y>1".asFormula)
     monitor._1 + "\n\n" + monitor._2 should
       equal(expectedMonitor("pow(params->x,params->y) > 1.0L", paramDecls))(after being whiteSpaceRemoved)
   }
 
   "abs" should "compile" in {
-    val paramDecls = """long double x;
-                       |  long double y;""".stripMargin
+    val paramDecls =
+      """long double x;
+        |  long double y;""".stripMargin
     val monitor = generator("abs(x-y)>0".asFormula)
     monitor._1 + "\n\n" + monitor._2 should
       equal(expectedMonitor("fabsl((params->x)-(params->y)) > 0.0L", paramDecls))(after being whiteSpaceRemoved)
   }
 
   "min" should "compile" in {
-    val paramDecls = """long double x;
-                       |  long double y;""".stripMargin
+    val paramDecls =
+      """long double x;
+        |  long double y;""".stripMargin
     val monitor = generator("min(x,y)<=x".asFormula)
     monitor._1 + "\n\n" + monitor._2 should equal(
       expectedMonitor("-(fminl(params->x, params->y)) >= -(params->x)", paramDecls, kind = "metric")
@@ -292,16 +296,18 @@ class CCodeGeneratorTests extends TacticTestBase {
   }
 
   "max" should "compile" in {
-    val paramDecls = """long double x;
-                       |  long double y;""".stripMargin
+    val paramDecls =
+      """long double x;
+        |  long double y;""".stripMargin
     val monitor = generator("max(x,y)>=x".asFormula)
     monitor._1 + "\n\n" + monitor._2 should
       equal(expectedMonitor("fmaxl(params->x, params->y) >= params->x", paramDecls))(after being whiteSpaceRemoved)
   }
 
   "A program with tests" should "compile" in withMathematica { _ =>
-    val paramDecls = """long double x;
-                       |  long double y;""".stripMargin
+    val paramDecls =
+      """long double x;
+        |  long double y;""".stripMargin
     val monitor = generator("<?x>=y;>true".asFormula)
     monitor._1 + "\n\n" + monitor._2 should equal(expectedMonitor(
       """if (params->x >= params->y) {
@@ -467,8 +473,8 @@ class CCodeGeneratorTests extends TacticTestBase {
 
   it should "generate metric C code for passivesafetyabs" in withMathematica { _ =>
     val inputFile = getClass.getResourceAsStream("/examples/casestudies/robix/passivesafetyabs.kym")
-    val monitorExp = ModelPlex
-      .toMetric(ArchiveParser(Source.fromInputStream(inputFile).mkString).head.model.asInstanceOf[Formula])
+    val monitorExp =
+      ModelPlex.toMetric(ArchiveParser(Source.fromInputStream(inputFile).mkString).head.model.asInstanceOf[Formula])
     val vars = Set(
       Variable("a"),
       Variable("dx"),
@@ -521,8 +527,9 @@ class CCodeGeneratorTests extends TacticTestBase {
     val inputFileName = "./keymaerax-webui/src/test/resources/examples/casestudies/robix/passivesafetyabs.kym"
     val outputFileName = File.createTempFile("passivesafetyabs", ".c").getAbsolutePath
 
-    KeymaeraxWebui
-      .main(Array("-codegen", inputFileName, "-vars", "a,w,r,xo,yo,dxo,dyo", "-nointerval", "-out", outputFileName))
+    KeymaeraxWebui.main(
+      Array("-codegen", inputFileName, "-vars", "a,w,r,xo,yo,dxo,dyo", "-nointerval", "-out", outputFileName)
+    )
 
     val expectedCCode = Source
       .fromFile("./keymaerax-webui/src/test/resources/examples/casestudies/robix/passivesafetyabs.c")
@@ -603,8 +610,9 @@ class CCodeGeneratorTests extends TacticTestBase {
       "long double href;",
     )
     // @todo fix
-    CodeGenTestTools
-      .compileC(CodeGenTestTools.augmentMonitorMain(code._1 + "\n\n" + code._2, hasParams = true, hasInputs = false))
+    CodeGenTestTools.compileC(
+      CodeGenTestTools.augmentMonitorMain(code._1 + "\n\n" + code._2, hasParams = true, hasInputs = false)
+    )
   }
 
   "Waypoint navigation" should "generate metric C code" in withTactics {
@@ -620,8 +628,11 @@ class CCodeGeneratorTests extends TacticTestBase {
       // @todo export non-expanded monitor with definitions, see Python exporter
 
       val stateVars = List("xg", "yg", "v", "a", "t", "vl", "vh", "k").map(_.asVariable.asInstanceOf[BaseVariable])
-      val ModelPlexConjecture(_, modelplexInput, assumptions) = ModelPlex
-        .createMonitorSpecificationConjecture(entry.expandedModel.asInstanceOf[Formula], stateVars, ListMap.empty)
+      val ModelPlexConjecture(_, modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(
+        entry.expandedModel.asInstanceOf[Formula],
+        stateVars,
+        ListMap.empty,
+      )
       val tactic = ModelPlex.controllerMonitorByChase(1) & DebuggingTactics.print("Chased") &
         ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1)
       val result = proveBy(modelplexInput, tactic)
@@ -629,8 +640,11 @@ class CCodeGeneratorTests extends TacticTestBase {
       val reassociatedMonitorFml = FormulaTools.reassociate(monitorFml)
       proveBy(Equiv(monitorFml, reassociatedMonitorFml), TactixLibrary.prop) shouldBe Symbol("proved")
 
-      val testProg =
-        proveBy(reassociatedMonitorFml, ModelPlex.chaseToTests(combineTests = false)(1) * 2).subgoals.head.succ.head
+      val testProg = proveBy(reassociatedMonitorFml, ModelPlex.chaseToTests(combineTests = false)(1) * 2)
+        .subgoals
+        .head
+        .succ
+        .head
 
       // CPrettyPrinter.printer = new CMpfrPrettyPrinter()
       val inputs = CodeGenerator.getInputs(testProg)
@@ -787,10 +801,11 @@ class CCodeGeneratorTests extends TacticTestBase {
           .asFormula
 
       // modelplex
-      val stateVars = List("xg", "yg", "v", "a", "t", "vl", "vh", "k", "t_0", "xg_0", "v_0", "yg_0")
-        .map(_.asVariable.asInstanceOf[BaseVariable])
-      val ModelPlexConjecture(_, modelplexInput, assumptions) = ModelPlex
-        .createMonitorSpecificationConjecture(approx._1, stateVars, ListMap.empty)
+      val stateVars = List("xg", "yg", "v", "a", "t", "vl", "vh", "k", "t_0", "xg_0", "v_0", "yg_0").map(
+        _.asVariable.asInstanceOf[BaseVariable]
+      )
+      val ModelPlexConjecture(_, modelplexInput, assumptions) =
+        ModelPlex.createMonitorSpecificationConjecture(approx._1, stateVars, ListMap.empty)
 
       val mxtactic = ModelPlex.controllerMonitorByChase(1) & DebuggingTactics.print("Chased") &
         ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1)
@@ -801,8 +816,11 @@ class CCodeGeneratorTests extends TacticTestBase {
       println("Monitor formula " + monitorFml.prettyString + "\nPretty " + reassociatedMonitorFml.prettyString)
       proveBy(Equiv(monitorFml, reassociatedMonitorFml), TactixLibrary.prop) shouldBe Symbol("proved")
 
-      val testProg =
-        proveBy(reassociatedMonitorFml, ModelPlex.chaseToTests(combineTests = false)(1) * 2).subgoals.head.succ.head
+      val testProg = proveBy(reassociatedMonitorFml, ModelPlex.chaseToTests(combineTests = false)(1) * 2)
+        .subgoals
+        .head
+        .succ
+        .head
       println("Test prog " + testProg.prettyString)
 
       val inputs = CodeGenerator.getInputs(testProg)

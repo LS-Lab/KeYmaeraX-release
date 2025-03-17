@@ -243,8 +243,10 @@ class MathematicaConversionTests extends AnyFlatSpec with Matchers with BeforeAn
   it should "associate minus and negation correctly" in {
     KeYmaeraToMathematica("5--2".asTerm) shouldBe
       (if (Parser.numNeg) MathematicaOpSpec.minus(new MExpr(BigInt(5).bigInteger), new MExpr(BigInt(-2).bigInteger))
-       else MathematicaOpSpec
-         .minus(new MExpr(BigInt(5).bigInteger), MathematicaOpSpec.neg(new MExpr(BigInt(2).bigInteger))))
+       else MathematicaOpSpec.minus(
+         new MExpr(BigInt(5).bigInteger),
+         MathematicaOpSpec.neg(new MExpr(BigInt(2).bigInteger)),
+       ))
   }
 
   it should "left-associate nary arithmetic operators" in {

@@ -269,12 +269,12 @@ class SOSsolveQELoggerTests extends TacticTestBase with PrivateMethodTester {
         println(s"$i/$lineCount($n): ${seq.toString.replace('\n', ' ')}")
         i = i + 1
         print("trying QE...")
-        val qeTry = qeTimer
-          .time { if (preprocessOnly) proveBy(True, closeT) else proveBy(seq, ?(QEX(None, Some(Number(timeout))))) }
+        val qeTry = qeTimer.time {
+          if (preprocessOnly) proveBy(True, closeT) else proveBy(seq, ?(QEX(None, Some(Number(timeout)))))
+        }
         val status =
           if (!qeTry.isProved) {
-            if (qeTry.subgoals.exists(_.succ.contains(False))) { qeFalse.inc() }
-            else { qeTimeout.inc(n, seq0, seq) }
+            if (qeTry.subgoals.exists(_.succ.contains(False))) { qeFalse.inc() } else { qeTimeout.inc(n, seq0, seq) }
           } else totalTimer.time {
             try {
               val ratFormStrategy = SOSSolve.RatForm(true)
@@ -302,14 +302,13 @@ class SOSsolveQELoggerTests extends TacticTestBase with PrivateMethodTester {
                     ),
                   )
                 }
-              if (res.forall(_.isProved)) { success.inc() }
-              else { ??? }
+              if (res.forall(_.isProved)) { success.inc() } else { ??? }
             } catch {
               case SOSSolveAborted() => aborted.inc(n, seq0, seq)
               case SOSSolveNoSOS() => noSos.inc(n, seq0, seq)
-              case PolynomialArithV2
-                    .NonSupportedOperationInapplicability(_: PolynomialArithV2.NonSupportedExponentException) =>
-                outofScopePower.inc(n, seq0, seq)
+              case PolynomialArithV2.NonSupportedOperationInapplicability(
+                    _: PolynomialArithV2.NonSupportedExponentException
+                  ) => outofScopePower.inc(n, seq0, seq)
               case PolynomialArithV2.NonSupportedExponentException(_) => outofScopePower.inc(n, seq0, seq)
               case SOSWelldefinedDivisionFailure(_) => divisorWelldefinedness.inc(n, seq0, seq)
               case NonUniversalOutOfScopeFailure(_) => outofScopeUniversal.inc(n, seq0, seq)

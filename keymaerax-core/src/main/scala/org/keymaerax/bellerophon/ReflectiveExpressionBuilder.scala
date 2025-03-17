@@ -16,10 +16,8 @@ import scala.annotation.nowarn
 
 /**
  * Constructs a [[org.keymaerax.bellerophon.BelleExpr]] from a tactic name
- * @author
- *   Nathan Fulton
- * @author
- *   Brandon Bohrer
+ * @author Nathan Fulton
+ * @author Brandon Bohrer
  */
 object ReflectiveExpressionBuilder extends Logging {
   private def generatorArg(generator: Option[InvariantGenerator]): InvariantGenerator = generator.getOrElse {
@@ -129,15 +127,11 @@ object ReflectiveExpressionBuilder extends Logging {
 
   /**
    * Create the BelleExpr tactic expression `name(arguments)`.
-   * @param name
-   *   The codeName of the Bellerophon tactic to create according to [[TacticInfo.codeName]].
-   * @param arguments
-   *   the list of arguments passed to the tactic, either expressions or positions.
-   * @param generator
-   *   invariant generators passed to the tactic, if any.
+   * @param name The codeName of the Bellerophon tactic to create according to [[TacticInfo.codeName]].
+   * @param arguments the list of arguments passed to the tactic, either expressions or positions.
+   * @param generator invariant generators passed to the tactic, if any.
    * @param defs
-   * @return
-   *   `name(arguments)` as a BelleExpr.
+   * @return `name(arguments)` as a BelleExpr.
    */
   def apply(
       name: String,

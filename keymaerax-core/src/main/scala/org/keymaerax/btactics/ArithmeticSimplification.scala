@@ -34,8 +34,7 @@ import scala.annotation.tailrec
 /**
  * Tactics for simplifying arithmetic sub-goals.
  *
- * @author
- *   Nathan Fulton
+ * @author Nathan Fulton
  */
 object ArithmeticSimplification {
   // region Tactics
@@ -98,11 +97,9 @@ object ArithmeticSimplification {
   /**
    * Simplifies arithmetic by removing all formulas (both antecedent and succedent) that mention any of the irrelevant
    * names.
-   * @author
-   *   Stefan Mistch
-   * @note
-   *   Same as smartHide except does both the succedent and the antecedent, and assumes that a list of irrelevant names
-   *   is already available.
+   * @author Stefan Mistch
+   * @note Same as smartHide except does both the succedent and the antecedent, and assumes that a list of irrelevant
+   *   names is already available.
    */
   // was "hideIrrelevant"
   def hideFactsAbout(irrelevant: String*): BelleExpr = anon((sequent: Sequent) => {
@@ -129,8 +126,7 @@ object ArithmeticSimplification {
   /**
    * Version of hideFactsAbout that hides all formulas mentioning free variable TODO: would be nice to allow multiple
    * variable hide on the UI somehow?
-   * @param xs
-   *   the variable to hide
+   * @param xs the variable to hide
    */
   def hideFactsAbout(xs: List[Variable]): InputTactic = "hideFactsAbout".byWithInputs(
     List(xs),
@@ -169,8 +165,7 @@ object ArithmeticSimplification {
   /**
    * Version of hideFactsAbout that hides all formulas mentioning free variable TODO: would be nice to allow multiple
    * variable hide on the UI somehow?
-   * @param xs
-   *   the variable to hide
+   * @param xs the variable to hide
    */
   def keepFactsAbout(xs: List[Variable]): InputTactic =
     new org.keymaerax.btactics.TacticFactory.TacticForNameFactory("keepFactsAbout").byWithInputs(
@@ -212,8 +207,7 @@ object ArithmeticSimplification {
 
   /**
    * Transforms the formula at position by replacing all free occurrences of equality.left with equality.right
-   * @author
-   *   Stefan Mitsch
+   * @author Stefan Mitsch
    */
   def transformEquality(equality: Formula): DependentPositionWithAppliedInputTactic = "transformEquality".byWithInputs(
     List(equality),
@@ -305,8 +299,8 @@ object ArithmeticSimplification {
   }
 
   /** Returns only irrelevant antecedent positions. */
-  private def irrelevantAntePositions(s: Sequent): Seq[AntePosition] = irrelevantIndices(s.ante, s.succ)
-    .map(i => AntePosition(i + 1))
+  private def irrelevantAntePositions(s: Sequent): Seq[AntePosition] =
+    irrelevantIndices(s.ante, s.succ).map(i => AntePosition(i + 1))
 
   private def irrelevantSuccPositions(s: Sequent): Seq[SuccPosition] = {
     val anteSymbols = s.ante.flatMap(StaticSemantics.symbols).toSet
@@ -368,9 +362,7 @@ object ArithmeticSimplification {
     fmls.filter(!irrelevant.contains(_))
   }
 
-  /**
-   * Returns all formulas that mention a relevantSymbol, together with that formula's position in the original sequence.
-   */
+  /** Returns all formulas that mention a relevantSymbol, together with that formula's position in the original sequence. */
   private def relevantFormulas(
       indexedFmls: Seq[(Formula, Int)],
       relevantSymbols: Set[NamedSymbol],
@@ -379,8 +371,8 @@ object ArithmeticSimplification {
   }
 
   /** Returns the union of all symbols mentioned in fmls. */
-  private def symbols(fmls: Seq[Formula]) = fmls
-    .foldLeft(Set[NamedSymbol]())((symbols, nextFml) => symbols ++ StaticSemantics.symbols(nextFml))
+  private def symbols(fmls: Seq[Formula]) =
+    fmls.foldLeft(Set[NamedSymbol]())((symbols, nextFml) => symbols ++ StaticSemantics.symbols(nextFml))
 
   // endregion
 }

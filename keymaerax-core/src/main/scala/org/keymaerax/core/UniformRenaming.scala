@@ -5,14 +5,11 @@
 
 /**
  * Uniform Renaming for KeYmaera X
- * @author
- *   Andre Platzer
+ * @author Andre Platzer
  * @see
  *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
- * @see
- *   [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
- * @note
- *   Code Review: 2020-02-17
+ * @see [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
+ * @note Code Review: 2020-02-17
  */
 package org.keymaerax.core
 
@@ -26,25 +23,16 @@ import scala.annotation.nowarn
  * `repl` (and its associated DifferentialSymbol `repl'`) everywhere and vice versa uniformly rename all occurrences of
  * variable `repl` (and its associated DifferentialSymbol) to `what` (and `what'`). Uniform renaming, thus, is a
  * transposition.
- * @param what
- *   What variable to replace (along with its associated DifferentialSymbol).
- * @param repl
- *   The target variable to replace `what` with and vice versa.
- * @param semantic
- *   `true` to allow semantic renaming of SpaceDependent symbols, which preserves local soundness when applied to
- *   inferences.
- * @author
- *   Andre Platzer
- * @author
- *   smitsch
- * @note
- *   soundness-critical
- * @see
- *   [[UniformRenaming]]
- * @see
- *   [[BoundRenaming]]
- * @see
- *   [[Provable.apply(ren:edu\.cmu\.cs\.ls\.keymaerax\.core\.URename):edu\.cmu\.cs\.ls\.keymaerax\.core\.Provable*]]
+ * @param what What variable to replace (along with its associated DifferentialSymbol).
+ * @param repl The target variable to replace `what` with and vice versa.
+ * @param semantic `true` to allow semantic renaming of SpaceDependent symbols, which preserves local soundness when
+ *   applied to inferences.
+ * @author Andre Platzer
+ * @author smitsch
+ * @note soundness-critical
+ * @see [[UniformRenaming]]
+ * @see [[BoundRenaming]]
+ * @see [[Provable.apply(ren:edu\.cmu\.cs\.ls\.keymaerax\.core\.URename):edu\.cmu\.cs\.ls\.keymaerax\.core\.Provable*]]
  */
 final case class URename(what: Variable, repl: Variable, semantic: Boolean = false) extends (Expression => Expression) {
   insist(what.sort == repl.sort, "Uniform renaming only to variables of the same sort: " + this)
@@ -72,8 +60,8 @@ final case class URename(what: Variable, repl: Variable, semantic: Boolean = fal
 
   /**
    * apply this uniform renaming everywhere in a term.
-   * @throws RenamingClashException
-   *   if this uniform renaming is not admissible for t (because a semantic symbol occurs despite !semantic).
+   * @throws RenamingClashException if this uniform renaming is not admissible for t (because a semantic symbol occurs
+   *   despite !semantic).
    */
   def apply(t: Term): Term =
     try rename(t)
@@ -81,8 +69,8 @@ final case class URename(what: Variable, repl: Variable, semantic: Boolean = fal
 
   /**
    * apply this uniform renaming everywhere in a formula.
-   * @throws RenamingClashException
-   *   if this uniform renaming is not admissible for f (because a semantic symbol occurs despite !semantic).
+   * @throws RenamingClashException if this uniform renaming is not admissible for f (because a semantic symbol occurs
+   *   despite !semantic).
    */
   def apply(f: Formula): Formula =
     try rename(f)
@@ -90,8 +78,8 @@ final case class URename(what: Variable, repl: Variable, semantic: Boolean = fal
 
   /**
    * apply this uniform renaming everywhere in a differential program.
-   * @throws RenamingClashException
-   *   if this uniform renaming is not admissible for p (because a semantic symbol occurs despite !semantic).
+   * @throws RenamingClashException if this uniform renaming is not admissible for p (because a semantic symbol occurs
+   *   despite !semantic).
    */
   def apply(p: DifferentialProgram): DifferentialProgram =
     try renameODE(p)
@@ -99,8 +87,8 @@ final case class URename(what: Variable, repl: Variable, semantic: Boolean = fal
 
   /**
    * apply this uniform renaming everywhere in a program.
-   * @throws RenamingClashException
-   *   if this uniform renaming is not admissible for p (because a semantic symbol occurs despite !semantic).
+   * @throws RenamingClashException if this uniform renaming is not admissible for p (because a semantic symbol occurs
+   *   despite !semantic).
    */
   def apply(p: Program): Program =
     try rename(p)
@@ -108,8 +96,8 @@ final case class URename(what: Variable, repl: Variable, semantic: Boolean = fal
 
   /**
    * Apply uniform renaming everywhere in the sequent.
-   * @throws RenamingClashException
-   *   if this uniform renaming is not admissible for s (because a semantic symbol occurs despite !semantic).
+   * @throws RenamingClashException if this uniform renaming is not admissible for s (because a semantic symbol occurs
+   *   despite !semantic).
    */
   // @note mapping apply instead of the equivalent rename makes sure the exceptions are augmented and the ensures contracts checked.
   def apply(s: Sequent): Sequent =
@@ -118,9 +106,7 @@ final case class URename(what: Variable, repl: Variable, semantic: Boolean = fal
 
   // implementation
 
-  /**
-   * Rename a variable and/or differential symbol x (that occurs in the given `context` for error reporting purposes)
-   */
+  /** Rename a variable and/or differential symbol x (that occurs in the given `context` for error reporting purposes) */
   private def renVar(x: Variable): Variable =
     if (x == what) repl
     else if (x == repl) what

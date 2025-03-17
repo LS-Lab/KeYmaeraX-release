@@ -372,8 +372,8 @@ object TaylorModelTactics extends Logging {
     private val cU = names.upperC(_)
     private val remainders = (0 until dim).map(remainder(_)).toList
     private val right_vars = names.right_vars(dim)
-    private val bounded_vars = right_vars ++ (0 until dim)
-      .map(remainder(_)) // variables for which we assume interval bounds somewhen
+    private val bounded_vars =
+      right_vars ++ (0 until dim).map(remainder(_)) // variables for which we assume interval bounds somewhen
 
     // Establish connection to the rings-library
     private val ringsLib = new RingsLibrary(time0 :: localTime :: vars ++ params ++ names.all_vars(dim, order))
@@ -389,10 +389,12 @@ object TaylorModelTactics extends Logging {
       state.lazyZip(templateTmCompose(names, dim)).map { case (v, tm) => Equal(v, tm) }.reduceRight(And.apply),
     )
 
-    private def lower_rembounds(t: Term)(td: Int => Term)(c: Int => Term): Seq[Formula] = (0 until dim)
-      .map(i => LessEqual(Plus(minF(Number(0), Times(t, td(i))), c(i)), remainder(i)))
-    private def upper_rembounds(t: Term)(td: Int => Term)(c: Int => Term): Seq[Formula] = (0 until dim)
-      .map(i => LessEqual(remainder(i), Plus(maxF(Number(0), Times(t, td(i))), c(i))))
+    private def lower_rembounds(t: Term)(td: Int => Term)(c: Int => Term): Seq[Formula] = (0 until dim).map(i =>
+      LessEqual(Plus(minF(Number(0), Times(t, td(i))), c(i)), remainder(i))
+    )
+    private def upper_rembounds(t: Term)(td: Int => Term)(c: Int => Term): Seq[Formula] = (0 until dim).map(i =>
+      LessEqual(remainder(i), Plus(maxF(Number(0), Times(t, td(i))), c(i)))
+    )
 
     private def in_domain(ltu: (Term, Term, Term)): Formula =
       ltu match { case (l: Term, t: Term, u: Term) => And(LessEqual(l, t), LessEqual(t, u)) }
@@ -464,8 +466,8 @@ object TaylorModelTactics extends Logging {
       .reduceRight(And.apply)
 
     // f (p + r)
-    private val fpr = ringsODE
-      .applyODE(picard_iteration_approxR.zipWithIndex.map { case (p, i) => p + ringsLib.toRing(remainder(i)) })
+    private val fpr =
+      ringsODE.applyODE(picard_iteration_approxR.zipWithIndex.map { case (p, i) => p + ringsLib.toRing(remainder(i)) })
     // p'
     private val pp = picard_iteration_approx.map(ringsLib.lieDerivative {
       case v: Variable if v == localTime => Some(ringsLib.ring(1))
@@ -880,8 +882,9 @@ object TaylorModelTactics extends Logging {
         prec: Integer,
         antepos: AntePosition,
         qeTool: QETacticTool,
-        remainder_estimation: IndexedSeq[(BigDecimal, BigDecimal)] = (0 until dim)
-          .map(_ => (BigDecimal(-0.001), BigDecimal(0.001))),
+        remainder_estimation: IndexedSeq[(BigDecimal, BigDecimal)] = (0 until dim).map(_ =>
+          (BigDecimal(-0.001), BigDecimal(0.001))
+        ),
     ): DependentPositionTactic = anon { (pos: Position, seq: Sequent) =>
       pos.checkSucc
       pos.checkTop

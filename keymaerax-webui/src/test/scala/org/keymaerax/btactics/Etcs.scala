@@ -23,10 +23,8 @@ import scala.language.postfixOps
  *
  * @see
  *   [[org.keymaerax.Bibliography.IcfemPlatzerQ09Tr European Train Control System: A Case Study in Formal Verification]]
- * @see
- *   [[org.keymaerax.Bibliography.JarPlatzer08 Differential dynamic logic for hybrid systems]]
- * @author
- *   Stefan Mitsch
+ * @see [[org.keymaerax.Bibliography.JarPlatzer08 Differential dynamic logic for hybrid systems]]
+ * @author Stefan Mitsch
  */
 @SlowTest @nowarn("cat=deprecation&origin=org.keymaerax.btactics.TactixLibrary.master")
 class Etcs extends TacticTestBase {
@@ -168,10 +166,9 @@ class Etcs extends TacticTestBase {
 
   it should "prove safety with piecewise constant actuation disturbance" in withMathematica { _ =>
     // @todo gets stuck with Z3
-    val s = parseToSequent(
-      getClass
-        .getResourceAsStream("/examples/casestudies/etcs/rephrased/safety-lemma-disturbed-simplified-piecewise.kyx")
-    )
+    val s = parseToSequent(getClass.getResourceAsStream(
+      "/examples/casestudies/etcs/rephrased/safety-lemma-disturbed-simplified-piecewise.kyx"
+    ))
     proveBy(s, master()) shouldBe Symbol("proved")
   }
 

@@ -14,8 +14,7 @@ import scala.annotation.nowarn
 /**
  * Generates a controller from a hybrid program without loops and ODEs. A controller transforms an input state by
  * choosing control set values depending on inputs and parameters.
- * @author
- *   Stefan Mitsch
+ * @author Stefan Mitsch
  */
 class CControllerGenerator(defs: Declaration) extends CodeGenerator {
   override def apply(
@@ -195,8 +194,7 @@ class CMpfrControllerGenerator(defs: Declaration) extends CodeGenerator {
 /**
  * Generates a controller from a hybrid program with only deterministic statements. A controller transforms an input
  * state by choosing control set values depending on inputs and parameters.
- * @author
- *   Stefan Mitsch
+ * @author Stefan Mitsch
  */
 class CDetControllerGenerator(defs: Declaration) extends CodeGenerator {
   override def apply(

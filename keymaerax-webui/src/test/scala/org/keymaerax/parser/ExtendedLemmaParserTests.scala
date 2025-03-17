@@ -302,8 +302,9 @@ class ExtendedLemmaParserTests extends TacticTestBase {
     val e2 = ToolEvidence(List("k1" -> "\"v1\"", "k2" -> "\"v2\""))
     e2.toString shouldBe "Tool.\n  k1 \"\"\"\" \"v1\" \"\"\"\"\n  k2 \"\"\"\" \"v2\" \"\"\"\"\nEnd."
 
-    val (ev, Token(EOF, _) :: Nil) = KeYmaeraXExtendedLemmaParser
-      .parseAllEvidence(KeYmaeraXLexer.inMode(e1.toString + "\n" + e2.toString, LemmaFileMode))
+    val (ev, Token(EOF, _) :: Nil) = KeYmaeraXExtendedLemmaParser.parseAllEvidence(
+      KeYmaeraXLexer.inMode(e1.toString + "\n" + e2.toString, LemmaFileMode)
+    )
     ev should contain theSameElementsInOrderAs List(e1, e2)
   }
 

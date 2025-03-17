@@ -49,24 +49,32 @@ class TestSynthesisRequest(
     val modelFml = ArchiveParser.parseAsFormula(model.keyFile)
     val vars = StaticSemantics.boundVars(modelFml).symbols.filter(_.isInstanceOf[BaseVariable]).toList
     val unobservable = ListMap.empty[NamedSymbol, Option[Formula]]
-    val ModelPlexConjecture(_, modelplexInput, assumptions) = ModelPlex
-      .createMonitorSpecificationConjecture(modelFml, vars, unobservable)
+    val ModelPlexConjecture(_, modelplexInput, assumptions) =
+      ModelPlex.createMonitorSpecificationConjecture(modelFml, vars, unobservable)
     val monitorCond = (monitorKind, ToolProvider.simplifierTool()) match {
       case ("controller", tool) =>
         val foResult = TactixLibrary.proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1))
         try {
           TactixLibrary.proveBy(
             foResult.subgoals.head,
-            ModelPlex
-              .optimizationOneWithSearch(tool, assumptions, unobservable.keySet.toList, Some(ModelPlex.mxSimplify))(1),
+            ModelPlex.optimizationOneWithSearch(
+              tool,
+              assumptions,
+              unobservable.keySet.toList,
+              Some(ModelPlex.mxSimplify),
+            )(1),
           )
         } catch { case _: Throwable => foResult }
       case ("model", tool) => TactixLibrary.proveBy(
           modelplexInput,
           ModelPlex.modelMonitorByChase(1) &
             SimplifierV3.simpTac(Nil, SimplifierV3.defaultFaxs, SimplifierV3.arithBaseIndex)(1) &
-            ModelPlex
-              .optimizationOneWithSearch(tool, assumptions, unobservable.keySet.toList, Some(ModelPlex.mxSimplify))(1),
+            ModelPlex.optimizationOneWithSearch(
+              tool,
+              assumptions,
+              unobservable.keySet.toList,
+              Some(ModelPlex.mxSimplify),
+            )(1),
         )
     }
 

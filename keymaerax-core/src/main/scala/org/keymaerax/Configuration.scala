@@ -280,20 +280,20 @@ object Configuration extends Configuration {
         .getOrElse(default)
     }
     object HeuristicInvariants {
-      def timeout(default: Int = -1): Int = getInt(Configuration.Keys.Pegasus.HeuristicInvariants.TIMEOUT)
-        .getOrElse(default)
+      def timeout(default: Int = -1): Int =
+        getInt(Configuration.Keys.Pegasus.HeuristicInvariants.TIMEOUT).getOrElse(default)
     }
     object FirstIntegrals {
       def timeout(default: Int = -1): Int = getInt(Configuration.Keys.Pegasus.FirstIntegrals.TIMEOUT).getOrElse(default)
       def degree(default: Int = -1): Int = getInt(Configuration.Keys.Pegasus.FirstIntegrals.DEGREE).getOrElse(default)
     }
     object LinearFirstIntegrals {
-      def timeout(default: Int = -1): Int = getInt(Configuration.Keys.Pegasus.LinearFirstIntegrals.TIMEOUT)
-        .getOrElse(default)
+      def timeout(default: Int = -1): Int =
+        getInt(Configuration.Keys.Pegasus.LinearFirstIntegrals.TIMEOUT).getOrElse(default)
     }
     object LinearGenericMethod {
-      def timeout(default: Int = -1): Int = getInt(Configuration.Keys.Pegasus.LinearGenericMethod.TIMEOUT)
-        .getOrElse(default)
+      def timeout(default: Int = -1): Int =
+        getInt(Configuration.Keys.Pegasus.LinearGenericMethod.TIMEOUT).getOrElse(default)
       def rationalsOnly(default: Boolean = false): Boolean =
         getBoolean(Configuration.Keys.Pegasus.LinearGenericMethod.RATIONALS_ONLY).getOrElse(default)
       def rationalPrecision(default: Int = 10): Int =
@@ -312,8 +312,8 @@ object Configuration extends Configuration {
       def degree(default: Int = -1): Int = getInt(Configuration.Keys.Pegasus.Barrier.DEGREE).getOrElse(default)
     }
     object InvariantExtractor {
-      def timeout(default: Int = -1): Int = getInt(Configuration.Keys.Pegasus.InvariantExtractor.TIMEOUT)
-        .getOrElse(default)
+      def timeout(default: Int = -1): Int =
+        getInt(Configuration.Keys.Pegasus.InvariantExtractor.TIMEOUT).getOrElse(default)
       def sufficiencyTimeout(default: Int = -1): Int =
         getInt(Configuration.Keys.Pegasus.InvariantExtractor.SUFFICIENCY_TIMEOUT).getOrElse(default)
       def dwTimeout(default: Int = -1): Int = getInt(Configuration.Keys.Pegasus.InvariantExtractor.DW_TIMEOUT)

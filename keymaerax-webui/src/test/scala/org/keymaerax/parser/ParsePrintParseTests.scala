@@ -17,8 +17,7 @@ import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 
 /**
  * Created by smitsch on 1/8/15.
- * @author
- *   Stefan Mitsch
+ * @author Stefan Mitsch
  */
 class ParsePrintParseTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
   private val randomTrials = 20

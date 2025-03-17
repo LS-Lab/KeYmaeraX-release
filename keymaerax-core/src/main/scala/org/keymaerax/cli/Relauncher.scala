@@ -44,8 +44,7 @@ object Relauncher extends Logging {
   /**
    * Try to the current JVM process with more stack space, but otherwise identical arguments.
    *
-   * @param cliArgs
-   *   The arguments that were passed to the main function.
+   * @param cliArgs The arguments that were passed to the main function.
    */
   def relaunchOrExit(cliArgs: Seq[String]): Nothing = {
     logger.info(s"Restarting $FullName with sufficient stack space.")

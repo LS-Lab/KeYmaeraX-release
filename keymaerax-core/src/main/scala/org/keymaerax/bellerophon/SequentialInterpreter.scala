@@ -23,12 +23,9 @@ import scala.util.{Failure, Success, Try}
 /**
  * Sequential interpreter for Bellerophon tactic expressions.
  *
- * @param listeners
- *   Pre- and post-processing hooks for step-wise tactic execution.
- * @author
- *   Nathan Fulton
- * @author
- *   Andre Platzer
+ * @param listeners Pre- and post-processing hooks for step-wise tactic execution.
+ * @author Nathan Fulton
+ * @author Andre Platzer
  */
 abstract class BelleBaseInterpreter(
     val listeners: scala.collection.immutable.Seq[IOListener],
@@ -170,58 +167,57 @@ abstract class BelleBaseInterpreter(
                 (cp: ProvableSig, clabels: Option[List[BelleLabel]], csubsts: USubst),
                 (subderivation: BelleProvable, cidx: Int),
               ) =>
-            val (substs, subProvable) =
-              subderivation match {
-                case p: BelleDelayedSubstProvable => p.parent match {
-                    case Some((parent, i)) =>
-                      if (
-                        p.subst
-                          .subsDefsInput
-                          .exists({
-                            case SubstitutionPair(FuncOf(n, Nothing), v: Variable) => n.name == v.name &&
-                              n.index == v.index
-                            case _ => false
-                          })
-                      ) {
-                        if (p.p.isProved) {
-                          (csubsts ++ p.subst ++ collectSubst(cp, cidx, parent), parent(p.p(p.subst), i))
-                        } else {
-                          // @note need to substitute p.p into p.parent and then p.parent into cp, but cannot apply substitutions because p.p is not proved
-                          throw BelleUnfinished(
-                            "Unable to merge provables: constified sub-derivation still has open goals\n  " +
-                              p.p.prettyString + "\nand therefore cannot be applied to the " + i +
-                              "-th subgoal of parent\n  " + parent.prettyString,
-                            p.p.underlyingProvable,
-                          )
-                        }
-                      } else (csubsts ++ p.subst ++ collectSubst(cp, cidx, parent), subderivation.p)
-                    case None => (csubsts ++ p.subst ++ collectSubst(cp, cidx, subderivation.p), subderivation.p)
-                  }
-                // @note child tactics may expand definitions internally and succeed, so won't return a delayed provable (e.g. QE)
-                case _ => (csubsts ++ collectSubst(cp, cidx, subderivation.p), subderivation.p)
-              }
+            val (substs, subProvable) = subderivation match {
+              case p: BelleDelayedSubstProvable =>
+                p.parent match {
+                  case Some((parent, i)) =>
+                    if (
+                      p.subst
+                        .subsDefsInput
+                        .exists({
+                          case SubstitutionPair(FuncOf(n, Nothing), v: Variable) => n.name == v.name &&
+                            n.index == v.index
+                          case _ => false
+                        })
+                    ) {
+                      if (p.p.isProved) {
+                        (csubsts ++ p.subst ++ collectSubst(cp, cidx, parent), parent(p.p(p.subst), i))
+                      } else {
+                        // @note need to substitute p.p into p.parent and then p.parent into cp, but cannot apply substitutions because p.p is not proved
+                        throw BelleUnfinished(
+                          "Unable to merge provables: constified sub-derivation still has open goals\n  " +
+                            p.p.prettyString + "\nand therefore cannot be applied to the " + i +
+                            "-th subgoal of parent\n  " + parent.prettyString,
+                          p.p.underlyingProvable,
+                        )
+                      }
+                    } else (csubsts ++ p.subst ++ collectSubst(cp, cidx, parent), subderivation.p)
+                  case None => (csubsts ++ p.subst ++ collectSubst(cp, cidx, subderivation.p), subderivation.p)
+                }
+              // @note child tactics may expand definitions internally and succeed, so won't return a delayed provable (e.g. QE)
+              case _ => (csubsts ++ collectSubst(cp, cidx, subderivation.p), subderivation.p)
+            }
             val (_, combinedProvable) = applySubDerivation(cp, cidx, exhaustiveSubst(subProvable, csubsts), substs)
             // @todo want to keep names of cp abbreviated instead of substituted
-            val combinedLabels: Option[List[BelleLabel]] =
-              (clabels, subderivation.label) match {
-                case (Some(origLabels), newLabels) =>
-                  val labels = newLabels.getOrElse(createLabels(
-                    origLabels.lift(cidx),
-                    origLabels.length,
-                    origLabels.length + subProvable.subgoals.length,
-                  ))
-                  if (labels.isEmpty) {
-                    if (origLabels.size == combinedProvable.subgoals.size) Some(origLabels)
-                    else Some(origLabels.patch(cidx, List.empty, 1)) // goal cidx was closed, remove label
-                  } else {
-                    val l :: rest = labels
-                    Some(origLabels.patch(cidx, List(l), 1) ++ rest)
-                  }
-                case (None, Some(newLabels)) =>
-                  if (newLabels.isEmpty && subderivation.p.isProved) None
-                  else Some(createLabels(None, 0, cidx) ++ newLabels)
-                case (None, None) => None
-              }
+            val combinedLabels: Option[List[BelleLabel]] = (clabels, subderivation.label) match {
+              case (Some(origLabels), newLabels) =>
+                val labels = newLabels.getOrElse(createLabels(
+                  origLabels.lift(cidx),
+                  origLabels.length,
+                  origLabels.length + subProvable.subgoals.length,
+                ))
+                if (labels.isEmpty) {
+                  if (origLabels.size == combinedProvable.subgoals.size) Some(origLabels)
+                  else Some(origLabels.patch(cidx, List.empty, 1)) // goal cidx was closed, remove label
+                } else {
+                  val l :: rest = labels
+                  Some(origLabels.patch(cidx, List(l), 1) ++ rest)
+                }
+              case (None, Some(newLabels)) =>
+                if (newLabels.isEmpty && subderivation.p.isProved) None
+                else Some(createLabels(None, 0, cidx) ++ newLabels)
+              case (None, None) => None
+            }
             (combinedProvable, combinedLabels, substs)
         })
     }
@@ -461,9 +457,9 @@ abstract class BelleBaseInterpreter(
         case _ => throw new IllFormedTacticApplicationException("Cannot attempt Let with a non-Provable value.")
             .inContext(expr, "")
       }
-      if (provable.subgoals.length != 1)
-        throw new IllFormedTacticApplicationException("Let of multiple goals is not currently supported.")
-          .inContext(expr, "")
+      if (provable.subgoals.length != 1) throw new IllFormedTacticApplicationException(
+        "Let of multiple goals is not currently supported."
+      ).inContext(expr, "")
 
       def subst(abbr: Expression, value: Expression): SubstitutionPair = (abbr, value) match {
         case (FuncOf(name, arg), t: Term) =>
@@ -548,9 +544,10 @@ abstract class BelleBaseInterpreter(
             BelleProvable(provable(backsubst, 0), resultLbl)
           } catch {
             case e: BelleThrowable => throw e.inContext(expr, "LetInspect backsubstitution failed")
-            case e: ProverException =>
-              throw new IllFormedTacticApplicationException("LetInspect backsubstitution failed", e)
-                .inContext(expr.toString, "LetInspect backsubstitution failed")
+            case e: ProverException => throw new IllFormedTacticApplicationException(
+                "LetInspect backsubstitution failed",
+                e,
+              ).inContext(expr.toString, "LetInspect backsubstitution failed")
           }
         case e =>
           throw new IllFormedTacticApplicationException("LetInspect expected successful sub-derivation, but got " + e)
@@ -753,26 +750,23 @@ abstract class BelleBaseInterpreter(
             .reduceRightOption[BelleExpr](_ & _)
             .getOrElse(UnifyUSCalculus.skip)
 
-          def selfAssignFor(p: ProvableSig, substs: Seq[SubstitutionPair]): ProvableSig = substs
-            .foldRight(p)({ case (s, pr) =>
-                s.what match {
-                  case PredOf(Function(fn, Some(i), _, _, _), arg) =>
-                    if (fn == "p_") {
-                      List
-                        .fill(StaticSemantics.symbols(arg).size)(UnifyUSCalculus.useFor(Ax.selfassignb)(AntePos(i)))
-                        .foldRight(pr)({ case (t, p) => t(p) })
-                    } else if (fn == "q_") {
-                      List
-                        .fill(StaticSemantics.symbols(arg).size)(UnifyUSCalculus.useFor(Ax.selfassignb)(SuccPos(i)))
-                        .foldRight(pr)({ case (t, p) => t(p) })
-                    } else throw new BelleCriticalException(
-                      "Implementation error in Using: expected abbreviated p_ or q_"
-                    ) {}
-                  case _ =>
+          def selfAssignFor(p: ProvableSig, substs: Seq[SubstitutionPair]): ProvableSig = substs.foldRight(p)({
+            case (s, pr) => s.what match {
+                case PredOf(Function(fn, Some(i), _, _, _), arg) =>
+                  if (fn == "p_") {
+                    List
+                      .fill(StaticSemantics.symbols(arg).size)(UnifyUSCalculus.useFor(Ax.selfassignb)(AntePos(i)))
+                      .foldRight(pr)({ case (t, p) => t(p) })
+                  } else if (fn == "q_") {
+                    List
+                      .fill(StaticSemantics.symbols(arg).size)(UnifyUSCalculus.useFor(Ax.selfassignb)(SuccPos(i)))
+                      .foldRight(pr)({ case (t, p) => t(p) })
+                  } else
                     throw new BelleCriticalException("Implementation error in Using: expected abbreviated p_ or q_") {}
-                }
+                case _ =>
+                  throw new BelleCriticalException("Implementation error in Using: expected abbreviated p_ or q_") {}
               }
-            )
+          })
 
           val goalResults = filteredGoals.map({ case (p, s) =>
             val tr = apply(t, BelleProvable(p, labels)) match {

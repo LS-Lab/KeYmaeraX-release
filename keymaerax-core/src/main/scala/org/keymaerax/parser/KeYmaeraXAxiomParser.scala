@@ -12,34 +12,26 @@ import org.keymaerax.parser.KeYmaeraXLexer.TokenStream
 /**
  * Parse an axiom string to a list of named formulas that are to be used as axioms in a theory. Created by nfulton on
  * 6/11/15.
- * @author
- *   nfulton
- * @see
- *   [[DLAxiomParser]]
+ * @author nfulton
+ * @see [[DLAxiomParser]]
  */
 object KeYmaeraXAxiomParser extends (String => List[(String, Formula)]) with Logging {
 
   /**
-   * @todo
-   *   sort checking.
-   * @param input
-   *   The contents of the axiom file.
-   * @return
-   *   A list of named axioms occurring in the file.
+   * @todo sort checking.
+   * @param input The contents of the axiom file.
+   * @return A list of named axioms occurring in the file.
    */
   def apply(input: String): List[(String, Formula)] = {
     val tokens = KeYmaeraXLexer.inMode(input, AxiomFileMode)
     logger.debug(s"Tokens are: $tokens")
-    try { parseAxioms(tokens) }
-    catch { case e: ParseException => throw e.inContext("<AxiomBase>" /*input*/ ) }
+    try { parseAxioms(tokens) } catch { case e: ParseException => throw e.inContext("<AxiomBase>" /*input*/ ) }
   }
 
   /**
    * Parse all axioms from input stream till EOF.
-   * @param input
-   *   Token string for the axiom file.
-   * @return
-   *   A list of axiom names and the associated formulas.
+   * @param input Token string for the axiom file.
+   * @return A list of axiom names and the associated formulas.
    */
   private def parseAxioms(input: TokenStream): List[(String, Formula)] = {
     require(input.last.tok == EOF, "token streams have to end in " + EOF)
@@ -55,8 +47,7 @@ object KeYmaeraXAxiomParser extends (String => List[(String, Formula)]) with Log
   /**
    * Parse one axiom till AXIOM_END from input stream
    * @param input
-   * @return
-   *   named axiom along with remaining token stream.
+   * @return named axiom along with remaining token stream.
    */
   private def parseNextAxiom(input: TokenStream): (String, Formula, TokenStream) = {
     require(

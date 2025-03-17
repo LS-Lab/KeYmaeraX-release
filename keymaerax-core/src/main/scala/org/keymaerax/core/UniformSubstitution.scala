@@ -6,20 +6,14 @@
 /**
  * Uniform Substitution for KeYmaera X
  *
- * @author
- *   Andre Platzer
- * @author
- *   smitsch
+ * @author Andre Platzer
+ * @author smitsch
  * @see
  *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
- * @see
- *   [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
- * @see
- *   [[org.keymaerax.Bibliography.CadePlatzer18 Uniform substitution for differential game logic]]
- * @see
- *   [[org.keymaerax.Bibliography.ToclPlatzer15 Differential game logic]]
- * @note
- *   Code Review: 2020-02-17
+ * @see [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
+ * @see [[org.keymaerax.Bibliography.CadePlatzer18 Uniform substitution for differential game logic]]
+ * @see [[org.keymaerax.Bibliography.ToclPlatzer15 Differential game logic]]
+ * @note Code Review: 2020-02-17
  */
 package org.keymaerax.core
 
@@ -58,18 +52,13 @@ object SubstitutionAdmissibility {
  *   - [[PredicationalOf]](p:[[Function]], [[DotFormula]])
  *   - [[DotTerm]]
  *   - [[DotFormula]]
- * @param repl
- *   the expression to be used in place of `what`.
- * @requires
- *   what.kind==repl.kind && what.sort==repl.sort && what has an acceptable shape
- * @see
- *   [[USubstOne]]
- * @see
- *   [[USubstChurch]]
+ * @param repl the expression to be used in place of `what`.
+ * @requires what.kind==repl.kind && what.sort==repl.sort && what has an acceptable shape
+ * @see [[USubstOne]]
+ * @see [[USubstChurch]]
  * @see
  *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
- * @see
- *   [[org.keymaerax.Bibliography.CadePlatzer19 Uniform substitution at one fell swoop]]
+ * @see [[org.keymaerax.Bibliography.CadePlatzer19 Uniform substitution at one fell swoop]]
  */
 final case class SubstitutionPair(what: Expression, repl: Expression) {
   insist(
@@ -150,10 +139,8 @@ final case class SubstitutionPair(what: Expression, repl: Expression) {
    * (new) free variables introduced by this substitution, i.e. free variables of repl that are not bound as arguments
    * in what.
    *
-   * @return
-   *   essentially freeVars(repl) except for special handling of UnitFunctional and UnitPredicational arguments.
-   * @see
-   *   Definition 19 in
+   * @return essentially freeVars(repl) except for special handling of UnitFunctional and UnitPredicational arguments.
+   * @see Definition 19 in
    *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
    * @see
    *   [[StaticSemantics.freeVars(f:edu\.cmu\.cs\.ls\.keymaerax\.core\.Formula):edu\.cmu\.cs\.ls\.keymaerax\.core\.SetLattice[edu\.cmu\.cs\.ls\.keymaerax\.core\.Variable]*]]
@@ -198,8 +185,7 @@ final case class SubstitutionPair(what: Expression, repl: Expression) {
 
   /**
    * The signature of the replacement introduced by this substitution.
-   * @note
-   *   DotTerm and DotFormula arguments don't literally occur if bound by p(DotTerm) ~> DotTerm>5
+   * @note DotTerm and DotFormula arguments don't literally occur if bound by p(DotTerm) ~> DotTerm>5
    */
   lazy val signature: immutable.Set[NamedSymbol] = what match {
     case what: ApplicationOf => what match {
@@ -213,10 +199,9 @@ final case class SubstitutionPair(what: Expression, repl: Expression) {
 
   /**
    * Occurrences of what top-level symbol this SubstitutionPair will be replacing.
-   * @return
-   *   Function/predicate/predicational or DotTerm or (Differential)ProgramConst whose occurrences we will replace.
-   * @note
-   *   Data structure invariant: Checks that `what` is a substitutable expression.
+   * @return Function/predicate/predicational or DotTerm or (Differential)ProgramConst whose occurrences we will
+   *   replace.
+   * @note Data structure invariant: Checks that `what` is a substitutable expression.
    */
   private[core] lazy val matchKey: NamedSymbol = what match {
     case p: UnitPredicational => p

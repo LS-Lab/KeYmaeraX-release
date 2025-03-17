@@ -99,16 +99,18 @@ class UncheckedBaseK2MConverter extends KeYmaeraToMathematica {
 
   override protected def convertFormula(f: Formula): MExpr = f match {
     case PredOf(Function(name, index, Unit, Bool, None), Nothing) =>
-      if (name.endsWith("_")) MathematicaNameConversion
-        .toMathematica(Variable(name.stripSuffix("_") + UncheckedBaseConverter.CONST_PRED_SUFFIX + "_", index))
+      if (name.endsWith("_")) MathematicaNameConversion.toMathematica(
+        Variable(name.stripSuffix("_") + UncheckedBaseConverter.CONST_PRED_SUFFIX + "_", index)
+      )
       else MathematicaNameConversion.toMathematica(Variable(name + UncheckedBaseConverter.CONST_PRED_SUFFIX, index))
     case _ => super.convertFormula(f)
   }
 
   override protected[tools] def convertTerm(t: Term): MExpr = t match {
     case FuncOf(Function(name, index, Unit, Real, None), Nothing) =>
-      if (name.endsWith("_")) MathematicaNameConversion
-        .toMathematica(Variable(name.stripSuffix("_") + UncheckedBaseConverter.CONST_FN_SUFFIX + "_", index))
+      if (name.endsWith("_")) MathematicaNameConversion.toMathematica(
+        Variable(name.stripSuffix("_") + UncheckedBaseConverter.CONST_FN_SUFFIX + "_", index)
+      )
       else MathematicaNameConversion.toMathematica(Variable(name + UncheckedBaseConverter.CONST_FN_SUFFIX, index))
     case _ => super.convertTerm(t)
   }
@@ -358,10 +360,8 @@ object PegasusM2KConverter extends UncheckedBaseM2KConverter with Logging {
    *                ) // end Result list
    *   ) // end Result
    * }}}
-   * @param e
-   *   The differential saturation strategy result.
-   * @return
-   *   The result encoded in a formula.
+   * @param e The differential saturation strategy result.
+   * @return The result encoded in a formula.
    */
   private def convertDiffSatResult(e: MExpr): Expression = {
     require(diffSatResult.applies(e), "Expected applicable Mathematica expression")
@@ -486,10 +486,8 @@ object PegasusM2KConverter extends UncheckedBaseM2KConverter with Logging {
    * {{{
    *   ResultType=Trivial & Result=Reason
    * }}}
-   * @param e
-   *   The trivial result.
-   * @return
-   *   The result encoded in a formula.
+   * @param e The trivial result.
+   * @return The result encoded in a formula.
    */
   private def convertTrivialResult(e: MExpr): Expression = {
     assert(trivialResult.applies(e), "Expected applicable Mathematica expression")
@@ -530,12 +528,9 @@ object PegasusM2KConverter extends UncheckedBaseM2KConverter with Logging {
    *   }
    * }}}
    * We throw an exception.
-   * @param e
-   *   The error result.
-   * @return
-   *   Never returns, throws an exception.
-   * @throws ToolExternalException
-   *   always (unless inapplicable conversion)
+   * @param e The error result.
+   * @return Never returns, throws an exception.
+   * @throws ToolExternalException always (unless inapplicable conversion)
    */
   private def convertErrorResult(e: MExpr): Expression = {
     require(errorResult.applies(e), "Expected applicable Mathematica expression")
@@ -564,8 +559,7 @@ object PegasusM2KConverter extends UncheckedBaseM2KConverter with Logging {
 
   /**
    * Extracts the list of (invariant,hint) and a proved/candidate indicator from the Pegasus result formula
-   * @see
-   *   [[convertDiffSatResult]], [[convertTrivialResult]]
+   * @see [[convertDiffSatResult]], [[convertTrivialResult]]
    */
   @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def extractResult(result: Expression): (immutable.Seq[(Formula, String)], Formula) = {
@@ -644,10 +638,8 @@ object PegasusM2KConverter extends UncheckedBaseM2KConverter with Logging {
 /**
  * Mathematica counter example implementation.
  *
- * @author
- *   Nathan Fulton
- * @author
- *   Stefan Mitsch
+ * @author Nathan Fulton
+ * @author Stefan Mitsch
  */
 class MathematicaCEXTool(override val link: MathematicaLink)
     extends BaseKeYmaeraMathematicaBridge[Either[KExpr, NamedSymbol]](link, CEXK2MConverter, CEXM2KConverter)
@@ -711,10 +703,8 @@ class MathematicaCEXTool(override val link: MathematicaLink)
 /**
  * A link to Mathematica using the JLink interface.
  *
- * @author
- *   Nathan Fulton
- * @author
- *   Stefan Mitsch
+ * @author Nathan Fulton
+ * @author Stefan Mitsch
  */
 class MathematicaODESolverTool(override val link: MathematicaLink)
     extends BaseKeYmaeraMathematicaBridge[KExpr](link, new UncheckedBaseK2MConverter, new UncheckedBaseM2KConverter)
@@ -727,12 +717,9 @@ class MathematicaODESolverTool(override val link: MathematicaLink)
   /**
    * Converts a system of differential equations given as DifferentialProgram into list of x'=theta
    *
-   * @param diffSys
-   *   The system of differential equations
-   * @param diffArg
-   *   The name of the differential argument (dx/d diffArg = theta).
-   * @return
-   *   The differential equation system in list form.
+   * @param diffSys The system of differential equations
+   * @param diffArg The name of the differential argument (dx/d diffArg = theta).
+   * @return The differential equation system in list form.
    */
   @nowarn("msg=match may not be exhaustive")
   private def toDiffSys(diffSys: DifferentialProgram, diffArg: Variable): List[(Variable, Term)] = {
@@ -754,12 +741,9 @@ class MathematicaODESolverTool(override val link: MathematicaLink)
   /**
    * Computes the symbolic solution of a system of differential equations.
    *
-   * @param diffArg
-   *   The differential argument, i.e., d f(diffArg) / d diffArg.
-   * @param diffSys
-   *   The system of differential equations of the form x' = theta.
-   * @return
-   *   The solution if found; None otherwise
+   * @param diffArg The differential argument, i.e., d f(diffArg) / d diffArg.
+   * @param diffSys The system of differential equations of the form x' = theta.
+   * @return The solution if found; None otherwise
    */
   private def diffSol(diffArg: Variable, iv: Map[Variable, Variable], diffSys: (Variable, Term)*): Option[Formula] = {
     val primedVars = diffSys.map(_._1)
@@ -771,8 +755,8 @@ class MathematicaODESolverTool(override val link: MathematicaLink)
 
     val functions = diffSys.map(t => k2m(functionalizeVars(t._1, diffArg)))
 
-    val initialValues = diffSys
-      .map(t => k2m(Equal(functionalizeVars(t._1, Number(BigDecimal(0)), primedVars: _*), iv(t._1))))
+    val initialValues =
+      diffSys.map(t => k2m(Equal(functionalizeVars(t._1, Number(BigDecimal(0)), primedVars: _*), iv(t._1))))
 
     val input = ExtMathematicaOpSpec.dsolve(
       MathematicaOpSpec.list(convertedDiffSys ++ initialValues: _*),
@@ -790,14 +774,10 @@ class MathematicaODESolverTool(override val link: MathematicaLink)
   /**
    * Replaces all occurrences of variables vars in the specified term t with functions of argument arg.
    *
-   * @param t
-   *   The term.
-   * @param arg
-   *   The function argument.
-   * @param vars
-   *   The variables to functionalize.
-   * @return
-   *   The term with variables replaced by functions.
+   * @param t The term.
+   * @param arg The function argument.
+   * @param vars The variables to functionalize.
+   * @return The term with variables replaced by functions.
    */
   private def functionalizeVars(t: Term, arg: Term, vars: Variable*) = ExpressionTraversal.traverse(
     new ExpressionTraversalFunction {
@@ -816,12 +796,9 @@ class MathematicaODESolverTool(override val link: MathematicaLink)
   /**
    * Replaces all functions with argument arg in formula f with a variable of the same name.
    *
-   * @param f
-   *   The formula.
-   * @param arg
-   *   The function argument.
-   * @return
-   *   The term with functions replaced by variables.
+   * @param f The formula.
+   * @param arg The function argument.
+   * @return The term with functions replaced by variables.
    */
   private def defunctionalize(f: Formula, arg: Term, fnNames: String*) = ExpressionTraversal.traverse(
     new ExpressionTraversalFunction {
@@ -850,8 +827,7 @@ class MathematicaODESolverTool(override val link: MathematicaLink)
 /**
  * A link to Mathematica using the JLink interface.
  *
- * @author
- *   Andre Platzer
+ * @author Andre Platzer
  */
 class MathematicaPDESolverTool(override val link: MathematicaLink)
     extends BaseKeYmaeraMathematicaBridge[KExpr](link, new UncheckedBaseK2MConverter, new DiffUncheckedM2KConverter)
@@ -933,10 +909,11 @@ class MathematicaLyapunovSolverTool(override val link: MathematicaLink)
 
   /** @inheritdoc */
   override def genMLF(sys: List[ODESystem], trans: List[(Int, Int, Formula)]): List[Term] = {
-    val cmd = createCommand(applyFunc(lsymbol("GenMLF"))(
-      convertODEs(sys),
-      list(trans.map({ case (s, t, g) => list(int(s), int(t), k2m(g)) }): _*),
-    ))
+    val cmd = createCommand(
+      applyFunc(
+        lsymbol("GenMLF")
+      )(convertODEs(sys), list(trans.map({ case (s, t, g) => list(int(s), int(t), k2m(g)) }): _*))
+    )
     val (_, result) = run(cmd)
     result match {
       case t: Term => flattenPairs(t)
@@ -967,7 +944,7 @@ private class DiffUncheckedM2KConverter extends UncheckedBaseM2KConverter {
   }
 
   @nowarn("msg=match may not be exhaustive")
-  protected override def convertAtomicTerm(e: MExpr): KExpr = interpretedSymbols.find(_._1.applies(e)) match {
+  override protected def convertAtomicTerm(e: MExpr): KExpr = interpretedSymbols.find(_._1.applies(e)) match {
     case Some((_, fn)) => convertFunction(fn, e.args())
     case None => toKeYmaera(e) match {
         case fn: Function =>
@@ -989,7 +966,7 @@ private class DiffUncheckedM2KConverter extends UncheckedBaseM2KConverter {
   protected def convertFunctionDomain(args: Array[MExpr]): Sort = {
     Range(1, args.length).foldRight[Sort](Real)((_, t) => Tuple(Real, t))
   }
-  protected override def convertFunction(fn: Function, args: Array[MExpr]): KExpr = {
+  override protected def convertFunction(fn: Function, args: Array[MExpr]): KExpr = {
     val arguments = args.map(convert).map(_.asInstanceOf[Term])
     FuncOf(fn, arguments.reduceRightOption[Term]((l, r) => Pair(l, r)).getOrElse(Nothing))
   }
@@ -998,8 +975,7 @@ private class DiffUncheckedM2KConverter extends UncheckedBaseM2KConverter {
 /**
  * A link to Mathematica using the JLink interface.
  *
- * @author
- *   Andre Platzer
+ * @author Andre Platzer
  */
 class MathematicaEquationSolverTool(override val link: MathematicaLink)
     extends BaseKeYmaeraMathematicaBridge[KExpr](link, new UncheckedBaseK2MConverter, new UncheckedBaseM2KConverter)
@@ -1021,8 +997,7 @@ class MathematicaEquationSolverTool(override val link: MathematicaLink)
 /**
  * A link to Mathematica using the JLink interface.
  *
- * @author
- *   Andre Platzer
+ * @author Andre Platzer
  */
 class MathematicaAlgebraTool(override val link: MathematicaLink)
     extends BaseKeYmaeraMathematicaBridge[KExpr](link, new UncheckedBaseK2MConverter, PegasusM2KConverter)
@@ -1080,8 +1055,7 @@ class MathematicaAlgebraTool(override val link: MathematicaLink)
 /**
  * A link to Mathematica using the JLink interface.
  *
- * @author
- *   Andre Platzer
+ * @author Andre Platzer
  */
 class MathematicaSimplificationTool(override val link: MathematicaLink)
     extends BaseKeYmaeraMathematicaBridge[KExpr](link, new UncheckedBaseK2MConverter, new UncheckedBaseM2KConverter)
@@ -1165,10 +1139,8 @@ object SimulationK2MConverter extends K2MConverter[Simulation] {
 /**
  * A link to Mathematica using the JLink interface.
  *
- * @author
- *   Nathan Fulton
- * @author
- *   Stefan Mitsch
+ * @author Nathan Fulton
+ * @author Stefan Mitsch
  */
 class MathematicaSimulationTool(override val link: MathematicaLink)
     extends BaseKeYmaeraMathematicaBridge[Simulation](link, SimulationK2MConverter, SimulationM2KConverter)

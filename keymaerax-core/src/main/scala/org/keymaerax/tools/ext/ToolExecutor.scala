@@ -42,10 +42,8 @@ class ToolExecutor(poolSize: Int) extends Logging {
 
   /**
    * Schedules a task; returns the task ID to query for status and result.
-   * @param task
-   *   The task to run
-   * @return
-   *   The task handle that [[ToolExecutor]] uses to identify this task.
+   * @param task The task to run
+   * @return The task handle that [[ToolExecutor]] uses to identify this task.
    */
   def schedule[T](task: Unit => T): TaskHandle[T] = {
     val id = java.util.UUID.randomUUID().toString
@@ -68,11 +66,9 @@ class ToolExecutor(poolSize: Int) extends Logging {
 
   /**
    * Removes a task from the executor.
-   * @param h
-   *   The task handle of the task to remove.
-   * @param force
-   *   If true, then the task can be removed even if it is currently running. In that case, the task execution is halted
-   *   first. Defaults to false.
+   * @param h The task handle of the task to remove.
+   * @param force If true, then the task can be removed even if it is currently running. In that case, the task
+   *   execution is halted first. Defaults to false.
    */
   def remove[T](h: TaskHandle[T], force: Boolean = false): Unit = {
     require(scheduledTasks.contains(h.id), "Cannot remove a task whose ID is not known")
@@ -90,10 +86,8 @@ class ToolExecutor(poolSize: Int) extends Logging {
 
   /**
    * Waits for task completion (polling).
-   * @param h
-   *   The task handle of the task to wait on
-   * @param millis
-   *   The duration in milliseconds to sleep between polling attempts
+   * @param h The task handle of the task to wait on
+   * @param millis The duration in milliseconds to sleep between polling attempts
    */
   def wait[T](h: TaskHandle[T], millis: Int = 10): Option[Either[T, Throwable]] = {
     try {
@@ -119,8 +113,6 @@ class ToolExecutor(poolSize: Int) extends Logging {
   }
 
   /** Creates the future that ultimately executes the task. */
-  private def makeFuture(task: Unit => Any): FutureTask[Either[Any, Throwable]] = new FutureTask(() =>
-    try { Left(task(())) }
-    catch { case e: Throwable => Right(e) }
-  )
+  private def makeFuture(task: Unit => Any): FutureTask[Either[Any, Throwable]] =
+    new FutureTask(() => try { Left(task(())) } catch { case e: Throwable => Right(e) })
 }

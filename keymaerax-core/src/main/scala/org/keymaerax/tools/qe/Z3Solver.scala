@@ -22,14 +22,10 @@ import scala.sys.process._
  * `converter`.
  *
  * Created by ran on 3/27/15.
- * @param z3Path
- *   The path to the Z3 binary.
- * @param converter
- *   Converts from KeYmaera X datastructures to SMT-Lib format.
- * @author
- *   Ran Ji
- * @author
- *   Stefan Mitsch
+ * @param z3Path The path to the Z3 binary.
+ * @param converter Converts from KeYmaera X datastructures to SMT-Lib format.
+ * @author Ran Ji
+ * @author Stefan Mitsch
  */
 class Z3Solver(val z3Path: String, val converter: SMTConverter) extends ToolOperationManagementBase with Logging {
 

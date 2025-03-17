@@ -41,10 +41,8 @@ import scala.util.matching.Regex
  *   - Proof agendas
  *   - Proof trees
  *
- * @author
- *   nfulton
- * @author
- *   Joscha Mennicken
+ * @author nfulton
+ * @author Joscha Mennicken
  */
 object SQLite {
 
@@ -64,10 +62,10 @@ object SQLite {
   class UncachedSQLiteLemmaDB(db: SQLiteDB) extends LemmaDBBase {
 
     /** @inheritdoc */
-    final override def contains(lemmaID: LemmaID): Boolean = db.containsLemma(lemmaID.toInt)
+    override final def contains(lemmaID: LemmaID): Boolean = db.containsLemma(lemmaID.toInt)
 
     /** @inheritdoc */
-    final override def readLemmas(ids: List[LemmaID]): Option[List[String]] = {
+    override final def readLemmas(ids: List[LemmaID]): Option[List[String]] = {
       val lemmaIds = ids.map(_.toInt)
       val lemmas = db.getLemmas(lemmaIds)
       assert(
@@ -79,7 +77,7 @@ object SQLite {
     }
 
     /** @inheritdoc */
-    final override def writeLemma(id: LemmaID, lemma: String): Unit = {
+    override final def writeLemma(id: LemmaID, lemma: String): Unit = {
       if (db.containsLemma(id.toInt)) db.updateLemma(id.toInt, lemma)
       else {
         val createdId = db.createLemma()
@@ -92,16 +90,16 @@ object SQLite {
     }
 
     /** @inheritdoc */
-    final override def createLemma(): LemmaID = db.createLemma().toString
+    override final def createLemma(): LemmaID = db.createLemma().toString
 
     /** @inheritdoc */
-    final override def remove(name: String): Unit = db.deleteLemma(name.toInt)
+    override final def remove(name: String): Unit = db.deleteLemma(name.toInt)
 
     /** @inheritdoc */
-    final override def removeAll(folder: String): Unit = ???
+    override final def removeAll(folder: String): Unit = ???
 
     /** @inheritdoc */
-    final override def deleteDatabase(): Unit = db.deleteAllLemmas()
+    override final def deleteDatabase(): Unit = db.deleteAllLemmas()
 
     /** @inheritdoc */
     override def version(): VersionNumber = versionOf(db)
@@ -157,10 +155,10 @@ object SQLite {
     ensureExists(DBAbstractionObj.testLocation)
 
     /** Syncs the database to the file system. */
-    final override def syncDatabase(): Unit = { run(sqlu"PRAGMA wal_checkpoint(FULL)") }
+    override final def syncDatabase(): Unit = { run(sqlu"PRAGMA wal_checkpoint(FULL)") }
 
     /** @inheritdoc */
-    final override def cleanup(): Unit = cleanup(DBAbstractionObj.dblocation)
+    override final def cleanup(): Unit = cleanup(DBAbstractionObj.dblocation)
 
     /** Initializes a new database. */
     def cleanup(which: String): Unit = {
@@ -244,7 +242,7 @@ object SQLite {
     // <editor-fold desc="Configuration storage">
 
     /** @inheritdoc */
-    final override def getAllConfigurations: Set[ConfigurationPOJO] = synchronized {
+    override final def getAllConfigurations: Set[ConfigurationPOJO] = synchronized {
       val config = runTransactionally(Config.result)
       config.filter(_.configname.isDefined).map(_.configname.get).map(getConfiguration).toSet
     }
@@ -253,10 +251,9 @@ object SQLite {
      * Poorly named -- either update the config, or else insert an existing key. But in Mongo it was just update,
      * because of the nested documents thing.
      *
-     * @param config
-     *   The new configuration.
+     * @param config The new configuration.
      */
-    final override def updateConfiguration(config: ConfigurationPOJO): Unit = synchronized {
+    override final def updateConfiguration(config: ConfigurationPOJO): Unit = synchronized {
       config
         .config
         .foreach(kvp => {
@@ -276,22 +273,21 @@ object SQLite {
     }
 
     /** @inheritdoc */
-    final override def getConfiguration(configName: String): ConfigurationPOJO = synchronized {
+    override final def getConfiguration(configName: String): ConfigurationPOJO = synchronized {
       val query = Config.filter(_.configname === configName).filter(_.key.isDefined)
       val kvp = runTransactionally(query.result).map(conf => (conf.key.get, conf.value.getOrElse(""))).toMap
       new ConfigurationPOJO(configName, kvp)
     }
 
     private def configWithDefault(config: String, subconfig: String, default: Int): Int =
-      try { getConfiguration(config).config(subconfig).toInt }
-      catch { case _: NoSuchElementException => default }
+      try { getConfiguration(config).config(subconfig).toInt } catch { case _: NoSuchElementException => default }
 
     // </editor-fold>
 
     // <editor-fold desc="Model storage">
 
     /** @inheritdoc */
-    final override def getModelList(userId: String): List[ModelPOJO] = synchronized {
+    override final def getModelList(userId: String): List[ModelPOJO] = synchronized {
       val models = runTransactionally(Models.filter(_.userid === userId).result).toList
       models.map(element =>
         ModelPOJO(
@@ -311,7 +307,7 @@ object SQLite {
     }
 
     /** @inheritdoc */
-    final override def getUniqueModelName(userId: String, modelName: String): String = {
+    override final def getUniqueModelName(userId: String, modelName: String): String = {
       val query = Models.filter(_.userid === userId).filter(_.name.startsWith(modelName)).map(_.name)
       val models = run(query.result).toList
       if (models.isEmpty) modelName
@@ -328,7 +324,7 @@ object SQLite {
     }
 
     /** @inheritdoc */
-    final override def createModel(
+    override final def createModel(
         userId: String,
         name: String,
         fileContents: String,
@@ -358,7 +354,7 @@ object SQLite {
     }
 
     /** @inheritdoc */
-    final override def updateModel(
+    override final def updateModel(
         modelId: Int,
         name: String,
         title: Option[String],
@@ -391,7 +387,7 @@ object SQLite {
     }
 
     /** @inheritdoc */
-    final override def addModelTactic(modelId: String, fileContents: String): Option[Int] = synchronized {
+    override final def addModelTactic(modelId: String, fileContents: String): Option[Int] = synchronized {
       val mId = Integer.parseInt(modelId)
       val action = Models
         .filter(_._Id === mId)
@@ -407,7 +403,7 @@ object SQLite {
     }
 
     /** @inheritdoc */
-    final override def getModel(modelId: Int): ModelPOJO = synchronized {
+    override final def getModel(modelId: Int): ModelPOJO = synchronized {
       val models = runTransactionally(Models.filter(_._Id === modelId).result)
         .toList
         .map(m =>
@@ -431,7 +427,7 @@ object SQLite {
     }
 
     /** @inheritdoc */
-    final override def deleteModel(modelId: Int): Boolean = synchronized {
+    override final def deleteModel(modelId: Int): Boolean = synchronized {
       val deleteModel = Models.filter(_._Id === modelId).delete
       val deleteProofs = Proofs.filter(_.modelid === modelId).delete
       runTransactionally(deleteModel.andThen(deleteProofs))
@@ -439,7 +435,7 @@ object SQLite {
     }
 
     /** @inheritdoc */
-    final override def getInvariants(modelId: Int): Map[Expression, Formula] = {
+    override final def getInvariants(modelId: Int): Map[Expression, Formula] = {
       val model = getModel(modelId)
       var invariants: Map[Expression, Formula] = Map.empty
       GlobalState
@@ -454,7 +450,7 @@ object SQLite {
     // <editor-fold desc="User storage">
 
     /** @inheritdoc */
-    final override def createUser(username: String, password: String, mode: String): Unit = {
+    override final def createUser(username: String, password: String, mode: String): Unit = {
       /* Store passwords as a salted hash. Allow configuring number of iterations
        * since we may conceivably want to change it after deployment for performance reasons */
       val iterations = configWithDefault("security", "passwordHashIterations", 10000)
@@ -469,18 +465,18 @@ object SQLite {
     }
 
     /** @inheritdoc */
-    final override def userExists(username: String): Boolean =
+    override final def userExists(username: String): Boolean =
       synchronized { runTransactionally(Users.filter(_.email === username).exists.result) }
 
     /** @inheritdoc */
-    final override def getUser(username: String): Option[UserPOJO] = synchronized {
-      val users = runTransactionally(Users.filter(_.email === username).result)
-        .map(m => new UserPOJO(m.email.get, m.level.get))
+    override final def getUser(username: String): Option[UserPOJO] = synchronized {
+      val users =
+        runTransactionally(Users.filter(_.email === username).result).map(m => new UserPOJO(m.email.get, m.level.get))
       if (users.length <= 1) users.headOption else throw new Exception("Primary keys aren't unique in models table.")
     }
 
     /** @inheritdoc */
-    final override def checkPassword(username: String, password: String): Boolean = synchronized {
+    override final def checkPassword(username: String, password: String): Boolean = synchronized {
       runTransactionally(Users.filter(_.email === username).result).exists({ row =>
         val hash = Password.hash(password.toCharArray, row.salt.get.getBytes("UTF-8"), row.iterations.get)
         Password.hashEquals(hash, row.hash.get)
@@ -488,7 +484,7 @@ object SQLite {
     }
 
     /** @inheritdoc */
-    final override def getTempUsers: List[UserPOJO] = synchronized {
+    override final def getTempUsers: List[UserPOJO] = synchronized {
       runTransactionally(Users.filter(_.level === 3).result).toList.map(m => new UserPOJO(m.email.get, m.level.get))
     }
 
@@ -512,7 +508,7 @@ object SQLite {
       Compiled((proofId: Rep[Int]) => Proofs.filter(p => p._Id === proofId && p.closed.getOrElse(0) === 1).exists)
 
     /** @inheritdoc */
-    final override def isProofClosed(proofId: Int): Boolean =
+    override final def isProofClosed(proofId: Int): Boolean =
       synchronized { runTransactionally(proofClosedQuery(proofId).result) }
 
     private[this] lazy val stepCountQuery = Compiled((proofId: Rep[Int]) =>
@@ -525,11 +521,11 @@ object SQLite {
         .length
     )
 
-    final override def proofExists(proofId: Int): Boolean =
+    override final def proofExists(proofId: Int): Boolean =
       synchronized { runTransactionally(Proofs.filter(_._Id === proofId).exists.result) }
 
     /** @inheritdoc */
-    final override def getProofInfo(proofId: Int): ProofPOJO = synchronized {
+    override final def getProofInfo(proofId: Int): ProofPOJO = synchronized {
       // With all the calls to different parts of the database, I don't see a good way
       // to implement all of this in a single transaction. It's made even worse since
       // this function not only gets data from the database but also may update data.
@@ -566,7 +562,7 @@ object SQLite {
     }
 
     /** @inheritdoc */
-    final override def getProofsForUser(userId: String): List[(ProofPOJO, String)] = synchronized {
+    override final def getProofsForUser(userId: String): List[(ProofPOJO, String)] = synchronized {
       val models = getModelList(userId)
 
       models.flatMap(model => {
@@ -584,11 +580,11 @@ object SQLite {
     })
 
     /** @inheritdoc */
-    final override def userOwnsProof(userId: String, proofId: String): Boolean =
+    override final def userOwnsProof(userId: String, proofId: String): Boolean =
       synchronized { runTransactionally(userOwnsProofQuery(userId, proofId.toInt).result) }
 
     /** @inheritdoc */
-    final override def updateProofInfo(proof: ProofPOJO): Unit =
+    override final def updateProofInfo(proof: ProofPOJO): Unit =
       synchronized { runTransactionally(Proofs.filter(_._Id === proof.proofId).update(proofPojoToRow(proof))) }
 
     /** Converts the proof meta information into database format. */
@@ -605,7 +601,7 @@ object SQLite {
     )
 
     /** @inheritdoc */
-    final override def getProofsForModel(modelId: Int): List[ProofPOJO] = synchronized {
+    override final def getProofsForModel(modelId: Int): List[ProofPOJO] = synchronized {
       run(Proofs.filter(_.modelid === modelId).result)
         .toList
         .map(p => {
@@ -628,7 +624,7 @@ object SQLite {
     }
 
     /** @inheritdoc */
-    final override def deleteProofSteps(proofId: Int): Int = synchronized {
+    override final def deleteProofSteps(proofId: Int): Int = synchronized {
       val countBefore = run(stepCountQuery(proofId).result)
       // @note count returned from .delete does not reflect the number of deleted steps correctly
       run(Executionsteps.filter(_.proofid === proofId).delete)
@@ -644,7 +640,7 @@ object SQLite {
     }
 
     /** @inheritdoc */
-    final override def deleteProof(proofId: Int): Boolean = synchronized {
+    override final def deleteProof(proofId: Int): Boolean = synchronized {
       deleteProofSteps(proofId)
       run(Proofs.filter(x => x._Id === proofId).delete) == 1
     }
@@ -669,7 +665,7 @@ object SQLite {
     }
 
     /** @inheritdoc */
-    final override def createProofForModel(
+    override final def createProofForModel(
         modelId: Int,
         name: String,
         description: String,
@@ -678,24 +674,26 @@ object SQLite {
     ): Int = synchronized {
       val (provableId, substTactic) = initializeProofForModel(modelId, tactic)
       val action =
-        (Proofs.map(p =>
-          (
-            p.modelid.get,
-            p.name.get,
-            p.description.get,
-            p.date.get,
-            p.closed.get,
-            p.lemmaid.get,
-            p.istemporary.get,
-            p.tactic,
-          )
-        ) returning Proofs.map(_._Id.get)) += (modelId, name, description, date, 0, provableId, 0, substTactic)
+        (
+          Proofs.map(p =>
+            (
+              p.modelid.get,
+              p.name.get,
+              p.description.get,
+              p.date.get,
+              p.closed.get,
+              p.lemmaid.get,
+              p.istemporary.get,
+              p.tactic,
+            )
+          ) returning Proofs.map(_._Id.get)
+        ) += (modelId, name, description, date, 0, provableId, 0, substTactic)
 
       run(action)
     }
 
     /** @inheritdoc */
-    final override def createProof(provable: ProvableSig): Int = synchronized {
+    override final def createProof(provable: ProvableSig): Int = synchronized {
       val provableId = createProvable(provable)
       val action =
         (Proofs.map(p => (p.closed.get, p.lemmaid.get, p.istemporary.get)) returning Proofs.map(_._Id.get)) +=
@@ -709,10 +707,10 @@ object SQLite {
     }
 
     /** @inheritdoc */
-    final override def deleteProvable(provableId: Int): Boolean = ???
+    override final def deleteProvable(provableId: Int): Boolean = ???
 
     /** @inheritdoc */
-    final override def addExecutionStep(step: ExecutionStepPOJO): Int = synchronized {
+    override final def addExecutionStep(step: ExecutionStepPOJO): Int = synchronized {
       val status = ExecutionStepStatus.toString(step.status)
       val steps = Executionsteps.map(dbstep =>
         (
@@ -752,7 +750,7 @@ object SQLite {
     }
 
     /** @inheritdoc */
-    final override def addAlternative(alternativeTo: Int, inputProvable: ProvableSig, trace: ExecutionTrace): Unit = {
+    override final def addAlternative(alternativeTo: Int, inputProvable: ProvableSig, trace: ExecutionTrace): Unit = {
       //      def get(stepId: Int) = {
       //        Executionsteps.filter(_._Id === stepId).list match {
       //          case Nil => throw new Exception("Execution step not found")
@@ -790,21 +788,21 @@ object SQLite {
     }
 
     /** @inheritdoc */
-    final override def addBelleExpr(expr: BelleExpr): Int = synchronized {
+    override final def addBelleExpr(expr: BelleExpr): Int = synchronized {
       val executableId =
         (Executables.map(_.belleexpr) returning Executables.map(_._Id.get)) += Some(BellePrettyPrinter(expr))
       runTransactionally(executableId)
     }
 
     /** @inheritdoc */
-    final override def createProvable(p: ProvableSig): Int = synchronized {
+    override final def createProvable(p: ProvableSig): Int = synchronized {
       val lemma =
         Lemma(p, Lemma.requiredEvidence(p, List(ToolEvidence(List("input" -> p.prettyString, "output" -> "true")))))
       lemmaDB.add(lemma).toInt
     }
 
     /** @inheritdoc */
-    final override def getExecutable(executableId: Int): ExecutablePOJO = getExecutables(List(executableId)).head
+    override final def getExecutable(executableId: Int): ExecutablePOJO = getExecutables(List(executableId)).head
 
     /** Allow retrieving executables in bulk to reduce the number of database queries. */
     private[this] def getExecutables(executableIds: List[Int]): List[ExecutablePOJO] = synchronized {
@@ -815,7 +813,7 @@ object SQLite {
     }
 
     /** @inheritdoc */
-    final override def getProvable(lemmaId: Int): ProvablePOJO = loadProvables(List(lemmaId)).head
+    override final def getProvable(lemmaId: Int): ProvablePOJO = loadProvables(List(lemmaId)).head
 
     private[this] def loadProvables(lemmaIds: List[Int]): List[ProvablePOJO] = {
       lemmaDB.get(lemmaIds.map(_.toString)) match {
@@ -825,7 +823,7 @@ object SQLite {
     }
 
     /** @inheritdoc */
-    final override def updateExecutionStep(executionStepId: Int, step: ExecutionStepPOJO): Unit = synchronized {
+    override final def updateExecutionStep(executionStepId: Int, step: ExecutionStepPOJO): Unit = synchronized {
       // update step
       val action = Executionsteps
         .filter(_._Id === executionStepId)
@@ -906,7 +904,7 @@ object SQLite {
     )
 
     /** @inheritdoc */
-    final override def deleteExecutionStep(proofId: Int, stepId: Int): Unit = {
+    override final def deleteExecutionStep(proofId: Int, stepId: Int): Unit = {
       // val succStepsQuery = Executionsteps.filter(row => row.proofid === proofId && row._Id === stepId)
       val parent = run(stepParentQuery(proofId, stepId).result).head
       run(Executionsteps.filter(row => row.proofid === proofId && row._Id === stepId).delete)
@@ -1008,7 +1006,7 @@ object SQLite {
     }
 
     /** @inheritdoc */
-    final override def getExecutionSteps(executionId: Int): List[ExecutionStepPOJO] = proofSteps(executionId)
+    override final def getExecutionSteps(executionId: Int): List[ExecutionStepPOJO] = proofSteps(executionId)
 
     private lazy val firstExecutionStepQuery = Compiled((proofId: Rep[Int]) =>
       Executionsteps.filter(row =>
@@ -1018,7 +1016,7 @@ object SQLite {
     )
 
     /** @inheritdoc */
-    final override def getFirstExecutionStep(proofId: Int): Option[ExecutionStepPOJO] = runTransactionally(
+    override final def getFirstExecutionStep(proofId: Int): Option[ExecutionStepPOJO] = runTransactionally(
       firstExecutionStepQuery(proofId).result
     ).headOption
       .map(step => {
@@ -1046,7 +1044,7 @@ object SQLite {
     // <editor-fold desc="Proof agenda">
 
     /** @inheritdoc */
-    final override def addAgendaItem(proofId: Int, initialProofNode: ProofTreeNodeId, displayName: String): Int =
+    override final def addAgendaItem(proofId: Int, initialProofNode: ProofTreeNodeId, displayName: String): Int =
       synchronized {
         val (stepId, subgoalId) = tupleId(initialProofNode)
         runTransactionally(
@@ -1056,7 +1054,7 @@ object SQLite {
       }
 
     /** @inheritdoc */
-    final override def updateAgendaItem(item: AgendaItemPOJO): Unit = synchronized {
+    override final def updateAgendaItem(item: AgendaItemPOJO): Unit = synchronized {
       val (stepId, subgoalId) = tupleId(item.initialProofNode)
       runTransactionally(
         Agendaitems
@@ -1067,7 +1065,7 @@ object SQLite {
     }
 
     /** @inheritdoc */
-    final override def agendaItemsForProof(proofId: Int): List[AgendaItemPOJO] = synchronized {
+    override final def agendaItemsForProof(proofId: Int): List[AgendaItemPOJO] = synchronized {
       runTransactionally(Agendaitems.filter(_.proofid === proofId).result)
         .toList
         .map(item =>
@@ -1081,7 +1079,7 @@ object SQLite {
     }
 
     /** @inheritdoc */
-    final override def getAgendaItem(proofId: Int, initialProofNode: ProofTreeNodeId): Option[AgendaItemPOJO] = {
+    override final def getAgendaItem(proofId: Int, initialProofNode: ProofTreeNodeId): Option[AgendaItemPOJO] = {
       val (stepId, subgoalId) = tupleId(initialProofNode)
       synchronized {
         runTransactionally(
@@ -1162,11 +1160,11 @@ object SQLite {
     }
 
     /** @inheritdoc */
-    final override def getPlainOpenSteps(proofId: Int): List[(ExecutionStepPOJO, List[Int])] =
+    override final def getPlainOpenSteps(proofId: Int): List[(ExecutionStepPOJO, List[Int])] =
       getPlainFinishedSteps(proofId, run(openStepsQuery(proofId).result).toList)
 
     /** @inheritdoc */
-    final override def getPlainLeafSteps(proofId: Int): List[(ExecutionStepPOJO, List[Int])] =
+    override final def getPlainLeafSteps(proofId: Int): List[(ExecutionStepPOJO, List[Int])] =
       getPlainFinishedSteps(proofId, run(leavesQuery(proofId).result).toList)
 
     private lazy val executionStepQuery = Compiled((proofId: Rep[Int], stepId: Rep[Int]) =>
@@ -1177,7 +1175,7 @@ object SQLite {
     )
 
     /** @inheritdoc */
-    final override def getPlainExecutionStep(proofId: Int, stepId: Int): Option[ExecutionStepPOJO] = {
+    override final def getPlainExecutionStep(proofId: Int, stepId: Int): Option[ExecutionStepPOJO] = {
       run(executionStepQuery(proofId, stepId).result).headOption match {
         case None => None
         case Some(step) =>
@@ -1209,7 +1207,7 @@ object SQLite {
     )
 
     /** @inheritdoc */
-    final override def getPlainStepSuccessors(
+    override final def getPlainStepSuccessors(
         proofId: Int,
         prevStepId: Int,
         branchOrder: Int,
@@ -1238,7 +1236,7 @@ object SQLite {
     }
 
     /** @inheritdoc */
-    final override def getExecutionStep(proofId: Int, stepId: Int): Option[ExecutionStep] =
+    override final def getExecutionStep(proofId: Int, stepId: Int): Option[ExecutionStep] =
       getPlainExecutionStep(proofId, stepId) match {
         case None => None
         case Some(step) =>
@@ -1261,7 +1259,7 @@ object SQLite {
       }
 
     /** @inheritdoc */
-    final override def getStepProvable(proofId: Int, stepId: Option[Int], subgoal: Option[Int]): Option[ProvableSig] =
+    override final def getStepProvable(proofId: Int, stepId: Option[Int], subgoal: Option[Int]): Option[ProvableSig] =
       (stepId, subgoal) match {
         case (None, None) => getProofInfo(proofId).provableId match {
             case None => None
@@ -1281,7 +1279,7 @@ object SQLite {
       }
 
     /** @inheritdoc */
-    final override def getExecutionTrace(proofId: Int, withProvables: Boolean = true): ExecutionTrace = {
+    override final def getExecutionTrace(proofId: Int, withProvables: Boolean = true): ExecutionTrace = {
       /* This method has proven itself to be a resource hog, so this implementation attempts to minimize the number of
          DB calls. */
       val stepsCount = run(stepCountQuery(proofId).result)

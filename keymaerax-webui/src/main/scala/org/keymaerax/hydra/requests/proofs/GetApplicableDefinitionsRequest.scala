@@ -87,19 +87,17 @@ class GetApplicableDefinitionsRequest(db: DBAbstraction, userId: String, proofId
                 }),
               0,
             )
-            repl.flatMap(
-              ExpressionTraversal.traverseExpr(
-                new ExpressionTraversalFunction() {
-                  override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
-                    case s: DotTerm =>
-                      val n = dots(s)
-                      Right(Variable(n.name, n.index))
-                    case _ => Left(None)
-                  }
-                },
-                _,
-              )
-            )
+            repl.flatMap(ExpressionTraversal.traverseExpr(
+              new ExpressionTraversalFunction() {
+                override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
+                  case s: DotTerm =>
+                    val n = dots(s)
+                    Right(Variable(n.name, n.index))
+                  case _ => Left(None)
+                }
+              },
+              _,
+            ))
         }
         val expansions: List[(NamedSymbol, Expression, Option[Expression], Boolean)] = applicable
           .toList

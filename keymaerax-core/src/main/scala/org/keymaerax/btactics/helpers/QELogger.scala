@@ -156,8 +156,7 @@ object QELogger extends Logging {
         case None => ()
         case Some(p) => processEntry(p)
       }
-    } catch { case ex: Exception => logger.error("File I/O exception", ex) }
-    finally { src.close() }
+    } catch { case ex: Exception => logger.error("File I/O exception", ex) } finally { src.close() }
   }
 
   type LogConfig = (Int, String)
@@ -242,8 +241,10 @@ object QELogger extends Logging {
     options.get("convert") match {
       case Some(format) => format match {
           case "smtlib" =>
-            val logPath = options
-              .getOrElse("logpath", throw new Exception("Missing log file path, use argument -logpath path/to/logfile"))
+            val logPath = options.getOrElse(
+              "logpath",
+              throw new Exception("Missing log file path, use argument -logpath path/to/logfile"),
+            )
             val outputPath = options.getOrElse("outputpath", logPath + "${entryname}.smt2")
             exportSmtLibFormat(logPath, outputPath)
           case _ => throw new Exception("Unknown output format " + format + ", use one of [smtlib]")

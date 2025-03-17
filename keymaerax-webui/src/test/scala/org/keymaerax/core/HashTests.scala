@@ -18,10 +18,8 @@ import scala.collection.mutable
 /**
  * Tests hash code and some collection expectations such as lookup and adds and removes.
  *
- * @todo
- *   more exhaustive tests
- * @author
- *   Andre Platzer
+ * @todo more exhaustive tests
+ * @author Andre Platzer
  */
 @CheckinTest
 class HashTests extends AnyFlatSpec with Matchers {

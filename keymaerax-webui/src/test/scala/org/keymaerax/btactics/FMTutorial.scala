@@ -18,8 +18,7 @@ import scala.language.postfixOps
 /**
  * Tutorial test cases.
  *
- * @author
- *   Stefan Mitsch
+ * @author Stefan Mitsch
  */
 @SlowTest @nowarn("cat=deprecation&origin=org.keymaerax.btactics.TactixLibrary.master")
 class FMTutorial extends TacticTestBase {

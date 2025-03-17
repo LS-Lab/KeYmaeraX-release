@@ -80,7 +80,7 @@ trait HTMLPrinter {
 
 @nowarn("cat=deprecation&origin=org.keymaerax.parser.KeYmaeraXWeightedPrettyPrinter")
 class UIAbbreviatingKeYmaeraXPrettyPrinter extends KeYmaeraXWeightedPrettyPrinter {
-  protected override def pp(q: PosInExpr, term: Term): String = term match {
+  override protected def pp(q: PosInExpr, term: Term): String = term match {
     case FuncOf(Function(n, i, _, _, Some(_)), Nothing) => emit(q, n + i.map("_" + _).getOrElse("") + "()")
     case FuncOf(Function(n, i, _, _, Some(_)), arg: Pair) => emit(q, n + i.map("_" + _).getOrElse("") + pp(q ++ 0, arg))
     case FuncOf(Function(n, i, _, _, Some(_)), arg) =>
@@ -130,8 +130,7 @@ object UIKeYmaeraXPrettyPrinter extends HTMLPrinter {
 
 /**
  * User-interface pretty printer for KeYmaera X syntax.
- * @author
- *   Andre Platzer
+ * @author Andre Platzer
  */
 class UIKeYmaeraXPrettyPrinter(val topId: String, val plainText: Boolean) extends UIAbbreviatingKeYmaeraXPrettyPrinter {
   import UIKeYmaeraXPrettyPrinter._
@@ -146,7 +145,7 @@ class UIKeYmaeraXPrettyPrinter(val topId: String, val plainText: Boolean) extend
     htmlEncode(stringify(expr))
   }
 
-  protected override def emit(q: PosInExpr, s: String): String = {
+  override protected def emit(q: PosInExpr, s: String): String = {
     val hasStep = plainText ||
       (topExpr match {
         case t: Term => UIIndex.allStepsAt(t.sub(q).get, Some(pos ++ q), None, Nil).isEmpty
@@ -183,7 +182,7 @@ class UIKeYmaeraXPrettyPrinter(val topId: String, val plainText: Boolean) extend
     }
   }
 
-  protected override def ppOp(expr: Expression): String = expr match {
+  override protected def ppOp(expr: Expression): String = expr match {
     case _: Term => htmlSpan("k4-op k4-term-op", super.ppOp(expr))
     case _: CompositeFormula => htmlSpan("k4-op k4-propfml-op", super.ppOp(expr))
     case _: ComparisonFormula => htmlSpan("k4-op k4-cmpfml-op", super.ppOp(expr))
@@ -193,7 +192,7 @@ class UIKeYmaeraXPrettyPrinter(val topId: String, val plainText: Boolean) extend
     case _ => super.ppOp(expr)
   }
 
-  protected override def wrap(text: String, expr: Expression): String = expr match {
+  override protected def wrap(text: String, expr: Expression): String = expr match {
     case _: Box => htmlSpan("k4-mod-open", "[") + text + htmlSpan("k4-mod-close", "]")
     case _: Diamond => htmlSpan("k4-mod-open", "<") + text + htmlSpan("k4-mod-close", ">")
     case _: ODESystem | _: Program | _: DifferentialProgram | _: UnaryCompositeProgram => htmlSpan("k4-prg-open", "{") +
@@ -201,7 +200,7 @@ class UIKeYmaeraXPrettyPrinter(val topId: String, val plainText: Boolean) extend
     case _ => super.wrap(text, expr)
   }
 
-  protected override def pp(q: PosInExpr, term: Term): String = term match {
+  override protected def pp(q: PosInExpr, term: Term): String = term match {
     case t: Power => emit(
         q,
         wrapLeft(t, pp(q ++ 0, t.left)) + s"${HTML_OPEN}sup$HTML_CLOSE" + wrapRight(t, pp(q ++ 1, t.right)) +
@@ -248,14 +247,14 @@ class UIKeYmaeraXPrettyPrinter(val topId: String, val plainText: Boolean) extend
   override def apply(seq: Sequent): String = ???
 
   // symmetric space depending on left/right/both having parentheses
-  protected override def spaceLeft(t: BinaryComposite, leftPrint: String): String =
+  override protected def spaceLeft(t: BinaryComposite, leftPrint: String): String =
     (skipParensLeft(t), skipParensRight(t)) match {
       case (true, true) => leftPrint + (" " * balanceWeight(t))
       case (true, false) => leftPrint + (" " * weight(t.right, t))
       case (false, true) => leftPrint + (" " * weight(t.left, t))
       case (false, false) => leftPrint + " "
     }
-  protected override def spaceRight(t: BinaryComposite, rightPrint: String): String =
+  override protected def spaceRight(t: BinaryComposite, rightPrint: String): String =
     (skipParensLeft(t), skipParensRight(t)) match {
       case (true, true) => (" " * balanceWeight(t)) + rightPrint
       case (true, false) => (" " * weight(t.right, t)) + rightPrint
@@ -265,7 +264,7 @@ class UIKeYmaeraXPrettyPrinter(val topId: String, val plainText: Boolean) extend
 
   private def balanceWeight(par: BinaryComposite): Int = Math.max(weight(par.left, par), weight(par.right, par))
 
-  protected override def weight(sub: Expression, par: BinaryComposite): Int = {
+  override protected def weight(sub: Expression, par: BinaryComposite): Int = {
     val prec = op(par).prec
     val subPrec = op(sub).prec
 
@@ -297,8 +296,7 @@ object UIKeYmaeraXAxiomPrettyPrinter {
 
 /**
  * User-interface pretty printer for UI axiom entries.
- * @author
- *   Stefan Mitsch
+ * @author Stefan Mitsch
  */
 @nowarn("cat=deprecation&origin=org.keymaerax.parser.KeYmaeraXWeightedPrettyPrinter")
 class UIKeYmaeraXAxiomPrettyPrinter extends KeYmaeraXWeightedPrettyPrinter with HTMLPrinter {
@@ -316,7 +314,7 @@ class UIKeYmaeraXAxiomPrettyPrinter extends KeYmaeraXWeightedPrettyPrinter with 
     case Except(vs) => s"(${HTML_OPEN}s$HTML_CLOSE" + vs.map(printName).mkString(",") + s"$HTML_OPEN/s$HTML_CLOSE)"
   }
 
-  protected override def pp(q: PosInExpr, fml: Formula): String = emit(
+  override protected def pp(q: PosInExpr, fml: Formula): String = emit(
     q,
     fml match {
       case PredOf(p, Nothing) => printName(p)
@@ -327,7 +325,7 @@ class UIKeYmaeraXAxiomPrettyPrinter extends KeYmaeraXWeightedPrettyPrinter with 
     },
   )
 
-  protected override def pp(q: PosInExpr, term: Term): String = emit(
+  override protected def pp(q: PosInExpr, term: Term): String = emit(
     q,
     term match {
       case FuncOf(f, Nothing) => printName(f)
@@ -342,7 +340,7 @@ class UIKeYmaeraXAxiomPrettyPrinter extends KeYmaeraXWeightedPrettyPrinter with 
     },
   )
 
-  protected override def pp(q: PosInExpr, program: Program): String = emit(
+  override protected def pp(q: PosInExpr, program: Program): String = emit(
     q,
     program match {
       case a: ProgramConst => printName(a) + ";"
@@ -352,7 +350,7 @@ class UIKeYmaeraXAxiomPrettyPrinter extends KeYmaeraXWeightedPrettyPrinter with 
     },
   )
 
-  protected override def ppODE(q: PosInExpr, program: DifferentialProgram): String = emit(
+  override protected def ppODE(q: PosInExpr, program: DifferentialProgram): String = emit(
     q,
     program match {
       case a @ DifferentialProgramConst(_, s) => printName(a) + printSpace(s)
@@ -363,14 +361,14 @@ class UIKeYmaeraXAxiomPrettyPrinter extends KeYmaeraXWeightedPrettyPrinter with 
   override def apply(seq: Sequent): String = ???
 
   // symmetric space depending on left/right/both having parentheses
-  protected override def spaceLeft(t: BinaryComposite, leftPrint: String): String =
+  override protected def spaceLeft(t: BinaryComposite, leftPrint: String): String =
     (skipParensLeft(t), skipParensRight(t)) match {
       case (true, true) => leftPrint + (" " * balanceWeight(t))
       case (true, false) => leftPrint + (" " * weight(t.right, t))
       case (false, true) => leftPrint + (" " * weight(t.left, t))
       case (false, false) => leftPrint + " "
     }
-  protected override def spaceRight(t: BinaryComposite, rightPrint: String): String =
+  override protected def spaceRight(t: BinaryComposite, rightPrint: String): String =
     (skipParensLeft(t), skipParensRight(t)) match {
       case (true, true) => (" " * balanceWeight(t)) + rightPrint
       case (true, false) => (" " * weight(t.right, t)) + rightPrint
@@ -380,7 +378,7 @@ class UIKeYmaeraXAxiomPrettyPrinter extends KeYmaeraXWeightedPrettyPrinter with 
 
   private def balanceWeight(par: BinaryComposite): Int = Math.max(weight(par.left, par), weight(par.right, par))
 
-  protected override def weight(sub: Expression, par: BinaryComposite): Int = {
+  override protected def weight(sub: Expression, par: BinaryComposite): Int = {
     val prec = op(par).prec
     val subPrec = op(sub).prec
 

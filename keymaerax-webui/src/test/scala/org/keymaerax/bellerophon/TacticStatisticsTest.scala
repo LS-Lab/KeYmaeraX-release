@@ -13,8 +13,7 @@ import scala.collection.immutable.StringOps
 
 /**
  * Tests tactic statistics.
- * @author
- *   Stefan Mitsch
+ * @author Stefan Mitsch
  */
 @SummaryTest @UsualTest
 class TacticStatisticsTest extends TacticTestBase {

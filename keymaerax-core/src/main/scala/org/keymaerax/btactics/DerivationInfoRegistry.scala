@@ -55,9 +55,7 @@ object DerivationInfoRegistry extends Logging {
   /** Locate the derivation info for said tactic */
   @tailrec
   def locate(t: BelleExpr): Option[DerivationInfo] = t match {
-    case n: NamedBelleExpr =>
-      try { Some(DerivationInfo.ofCodeName(n.name)) }
-      catch { case _: Exception => None }
+    case n: NamedBelleExpr => try { Some(DerivationInfo.ofCodeName(n.name)) } catch { case _: Exception => None }
     case AppliedPositionTactic(n, _) => locate(n)
     case AppliedBuiltinTwoPositionTactic(n, _, _) => locate(n)
     // @todo probably more cases
@@ -68,9 +66,7 @@ object DerivationInfoRegistry extends Logging {
   private def registerDerivationFromMethod(clazz: Class[_], instance: AnyRef, method: Method): Unit = {
     // Exceptions that occur during reflection are wrapped in an InvocationTargetException.
     // We unwrap and rethrow so from the outside it looks like we just evaluated the derivation normally.
-    val valueAny =
-      try { method.invoke(instance) }
-      catch { case e: InvocationTargetException => throw e.getCause }
+    val valueAny = try { method.invoke(instance) } catch { case e: InvocationTargetException => throw e.getCause }
 
     val value = valueAny.asInstanceOf[DerivationInfo]
     DerivationInfo.register(value)
@@ -104,8 +100,7 @@ object DerivationInfoRegistry extends Logging {
   /**
    * Find and register all fields of a Scala object which are marked with the [[Derivation]] annotation.
    *
-   * @return
-   *   A list of fields that failed to initialize and register, along with the cause.
+   * @return A list of fields that failed to initialize and register, along with the cause.
    */
   private def registerDerivationsFromObject(clazz: Class[?]): Seq[String] = {
     // An object's instance can be located through its public static final MODULE$ field.
@@ -143,8 +138,7 @@ object DerivationInfoRegistry extends Logging {
    * This function is implemented without using the Scala 2 reflection API. Hopefully this will make it easier to
    * upgrade to Scala 3 later.
    *
-   * @return
-   *   A list of fields that failed to initialize and register, along with the cause.
+   * @return A list of fields that failed to initialize and register, along with the cause.
    */
   private def registerDerivationsGlobally(): Seq[String] = {
     import scala.jdk.CollectionConverters.*
@@ -167,8 +161,7 @@ object DerivationInfoRegistry extends Logging {
    * require loading a number of classes, which triggers their static initializers and thus requires some attention to
    * initialization order.
    *
-   * @return
-   *   a list of errors encountered during initialization
+   * @return a list of errors encountered during initialization
    */
   def init(initLibrary: Boolean = true): Seq[String] = {
     // Initialization is relatively slow, so only initialize once

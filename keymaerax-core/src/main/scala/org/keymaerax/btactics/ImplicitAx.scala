@@ -254,7 +254,7 @@ object ImplicitAx extends Logging {
           cohideR(1) & byUS(Ax.Dcompose),
           useAt(Ax.K)(1) &
             useAt(assignby3, PosInExpr(1 :: Nil))(1) & allR(1) & allL(-1) &
-            useAt(Ax.K)(1) & monb & exhaustiveEqR2L(-1) & prop
+            useAt(Ax.K)(1) & monb & exhaustiveEqR2L(-1) & prop,
         ),
       namespace,
     )
@@ -284,19 +284,16 @@ object ImplicitAx extends Logging {
                 cut("(y_)'=-(1)".asFormula) < (
                   cutR("[t:=y_;][t':=1;](f(y_))'=(f(t))'*(y_)'".asFormula)(1) < (
                     cohideR(1) & byUS(Ax.Dcompose),
-                    exhaustiveEqL2R(-3) & cohideR(1) & implyR(1) & id
+                    exhaustiveEqL2R(-3) & cohideR(1) & implyR(1) & id,
                   ),
-                  hideR(1) & hideL(-1) & chase(1, 0 :: Nil) & id
+                  hideR(1) & hideL(-1) & chase(1, 0 :: Nil) & id,
                 ),
-                implyR(1) & useAt(selfasg)(-3) & implyL(-3) < (
-                  hideL(-2) & hideR(1) & QE,
-                  id
-                )
+                implyR(1) & useAt(selfasg)(-3) & implyL(-3) < (hideL(-2) & hideR(1) & QE, id),
               ),
             K(1) & G(1) & K(1, 1 :: Nil) & K(1) & G(1) & K(1, 1 :: Nil) & K(1) & G(1) &
-              implyR(1) & exhaustiveEqL2R(hide = true)(-1) & cohideR(1) & byUS(arith)
+              implyR(1) & exhaustiveEqL2R(hide = true)(-1) & cohideR(1) & byUS(arith),
           ),
-          cohideR(2) & K(1) & G(1) & K(1) & G(1) & implyR(1) & Dassignb(1) & id
+          cohideR(2) & K(1) & G(1) & K(1) & G(1) & implyR(1) & Dassignb(1) & id,
         ),
     )
   }
@@ -314,7 +311,7 @@ object ImplicitAx extends Logging {
       "[{c{|t_|}}]p(|t_|) <-> [{t_'=1,c{|t_|}}]p(|t_|)".asFormula,
       equivR(1) < (
         useAt(pr1)(-1) & useAt(pr2)(-1) & useAt(Ax.commaCommute)(-1) & id,
-        useAt(pr3)(1) & useAt(pr4, PosInExpr(1 :: Nil))(1) & useAt(Ax.commaCommute)(1) & id
+        useAt(pr3)(1) & useAt(pr4, PosInExpr(1 :: Nil))(1) & useAt(Ax.commaCommute)(1) & id,
       ),
     )
 
@@ -330,7 +327,7 @@ object ImplicitAx extends Logging {
         hideL(-3) & hideL(-3) & exhaustiveEqL2R(-1) & hideL(-1) & QE,
         hideL(-1) & hideL(-1) & chase(1, 1 :: Nil) & DW(1) &
           DE(1) & G(1) & useAt(Ax.Dassignbeq)(1) & allR(1) & implyR(1) &
-          exhaustiveEqL2R(-1) & hideL(-1) & byUS(arith2)
+          exhaustiveEqL2R(-1) & hideL(-1) & byUS(arith2),
       ),
     )
 
@@ -340,7 +337,7 @@ object ImplicitAx extends Logging {
         hideL(-3) & hideL(-3) & exhaustiveEqL2R(-1) & hideL(-1) & QE,
         hideL(-1) & hideL(-1) & chase(1, 1 :: Nil) & DW(1) &
           DE(1) & G(1) & useAt(Ax.Dassignbeq)(1) & allR(1) & implyR(1) &
-          exhaustiveEqL2R(-1) & hideL(-1) & byUS(arith2)
+          exhaustiveEqL2R(-1) & hideL(-1) & byUS(arith2),
       ),
     )
 
@@ -362,52 +359,40 @@ object ImplicitAx extends Logging {
                   cutR("<{t_'=1,c{|t_,t0|}& f(|t_,t0|)-(t_-t0)^2>=0}>t_!=t0".asFormula)(1) < (
                     ODELiveness.dDR("(f(|t_,t0|))'-2*(t_-t0)>=0".asFormula)(1) < (
                       useAt(ODEInvariance.contAx, PosInExpr(1 :: Nil))(1) & id,
-                      hideL(-1) & hideL(-3) & byUS(tt)
+                      hideL(-1) & hideL(-3) & byUS(tt),
                     ),
                     cohideR(1) & implyR(1) &
                       DWd(-1) & ODELiveness.kDomainDiamond("f(|t_,t0|)-(t_-t0)^2>=0 & t_!=t0".asFormula)(1) < (
-                        ODELiveness.dDR("f(|t_,t0|)-(t_-t0)^2>=0".asFormula)(1) < (
-                          id,
-                          G(1) & closeT
-                        ),
+                        ODELiveness.dDR("f(|t_,t0|)-(t_-t0)^2>=0".asFormula)(1) < (id, G(1) & closeT),
                         DW(1) & G(1) & implyR(1) & andL(-1) & notL(-2) & notR(2) & exhaustiveEqL2R()(-2) & hideL(
                           -2
-                        ) & QE
-                      )
+                        ) & QE,
+                      ),
                   ),
-                  hideR(1) & hideL(-2) & byUS(arith3)
+                  hideR(1) & hideL(-2) & byUS(arith3),
                 ),
                 // reverse direction
                 cut("-(f(|t_,t0|))' - 2*(t_-t0) > 0".asFormula) < (
                   cutR("<{t_'=1,c{|t_,t0|}& -f(|t_,t0|)-(t_-t0)^2>=0}>t_!=t0".asFormula)(1) < (
                     ODELiveness.dDR("-(f(|t_,t0|))'-2*(t_-t0)>=0".asFormula)(1) < (
                       useAt(ODEInvariance.contAx, PosInExpr(1 :: Nil))(1) & id,
-                      hideL(-1) & hideL(-3) & byUS(tt2)
+                      hideL(-1) & hideL(-3) & byUS(tt2),
                     ),
                     cohideR(1) & implyR(1) &
                       DWd(-1) & ODELiveness.kDomainDiamond("-f(|t_,t0|)-(t_-t0)^2>=0 & t_!=t0".asFormula)(1) < (
-                        ODELiveness.dDR("-f(|t_,t0|)-(t_-t0)^2>=0".asFormula)(1) < (
-                          id,
-                          G(1) & closeT
-                        ),
+                        ODELiveness.dDR("-f(|t_,t0|)-(t_-t0)^2>=0".asFormula)(1) < (id, G(1) & closeT),
                         DW(1) & G(1) & implyR(1) & andL(-1) & notL(-2) & notR(2) & exhaustiveEqL2R()(-2) & hideL(
                           -2
-                        ) & QE
-                      )
+                        ) & QE,
+                      ),
                   ),
-                  hideR(1) & hideL(-2) & byUS(arith3)
-                )
+                  hideR(1) & hideL(-2) & byUS(arith3),
+                ),
               ),
-              cohideR(2) & QE
+              cohideR(2) & QE,
             ),
           useAt(Ax.Kd, PosInExpr(1 :: Nil))(1) & useAt(Ax.Dcomp)(-1) & monb &
-            implyR(1) & andR(1) < (
-              andR(1) < (
-                hideL(-1) & byUS(arith),
-                useAt(Ax.DX)(-1) & prop
-              ),
-              id
-            )
+            implyR(1) & andR(1) < (andR(1) < (hideL(-1) & byUS(arith), useAt(Ax.DX)(-1) & prop), id),
         ),
       namespace,
     )
@@ -445,27 +430,26 @@ object ImplicitAx extends Logging {
                 useAt(Ax.DCC)(1) & andR(1) < (
                   boxd(1) & notR(1) &
                     cutL("<{t_'=1,c{|x_|}&true&x_-t_>0}>(t_=x_ | !f(|x_|)>=0)".asFormula)(-2) < (
-                      skip, cohideR(1) & implyR(1) & mond & prop
+                      skip,
+                      cohideR(1) & implyR(1) & mond & prop,
                     ) &
                     cutL("<{t_'=1,c{|x_|}&f(|x_|)>=0}>(t_=x_ | !f(|x_|)>=0)".asFormula)(-1) < (
-                      skip, cohideR(1) & implyR(1) & mond & prop
+                      skip,
+                      cohideR(1) & implyR(1) & mond & prop,
                     ) & andLi &
                     useAt(Ax.UniqIff, PosInExpr(0 :: Nil))(-1) & diamondd(-1) & notL(-1) & DW(1) & G(1) &
                     byUS(arith),
-                  G(1) & byUS(tt)
-                )
+                  G(1) & byUS(tt),
+                ),
             ),
           cohideR(2) & implyR(1) & useAt(pr)(1, 1 :: Nil) &
             andL(-1) & ODELiveness.kDomainDiamond("t_!=g()".asFormula)(1) < (
               useAt(ODEInvariance.contAx, PosInExpr(1 :: Nil))(1) & id,
               hideL(-1) & dC("t_>=g()".asFormula)(1) < (
                 DW(1) & G(1) & implyR(1) & andL(-1) & andL(-1) & hideL(-2) & QE,
-                dR("true".asFormula)(1) < (
-                  byUS(tt2),
-                  cohideR(1) & useAt(boxTrueAxiom)(1)
-                )
-              )
-            )
+                dR("true".asFormula)(1) < (byUS(tt2), cohideR(1) & useAt(boxTrueAxiom)(1)),
+              ),
+            ),
         ),
       namespace,
     )
@@ -532,15 +516,15 @@ object ImplicitAx extends Logging {
               // Get rid of x=g(t) equalities
               (andL(-1) & exhaustiveEqL2R()(-1) & hideL(-1)) * (dim - 1) & exhaustiveEqL2R()(-1) & hideL(-1) &
               // Prove all remaining equalities
-              (andR(1) < (byUS(Ax.equalReflexive), skip)) * (dim - 1) & byUS(Ax.equalReflexive)
+              (andR(1) < (byUS(Ax.equalReflexive), skip)) * (dim - 1) & byUS(Ax.equalReflexive),
           ),
           cohideR(2) & implyR(1) & boxAnd(1) & andR(1) < (
             id,
             implyRi &
               (useAt(impSplit, PosInExpr(1 :: Nil))(1) & andR(1) < (byUS(firstDerVar), skip)) * (dim - 1) & byUS(
                 firstDerVar
-              )
-          )
+              ),
+          ),
         ),
     )
   }
@@ -613,8 +597,8 @@ object ImplicitAx extends Logging {
             implyR(1) & barcantac & mond &
             cut(cutfml2) < (
               existsL(Symbol("Llast")) * dim & andL(Symbol("Llast")) * (dim - 1) & eqr2l & extac & prop,
-              cohideR(2) & QE
-            )
+              cohideR(2) & QE,
+            ),
         ),
     )
   }
@@ -683,8 +667,9 @@ object ImplicitAx extends Logging {
     val fml = Imply(expdef, Or(Box(ODESystem(ode, odeDom), expLeft), Box(ODESystem(oder, odeDom), expRight)))
 
     val stt = (pos: Int) =>
-      (odeLHS zip yLHS)
-        .foldLeft(skip: BelleExpr)((t, v) => DLBySubst.stutter(v._1)(pos) & boundRename(v._1, v._2)(pos) & t)
+      (odeLHS zip yLHS).foldLeft(skip: BelleExpr)((t, v) =>
+        DLBySubst.stutter(v._1)(pos) & boundRename(v._1, v._2)(pos) & t
+      )
 
     proveBy(
       fml,
@@ -692,7 +677,7 @@ object ImplicitAx extends Logging {
         hideR(2) & stt(-1) &
           useAt(fwd)(-1) & monb & useAt(dDcomp)(1) & mond & stt(1) & id,
         hideR(1) & stt(-1) &
-          useAt(bwd)(-1) & monb & ODEInvariance.rewriteODEAt(ode)(-1) & useAt(dDcomp)(1) & mond & stt(1) & id
+          useAt(bwd)(-1) & monb & ODEInvariance.rewriteODEAt(ode)(-1) & useAt(dDcomp)(1) & mond & stt(1) & id,
       ),
     )
   }
@@ -759,7 +744,7 @@ object ImplicitAx extends Logging {
                 .foldRight(skip: BelleExpr)((pr, t) =>
                   andR(1) < (useAt(pr)(1) & (existsR(1) * (dim - 1)) & orR(1) & hideR(2) & id, t)
                 ) &
-              useAt(canonPr.last)(1) & (existsR(1) * (dim - 1)) & orR(1) & hideR(2) & id
+              useAt(canonPr.last)(1) & (existsR(1) * (dim - 1)) & orR(1) & hideR(2) & id,
           ),
           cutL(parDerR.conclusion.succ(0).sub(PosInExpr(0 :: Nil)).get.asInstanceOf[Formula])(-1) < (
             useAt(parDerR)(-1) &
@@ -772,10 +757,10 @@ object ImplicitAx extends Logging {
                 .foldRight(skip: BelleExpr)((pr, t) =>
                   andR(1) < (useAt(pr)(1) & (existsR(1) * (dim - 1)) & orR(1) & hideR(1) & id, t)
                 ) &
-              useAt(canonPr.last)(1) & (existsR(1) * (dim - 1)) & orR(1) & hideR(1) & id
-          )
+              useAt(canonPr.last)(1) & (existsR(1) * (dim - 1)) & orR(1) & hideR(1) & id,
+          ),
         ),
-        cohideR(2) & existsR(eq1.right)(1) & byUS(Ax.equalReflexive)
+        cohideR(2) & existsR(eq1.right)(1) & byUS(Ax.equalReflexive),
       ),
     )
 
@@ -822,10 +807,8 @@ object ImplicitAx extends Logging {
   /**
    * Same as deriveDiffAxiom but generates the list of simultaneously defined functions by guessing names
    *
-   * @param f
-   *   an interpreted function with differential equations
-   * @return
-   *   list of proved differential axioms
+   * @param f an interpreted function with differential equations
+   * @return list of proved differential axioms
    */
   def deriveDiffAxiomSing(f: Function): List[(Function, ProvableSig)] = {
     require(f.interp.isDefined, "Function must be interpreted: " + f)
@@ -974,7 +957,8 @@ object ImplicitAx extends Logging {
             cut("g() = f() | g() > f() | g() < f()".asFormula) < (
               orL(-3) < (
                 choiceb(-1) & andL(-1) & useAt(Ax.DX)(-3) & exhaustiveEqL2R(-2) & exhaustiveEqL2R(-1) & implyL(-3) < (
-                  cohideR(2) & QE, id
+                  cohideR(2) & QE,
+                  id,
                 ),
                 orL(-3) < (
                   cut("<{y'=1 & y <= g()}>P(g())".asFormula) < (
@@ -984,17 +968,14 @@ object ImplicitAx extends Logging {
                         ODELiveness.closedRef(True)(1) < (
                           ODELiveness.kDomainDiamond("y>=g()".asFormula)(1) < (
                             ODELiveness.dV(None)(1) & QE,
-                            ODEInvariance.dCClosure(1) < (
-                              QE,
-                              dW(1) & QE
-                            )
+                            ODEInvariance.dCClosure(1) < (QE, dW(1) & QE),
                           ),
                           QE,
-                          ODE(1)
+                          ODE(1),
                         ),
                       useAt(Ax.Kd, PosInExpr(1 :: Nil))(1) & choiceb(-1) & andL(-1) & cohideOnlyL(-3) & monb &
-                        implyR(1) & exhaustiveEqL2R(-2) & prop
-                    )
+                        implyR(1) & exhaustiveEqL2R(-2) & prop,
+                    ),
                   ),
                   cut("<{y'=(-1) & g() <= y}>P(g())".asFormula) < (
                     cohideOnlyL(-4) & diamondd(-1) & notL(-1) & V(2) & prop,
@@ -1003,24 +984,21 @@ object ImplicitAx extends Logging {
                         ODELiveness.closedRef(True)(1) < (
                           ODELiveness.kDomainDiamond("g() >= y".asFormula)(1) < (
                             ODELiveness.dV(None)(1) & QE,
-                            ODEInvariance.dCClosure(1) < (
-                              QE,
-                              dW(1) & QE
-                            )
+                            ODEInvariance.dCClosure(1) < (QE, dW(1) & QE),
                           ),
                           QE,
-                          ODE(1)
+                          ODE(1),
                         ),
                       useAt(Ax.Kd, PosInExpr(1 :: Nil))(1) & choiceb(-1) & andL(-1) & cohideOnlyL(-4) & monb &
-                        implyR(1) & exhaustiveEqL2R(-2) & prop
-                    )
-                  )
-                )
+                        implyR(1) & exhaustiveEqL2R(-2) & prop,
+                    ),
+                  ),
+                ),
               ),
-              cohideR(2) & QE
-            )
+              cohideR(2) & QE,
+            ),
           ),
-        cohideR(2) & QE
+        cohideR(2) & QE,
       ),
     namespace,
   )
@@ -1054,7 +1032,7 @@ object ImplicitAx extends Logging {
               Symbol("Llast")
             ), // Rewrite the initial value x=0
             implyR(pos) &
-              choiceb(pos) & andR(pos)
+              choiceb(pos) & andR(pos),
           )
       }
     },
@@ -1100,7 +1078,7 @@ object ImplicitAx extends Logging {
 
       cutR(Exists(targetVar :: Nil, Equal(targetVar, t0)))(pos) < (
         cohideR(Symbol("Rlast")) & existsR(t0)(1) & byUS(Ax.equalReflexive),
-        implyR(pos) & existsL(Symbol("Llast")) & useAt(expAx, PosInExpr(1 :: Nil))(pos)
+        implyR(pos) & existsL(Symbol("Llast")) & useAt(expAx, PosInExpr(1 :: Nil))(pos),
       )
     },
   )
@@ -1115,8 +1093,8 @@ object ImplicitAx extends Logging {
   )
 
   // Hack version of generalize to work for diamond
-  private def generalized(f: Formula): DependentPositionWithAppliedInputTactic =
-    inputanon { (pos: Position, seq: Sequent) =>
+  private def generalized(f: Formula): DependentPositionWithAppliedInputTactic = inputanon {
+    (pos: Position, seq: Sequent) =>
       {
         require(pos.isSucc && pos.isTopLevel, "differential equation unfolding only at top-level succedent")
 
@@ -1129,23 +1107,17 @@ object ImplicitAx extends Logging {
 
         cutR(fml)(pos) < (skip, cohideR(pos) & implyR(1) & mond)
       }
-    }
+  }
 
   private lazy val tEx1 = remember(
     "y()>=t__0  ==>  <{t__0'=--(1)}>y()=t__0".asSequent,
-    ODELiveness.kDomainDiamond("t__0 > y()".asFormula)(1) < (
-      cohideR(1) & solve(1) & QE,
-      ODE(1)
-    ),
+    ODELiveness.kDomainDiamond("t__0 > y()".asFormula)(1) < (cohideR(1) & solve(1) & QE, ODE(1)),
     namespace,
   )
 
   private lazy val tEx2 = remember(
     "y()<=t__0  ==>  <{t__0'=-(1)}>y()=t__0".asSequent,
-    ODELiveness.kDomainDiamond("t__0 < y()".asFormula)(1) < (
-      cohideR(1) & solve(1) & QE,
-      ODE(1)
-    ),
+    ODELiveness.kDomainDiamond("t__0 < y()".asFormula)(1) < (cohideR(1) & solve(1) & QE, ODE(1)),
     namespace,
   )
 
@@ -1183,10 +1155,9 @@ object ImplicitAx extends Logging {
         val i = xii._2
         val pos = if (i == m.length - 1) 0 :: 1 :: List.fill(i)(1) else 0 :: 1 :: List.fill(i)(1) ++ (0 :: Nil)
         val x0 = Variable(xi._1.name, Some(0))
-        cutR(Exists(x0 :: Nil, Equal(x0, xi._2)))(1) < (
-          cohideR(1) & QE,
-          implyR(1) & existsL(Symbol("Llast")) & eqR2L(-(i + 1))(1, pos)
-        ): BelleExpr
+        cutR(
+          Exists(x0 :: Nil, Equal(x0, xi._2))
+        )(1) < (cohideR(1) & QE, implyR(1) & existsL(Symbol("Llast")) & eqR2L(-(i + 1))(1, pos)): BelleExpr
       })
       .reduce(_ & _)
 
@@ -1222,7 +1193,7 @@ object ImplicitAx extends Logging {
                 ODELiveness.odeReduce(strict = true, Nil)(1) &
                   (hideL(-1) * (m.length)) &
                   byUS(tEx1),
-                QE
+                QE,
               ),
             hideR(1) & useAt(diffadj2)(1, 0 :: 1 :: Nil) &
               chase(1, 0 :: Nil) &
@@ -1232,9 +1203,9 @@ object ImplicitAx extends Logging {
                 ODELiveness.odeReduce(strict = true, Nil)(1) &
                   (hideL(-1) * (m.length)) &
                   byUS(tEx2),
-                QE
-              )
-          )
+                QE,
+              ),
+          ),
         ),
     )
 

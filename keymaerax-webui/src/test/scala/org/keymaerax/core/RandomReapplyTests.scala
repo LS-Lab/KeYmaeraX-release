@@ -19,10 +19,8 @@ import scala.collection.immutable
  * Tests reapply function of expression data structures for identity after deep copy. Performance test if printing were
  * turned off.
  *
- * @todo
- *   add a test that reapplies with new random formulas/terms as arguments
- * @author
- *   Andre Platzer
+ * @todo add a test that reapplies with new random formulas/terms as arguments
+ * @author Andre Platzer
  */
 @CoverageTest @CheckinTest @nowarn("msg=match may not be exhaustive")
 class RandomReapplyTests extends AnyFlatSpec with Matchers {
@@ -51,9 +49,10 @@ class RandomReapplyTests extends AnyFlatSpec with Matchers {
       Or(True, NotEqual(Number(7), Number(9)))
   }
   it should "work for Quantified" in {
-    Forall(immutable.Seq(Variable("x")), PredOf(Function("p", None, Real, Bool), Variable("x")))
-      .reapply(immutable.Seq(Variable("y")), PredOf(Function("q", None, Real, Bool), Variable("y"))) shouldBe
-      (Forall(immutable.Seq(Variable("y")), PredOf(Function("q", None, Real, Bool), Variable("y"))))
+    Forall(immutable.Seq(Variable("x")), PredOf(Function("p", None, Real, Bool), Variable("x"))).reapply(
+      immutable.Seq(Variable("y")),
+      PredOf(Function("q", None, Real, Bool), Variable("y")),
+    ) shouldBe (Forall(immutable.Seq(Variable("y")), PredOf(Function("q", None, Real, Bool), Variable("y"))))
   }
   it should "work for Modality" in {
     Box(ProgramConst("b"), Less(Variable("z"), Number(0))).reapply(

@@ -61,8 +61,12 @@ class InitializeProofFromTacticRequest(db: DBAbstraction, userId: String, proofI
               // @note replace listener created by proof tree (we want a different tactic name for each component of the
               // executed tactic and we want to see progress)
               val interpreter = (_: List[IOListener]) =>
-                DatabasePopulator
-                  .prepareInterpreter(db, proofId.toInt, proofSession.defs, CollectProgressListener() :: Nil)
+                DatabasePopulator.prepareInterpreter(
+                  db,
+                  proofId.toInt,
+                  proofSession.defs,
+                  CollectProgressListener() :: Nil,
+                )
               val tree: ProofTree = DbProofTree(db, proofId)
               val executor = BellerophonTacticExecutor.defaultExecutor
               val taskId = tree.root.runTactic(userId, interpreter, tactic, "", executor)

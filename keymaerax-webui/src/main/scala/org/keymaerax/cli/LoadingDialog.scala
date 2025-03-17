@@ -13,8 +13,7 @@ import javax.swing.{JLabel, JProgressBar, JWindow}
 
 /**
  * The KeYmaera X loading splash screen.
- * @author
- *   Nathan Fulton
+ * @author Nathan Fulton
  */
 trait LoadingDialog {
 
@@ -24,9 +23,8 @@ trait LoadingDialog {
   /**
    * Updates the status with a `progress` indicator and a message `msg`.
    *
-   * @param progress
-   *   the percentage points of progress that are being made now. Overall, the percentage should sum to 100, at which
-   *   point the splash screen will be closed automatically.
+   * @param progress the percentage points of progress that are being made now. Overall, the percentage should sum to
+   *   100, at which point the splash screen will be closed automatically.
    */
   def addToStatus(progress: Int, msg: Option[String]): Unit
 

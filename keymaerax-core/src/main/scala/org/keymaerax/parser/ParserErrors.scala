@@ -17,10 +17,8 @@ import scala.collection.immutable.StringOps
 
 /**
  * Indicates a parse error at the given location, with the context information state.
- * @author
- *   Andre Platzer
- * @see
- *   [[ProverException.getContext]]
+ * @author Andre Platzer
+ * @see [[ProverException.getContext]]
  */
 case class ParseException(
     msg: String,
@@ -38,12 +36,9 @@ case class ParseException(
 
   /**
    * Add the input context information to this exception, returning the resulting exception to be thrown.
-   * @param input
-   *   textual description of the input in which this prover exception occurred.
-   * @param tokenStream
-   *   optionally the tokenStream lexed from the input.
-   * @see
-   *   [[ProverException.getContext]]
+   * @param input textual description of the input in which this prover exception occurred.
+   * @param tokenStream optionally the tokenStream lexed from the input.
+   * @see [[ProverException.getContext]]
    */
   def inInput(input: String, tokenStream: Option[TokenStream] = None): ParseException = {
     // @todo take loc into account to project input to loc

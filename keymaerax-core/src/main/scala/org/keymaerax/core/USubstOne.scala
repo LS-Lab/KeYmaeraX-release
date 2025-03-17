@@ -6,14 +6,11 @@
 /**
  * Uniform Substitution for KeYmaera X
  *
- * @author
- *   Andre Platzer
- * @see
- *   [[org.keymaerax.Bibliography.CadePlatzer19 Uniform substitution at one fell swoop]]
+ * @author Andre Platzer
+ * @see [[org.keymaerax.Bibliography.CadePlatzer19 Uniform substitution at one fell swoop]]
  * @see
  *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
- * @note
- *   Code Review: 2020-02-17
+ * @note Code Review: 2020-02-17
  */
 package org.keymaerax.core
 
@@ -31,20 +28,15 @@ import scala.collection.immutable
  *
  * This type implements the application of uniform substitutions to terms, formulas, programs, and sequents.
  *
- * @note
- *   Implements the one-pass version that checks admissibility on the fly and checking upon occurrence. Faster than the
- *   alternative [[USubstChurch]]. Main ingredient of prover core.
- * @note
- *   soundness-critical
- * @author
- *   Andre Platzer Created by aplatzer on 2019-2-12.
+ * @note Implements the one-pass version that checks admissibility on the fly and checking upon occurrence. Faster than
+ *   the alternative [[USubstChurch]]. Main ingredient of prover core.
+ * @note soundness-critical
+ * @author Andre Platzer Created by aplatzer on 2019-2-12.
  * @since 4.7
- * @see
- *   [[org.keymaerax.Bibliography.CadePlatzer19 Uniform substitution at one fell swoop]]
+ * @see [[org.keymaerax.Bibliography.CadePlatzer19 Uniform substitution at one fell swoop]]
  * @see
  *   [[org.keymaerax.core.Provable.apply(subst:edu\.cmu\.cs\.ls\.keymaerax\.core\.USubstOne):edu\.cmu\.cs\.ls\.keymaerax\.core\.Provable*]]
- * @see
- *   [[USubstChurch]]
+ * @see [[USubstChurch]]
  */
 final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) extends (Expression => Expression) {
 
@@ -79,27 +71,23 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
    * The (new) free variables that this substitution introduces (without DotTerm/DotFormula arguments). That is the
    * (new) free variables introduced by this substitution, i.e. free variables of all repl that are not bound as
    * arguments in what.
-   * @return
-   *   union of the freeVars of all our substitution pairs.
-   * @note
-   *   unused
+   * @return union of the freeVars of all our substitution pairs.
+   * @note unused
    */
   lazy val freeVars: SetLattice[Variable] = subsDefs.foldLeft(bottom[Variable])((a, b) => a ++ b.freeVars)
 
   /**
    * The signature of the replacement introduced by this substitution.
-   * @return
-   *   union of the freeVars of all our substitution pairs.
+   * @return union of the freeVars of all our substitution pairs.
    */
   // lazy val signature: immutable.Set[NamedSymbol] = subsDefs.foldLeft(Set.empty[NamedSymbol])((a,b) => a ++ b.signature)
 
   /**
    * The key characteristic expression constituents that this Substitution is matching on.
-   * @return
-   *   union of the matchKeys of all our substitution pairs.
+   * @return union of the matchKeys of all our substitution pairs.
    */
-  private[core] lazy val matchKeys: immutable.List[NamedSymbol] = subsDefs
-    .foldLeft(immutable.List[NamedSymbol]())((a, b) => a :+ b.matchKey)
+  private[core] lazy val matchKeys: immutable.List[NamedSymbol] =
+    subsDefs.foldLeft(immutable.List[NamedSymbol]())((a, b) => a :+ b.matchKey)
 
   // apply calls usubst, augmenting with contract and exception context handling
 
@@ -123,8 +111,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
 
   /**
    * apply this uniform substitution everywhere in a term
-   * @throws SubstitutionClashException
-   *   if this substitution is not admissible for t.
+   * @throws SubstitutionClashException if this substitution is not admissible for t.
    */
   // @note optimizable for empty subsDefs if that happens often (unlikely)
   def apply(t: Term): Term =
@@ -133,8 +120,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
 
   /**
    * apply this uniform substitution everywhere in a formula
-   * @throws SubstitutionClashException
-   *   if this substitution is not admissible for f.
+   * @throws SubstitutionClashException if this substitution is not admissible for f.
    */
   def apply(f: Formula): Formula =
     try usubst(bottom, f)
@@ -142,8 +128,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
 
   /**
    * apply this uniform substitution everywhere in a program
-   * @throws SubstitutionClashException
-   *   if this substitution is not admissible for p.
+   * @throws SubstitutionClashException if this substitution is not admissible for p.
    */
   def apply(p: Program): Program =
     try usubst(bottom[Variable], p)._2
@@ -151,8 +136,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
 
   /**
    * apply this uniform substitution everywhere in a differential program
-   * @throws SubstitutionClashException
-   *   if this substitution is not admissible for p.
+   * @throws SubstitutionClashException if this substitution is not admissible for p.
    */
   def apply(p: DifferentialProgram): DifferentialProgram =
     try usubstODE(boundVars(p), p)
@@ -160,8 +144,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
 
   /**
    * Apply uniform substitution everywhere in the sequent.
-   * @throws SubstitutionClashException
-   *   if this substitution is not admissible for s.
+   * @throws SubstitutionClashException if this substitution is not admissible for s.
    */
   // @note mapping apply instead of the equivalent usubst makes sure the exceptions are augmented with formula context
   def apply(s: Sequent): Sequent =
@@ -170,8 +153,8 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
 
   /**
    * apply this uniform substitution everywhere in a formula with [[SetLattice.allVars]] as taboos.
-   * @throws SubstitutionClashException
-   *   if this substitution is not admissible for f (e.g. because it introduces any free variables).
+   * @throws SubstitutionClashException if this substitution is not admissible for f (e.g. because it introduces any
+   *   free variables).
    */
   def applyAllTaboo(f: Formula): Formula =
     try usubst(allVars, f)
@@ -179,8 +162,8 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
 
   /**
    * Apply uniform substitution everywhere in the sequent with [[SetLattice.allVars]] as taboos.
-   * @throws SubstitutionClashException
-   *   if this substitution is not admissible for s (e.g. because it introduces any free variables).
+   * @throws SubstitutionClashException if this substitution is not admissible for s (e.g. because it introduces any
+   *   free variables).
    */
   // @note mapping apply instead of the equivalent usubst makes sure the exceptions are augmented and the ensures contracts checked.
   def applyAllTaboo(s: Sequent): Sequent =
@@ -189,9 +172,8 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
 
   /**
    * Union of uniform substitutions, i.e., both replacement lists merged.
-   * @note
-   *   Convenience method not used in the core, but used for stapling uniform substitutions together during unification
-   *   etc.
+   * @note Convenience method not used in the core, but used for stapling uniform substitutions together during
+   *   unification etc.
    */
   // @todo optimizable since most of the data structure invariant, filtering, and individual distinctness is already checked
   def ++(other: USubstOne): USubstOne = USubstOne((this.subsDefs ++ other.subsDefs).distinct)
@@ -201,8 +183,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
 
   /**
    * uniform substitution on terms.
-   * @param u
-   *   the set of variables that are taboo, so cannot be introduced free by the substitution into term.
+   * @param u the set of variables that are taboo, so cannot be introduced free by the substitution into term.
    */
   private def usubst(u: SetLattice[Variable], term: Term): Term = {
     term match {
@@ -249,8 +230,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
 
   /**
    * uniform substitution on formulas.
-   * @param u
-   *   the set of variables that are taboo, so cannot be introduced free by the substitution into formula.
+   * @param u the set of variables that are taboo, so cannot be introduced free by the substitution into formula.
    */
   private def usubst(u: SetLattice[Variable], formula: Formula): Formula = {
     formula match {
@@ -273,8 +253,10 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
             val PredicationalOf(wp, wArg) = subs.what
             // redundant: assert(wp == p, "match only if same head")
             // redundant: assert(wArg == DotFormula)
-            USubstOne(SubstitutionPair(wArg, usubst(allVars, fml)) :: Nil)
-              .usubst(bottom[Variable], subs.repl.asInstanceOf[Formula])
+            USubstOne(SubstitutionPair(wArg, usubst(allVars, fml)) :: Nil).usubst(
+              bottom[Variable],
+              subs.repl.asInstanceOf[Formula],
+            )
           case None =>
             // @note admissibility is required for nonmatching predicationals since the arguments might be evaluated in different states.
             PredicationalOf(p, usubst(allVars, fml))
@@ -321,8 +303,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
 
   /**
    * uniform substitution on programs.
-   * @param u
-   *   the set of variables that are taboo, so cannot be introduced free by the substitution into program.
+   * @param u the set of variables that are taboo, so cannot be introduced free by the substitution into program.
    */
   private def usubst(u: SetLattice[Variable], program: Program): (SetLattice[Variable], Program) = {
     program match {
@@ -359,9 +340,8 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
 
   /**
    * uniform substitutions on differential programs.
-   * @param v
-   *   the set of variables that are taboo (including the surrounding ODESystem), so cannot be introduced free by the
-   *   substitution into ode.
+   * @param v the set of variables that are taboo (including the surrounding ODESystem), so cannot be introduced free by
+   *   the substitution into ode.
    */
   @nowarn("msg=match may not be exhaustive")
   private def usubstODE(v: SetLattice[Variable], ode: DifferentialProgram): DifferentialProgram = {
@@ -384,8 +364,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
   /**
    * Require that this uniform substitution is admissible with the given taboos for expression e, and raise informative
    * exception if not.
-   * @throws SubstitutionClashException
-   *   if `!taboo.intersect(frees).isEmpty`
+   * @throws SubstitutionClashException if `!taboo.intersect(frees).isEmpty`
    */
   @inline
   private def requireAdmissible(
@@ -407,8 +386,8 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
 
   /**
    * Turns matching terms into substitution pairs (traverses pairs to create component-wise substitutions).
-   * @return
-   *   The SubstitutionPair `w ~> usubst(taboo, r)` or such substitutions on the components in case w and r are Pairs.
+   * @return The SubstitutionPair `w ~> usubst(taboo, r)` or such substitutions on the components in case w and r are
+   *   Pairs.
    */
   private def toSubsPairs(taboo: SetLattice[Variable], w: Term, r: Term): List[SubstitutionPair] = (w, r) match {
     case (Pair(wl, wr), Pair(rl, rr)) => toSubsPairs(taboo, wl, rl) ++ toSubsPairs(taboo, wr, rr)
@@ -419,11 +398,9 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
 
   /**
    * Predict bound variables of this(program), whether substitution clashes or not.
-   * @note
-   *   Not soundness-critical as result is checked by inclusion for second usubst round
-   * @note
-   *   Like [[StaticSemantics.boundVars()]] except with replaced program constant symbols etc computed from their bound
-   *   variables.
+   * @note Not soundness-critical as result is checked by inclusion for second usubst round
+   * @note Like [[StaticSemantics.boundVars()]] except with replaced program constant symbols etc computed from their
+   *   bound variables.
    */
   @nowarn("msg=match may not be exhaustive")
   private def substBoundVars(program: Program): SetLattice[Variable] = {

@@ -36,16 +36,11 @@ trait Tables {
 
   /**
    * Entity class storing rows of table Agendaitems
-   * @param _Id
-   *   Database column _id SqlType(INTEGER), PrimaryKey
-   * @param proofid
-   *   Database column proofId SqlType(INTEGER)
-   * @param stepid
-   *   Database column stepId SqlType(INTEGER)
-   * @param subgoalid
-   *   Database column subgoalId SqlType(INTEGER)
-   * @param displayname
-   *   Database column displayName SqlType(STRING)
+   * @param _Id Database column _id SqlType(INTEGER), PrimaryKey
+   * @param proofid Database column proofId SqlType(INTEGER)
+   * @param stepid Database column stepId SqlType(INTEGER)
+   * @param subgoalid Database column subgoalId SqlType(INTEGER)
+   * @param displayname Database column displayName SqlType(STRING)
    */
   case class AgendaitemsRow(
       _Id: Option[Int],
@@ -101,14 +96,10 @@ trait Tables {
 
   /**
    * Entity class storing rows of table Config
-   * @param configid
-   *   Database column configId SqlType(INTEGER), PrimaryKey
-   * @param configname
-   *   Database column configName SqlType(TEXT)
-   * @param key
-   *   Database column key SqlType(TEXT)
-   * @param value
-   *   Database column value SqlType(TEXT)
+   * @param configid Database column configId SqlType(INTEGER), PrimaryKey
+   * @param configname Database column configName SqlType(TEXT)
+   * @param key Database column key SqlType(TEXT)
+   * @param value Database column value SqlType(TEXT)
    */
   case class ConfigRow(configid: Option[Int], configname: Option[String], key: Option[String], value: Option[String])
 
@@ -140,10 +131,8 @@ trait Tables {
 
   /**
    * Entity class storing rows of table Executables
-   * @param _Id
-   *   Database column _id SqlType(INTEGER), PrimaryKey
-   * @param belleexpr
-   *   Database column belleExpr SqlType(TEXT)
+   * @param _Id Database column _id SqlType(INTEGER), PrimaryKey
+   * @param belleexpr Database column belleExpr SqlType(TEXT)
    */
   case class ExecutablesRow(_Id: Option[Int], belleexpr: Option[String])
 
@@ -170,34 +159,20 @@ trait Tables {
 
   /**
    * Entity class storing rows of table Executionsteps
-   * @param _Id
-   *   Database column _id SqlType(INTEGER), PrimaryKey
-   * @param proofid
-   *   Database column proofId SqlType(INTEGER)
-   * @param previousstep
-   *   Database column previousStep SqlType(INTEGER)
-   * @param branchorder
-   *   Database column branchOrder SqlType(INT)
-   * @param status
-   *   Database column status SqlType(TEXT)
-   * @param executableid
-   *   Database column executableId SqlType(INTEGER)
-   * @param inputprovableid
-   *   Database column inputProvableId SqlType(INTEGER)
-   * @param resultprovableid
-   *   Database column resultProvableId SqlType(INTEGER)
-   * @param localprovableid
-   *   Database column localProvableId SqlType(INTEGER)
-   * @param userexecuted
-   *   Database column userExecuted SqlType(BOOLEAN)
-   * @param childrenrecorded
-   *   Database column childrenRecorded SqlType(BOOLEAN)
-   * @param rulename
-   *   Database column ruleName SqlType(STRING)
-   * @param numsubgoals
-   *   Database column numSubGoals SqlType(INTEGER), Default(-1)
-   * @param numopensubgoals
-   *   Database column numOpenSubGoals SqlType(INTEGER), Default(-1)
+   * @param _Id Database column _id SqlType(INTEGER), PrimaryKey
+   * @param proofid Database column proofId SqlType(INTEGER)
+   * @param previousstep Database column previousStep SqlType(INTEGER)
+   * @param branchorder Database column branchOrder SqlType(INT)
+   * @param status Database column status SqlType(TEXT)
+   * @param executableid Database column executableId SqlType(INTEGER)
+   * @param inputprovableid Database column inputProvableId SqlType(INTEGER)
+   * @param resultprovableid Database column resultProvableId SqlType(INTEGER)
+   * @param localprovableid Database column localProvableId SqlType(INTEGER)
+   * @param userexecuted Database column userExecuted SqlType(BOOLEAN)
+   * @param childrenrecorded Database column childrenRecorded SqlType(BOOLEAN)
+   * @param rulename Database column ruleName SqlType(STRING)
+   * @param numsubgoals Database column numSubGoals SqlType(INTEGER), Default(-1)
+   * @param numopensubgoals Database column numOpenSubGoals SqlType(INTEGER), Default(-1)
    */
   case class ExecutionstepsRow(
       _Id: Option[Int],
@@ -243,54 +218,57 @@ trait Tables {
 
   /** Table description of table executionSteps. Objects of this class serve as prototypes for rows in queries. */
   class Executionsteps(_tableTag: Tag) extends profile.api.Table[ExecutionstepsRow](_tableTag, "executionSteps") {
-    def * = (
+    def * =
       (
-        _Id,
-        proofid,
-        previousstep,
-        branchorder,
-        status,
-        executableid,
-        inputprovableid,
-        resultprovableid,
-        localprovableid,
-        userexecuted,
-        childrenrecorded,
-        rulename,
-        numsubgoals,
-        numopensubgoals,
-      ),
-    ).mapTo[ExecutionstepsRow]
+        (
+          _Id,
+          proofid,
+          previousstep,
+          branchorder,
+          status,
+          executableid,
+          inputprovableid,
+          resultprovableid,
+          localprovableid,
+          userexecuted,
+          childrenrecorded,
+          rulename,
+          numsubgoals,
+          numopensubgoals,
+        ),
+      ).mapTo[ExecutionstepsRow]
 
     /** Maps whole row to an option. Useful for outer joins. */
-    def ? = (
+    def ? =
       (
-        _Id,
-        proofid,
-        previousstep,
-        Rep.Some(branchorder),
-        status,
-        executableid,
-        inputprovableid,
-        resultprovableid,
-        localprovableid,
-        userexecuted,
-        childrenrecorded,
-        rulename,
-        Rep.Some(numsubgoals),
-        Rep.Some(numopensubgoals),
-      ),
-    ).shaped
-      .<>(
-        { r =>
-          import r._;
-          _4.map(_ =>
-            (ExecutionstepsRow.apply _)
-              .tupled((_1, _2, _3, _4.get, _5, _6, _7, _8, _9, _10, _11, _12, _13.get, _14.get))
-          )
-        },
-        (_: Any) => throw new Exception("Inserting into ? projection not supported."),
-      )
+        (
+          _Id,
+          proofid,
+          previousstep,
+          Rep.Some(branchorder),
+          status,
+          executableid,
+          inputprovableid,
+          resultprovableid,
+          localprovableid,
+          userexecuted,
+          childrenrecorded,
+          rulename,
+          Rep.Some(numsubgoals),
+          Rep.Some(numopensubgoals),
+        ),
+      ).shaped
+        .<>(
+          { r =>
+            import r._;
+            _4.map(_ =>
+              (ExecutionstepsRow.apply _).tupled(
+                (_1, _2, _3, _4.get, _5, _6, _7, _8, _9, _10, _11, _12, _13.get, _14.get)
+              )
+            )
+          },
+          (_: Any) => throw new Exception("Inserting into ? projection not supported."),
+        )
 
     /** Database column _id SqlType(INTEGER), PrimaryKey */
     val _Id: Rep[Option[Int]] = column[Option[Int]]("_id", O.PrimaryKey, O.AutoInc)
@@ -377,10 +355,8 @@ trait Tables {
 
   /**
    * Entity class storing rows of table Lemmas
-   * @param _Id
-   *   Database column _id SqlType(INTEGER), PrimaryKey
-   * @param lemma
-   *   Database column lemma SqlType(TEXT)
+   * @param _Id Database column _id SqlType(INTEGER), PrimaryKey
+   * @param lemma Database column lemma SqlType(TEXT)
    */
   case class LemmasRow(_Id: Option[Int], lemma: Option[String])
 
@@ -406,26 +382,16 @@ trait Tables {
 
   /**
    * Entity class storing rows of table Models
-   * @param _Id
-   *   Database column _id SqlType(INTEGER), PrimaryKey
-   * @param userid
-   *   Database column userId SqlType(TEXT)
-   * @param name
-   *   Database column name SqlType(TEXT)
-   * @param date
-   *   Database column date SqlType(TEXT)
-   * @param description
-   *   Database column description SqlType(TEXT)
-   * @param filecontents
-   *   Database column fileContents SqlType(TEXT)
-   * @param publink
-   *   Database column publink SqlType(TEXT)
-   * @param title
-   *   Database column title SqlType(TEXT)
-   * @param tactic
-   *   Database column tactic SqlType(TEXT)
-   * @param istemporary
-   *   Database column isTemporary SqlType(INTEGER), Default(Some(0))
+   * @param _Id Database column _id SqlType(INTEGER), PrimaryKey
+   * @param userid Database column userId SqlType(TEXT)
+   * @param name Database column name SqlType(TEXT)
+   * @param date Database column date SqlType(TEXT)
+   * @param description Database column description SqlType(TEXT)
+   * @param filecontents Database column fileContents SqlType(TEXT)
+   * @param publink Database column publink SqlType(TEXT)
+   * @param title Database column title SqlType(TEXT)
+   * @param tactic Database column tactic SqlType(TEXT)
+   * @param istemporary Database column isTemporary SqlType(INTEGER), Default(Some(0))
    */
   case class ModelsRow(
       _Id: Option[Int],
@@ -504,24 +470,15 @@ trait Tables {
 
   /**
    * Entity class storing rows of table Proofs
-   * @param _Id
-   *   Database column _id SqlType(INTEGER), PrimaryKey
-   * @param modelid
-   *   Database column modelId SqlType(INTEGER)
-   * @param name
-   *   Database column name SqlType(TEXT)
-   * @param description
-   *   Database column description SqlType(TEXT)
-   * @param date
-   *   Database column date SqlType(TEXT)
-   * @param closed
-   *   Database column closed SqlType(INTEGER)
-   * @param lemmaid
-   *   Database column lemmaId SqlType(INTEGER)
-   * @param istemporary
-   *   Database column isTemporary SqlType(INTEGER), Default(Some(0))
-   * @param tactic
-   *   Database column tactic SqlType(TEXT)
+   * @param _Id Database column _id SqlType(INTEGER), PrimaryKey
+   * @param modelid Database column modelId SqlType(INTEGER)
+   * @param name Database column name SqlType(TEXT)
+   * @param description Database column description SqlType(TEXT)
+   * @param date Database column date SqlType(TEXT)
+   * @param closed Database column closed SqlType(INTEGER)
+   * @param lemmaid Database column lemmaId SqlType(INTEGER)
+   * @param istemporary Database column isTemporary SqlType(INTEGER), Default(Some(0))
+   * @param tactic Database column tactic SqlType(TEXT)
    */
   case class ProofsRow(
       _Id: Option[Int],
@@ -538,8 +495,9 @@ trait Tables {
   /** GetResult implicit for fetching ProofsRow objects using plain SQL queries */
   implicit def GetResultProofsRow(implicit e0: GR[Option[Int]], e1: GR[Option[String]]): GR[ProofsRow] = GR { prs =>
     import prs._
-    (ProofsRow.apply _)
-      .tupled((<<?[Int], <<?[Int], <<?[String], <<?[String], <<?[String], <<?[Int], <<?[Int], <<?[Int], <<?[String]))
+    (ProofsRow.apply _).tupled(
+      (<<?[Int], <<?[Int], <<?[String], <<?[String], <<?[String], <<?[Int], <<?[Int], <<?[Int], <<?[String])
+    )
   }
 
   /** Table description of table proofs. Objects of this class serve as prototypes for rows in queries. */
@@ -586,16 +544,11 @@ trait Tables {
 
   /**
    * Entity class storing rows of table Users
-   * @param email
-   *   Database column email SqlType(TEXT), PrimaryKey
-   * @param hash
-   *   Database column hash SqlType(TEXT)
-   * @param salt
-   *   Database column salt SqlType(TEXT)
-   * @param iterations
-   *   Database column iterations SqlType(INTEGER)
-   * @param level
-   *   Database column level SqlType(INTEGER), Default(Some(0))
+   * @param email Database column email SqlType(TEXT), PrimaryKey
+   * @param hash Database column hash SqlType(TEXT)
+   * @param salt Database column salt SqlType(TEXT)
+   * @param iterations Database column iterations SqlType(INTEGER)
+   * @param level Database column level SqlType(INTEGER), Default(Some(0))
    */
   case class UsersRow(
       email: Option[String],

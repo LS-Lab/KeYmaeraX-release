@@ -29,12 +29,9 @@ import scala.collection.immutable._
  *   println(f)
  *   println(f + " is the same as " + ctx(g))
  *   }}}
- * @author
- *   Andre Platzer
- * @see
- *   [[PosInExpr]]
- * @see
- *   [[Augmentors]]
+ * @author Andre Platzer
+ * @see [[PosInExpr]]
+ * @see [[Augmentors]]
  */
 object Context {
 
@@ -70,8 +67,7 @@ object Context {
 
   /**
    * Subexpression of `t` at the indicated position `pos` or exception if ill-defined position.
-   * @ensures
-   *   sub(t,pos) == at(t,pos)._2
+   * @ensures sub(t,pos) == at(t,pos)._2
    */
   def sub(t: Expression, pos: PosInExpr): Expression = { part(t, pos) } /*ensures(
     //@note redundant cross-contract consistency checks
@@ -94,33 +90,20 @@ object Context {
    * which that expression occurs. Thus `C{e}` will equal the original `t` and `e` occurs at position pos in `t`
    * (provided that back-substitution is admissible, otherwise a direct replacement in `C` at `pos` to `e` will equal
    * `t`).
-   * @ensures
-   *   at(t,pos)._2 == sub(t,pos)
+   * @ensures at(t,pos)._2 == sub(t,pos)
    */
   def at(t: Expression, pos: PosInExpr): (Context[Expression], Expression) =
     if (!GUARDED) { directAt(t, pos) }
     else
       {
         val sp = t match {
-          case f: Term =>
-            {
-              context(f, pos)
-            } ensures
+          case f: Term => { context(f, pos) } ensures
               (r => !REDUNDANT || r == split(f, pos), "direct and generic split have same result " + f + " at " + pos)
-          case f: Formula =>
-            {
-              context(f, pos)
-            } ensures
+          case f: Formula => { context(f, pos) } ensures
               (r => !REDUNDANT || r == split(f, pos), "direct and generic split have same result " + f + " at " + pos)
-          case f: DifferentialProgram =>
-            {
-              context(f, pos)
-            } ensures
+          case f: DifferentialProgram => { context(f, pos) } ensures
               (r => !REDUNDANT || r == split(f, pos), "direct and generic split have same result " + f + " at " + pos)
-          case f: Program =>
-            {
-              context(f, pos)
-            } ensures
+          case f: Program => { context(f, pos) } ensures
               (r => !REDUNDANT || r == split(f, pos), "direct and generic split have same result " + f + " at " + pos)
           case _ => ??? // trivial totality on possibly problematic patmats
         }
@@ -151,9 +134,7 @@ object Context {
     if (!GUARDED) { directAt(t, pos) }
     else
       {
-        val sp = {
-          context(t, pos)
-        } ensures
+        val sp = { context(t, pos) } ensures
           (r => !REDUNDANT || r == split(t, pos), "direct and generic split have same result " + t + " at " + pos)
         (Context(sp._1), sp._2)
       } ensures
@@ -172,9 +153,7 @@ object Context {
     if (!GUARDED) { directAt(f, pos) }
     else
       {
-        val sp = {
-          context(f, pos)
-        } ensures
+        val sp = { context(f, pos) } ensures
           (r => !REDUNDANT || r == split(f, pos), "direct and generic split have same result " + f + " at " + pos)
         (Context(sp._1), sp._2)
       } ensures
@@ -194,9 +173,7 @@ object Context {
     if (!GUARDED) { directAt(a, pos) }
     else
       {
-        val sp = {
-          context(a, pos)
-        } ensures
+        val sp = { context(a, pos) } ensures
           (r => !REDUNDANT || r == split(a, pos), "direct and generic split have same result " + a + " at " + pos)
         (Context(sp._1), sp._2)
       } ensures
@@ -208,12 +185,10 @@ object Context {
 
   /**
    * Split the given position into formula position and term position within that formula.
-   * @return
-   *   `._1` will be the formula position of the atomic formula around pos and `._2` will be the term position that pos
-   *   refers to within that atomic formula.
-   * @todo
-   *   horribly slow implementation by marching from the right and researching from the left. Trigger at transition to
-   *   split(Term) would be much faster.
+   * @return `._1` will be the formula position of the atomic formula around pos and `._2` will be the term position
+   *   that pos refers to within that atomic formula.
+   * @todo horribly slow implementation by marching from the right and researching from the left. Trigger at transition
+   *   to split(Term) would be much faster.
    */
   def splitPos(f: Formula, pos: PosInExpr): (PosInExpr, PosInExpr) = {
     var fPos: List[Int] = pos.pos
@@ -439,8 +414,7 @@ object Context {
 
   /**
    * Replace within term at position pos by repl
-   * @see
-   *   [[org.keymaerax.infrastruct.StaticSemanticsTools.boundAt()]] for same positions
+   * @see [[org.keymaerax.infrastruct.StaticSemanticsTools.boundAt()]] for same positions
    */
   def replaceAt(expr: Expression, pos: PosInExpr, repl: Expression): Expression = expr match {
     case f: Term => replaceAt(f, pos, repl)
@@ -715,12 +689,9 @@ object Context {
  *   val result = ctx(h)
  *   println(result)
  *   }}}
- * @tparam T
- *   the type/kind of expression that this context is representing.
- * @author
- *   Stefan Mitsch
- * @author
- *   Andre Platzer
+ * @tparam T the type/kind of expression that this context is representing.
+ * @author Stefan Mitsch
+ * @author Andre Platzer
  */
 sealed trait Context[+T <: Expression] extends (Expression => T) {
   import Context.{DotDiffProgram, DotProgram}
@@ -758,19 +729,13 @@ sealed trait Context[+T <: Expression] extends (Expression => T) {
 
 /**
  * An implementation of a context by direct replacement in unguarded ways (even if not admissible).
- * @param replicate
- *   the expression of type T representing this context indirectly in the sense that instantiation replaces its position
- *   dot.
- * @param dot
- *   the position within replicate that will be replaced when instantiating this context
- * @tparam T
- *   the type/kind of expression that this context is representing.
- * @author
- *   Andre Platzer
- * @see
- *   [[Context.replaceAt()]]
- * @note
- *   ReplacementContexts that differ only in replacee are considered equal.
+ * @param replicate the expression of type T representing this context indirectly in the sense that instantiation
+ *   replaces its position dot.
+ * @param dot the position within replicate that will be replaced when instantiating this context
+ * @tparam T the type/kind of expression that this context is representing.
+ * @author Andre Platzer
+ * @see [[Context.replaceAt()]]
+ * @note ReplacementContexts that differ only in replacee are considered equal.
  */
 private class ReplacementContext[+T <: Expression](replicate: T, dot: PosInExpr) extends Context[T] {
   import Context.{DotDiffProgram, DotProgram}
@@ -808,14 +773,10 @@ private class ReplacementContext[+T <: Expression](replicate: T, dot: PosInExpr)
 
 /**
  * An implementation of a context guarded by the protection of uniform substitutions.
- * @param ctx
- *   the expression of type T representing this context
- * @tparam T
- *   the type/kind of expression that this context is representing.
- * @author
- *   Andre Platzer
- * @see
- *   [[USubst]]
+ * @param ctx the expression of type T representing this context
+ * @tparam T the type/kind of expression that this context is representing.
+ * @author Andre Platzer
+ * @see [[USubst]]
  */
 private case class GuardedContext[+T <: Expression](ctx: T) extends Context[T] {
   import Context.{DotDiffProgram, DotProgram}
@@ -839,10 +800,8 @@ private case class GuardedContext[+T <: Expression](ctx: T) extends Context[T] {
 
   /**
    * Instantiates the context ctx with the formula withF
-   * @param withF
-   *   The formula to instantiate this context ctx with.
-   * @return
-   *   The instantiated context ctx{withF}.
+   * @param withF The formula to instantiate this context ctx with.
+   * @return The instantiated context ctx{withF}.
    */
   private def instantiate(withF: Formula): T = {
     assert(!isTermContext, "can only instantiate formulas within a formula context " + this)
@@ -851,12 +810,9 @@ private case class GuardedContext[+T <: Expression](ctx: T) extends Context[T] {
 
   /**
    * Instantiates the context ctx with the term withT
-   * @param withT
-   *   The term to instantiate this context ctx with.
-   * @return
-   *   The instantiated context ctx(withT).
-   * @todo
-   *   this implementation could be generalized using predicationals or replaceAt.
+   * @param withT The term to instantiate this context ctx with.
+   * @return The instantiated context ctx(withT).
+   * @todo this implementation could be generalized using predicationals or replaceAt.
    */
   private def instantiate(withT: Term): T = {
     assert(!isFormulaContext, "can only instantiate terms within a term context " + this)
@@ -865,10 +821,8 @@ private case class GuardedContext[+T <: Expression](ctx: T) extends Context[T] {
 
   /**
    * Instantiates the context ctx with the program withA
-   * @param withA
-   *   The program to instantiate this context ctx with.
-   * @return
-   *   The instantiated context ctx{withA}.
+   * @param withA The program to instantiate this context ctx with.
+   * @return The instantiated context ctx{withA}.
    */
   private def instantiate(withA: Program): T = {
     assert(!isFormulaContext || isTermContext, "can only instantiate programs within a program context " + this)
@@ -881,10 +835,8 @@ private case class GuardedContext[+T <: Expression](ctx: T) extends Context[T] {
 
   /**
    * Instantiates the context ctx with the program withA
-   * @param withA
-   *   The program to instantiate this context ctx with.
-   * @return
-   *   The instantiated context ctx{withA}.
+   * @param withA The program to instantiate this context ctx with.
+   * @return The instantiated context ctx{withA}.
    */
   private def instantiate(withA: DifferentialProgram): T = {
     assert(

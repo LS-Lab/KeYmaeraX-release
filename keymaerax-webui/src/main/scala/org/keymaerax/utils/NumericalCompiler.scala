@@ -13,18 +13,15 @@ import scala.annotation.nowarn
 /**
  * Compile a hybrid program to a discrete program performing some form of numerical integration.
  *
- * @author
- *   André Platzer
+ * @author André Platzer
  */
 trait NumericalCompiler extends (Program => Program) {
 
   /**
    * Compile `hp` to a discrete program whose runs perform some numerical integration of `hp` (usually without clever
    * error control).
-   * @param hp
-   *   the hybrid program
-   * @return
-   *   a discrete program, which, if run, computes a numerical integration of `hp`.
+   * @param hp the hybrid program
+   * @return a discrete program, which, if run, computes a numerical integration of `hp`.
    */
   override def apply(hp: Program): Program
 }
@@ -32,8 +29,7 @@ trait NumericalCompiler extends (Program => Program) {
 /**
  * Compile a hybrid program to a discrete program by naive explicit forward Euler integration.
  *
- * @author
- *   André Platzer
+ * @author André Platzer
  */
 class EulerIntegrationCompiler extends NumericalCompiler {
 
@@ -41,10 +37,8 @@ class EulerIntegrationCompiler extends NumericalCompiler {
    * Compile `hp` to a discrete program whose runs perform some numerical integration of `hp` (usually without clever
    * error control).
    *
-   * @param hp
-   *   the hybrid program
-   * @return
-   *   a discrete program, which, if run, computes a numerical integration of `hp`.
+   * @param hp the hybrid program
+   * @return a discrete program, which, if run, computes a numerical integration of `hp`.
    */
   override def apply(hp: Program): Program = {
     // fresh step size variable for numerical integration

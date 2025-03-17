@@ -102,14 +102,15 @@ class InvariantGeneratorTests extends TacticTestBase with PrivateMethodTester {
   }
 
   it should "find an invariant for the runaround robot" in withMathematica { _ =>
-    val s = """x!=ox | y!=oy ==>
-              #  [{
-              #    {?(x+w/-1-ox)^2+(y-v/-1-oy)^2!=v^2+w^2; om:=-1;
-              #    ++ ?(x+w-ox)^2+(y-v-oy)^2!=v^2+w^2; om:=1;
-              #    ++ ?(ox-x)*w!=(oy-y)*v; om:=0;}
-              #    {x'=v,y'=w,v'=om*w,w'=-om*v}
-              #   }*
-              #  ] !(x=ox & y=oy)""".stripMargin('#').asSequent
+    val s =
+      """x!=ox | y!=oy ==>
+        #  [{
+        #    {?(x+w/-1-ox)^2+(y-v/-1-oy)^2!=v^2+w^2; om:=-1;
+        #    ++ ?(x+w-ox)^2+(y-v-oy)^2!=v^2+w^2; om:=1;
+        #    ++ ?(ox-x)*w!=(oy-y)*v; om:=0;}
+        #    {x'=v,y'=w,v'=om*w,w'=-om*v}
+        #   }*
+        #  ] !(x=ox & y=oy)""".stripMargin('#').asSequent
     // @note precondition and postcondition are invariant
     InvariantGenerator.loopInvariantGenerator.generate(s, SuccPos(0), Declaration(Map.empty)).toList should
       contain theSameElementsAs List(Invariant("x!=ox|y!=oy".asFormula), Invariant("!(x=ox&y=oy)".asFormula))
@@ -153,16 +154,25 @@ class InvariantGeneratorTests extends TacticTestBase with PrivateMethodTester {
   it should "use Pegasus lazily from ODE" in withTactics {
     // InvariantGenerator relevance filter tends to break this test
     def mockInvgen(requestedInvs: ListBuffer[ODESystem]): InvGenTool = new InvGenTool {
-      override def invgen(ode: ODESystem, assumptions: immutable.Seq[Formula], postCond: Formula)
-          : immutable.Seq[Either[immutable.Seq[(Formula, String)], immutable.Seq[(Formula, String)]]] = {
+      override def invgen(
+          ode: ODESystem,
+          assumptions: immutable.Seq[Formula],
+          postCond: Formula,
+      ): immutable.Seq[Either[immutable.Seq[(Formula, String)], immutable.Seq[(Formula, String)]]] = {
         requestedInvs.append(ode)
         Nil
       }
       override def lzzCheck(ode: ODESystem, inv: Formula): Boolean = true
-      override def refuteODE(ode: ODESystem, assumptions: immutable.Seq[Formula], postCond: Formula)
-          : Option[Map[NamedSymbol, Expression]] = None
-      override def genODECond(ode: ODESystem, assumptions: immutable.Seq[Formula], postCond: Formula)
-          : (List[Formula], List[Formula]) = (Nil, Nil)
+      override def refuteODE(
+          ode: ODESystem,
+          assumptions: immutable.Seq[Formula],
+          postCond: Formula,
+      ): Option[Map[NamedSymbol, Expression]] = None
+      override def genODECond(
+          ode: ODESystem,
+          assumptions: immutable.Seq[Formula],
+          postCond: Formula,
+      ): (List[Formula], List[Formula]) = (Nil, Nil)
     }
 
     val requestedInvs: ListBuffer[ODESystem] = ListBuffer.empty
@@ -224,12 +234,13 @@ class InvariantGeneratorTests extends TacticTestBase with PrivateMethodTester {
   }
 
   it should "generate Darboux polynomials" taggedAs IgnoreInBuildTest in withMathematicaMatlab { _ =>
-    val s = """x > -1, x < -3/4, y <= 3/2 & y >= 1
-              |==>
-              |[
-              |  {x'=-42*x^7+50*x^2*y+156*x^3*y+258*x^4*y-46*x^5*y+68*x^6*y+20*x*y^6-8*y^7,
-              |   y'=y*(1110*x^6-3182*x^4*y-220*x^5*y+478*x^3*y^3+487*x^2*y^4-102*x*y^5-12*y^6)}
-              |] !(x > 1 + y)""".stripMargin.asSequent
+    val s =
+      """x > -1, x < -3/4, y <= 3/2 & y >= 1
+        |==>
+        |[
+        |  {x'=-42*x^7+50*x^2*y+156*x^3*y+258*x^4*y-46*x^5*y+68*x^6*y+20*x*y^6-8*y^7,
+        |   y'=y*(1110*x^6-3182*x^4*y-220*x^5*y+478*x^3*y^3+487*x^2*y^4-102*x*y^5-12*y^6)}
+        |] !(x > 1 + y)""".stripMargin.asSequent
     InvariantGenerator.pegasusInvariants.generate(s, SuccPos(0), Declaration(Map.empty)).toList should
       contain theSameElementsInOrderAs List()
   }
@@ -252,8 +263,9 @@ class InvariantGeneratorTests extends TacticTestBase with PrivateMethodTester {
         Invariant("true".asFormula, Some(InvariantHint.Pegasus(isInvariant = true, Some("PreNoImpPost")))),
       )
       else List(Invariant("x>=old(x)".asFormula, Some(InvariantHint.Annotation(tryHard = true))))
-    val invs =
-      TactixLibrary.invGenerator.generate("==> [{x'=3}]x>=0".asSequent, SuccPosition(1), Declaration(Map.empty))
+    val invs = TactixLibrary
+      .invGenerator
+      .generate("==> [{x'=3}]x>=0".asSequent, SuccPosition(1), Declaration(Map.empty))
     invs should contain theSameElementsInOrderAs expectedInvs
     // @note ODE will return with counterexample before even trying fastODE, so call fastODE directly
     proveBy(s, (DifferentialTactics invokePrivate fastODE(() => invs.iterator, UnifyUSCalculus.skip))(1))
@@ -880,12 +892,10 @@ class NonlinearExamplesTester(
 
   /**
    * Runs invariant generation and checking on the model `name` with content `modelContent`.
-   * @param matlab
-   *   If true, initializes and restarts Matlab before the run, uses Mathematica otherwise.
-   * @param stripProofHints
-   *   If true, deletes proof hints from generated invariants, otherwise keeps proof hints.
-   * @param keepUnverifiedCandidates
-   *   If true, tries proving candidates that are marked false, otherwise discards them without proving.
+   * @param matlab If true, initializes and restarts Matlab before the run, uses Mathematica otherwise.
+   * @param stripProofHints If true, deletes proof hints from generated invariants, otherwise keeps proof hints.
+   * @param keepUnverifiedCandidates If true, tries proving candidates that are marked false, otherwise discards them
+   *   without proving.
    */
   private def runInvGen(
       name: String,

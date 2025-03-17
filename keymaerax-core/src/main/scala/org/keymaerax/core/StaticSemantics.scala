@@ -6,14 +6,11 @@
 /**
  * The static semantics of differential dynamic logic.
  *
- * @author
- *   Andre Platzer
+ * @author Andre Platzer
  * @see
  *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
- * @see
- *   [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
- * @note
- *   Code Review: 2020-02-17
+ * @see [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
+ * @note Code Review: 2020-02-17
  */
 package org.keymaerax.core
 
@@ -26,17 +23,12 @@ import scala.collection.immutable
  * The static semantics of differential dynamic logic. This object defines the static semantics of differential dynamic
  * logic in terms of the free variables and bound variables that expressions have as well as their signatures.
  *
- * @author
- *   Andre Platzer
- * @author
- *   smitsch
- * @note
- *   soundness-critical
- * @see
- *   Section 2.3 in
+ * @author Andre Platzer
+ * @author smitsch
+ * @note soundness-critical
+ * @see Section 2.3 in
  *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
- * @see
- *   [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
+ * @see [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
  * @example
  *   {{{
  *   val fml = Imply(Greater(Variable("x",None,Real), Number(5)),
@@ -51,8 +43,7 @@ import scala.collection.immutable
  *   // determine all symbols occurring in the above formula
  *   println("Symbols         " + StaticSemantics.symbols(fml))
  *   }}}
- * @see
- *   [[org.keymaerax.infrastruct.StaticSemanticsTools]]
+ * @see [[org.keymaerax.infrastruct.StaticSemanticsTools]]
  */
 object StaticSemantics {
 
@@ -61,12 +52,9 @@ object StaticSemantics {
   /**
    * Variable Categories for Formulas: Structure recording which names are free or bound in a formula.
    *
-   * @param fv
-   *   Free names (maybe read)
-   * @param bv
-   *   Bound names (maybe written)
-   * @note
-   *   The core does not uses bv.
+   * @param fv Free names (maybe read)
+   * @param bv Bound names (maybe written)
+   * @note The core does not uses bv.
    */
   final case class VCF(fv: SetLattice[Variable], bv: SetLattice[Variable]) {
 
@@ -77,12 +65,9 @@ object StaticSemantics {
   /**
    * Variable Categories for Programs: Structure recording which names are free, bound, or must-bound in a program.
    *
-   * @param fv
-   *   Free names (maybe read)
-   * @param bv
-   *   Bound names (maybe written on some paths)
-   * @param mbv
-   *   Must-bound names (definitely written on all paths).
+   * @param fv Free names (maybe read)
+   * @param bv Bound names (maybe written on some paths)
+   * @param mbv Must-bound names (definitely written on all paths).
    */
   final case class VCP(fv: SetLattice[Variable], bv: SetLattice[Variable], mbv: SetLattice[Variable])
 
@@ -124,17 +109,12 @@ object StaticSemantics {
    * Check whether expression e is literally a properly differential term/expression, i.e. mentions differentials or
    * differential symbols free.
    *
-   * @note
-   *   Only verbatim mentions are counted, so not via indirect Space dependency.
-   * @note
-   *   (5)' and (c())' will be considered as non-differential terms on account of not mentioning variables, but (x+y)'
-   *   is differential.
-   * @note
-   *   [[AtomicODE]] uses isDifferential to ensure explicit differential equation x'=e has no primes in e.
-   * @note
-   *   [[ODESystem]] uses isDifferential to ensure explicit differential equation x'=e&Q has no primes in Q.
-   * @note
-   *   For proper terms (not using Anything), freeVars is finite so .symbols==.toSet, so checks for literally free
+   * @note Only verbatim mentions are counted, so not via indirect Space dependency.
+   * @note (5)' and (c())' will be considered as non-differential terms on account of not mentioning variables, but
+   *   (x+y)' is differential.
+   * @note [[AtomicODE]] uses isDifferential to ensure explicit differential equation x'=e has no primes in e.
+   * @note [[ODESystem]] uses isDifferential to ensure explicit differential equation x'=e&Q has no primes in Q.
+   * @note For proper terms (not using Anything), freeVars is finite so .symbols==.toSet, so checks for literally free
    *   DifferentialSymbols.
    */
   def isDifferential(e: Expression): Boolean = freeVars(e).symbols.exists(x => x.isInstanceOf[DifferentialSymbol])
@@ -262,17 +242,14 @@ object StaticSemantics {
   /**
    * The signature of expression e.
    *
-   * @note
-   *   Result will not be order stable, so order could be different on different runs of the prover.
+   * @note Result will not be order stable, so order could be different on different runs of the prover.
    * @example
    *   {{{
    *   signature(e).toList.sort            // sorts by compare of NamedSymbol, by name and index
    *   signature(e).toList.sortBy(_.name)  // sorts alphabetically by name, ignores indices
    *   }}}
-   * @note
-   *   Soundness-critical in data structure invariant for interpreted functions.
-   * @note
-   *   Not soundness-critical otherwise since substitution only uses it in old [[USubstChurch]] not in new
+   * @note Soundness-critical in data structure invariant for interpreted functions.
+   * @note Not soundness-critical otherwise since substitution only uses it in old [[USubstChurch]] not in new
    *   [[USubstOne]].
    */
   def signature(e: Expression): immutable.Set[NamedSymbol] = e match {
@@ -286,10 +263,8 @@ object StaticSemantics {
   /**
    * The signature of a term, i.e., set of (non-logical) function/functional symbols occurring in it. Disregarding
    * number literals.
-   * @note
-   *   Soundness-critical in data structure invariant for interpreted functions.
-   * @note
-   *   Not soundness-critical otherwise since substitution only uses it in old [[USubstChurch]] not in new
+   * @note Soundness-critical in data structure invariant for interpreted functions.
+   * @note Not soundness-critical otherwise since substitution only uses it in old [[USubstChurch]] not in new
    *   [[USubstOne]].
    */
   def signature(term: Term): immutable.Set[NamedSymbol] = term match {
@@ -318,10 +293,8 @@ object StaticSemantics {
   /**
    * The signature of a formula, i.e., set of (non-logical) function, predicate, predicational, and atomic program
    * symbols occurring in it.
-   * @note
-   *   Soundness-critical in data structure invariant for interpreted functions.
-   * @note
-   *   Not soundness-critical otherwise since substitution only uses it in old [[USubstChurch]] not in new
+   * @note Soundness-critical in data structure invariant for interpreted functions.
+   * @note Not soundness-critical otherwise since substitution only uses it in old [[USubstChurch]] not in new
    *   [[USubstOne]].
    */
   def signature(formula: Formula): immutable.Set[NamedSymbol] = formula match {
@@ -360,10 +333,8 @@ object StaticSemantics {
 
   /**
    * The signature of a program, i.e., set of function, predicate, and atomic program symbols occurring in it.
-   * @note
-   *   Soundness-critical in data structure invariant for interpreted functions.
-   * @note
-   *   Not soundness-critical otherwise since substitution only uses it in old [[USubstChurch]] not in new
+   * @note Soundness-critical in data structure invariant for interpreted functions.
+   * @note Not soundness-critical otherwise since substitution only uses it in old [[USubstChurch]] not in new
    *   [[USubstOne]].
    */
   @nowarn("msg=match may not be exhaustive")
@@ -424,23 +395,27 @@ object StaticSemantics {
   // convenience for sequents are unions over their formulas
 
   /** The set FV(a) of free variables of a sequent. */
-  def freeVars(s: Sequent): SetLattice[Variable] = (s.ante ++ s.succ)
-    .foldLeft(bottom[Variable])((a, b) => a ++ freeVars(b))
+  def freeVars(s: Sequent): SetLattice[Variable] = (s.ante ++ s.succ).foldLeft(bottom[Variable])((a, b) =>
+    a ++ freeVars(b)
+  )
 
   /** The set BV(a) of bound variables of a sequent. */
-  def boundVars(s: Sequent): SetLattice[Variable] = (s.ante ++ s.succ)
-    .foldLeft(bottom[Variable])((a, b) => a ++ boundVars(b))
+  def boundVars(s: Sequent): SetLattice[Variable] = (s.ante ++ s.succ).foldLeft(bottom[Variable])((a, b) =>
+    a ++ boundVars(b)
+  )
 
   /** The signature of a sequent. */
-  def signature(s: Sequent): immutable.Set[NamedSymbol] = (s.ante ++ s.succ)
-    .foldLeft(Set.empty[NamedSymbol])((a, b) => a ++ signature(b))
+  def signature(s: Sequent): immutable.Set[NamedSymbol] = (s.ante ++ s.succ).foldLeft(Set.empty[NamedSymbol])((a, b) =>
+    a ++ signature(b)
+  )
 
   /**
    * Any symbol occurring verbatim in a sequent, whether free or bound variable or function or predicate or program
    * constant
    */
-  def symbols(s: Sequent): immutable.Set[NamedSymbol] = (s.ante ++ s.succ)
-    .foldLeft(Set[NamedSymbol]())((a, b) => a ++ symbols(b))
+  def symbols(s: Sequent): immutable.Set[NamedSymbol] = (s.ante ++ s.succ).foldLeft(Set[NamedSymbol]())((a, b) =>
+    a ++ symbols(b)
+  )
 
   // helpers
 

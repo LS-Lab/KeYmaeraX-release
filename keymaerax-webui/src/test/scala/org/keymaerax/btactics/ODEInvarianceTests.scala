@@ -90,8 +90,8 @@ class ODEInvarianceTests extends TacticTestBase {
   it should "prove a 3D equilibirum" in withQE { _ =>
     val fml = "x=0&y=0 ==> z!=1 , [{x'=(2*z+y)*x+x^2*y+z-1,y'=x+y^2+(z-1),z'=x*y+x+z-1}](x=0&y=0&z=1)".asSequent
 
-    val cofactors = List(List("2*z+y", "x^2", "1"), List("1", "y", "1"), List("1", "x", "1"))
-      .map(ls => ls.map(s => s.asTerm))
+    val cofactors =
+      List(List("2*z+y", "x^2", "1"), List("1", "y", "1"), List("1", "x", "1")).map(ls => ls.map(s => s.asTerm))
     val polys = List("x", "y", "z-1").map(s => s.asTerm)
     val pr = proveBy(fml, dgVdbx(cofactors, polys)(2) & dW(2) & QE)
     pr shouldBe Symbol("proved")
@@ -100,8 +100,8 @@ class ODEInvarianceTests extends TacticTestBase {
   it should "prove a 3D disequilibirum" in withQE { _ =>
     val fml = "x=0&y=0 ==> z=1 , [{x'=(2*z+y)*x+x^2*y+z-1,y'=x+y^2+(z-1),z'=x*y+x+z-1}](x!=0|y!=0|z!=1)".asSequent
 
-    val cofactors = List(List("2*z+y", "x^2", "1"), List("1", "y", "1"), List("1", "x", "1"))
-      .map(ls => ls.map(s => s.asTerm))
+    val cofactors =
+      List(List("2*z+y", "x^2", "1"), List("1", "y", "1"), List("1", "x", "1")).map(ls => ls.map(s => s.asTerm))
     val polys = List("x", "y", "z-1").map(s => s.asTerm)
     val pr = proveBy(fml, dgVdbx(cofactors, polys, negate = true)(2) & dW(2) & QE)
     pr shouldBe Symbol("proved")
@@ -726,20 +726,21 @@ class ODEInvarianceTests extends TacticTestBase {
   }
 
   it should "FEATURE_REQUEST: support division/square root" taggedAs TodoTest in withMathematica { _ =>
-    val s = """g>0 & p>a & a>0 & T>0 & m< -(g/p)^(1/2) &
-              |  x>=0 & v<0 & v> -(g/p)^(1/2) & r=a
-              |==>
-              |[ {
-              |    {
-              |      ?(v - g*T > -(g/p)^(1/2) & r = a);
-              |      ++
-              |      r := p;
-              |    }
-              |    t := 0;
-              |    {x'=v, v'=-g+r*v^2, t'=1 & t<=T & x>=0 & v<0}
-              |  }*
-              |](x=0 -> v>=m)
-              |""".stripMargin.asSequent
+    val s =
+      """g>0 & p>a & a>0 & T>0 & m< -(g/p)^(1/2) &
+        |  x>=0 & v<0 & v> -(g/p)^(1/2) & r=a
+        |==>
+        |[ {
+        |    {
+        |      ?(v - g*T > -(g/p)^(1/2) & r = a);
+        |      ++
+        |      r := p;
+        |    }
+        |    t := 0;
+        |    {x'=v, v'=-g+r*v^2, t'=1 & t<=T & x>=0 & v<0}
+        |  }*
+        |](x=0 -> v>=m)
+        |""".stripMargin.asSequent
     // @todo sAI causes singularities in dG because it hides the assumptions g>0, p>a, a>0
     proveBy(s, autoClose) shouldBe Symbol("proved")
   }

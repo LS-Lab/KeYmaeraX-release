@@ -43,16 +43,13 @@ private[keymaerax] object PropositionalTactics extends Logging {
 
   /**
    * Inverse of [[SequentCalculus.implyR]].
-   * @author
-   *   Nathan Fulton
-   * @author
-   *   Stefan Mitsch
-   * @see
-   *   [[SequentCalculus.implyR]]
+   * @author Nathan Fulton
+   * @author Stefan Mitsch
+   * @see [[SequentCalculus.implyR]]
    */
   private[btactics] lazy val implyRi: AppliedBuiltinTwoPositionTactic = implyRi()(AntePos(0), SuccPos(0))
-  private[btactics] def implyRi(keep: Boolean = false): BuiltInTwoPositionTactic =
-    anon((p: ProvableSig, a: Position, s: Position) => {
+  private[btactics] def implyRi(keep: Boolean = false): BuiltInTwoPositionTactic = anon(
+    (p: ProvableSig, a: Position, s: Position) => {
       assert(p.subgoals.length == 1, "Assuming one subgoal.")
       val sequent = p.subgoals.head
       require(
@@ -63,20 +60,19 @@ private[keymaerax] object PropositionalTactics extends Logging {
       val left = sequent.ante(a.checkAnte.top.getIndex)
       val impl = p(CutRight(left, s.checkSucc.top), 0)(Close(a.checkAnte.top, s.checkSucc.top), 0)
       if (keep) impl else impl(core.HideLeft(a.checkAnte.top), 0)
-    })
+    }
+  )
 
   /**
    * Inverse of [[ProofRuleTactics.orR]].
    *
-   * @author
-   *   Stefan Mitsch
-   * @see
-   *   [[ProofRuleTactics.orR]]
+   * @author Stefan Mitsch
+   * @see [[ProofRuleTactics.orR]]
    */
   private[btactics] lazy val orRi: AppliedBuiltinTwoPositionTactic =
     orRi(keepLeft = false)(SuccPosition.base0(0), SuccPosition.base0(1))
-  private[btactics] def orRi(keepLeft: Boolean): BuiltInTwoPositionTactic =
-    anon { (pr: ProvableSig, pos1: Position, pos2: Position) =>
+  private[btactics] def orRi(keepLeft: Boolean): BuiltInTwoPositionTactic = anon {
+    (pr: ProvableSig, pos1: Position, pos2: Position) =>
       {
         require(pos1 != pos2, "Two distinct positions required")
         val sequent = pr.subgoals.head
@@ -104,20 +100,18 @@ private[keymaerax] object PropositionalTactics extends Logging {
           0,
         )(Close(cutUsePos, pos2.checkSucc.checkTop), 2)(Close(cutUsePos, pos1.checkSucc.checkTop), 0)
       }
-    }
+  }
 
   /**
    * Inverse of [[ProofRuleTactics.andL]].
    *
-   * @author
-   *   Stefan Mitsch
-   * @see
-   *   [[ProofRuleTactics.andL]]
+   * @author Stefan Mitsch
+   * @see [[ProofRuleTactics.andL]]
    */
   private[btactics] lazy val andLi: AppliedBuiltinTwoPositionTactic =
     andLi(keepLeft = false)(AntePosition.base0(0), AntePosition.base0(1))
-  private[btactics] def andLi(keepLeft: Boolean): BuiltInTwoPositionTactic =
-    anon { (pr: ProvableSig, pos1: Position, pos2: Position) =>
+  private[btactics] def andLi(keepLeft: Boolean): BuiltInTwoPositionTactic = anon {
+    (pr: ProvableSig, pos1: Position, pos2: Position) =>
       {
         require(pos1 != pos2, "Two distinct positions required")
         val sequent = pr.subgoals.head
@@ -147,26 +141,22 @@ private[keymaerax] object PropositionalTactics extends Logging {
           1,
         )
       }
-    }
+  }
 
   /**
    * Returns a tactic for propositional CE with purely propositional unpeeling. Useful when unpeeled fact is not an
    * equivalence, as needed by CE. May perform better than CE for small contexts.
    *
-   * @see
-   *   [[UnifyUSCalculus.CMon(Context)]]
-   * @see
-   *   [[UnifyUSCalculus.CE(Context)]]
+   * @see [[UnifyUSCalculus.CMon(Context)]]
+   * @see [[UnifyUSCalculus.CE(Context)]]
    * @example
    *   {{{
    *            z=1 |- z>0
    *   --------------------------propCE(PosInExpr(1::Nil))
    *     x>0 -> z=1 |- x>0 -> z>0
    *   }}}
-   * @param at
-   *   Points to the position to unpeel.
-   * @return
-   *   The tactic.
+   * @param at Points to the position to unpeel.
+   * @return The tactic.
    */
   def propCMon(at: PosInExpr): BuiltInTactic = anon { (provable: ProvableSig) =>
     ProofRuleTactics.requireOneSubgoal(provable, "propCMon")
@@ -186,74 +176,71 @@ private[keymaerax] object PropositionalTactics extends Logging {
     // will branch and one of these branches will close by identity. on the other branch, we have to hide
     // list all cases explicitly, hide appropriate formulas in order to not blow up branching
     if (at.pos.length <= 0) provable
-    else
-      (
-        (
-          sequent.succ.headOption match {
-            case Some(_: Not) => (provable(NotLeft(AntePos(0)), 0)(NotRight(SuccPos(0)), 0))
-            case Some(And(lhs, rhs)) => (
-              provable(AndLeft(AntePos(0)), 0)(AndRight(SuccPos(0)), 0)(
-                (pr: ProvableSig) =>
-                  if (pr.subgoals.head(AntePos(1)) == rhs) pr(Close(AntePos(1), SuccPos(0)), 0)
-                  else pr(HideLeft(AntePos(0)), 0),
-                1,
-              )(
-                (pr: ProvableSig) =>
-                  if (pr.subgoals.head(AntePos(0)) == lhs) pr(Close(AntePos(0), SuccPos(0)), 0)
-                  else pr(HideLeft(AntePos(1)), 0),
-                0,
-              )
-            )
-            case Some(Or(lhs, rhs)) => (
-              provable(OrRight(SuccPos(0)), 0)(OrLeft(AntePos(0)), 0)(
-                (pr: ProvableSig) =>
-                  if (pr.subgoals.head(AntePos(0)) == rhs) pr(Close(AntePos(0), SuccPos(1)), 0)
-                  else pr(HideRight(SuccPos(0)), 0),
-                1,
-              )(
-                (pr: ProvableSig) =>
-                  if (pr.subgoals.head(AntePos(0)) == lhs) pr(Close(AntePos(0), SuccPos(0)), 0)
-                  else pr(HideRight(SuccPos(1)), 0),
-                0,
-              )
-            )
-            case Some(Imply(lhs, rhs)) => (
-              provable(ImplyRight(SuccPos(0)), 0)(ImplyLeft(AntePos(0)), 0)(
-                (pr: ProvableSig) =>
-                  if (pr.subgoals.head(AntePos(0)) == rhs) pr(Close(AntePos(0), SuccPos(0)), 0)
-                  else pr(HideLeft(AntePos(1) /* 'Llast */ ), 0),
-                1,
-              )(
-                (pr: ProvableSig) =>
-                  if (pr.subgoals.head(SuccPos(1)) == lhs) pr(Close(AntePos(0), SuccPos(1)), 0)
-                  else pr(HideRight(SuccPos(0)), 0),
-                0,
-              )
-            )
-            case Some(_: Box) =>
-              import org.keymaerax.btactics.macros.DerivationInfoAugmentors.*
-              provable(UnifyUSCalculus.US(Ax.monbaxiom.provable), 0)
-            case Some(_: Diamond) =>
-              import org.keymaerax.btactics.macros.DerivationInfoAugmentors.*
-              provable(UnifyUSCalculus.US(Ax.mondrule.provable), 0)
-            case Some(_: Forall) => provable(
-                FOQuantifierTactics.allSkolemize(SuccPos(0)) andThen
-                  FOQuantifierTactics.allInstantiate(None, None)(AntePos(0)),
-                0,
-              )
-            case Some(_: Exists) => provable(
-                FOQuantifierTactics.existsSkolemize(AntePos(0)) andThen
-                  FOQuantifierTactics.existsInstantiate(None, None)(SuccPos(0)),
-                0,
-              )
-            case Some(e) => throw new TacticInapplicableFailure("Prop. CMon not applicable to " + e.prettyString)
-            // redundant to exception raised by .at(...) in contract above
-            case None => throw new IllFormedTacticApplicationException(
-                "Prop. CMon: no more formulas left to descend into " + at.prettyString
-              )
-          }
-        )(propCMon(at.child), 0)
-      )
+    else (
+      (sequent.succ.headOption match {
+        case Some(_: Not) => (provable(NotLeft(AntePos(0)), 0)(NotRight(SuccPos(0)), 0))
+        case Some(And(lhs, rhs)) => (
+          provable(AndLeft(AntePos(0)), 0)(AndRight(SuccPos(0)), 0)(
+            (pr: ProvableSig) =>
+              if (pr.subgoals.head(AntePos(1)) == rhs) pr(Close(AntePos(1), SuccPos(0)), 0)
+              else pr(HideLeft(AntePos(0)), 0),
+            1,
+          )(
+            (pr: ProvableSig) =>
+              if (pr.subgoals.head(AntePos(0)) == lhs) pr(Close(AntePos(0), SuccPos(0)), 0)
+              else pr(HideLeft(AntePos(1)), 0),
+            0,
+          )
+        )
+        case Some(Or(lhs, rhs)) => (
+          provable(OrRight(SuccPos(0)), 0)(OrLeft(AntePos(0)), 0)(
+            (pr: ProvableSig) =>
+              if (pr.subgoals.head(AntePos(0)) == rhs) pr(Close(AntePos(0), SuccPos(1)), 0)
+              else pr(HideRight(SuccPos(0)), 0),
+            1,
+          )(
+            (pr: ProvableSig) =>
+              if (pr.subgoals.head(AntePos(0)) == lhs) pr(Close(AntePos(0), SuccPos(0)), 0)
+              else pr(HideRight(SuccPos(1)), 0),
+            0,
+          )
+        )
+        case Some(Imply(lhs, rhs)) => (
+          provable(ImplyRight(SuccPos(0)), 0)(ImplyLeft(AntePos(0)), 0)(
+            (pr: ProvableSig) =>
+              if (pr.subgoals.head(AntePos(0)) == rhs) pr(Close(AntePos(0), SuccPos(0)), 0)
+              else pr(HideLeft(AntePos(1) /* 'Llast */ ), 0),
+            1,
+          )(
+            (pr: ProvableSig) =>
+              if (pr.subgoals.head(SuccPos(1)) == lhs) pr(Close(AntePos(0), SuccPos(1)), 0)
+              else pr(HideRight(SuccPos(0)), 0),
+            0,
+          )
+        )
+        case Some(_: Box) =>
+          import org.keymaerax.btactics.macros.DerivationInfoAugmentors.*
+          provable(UnifyUSCalculus.US(Ax.monbaxiom.provable), 0)
+        case Some(_: Diamond) =>
+          import org.keymaerax.btactics.macros.DerivationInfoAugmentors.*
+          provable(UnifyUSCalculus.US(Ax.mondrule.provable), 0)
+        case Some(_: Forall) => provable(
+            FOQuantifierTactics.allSkolemize(SuccPos(0)) andThen
+              FOQuantifierTactics.allInstantiate(None, None)(AntePos(0)),
+            0,
+          )
+        case Some(_: Exists) => provable(
+            FOQuantifierTactics.existsSkolemize(AntePos(0)) andThen
+              FOQuantifierTactics.existsInstantiate(None, None)(SuccPos(0)),
+            0,
+          )
+        case Some(e) => throw new TacticInapplicableFailure("Prop. CMon not applicable to " + e.prettyString)
+        // redundant to exception raised by .at(...) in contract above
+        case None => throw new IllFormedTacticApplicationException(
+            "Prop. CMon: no more formulas left to descend into " + at.prettyString
+          )
+      })(propCMon(at.child), 0)
+    )
   }
 
   /** @see [[SequentCalculus.modusPonens()]] */
@@ -310,8 +297,8 @@ private[keymaerax] object PropositionalTactics extends Logging {
   }
 
   @Derivation
-  private[btactics] val autoMPInfo: PositionTacticInfo = PositionTacticInfo
-    .create(name = "autoMP", constructor = TacticConstructor0.create()(() => autoMP))
+  private[btactics] val autoMPInfo: PositionTacticInfo =
+    PositionTacticInfo.create(name = "autoMP", constructor = TacticConstructor0.create()(() => autoMP))
 
   /**
    * Converts a sequent into a single formula.
@@ -377,8 +364,8 @@ private[keymaerax] object PropositionalTactics extends Logging {
   }
 
   @Derivation
-  val toSingleFormulaInfo: PlainTacticInfo = PlainTacticInfo
-    .create(name = "toSingleFormula", constructor = TacticConstructor0.create()(() => toSingleFormula))
+  val toSingleFormulaInfo: PlainTacticInfo =
+    PlainTacticInfo.create(name = "toSingleFormula", constructor = TacticConstructor0.create()(() => toSingleFormula))
 
   /** Forward propositional tactic for internal use (does not create branch labels). */
   val prop: BuiltInTactic = prop(alphaRules, betaRules)(List.empty, List.empty)
@@ -406,10 +393,10 @@ private[keymaerax] object PropositionalTactics extends Logging {
   }
 
   /** Forward propositional tactic implementation with work stacks `alpha` and `beta`, and configuration */
-  def prop(
-      alphaRules: (Formula, SeqPos) => List[PositionRule],
-      betaRules: (Formula, SeqPos) => List[PositionRule],
-  )(alpha: List[PositionRule], beta: List[PositionRule]): BuiltInTactic = anon { (provable: ProvableSig) =>
+  def prop(alphaRules: (Formula, SeqPos) => List[PositionRule], betaRules: (Formula, SeqPos) => List[PositionRule])(
+      alpha: List[PositionRule],
+      beta: List[PositionRule],
+  ): BuiltInTactic = anon { (provable: ProvableSig) =>
     ProofRuleTactics.requireOneSubgoal(provable, "PropositionalTactics.prop")
 
     /** Repositions the beta rules in `r` a position up (to index-1) if they are after position `p`. */
@@ -518,8 +505,8 @@ private[keymaerax] object PropositionalTactics extends Logging {
                   s.ante.zipWithIndex.flatMap({ case (fml, i) => alphaRules(fml, AntePos(i)) }).reverse
                 val beta = s.succ.zipWithIndex.flatMap({ case (fml, i) => betaRules(fml, SuccPos(i)) }).reverse ++
                   s.ante.zipWithIndex.flatMap({ case (fml, i) => betaRules(fml, AntePos(i)) }).reverse
-                if (alpha.nonEmpty || beta.nonEmpty) prop(alphaRules, betaRules)(alpha.toList, beta.toList)
-                  .result(provable)
+                if (alpha.nonEmpty || beta.nonEmpty)
+                  prop(alphaRules, betaRules)(alpha.toList, beta.toList).result(provable)
                 else provable
             }
         }
@@ -533,8 +520,7 @@ private[keymaerax] object PropositionalTactics extends Logging {
    * equivalence in place. Instantiates Forall-quantified equivalences so that they match the target position when
    * necessary. If the quantified variable is not mentioned in the targetPos, then the quantified name is used.
    *
-   * @todo
-   *   these examples might be incorrect, and the description above might be incorrect. Correct explanation is "does
+   * @todo these examples might be incorrect, and the description above might be incorrect. Correct explanation is "does
    *   whatever unification does", actually. Although we might want to change that to not use unification...
    *
    * Examples:
@@ -560,8 +546,8 @@ private[keymaerax] object PropositionalTactics extends Logging {
    *   \forall x. p(x) <-> q(z), p(x) |-
    * }}}
    */
-  val equivRewriting: BuiltInTwoPositionTactic = "equivRewriting"
-    .by { (p: ProvableSig, equivPos: Position, targetPos: Position) =>
+  val equivRewriting: BuiltInTwoPositionTactic =
+    "equivRewriting".by { (p: ProvableSig, equivPos: Position, targetPos: Position) =>
       assert(p.subgoals.length == 1, "Assuming one subgoal.")
       val seq = p.subgoals.head
       val target = seq(targetPos).asInstanceOf[Formula]
@@ -601,20 +587,18 @@ private[keymaerax] object PropositionalTactics extends Logging {
           val cutPos = AntePos(p.subgoals.head.ante.length) // Position of equivalence to instantiate.
 
           // step 2: input is p and output is postCut
+          (p(Cut(fa), 0)(closeId(equivPos.checkAnte.top, SuccPos(p.subgoals.head.succ.length)), 1)
+          // step 3: input is postCut and output is instantiatedEquivalence
           (
-            p(Cut(fa), 0)(closeId(equivPos.checkAnte.top, SuccPos(p.subgoals.head.succ.length)), 1)
-            // step 3: input is postCut and output is instantiatedEquivalence
-            (
-              vars(fa)
-                .map(x => FOQuantifierTactics.allInstantiate(Some(x), Some(instantiation(x)))(cutPos))
-                .foldLeft(_: ProvableSig)({ case (pr, r) => pr(r, 0) }),
-              0,
-            )
-            // step 4
-            (instantiatedEquivRewritingImpl(_, cutPos, targetPos.top), 0)
-            // step 5
-            (if (targetPos.isAnte) HideLeft(targetPos.checkAnte.top) else HideLeft(cutPos), 0)
+            vars(fa)
+              .map(x => FOQuantifierTactics.allInstantiate(Some(x), Some(instantiation(x)))(cutPos))
+              .foldLeft(_: ProvableSig)({ case (pr, r) => pr(r, 0) }),
+            0,
           )
+          // step 4
+          (instantiatedEquivRewritingImpl(_, cutPos, targetPos.top), 0)
+          // step 5
+          (if (targetPos.isAnte) HideLeft(targetPos.checkAnte.top) else HideLeft(cutPos), 0))
       }
     }
 
@@ -756,8 +740,8 @@ private[keymaerax] object PropositionalTactics extends Logging {
     }
   }
 
-  val instantiatedEquivRewriting: BuiltInTwoPositionTactic = "instantiatedEquivRewriting"
-    .by { (p: ProvableSig, equivPos: Position, targetPos: Position) =>
+  val instantiatedEquivRewriting: BuiltInTwoPositionTactic =
+    "instantiatedEquivRewriting".by { (p: ProvableSig, equivPos: Position, targetPos: Position) =>
       assert(targetPos.isTopLevel, "Simple equivalence rewriting only when target is top-level")
       instantiatedEquivRewritingImpl(p, equivPos, targetPos.top)
     }
@@ -796,8 +780,7 @@ private[keymaerax] object PropositionalTactics extends Logging {
 
   /**
    * Negation normal form with proof.
-   * @see
-   *   [[FormulaTools.negationNormalForm]]
+   * @see [[FormulaTools.negationNormalForm]]
    */
   def negationNormalForm(fml: Formula): (Formula, ProvableSig) = fml match {
     case p: AtomicFormula => (
@@ -815,8 +798,9 @@ private[keymaerax] object PropositionalTactics extends Logging {
         case False => (True, ProvableSig.startPlainProof(Equiv(fml, True))(PropositionalTactics.prop, 0))
         case _: PredOf => (
             fml,
-            ProvableSig
-              .startPlainProof(Equiv(fml, fml))(Ax.equivReflexive.provable(USubst(List(SubstitutionPair(px, fml)))), 0),
+            ProvableSig.startPlainProof(
+              Equiv(fml, fml)
+            )(Ax.equivReflexive.provable(USubst(List(SubstitutionPair(px, fml)))), 0),
           )
         case _ => throw new IllegalArgumentException("negationNormalForm of formula " + fml + " not implemented")
       }
@@ -1081,8 +1065,7 @@ private[keymaerax] object PropositionalTactics extends Logging {
 
   /**
    * Reassociates `fml` to default right-associativity.
-   * @see
-   *   [[FormulaTools.reassociate]]
+   * @see [[FormulaTools.reassociate]]
    */
   def rightAssociate(fml: Formula): (Formula, ProvableSig) = fml match {
     case Or(l, r) =>
@@ -1091,8 +1074,9 @@ private[keymaerax] object PropositionalTactics extends Logging {
       timed(rightAssociateStep(l, r, FormulaTools.conjuncts, And.apply, propAnd), "Right associate step and")
     case _ => (
         fml,
-        ProvableSig
-          .startPlainProof(Equiv(fml, fml))(Ax.equivReflexive.provable(USubst(List(SubstitutionPair(px, fml)))), 0),
+        ProvableSig.startPlainProof(
+          Equiv(fml, fml)
+        )(Ax.equivReflexive.provable(USubst(List(SubstitutionPair(px, fml)))), 0),
       )
   }
 
@@ -1110,12 +1094,12 @@ private[keymaerax] object PropositionalTactics extends Logging {
   }
 
   @Derivation
-  val rightAssociateInfo: PositionTacticInfo = PositionTacticInfo
-    .create(name = "rightAssociate", constructor = TacticConstructor0.create()(() => rightAssociate))
+  val rightAssociateInfo: PositionTacticInfo =
+    PositionTacticInfo.create(name = "rightAssociate", constructor = TacticConstructor0.create()(() => rightAssociate))
 
   /** Apply sub-proofs at a right-associated goal. */
-  private def applySubproofs(subProofs: List[ProvableSig], key: PosInExpr): BuiltInPositionTactic =
-    anon { (pr: ProvableSig, pos: Position) =>
+  private def applySubproofs(subProofs: List[ProvableSig], key: PosInExpr): BuiltInPositionTactic = anon {
+    (pr: ProvableSig, pos: Position) =>
       timed(
         subProofs
           .zipWithIndex
@@ -1127,7 +1111,7 @@ private[keymaerax] object PropositionalTactics extends Logging {
           }),
         "Applying subproofs",
       )
-    }
+  }
 
   /**
    * Applies tactics `l`, `r` on the subgoals resulting from splitting the equivalence in the only subgoal of `pr` after
@@ -1258,40 +1242,37 @@ private[keymaerax] object PropositionalTactics extends Logging {
           assert(orDistAndRevProof.isProved, "Expected proved orDistAndRev proof, but got open goals")
 
           val combineProof = timed(
-            ProvableSig.startPlainProof(Equiv(cOrO, dAndO))(EquivRight(SuccPos(0)), 0)(AndLeft(AntePos(0)), 1)(
-              AndRight(SuccPos(0)),
-              1,
-            )(Close(AntePos(1), SuccPos(0)), 2)(
-              UnifyUSCalculus.CEat(orDistAndRevProof, PosInExpr(List(1)))(SuccPos(0)),
-              1,
-            )(Close(AntePos(0), SuccPos(0)), 1)(AndLeft(AntePos(0)), 0)(AndRight(SuccPos(0)), 0)(
+            ProvableSig.startPlainProof(
+              Equiv(cOrO, dAndO)
+            )(EquivRight(SuccPos(0)), 0)(AndLeft(AntePos(0)), 1)(AndRight(SuccPos(0)), 1)(
               Close(AntePos(1), SuccPos(0)),
-              1,
-            )(UnifyUSCalculus.CEat(orDistAndRevProof, PosInExpr(List(1)))(AntePos(0)), 0)(
+              2,
+            )(UnifyUSCalculus.CEat(orDistAndRevProof, PosInExpr(List(1)))(SuccPos(0)), 1)(
               Close(AntePos(0), SuccPos(0)),
+              1,
+            )(AndLeft(AntePos(0)), 0)(AndRight(SuccPos(0)), 0)(Close(AntePos(1), SuccPos(0)), 1)(
+              UnifyUSCalculus.CEat(orDistAndRevProof, PosInExpr(List(1)))(AntePos(0)),
               0,
-            ),
+            )(Close(AntePos(0), SuccPos(0)), 0),
             "combineProof",
           )
           assert(combineProof.isProved)
 
           val mixOProof = timed(
-            ProvableSig.startPlainProof(Equiv(result, cOrO))(
-              applyTacticAbbrv(propOrAnd(o), propOrAnd(o), innerDisjuncts.flatten),
-              0,
-            ),
+            ProvableSig.startPlainProof(
+              Equiv(result, cOrO)
+            )(applyTacticAbbrv(propOrAnd(o), propOrAnd(o), innerDisjuncts.flatten), 0),
             "mixOProof",
           )
           assert(mixOProof.isProved)
 
           val resultProof = timed(
-            ProvableSig.startPlainProof(Equiv(fml, result))(
-              UnifyUSCalculus.CEat(mixOProof, PosInExpr(List(0)))(SuccPosition.base0(0, PosInExpr(List(1)))),
+            ProvableSig.startPlainProof(
+              Equiv(fml, result)
+            )(UnifyUSCalculus.CEat(mixOProof, PosInExpr(List(0)))(SuccPosition.base0(0, PosInExpr(List(1)))), 0)(
+              UnifyUSCalculus.CEat(combineProof, PosInExpr(List(0)))(SuccPosition.base0(0, PosInExpr(List(1)))),
               0,
-            )(UnifyUSCalculus.CEat(combineProof, PosInExpr(List(0)))(SuccPosition.base0(0, PosInExpr(List(1)))), 0)(
-              applyTacticAbbrv(propAnd, propAnd, innerDisjuncts.flatten),
-              0,
-            ),
+            )(applyTacticAbbrv(propAnd, propAnd, innerDisjuncts.flatten), 0),
             "resultProof",
           )
           assert(resultProof.isProved)
@@ -1302,8 +1283,9 @@ private[keymaerax] object PropositionalTactics extends Logging {
           val rearranged = disjunctions.reduceRight(And.apply)
           val disjuncts = disjunctions.flatMap(FormulaTools.disjuncts)
           val combineProof = timed(
-            ProvableSig
-              .startPlainProof(Equiv(result, rearranged))(applyTacticAbbrv(propAndOr, propAndOr, disjuncts), 0),
+            ProvableSig.startPlainProof(
+              Equiv(result, rearranged)
+            )(applyTacticAbbrv(propAndOr, propAndOr, disjuncts), 0),
             "combineProof (2)",
           )
           assert(combineProof.isProved)
@@ -1322,8 +1304,9 @@ private[keymaerax] object PropositionalTactics extends Logging {
       } else {
         (
           fml,
-          ProvableSig
-            .startPlainProof(Equiv(fml, fml))(Ax.equivReflexive.provable(USubst(List(SubstitutionPair(px, fml)))), 0),
+          ProvableSig.startPlainProof(
+            Equiv(fml, fml)
+          )(Ax.equivReflexive.provable(USubst(List(SubstitutionPair(px, fml)))), 0),
         )
       }
     case f =>

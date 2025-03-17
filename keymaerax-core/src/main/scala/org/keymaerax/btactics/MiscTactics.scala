@@ -70,8 +70,8 @@ object DebuggingTactics extends Logging {
       }
     }
 
-  def debugX(msg: String): StringInputTactic = "debug"
-    .byWithInputsS(List(msg), { (p: ProvableSig) => debug(msg).result(p) })
+  def debugX(msg: String): StringInputTactic =
+    "debug".byWithInputsS(List(msg), { (p: ProvableSig) => debug(msg).result(p) })
 
   @Derivation
   val debugXInfo: InputTacticInfo = InputTacticInfo.create(
@@ -90,8 +90,8 @@ object DebuggingTactics extends Logging {
    */
   def printIndexed(message: => String): BuiltInTactic = debug(message, doPrint = true, _.prettyString)
 
-  def printX(msg: String): StringInputTactic = "print"
-    .byWithInputsS(List(msg), { (p: ProvableSig) => printIndexed(msg).result(p) })
+  def printX(msg: String): StringInputTactic =
+    "print".byWithInputsS(List(msg), { (p: ProvableSig) => printIndexed(msg).result(p) })
 
   @Derivation
   val printXInfo: InputTacticInfo = InputTacticInfo.create(
@@ -102,28 +102,26 @@ object DebuggingTactics extends Logging {
   )
 
   /** debug is a no-op tactic that prints a message and the current provable, if the system property DEBUG is true. */
-  def debugAt(message: => String, doPrint: Boolean = DEBUG): BuiltInPositionTactic = new BuiltInPositionTactic("debug")
-    with NoOpTactic {
-    override def computeResult(provable: ProvableSig, pos: Position): ProvableSig = {
-      if (doPrint) this
-        .logger
-        .debug(
-          s"""===== $message =====
-             |with formula: ${provable.subgoals.head.at(pos)} at position $pos of first subgoal,
-             |entire provable: $provable
-             |=====""".stripMargin
-        )
-      provable
+  def debugAt(message: => String, doPrint: Boolean = DEBUG): BuiltInPositionTactic =
+    new BuiltInPositionTactic("debug") with NoOpTactic {
+      override def computeResult(provable: ProvableSig, pos: Position): ProvableSig = {
+        if (doPrint) this
+          .logger
+          .debug(
+            s"""===== $message =====
+               |with formula: ${provable.subgoals.head.at(pos)} at position $pos of first subgoal,
+               |entire provable: $provable
+               |=====""".stripMargin
+          )
+        provable
+      }
     }
-  }
 
   /**
    * Assert that the assertion holds at a the specified position. Could be a non-top-level position. Analogous to
    * [[debugAt]].
-   * @param msg
-   *   The message to display.
-   * @param assertion
-   *   The assertion.
+   * @param msg The message to display.
+   * @param assertion The assertion.
    */
   def assertAt(
       msg: Expression => String,
@@ -247,8 +245,9 @@ object DebuggingTactics extends Logging {
     new BuiltInTactic(ANON) with NoOpTactic {
       override def result(provable: ProvableSig): ProvableSig = {
         if (provable.subgoals.length != provableSize) throw ex(
-          s"assertProvableSize failed: Expected to have $provableSize open goals but found an open goal with ${provable.subgoals.size} subgoals:\n" +
-            provable.prettyString
+          s"assertProvableSize failed: Expected to have $provableSize open goals but found an open goal with ${provable
+              .subgoals
+              .size} subgoals:\n" + provable.prettyString
         )
         provable
       }
@@ -318,18 +317,17 @@ object DebuggingTactics extends Logging {
   def assertE(expected: => Expression, message: => String): DependentPositionWithAppliedInputTactic =
     assertE(expected, message, new TacticAssertionError(_))
 
-  def assertX(expected: Expression, msg: String): DependentPositionWithAppliedInputTactic = "assert"
-    .byWithInputs(List(expected, msg), { DebuggingTactics.assertE(expected, msg)(_: Position) })
+  def assertX(expected: Expression, msg: String): DependentPositionWithAppliedInputTactic =
+    "assert".byWithInputs(List(expected, msg), { DebuggingTactics.assertE(expected, msg)(_: Position) })
 
   @Derivation
   val assertXInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
     name = "assert",
     displayName = Some("Assert"),
     displayNameAscii = Some("assert"),
-    constructor = TacticConstructor2
-      .create(ExpressionArg("expected"), StringArg("msg"))((expected: Expression, msg: String) =>
-        assertX(expected, msg)
-      ),
+    constructor = TacticConstructor2.create(ExpressionArg("expected"), StringArg("msg"))(
+      (expected: Expression, msg: String) => assertX(expected, msg)
+    ),
   )
 
   /** @see [[TactixLibrary.done]] */
@@ -337,8 +335,8 @@ object DebuggingTactics extends Logging {
   def done(msg: String): StringInputTactic = done(Some(msg), None)
   def done(msg: String, storeLemma: Option[String]): StringInputTactic = done(Some(msg), storeLemma)
 
-  def done(msg: scala.Option[String], lemmaName: scala.Option[String]): StringInputTactic = "done"
-    .forward(doneImpl(msg.getOrElse(""), lemmaName))
+  def done(msg: scala.Option[String], lemmaName: scala.Option[String]): StringInputTactic =
+    "done".forward(doneImpl(msg.getOrElse(""), lemmaName))
 
   @Derivation
   val doneInfo: InputTacticInfo = InputTacticInfo.create(
@@ -404,9 +402,8 @@ object Idioms {
 
   /** Optional tactic */
   def ?(t: BelleExpr): BelleExpr = t | UnifyUSCalculus.nil
-  def opt(t: ProvableSig => ProvableSig): ProvableSig => ProvableSig = (pr: ProvableSig) =>
-    try { t(pr) }
-    catch { case _: BelleProofSearchControl => pr }
+  def opt(t: ProvableSig => ProvableSig): ProvableSig => ProvableSig =
+    (pr: ProvableSig) => try { t(pr) } catch { case _: BelleProofSearchControl => pr }
 
   /** Saturate tactic `t` until no longer applicable. */
   def saturate(t: ProvableSig => ProvableSig): ProvableSig => ProvableSig = (pr: ProvableSig) => {
@@ -420,10 +417,7 @@ object Idioms {
 
   /** Try `s` and recover from proof search control failure with `t`. */
   def or(s: ProvableSig => ProvableSig, t: ProvableSig => ProvableSig): ProvableSig => ProvableSig =
-    (pr: ProvableSig) => {
-      try { s(pr) }
-      catch { case _: BelleProofSearchControl => t(pr) }
-    }
+    (pr: ProvableSig) => { try { s(pr) } catch { case _: BelleProofSearchControl => t(pr) } }
 
   /** Execute ts by branch order. */
   def <(t: BelleExpr*): BelleExpr = BranchTactic(t)
@@ -431,8 +425,7 @@ object Idioms {
   /**
    * Execute different tactics depending on branch label, fall back to branch order if branches come without labels.
    * `<((lbl1,t1), (lbl2,t2))` uses tactic t1 on branch labelled lbl1 and uses t2 on lbl2.
-   * @see
-   *   [[BelleLabels]]
+   * @see [[BelleLabels]]
    */
   def <(s1: (BelleLabel, BelleExpr), spec: (BelleLabel, BelleExpr)*): BelleExpr = CaseTactic(s1 +: spec)
 
@@ -502,17 +495,17 @@ object Idioms {
   }
 
   /** Stores a lemma `lemmaName` if the current provable is proved. */
-  def rememberAs(lemmaName: String)(implicit lemmaDB: LemmaDB): BelleExpr = new BuiltInTactic("RememberProof")
-    with NoOpTactic {
-    override def result(provable: ProvableSig): ProvableSig = {
-      if (provable.isProved) {
-        val evidence = ToolEvidence(immutable.List("input" -> provable.conclusion.prettyString, "output" -> "true")) ::
-          Nil
-        lemmaDB.add(new Lemma(provable, evidence, Some(lemmaName)))
+  def rememberAs(lemmaName: String)(implicit lemmaDB: LemmaDB): BelleExpr =
+    new BuiltInTactic("RememberProof") with NoOpTactic {
+      override def result(provable: ProvableSig): ProvableSig = {
+        if (provable.isProved) {
+          val evidence =
+            ToolEvidence(immutable.List("input" -> provable.conclusion.prettyString, "output" -> "true")) :: Nil
+          lemmaDB.add(new Lemma(provable, evidence, Some(lemmaName)))
+        }
+        provable
       }
-      provable
     }
-  }
 
   /** Repeats t while condition at position is true. */
   // was "loopwhile"
@@ -619,12 +612,9 @@ object Idioms {
 
 /**
  * Basic facilities for easily creating tactic objects.
- * @author
- *   Stefan Mitsch
- * @author
- *   Brandon Bohrer
- * @author
- *   Andre Platzer
+ * @author Stefan Mitsch
+ * @author Brandon Bohrer
+ * @author Andre Platzer
  */
 object TacticFactory {
 
@@ -636,9 +626,8 @@ object TacticFactory {
    *   {{{
    *   "[:=] assign" by (pos => useAt(Ax.assignbAxiom)(pos))
    *   }}}
-   * @param name
-   *   The tactic name. Use the special name ANON to indicate that this is an anonymous inner tactic that needs no
-   *   storage.
+   * @param name The tactic name. Use the special name ANON to indicate that this is an anonymous inner tactic that
+   *   needs no storage.
    */
   implicit class TacticForNameFactory(val name: String) extends Logging {
     if (name == "") throw new InternalError("Don't use empty name, use ANON for anonymous inner tactics")
@@ -776,10 +765,10 @@ object TacticFactory {
     def byWithInputs(inputs: Seq[Any], t: => BelleExpr): InputTactic = new InputTactic(name, inputs) {
       override def computeExpr(): BelleExpr = t
     }
-    def byWithInputsNoop(inputs: Seq[Any], t: => BelleExpr): InputTactic with NoOpTactic = new InputTactic(name, inputs)
-      with NoOpTactic {
-      override def computeExpr(): BelleExpr = t
-    }
+    def byWithInputsNoop(inputs: Seq[Any], t: => BelleExpr): InputTactic with NoOpTactic =
+      new InputTactic(name, inputs) with NoOpTactic {
+        override def computeExpr(): BelleExpr = t
+      }
 
     /** Creates a dependent tactic, which can inspect the sole sequent */
     def by(t: Sequent => BelleExpr): DependentTactic = new SingleGoalDependentTactic(name) {
@@ -827,16 +816,14 @@ object TacticFactory {
      *   {{{
      *   "andR" coreby((pr,pos)=> pr(AndRight(pos.top),0))
      *   }}}
-     * @see
-     *   [[Rule]]
-     * @see
-     *   [[TacticInapplicableFailure]]
+     * @see [[Rule]]
+     * @see [[TacticInapplicableFailure]]
      */
     def coreby(t: (ProvableSig, SuccPosition) => ProvableSig): CoreRightTactic = new CoreRightTactic(name) {
 
       /**
-       * @throws TacticInapplicableFailure
-       *   if this tactic is not applicable at the indicated position `pos` in `provable`
+       * @throws TacticInapplicableFailure if this tactic is not applicable at the indicated position `pos` in
+       *   `provable`
        */
       @inline
       override def computeCoreResult(provable: ProvableSig, pos: SuccPosition): ProvableSig = {
@@ -852,10 +839,8 @@ object TacticFactory {
      *   {{{
      *   "andR" coreby((pr,pos)=> pr(AndRight(pos.top),0))
      *   }}}
-     * @see
-     *   [[Rule]]
-     * @see
-     *   [[TacticInapplicableFailure]]
+     * @see [[Rule]]
+     * @see [[TacticInapplicableFailure]]
      */
     def corebyWithInputsR(
         inputs: Seq[Any],
@@ -876,10 +861,8 @@ object TacticFactory {
      *   {{{
      *   "andL" coreby((pr,pos)=> pr(AndLeft(pos.top),0))
      *   }}}
-     * @see
-     *   [[Rule]]
-     * @see
-     *   [[TacticInapplicableFailure]]
+     * @see [[Rule]]
+     * @see [[TacticInapplicableFailure]]
      */
     def corebyWithInputsL(
         inputs: Seq[Any],
@@ -946,16 +929,14 @@ object TacticFactory {
      *   {{{
      *   "andL" coreby((pr,pos)=> pr(AndLeft(pos.top),0))
      *   }}}
-     * @see
-     *   [[Rule]]
-     * @see
-     *   [[TacticInapplicableFailure]]
+     * @see [[Rule]]
+     * @see [[TacticInapplicableFailure]]
      */
     def coreby(t: (ProvableSig, AntePosition) => ProvableSig): CoreLeftTactic = new CoreLeftTactic(name) {
 
       /**
-       * @throws TacticInapplicableFailure
-       *   if this tactic is not applicable at the indicated position `pos` in `provable`
+       * @throws TacticInapplicableFailure if this tactic is not applicable at the indicated position `pos` in
+       *   `provable`
        */
       @inline
       override def computeCoreResult(provable: ProvableSig, pos: AntePosition): ProvableSig = {
@@ -981,9 +962,7 @@ object TacticFactory {
       }
   }
 
-  /**
-   * Creates labels for a core tactic that produces 2 subgoals. @note: not hooked into the annotation macros framework.
-   */
+  /** Creates labels for a core tactic that produces 2 subgoals. @note: not hooked into the annotation macros framework. */
   @nowarn("msg=match may not be exhaustive") @inline
   def corelabelledby[S <: Expression, T <: Expression](
       name: String,

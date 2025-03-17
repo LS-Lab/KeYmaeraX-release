@@ -86,7 +86,9 @@ class SmlQETests extends TacticTestBase with Logging {
     List(
       "sml" ->
         s"""open VS;
-           |val e = ${if (rounding) SmlQEReal64Printer(f) else (SmlQENoRoundingPrinter(f))};
+           |val e = ${
+            if (rounding) SmlQEReal64Printer(f) else (SmlQENoRoundingPrinter(f))
+          };
            |val noquantifiers = case CommandLine.arguments () of
            |         []                 => (print ("Expected QE method: one of [qE_dnf_eq,qE_dnf_general]\\n"); NONE)
            |       | ["vsEquality"]     => SOME (vSEquality e)
@@ -116,11 +118,16 @@ class SmlQETests extends TacticTestBase with Logging {
         s"""(* $name.mlb *)
            |$$(SML_LIB)/basis/basis.mlb
            |$$(SML_LIB)/smlnj-lib/Util/smlnj-lib.mlb
-           |$$(VIRTSUBST_LIB)/VS${if (rounding) "" else "NoRounding"}.sml
+           |$$(VIRTSUBST_LIB)/VS${
+            if (rounding) "" else "NoRounding"
+          }.sml
            |$$(VIRTSUBST_LIB)/SyntacticSugar.sml
-           |$$(VIRTSUBST_LIB)/Util${if (rounding) "" else "NoRounding"}.sml
-           |$$(BENCHMARK_BASE)/${if (rounding) "roundingfloat" + name.stripPrefix("rounding")
-          else name.stripPrefix("examples/")}.sml""".stripMargin,
+           |$$(VIRTSUBST_LIB)/Util${
+            if (rounding) "" else "NoRounding"
+          }.sml
+           |$$(BENCHMARK_BASE)/${
+            if (rounding) "roundingfloat" + name.stripPrefix("rounding") else name.stripPrefix("examples/")
+          }.sml""".stripMargin,
     )
   }
 
@@ -459,10 +466,7 @@ class SmlQETests extends TacticTestBase with Logging {
     for (c <- categories) {
       val summaryName = "summary-" + tool + "-" + c.getName + ".csv"
       val logFiles = listFiles(c, "log").sortBy(_.getName)
-      new PrintWriter(summaryName) {
-        try { write(BenchmarkResult.csvHeader + "\r\n") }
-        finally { close() }
-      }
+      new PrintWriter(summaryName) { try { write(BenchmarkResult.csvHeader + "\r\n") } finally { close() } }
       Table("filehandle", logFiles.zipWithIndex: _*).forEvery({ case (logFile, i) =>
         val log = Source.fromFile(logFile)
         try {
@@ -470,8 +474,7 @@ class SmlQETests extends TacticTestBase with Logging {
           val dur = parseDuration(logLines)
           val result = converter(logLines)(logFile.getName.stripSuffix(".log"), i, dur)
           new PrintWriter(new FileOutputStream(summaryName, true)) {
-            try { write(result.toCsv() + "\r\n") }
-            finally { close() }
+            try { write(result.toCsv() + "\r\n") } finally { close() }
           }
         } finally { log.close() }
       })
@@ -608,10 +611,7 @@ class SmlQETests extends TacticTestBase with Logging {
       val smtFiles = listFiles(c, ending).sortBy(_.getName)
       tool.setOperationTimeout(TIMEOUT)
       val summaryName = "summary-Mathematica-" + c.getName + ".csv"
-      new PrintWriter(summaryName) {
-        try { write(BenchmarkResult.csvHeader + "\r\n") }
-        finally { close() }
-      }
+      new PrintWriter(summaryName) { try { write(BenchmarkResult.csvHeader + "\r\n") } finally { close() } }
       Table("filehandle", smtFiles.zipWithIndex: _*).forEvery({ case (smtFile, i) =>
         val (Not(fml: Formula) :: Nil, info) = converter(smtFile)
         val infos = info ++ Map(
@@ -656,8 +656,7 @@ class SmlQETests extends TacticTestBase with Logging {
             )
         }
         new PrintWriter(new FileOutputStream(summaryName, true)) {
-          try { write(result.toCsv() + "\r\n") }
-          finally { close() }
+          try { write(result.toCsv() + "\r\n") } finally { close() }
         }
       })
       logger.debug(MarkerFactory.getMarker("mathematica-qe-notebook"), "}},")

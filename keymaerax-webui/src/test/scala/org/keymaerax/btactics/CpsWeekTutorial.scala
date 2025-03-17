@@ -28,8 +28,7 @@ import scala.language.postfixOps
 /**
  * Tutorial test cases.
  *
- * @author
- *   Stefan Mitsch
+ * @author Stefan Mitsch
  */
 @SlowTest @nowarn("cat=deprecation&origin=org.keymaerax.btactics.TactixLibrary.master")
 class CpsWeekTutorial extends TacticTestBase {
@@ -186,8 +185,9 @@ class CpsWeekTutorial extends TacticTestBase {
     // now get rid of stuff that violates our assumptions and transform into nicer shape
     val simpler = proveBy(
       initCond.subgoals.head,
-      TactixLibrary
-        .transform("m()>=1/2*b()^-1*(A()^2*t_^2+A()*b()*t_^2+2*A()*t_*v+2*b()*t_*v+v^2+2*b()*x)".asFormula)(1),
+      TactixLibrary.transform("m()>=1/2*b()^-1*(A()^2*t_^2+A()*b()*t_^2+2*A()*t_*v+2*b()*t_*v+v^2+2*b()*x)".asFormula)(
+        1
+      ),
     )
     simpler.subgoals.loneElement shouldBe
       "A()>=0, b()>0, v^2<=2*b()*(m()-x), ep()>0, t_>=0, \\forall s_ (0<=s_&s_<=t_->A()*s_+v>=0&s_<=ep()) ==> m()>=1/2*b()^-1*(A()^2*t_^2+A()*b()*t_^2+2*A()*t_*v+2*b()*t_*v+v^2+2*b()*x)"
@@ -295,8 +295,9 @@ class CpsWeekTutorial extends TacticTestBase {
         hideR(Symbol("R"), s"2*b()*abs(m$x-$x)>v^2".asFormula)
 
       val tactic = implyR(Symbol("R")) & SaturateTactic(andL(Symbol("L"))) &
-        HybridProgramCalculus
-          .loop("r!=0 & v>=0 & dx^2+dy^2=1 & (2*b()*abs(mx-x)>v^2 | 2*b()*abs(my-y)>v^2)".asFormula)(Symbol("R")) <
+        HybridProgramCalculus.loop("r!=0 & v>=0 & dx^2+dy^2=1 & (2*b()*abs(mx-x)>v^2 | 2*b()*abs(my-y)>v^2)".asFormula)(
+          Symbol("R")
+        ) <
         (
           print("Base case") & QE,
           print("Use case") & QE,

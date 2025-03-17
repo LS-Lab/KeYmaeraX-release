@@ -116,8 +116,10 @@ object QuizExtractor {
 
     private val ASK_EXTRACTOR = """\\""" + QUESTION_START + """(?:.*?)"""
     private val ALL_SOL_EXTRACTOR = """(?:""" + SOL_EXTRACTOR + "|" + SOLFIN_EXTRACTOR + ")"
-    private val QUESTION_EXTRACTOR: Regex = ("(?s)" + ASK_EXTRACTOR + "(?:(.*?)(?=\\\\" + QUESTION_START + ")|(.*))")
-      .r(QUESTION_INFO1, QUESTION_INFO2)
+    private val QUESTION_EXTRACTOR: Regex = ("(?s)" + ASK_EXTRACTOR + "(?:(.*?)(?=\\\\" + QUESTION_START + ")|(.*))").r(
+      QUESTION_INFO1,
+      QUESTION_INFO2,
+    )
 
     @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
     def firstFromString(rawContent: String): Option[AskQuestion] = {
@@ -273,8 +275,12 @@ object QuizExtractor {
       else if (s == "-\\infty") { TexExpressionArtifact(Neg(Number(Long.MaxValue))) }
       else {
         // intervals [0,3] \cup [0,\infty) \cup \lbrack -1.0,4 ] \cup (5,7\rbrack
-        val interval = """(\(|\[|\\lbrack)\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?|\\infty)\s*(\)|]|\\rbrack)"""
-          .r("(", "l", "u", ")")
+        val interval = """(\(|\[|\\lbrack)\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?|\\infty)\s*(\)|]|\\rbrack)""".r(
+          "(",
+          "l",
+          "u",
+          ")",
+        )
         val ivfml = interval
           .findAllMatchIn(s)
           .map(m => (m.group("(") -> m.group("l"), m.group("u") -> m.group(")")))
@@ -405,8 +411,12 @@ object QuizExtractor {
     private val PROBLEM_POINTS = "problempoints"
     private val PROBLEM_LABEL = "problemlabel"
     private val PROBLEM_EXTRACTOR =
-      """(?s)\\begin\{problem}(?:\[(\d+\.?\d*)])?(?:\[([^]]*)])?(?:\\label\{([^}]+)})?(.*?)\\end\{problem}"""
-        .r(PROBLEM_POINTS, PROBLEM_NAME, PROBLEM_LABEL, PROBLEM_CONTENT)
+      """(?s)\\begin\{problem}(?:\[(\d+\.?\d*)])?(?:\[([^]]*)])?(?:\\label\{([^}]+)})?(.*?)\\end\{problem}""".r(
+        PROBLEM_POINTS,
+        PROBLEM_NAME,
+        PROBLEM_LABEL,
+        PROBLEM_CONTENT,
+      )
     private val QUESTION_EXTRACTOR =
       (AskTFQuestion.QUESTION_START :: AskQuestion.QUESTION_START :: OneChoiceQuestion.QUESTION_START ::
         AnyChoiceQuestion.QUESTION_START :: Nil)
@@ -445,10 +455,10 @@ object QuizExtractor {
             Option(m.group(AnyChoiceQuestion.getClass.getSimpleName)) ::
             Option(m.group(AskTFQuestion.getClass.getSimpleName)) :: Nil).filter(_.isDefined).head match {
             case Some(AskQuestion.QUESTION_START) => AskQuestion.firstFromString(rawContent.substring(m.start))
-            case Some(OneChoiceQuestion.QUESTION_START) => OneChoiceQuestion
-                .firstFromString(rawContent.substring(m.start))
-            case Some(AnyChoiceQuestion.QUESTION_START) => AnyChoiceQuestion
-                .firstFromString(rawContent.substring(m.start))
+            case Some(OneChoiceQuestion.QUESTION_START) =>
+              OneChoiceQuestion.firstFromString(rawContent.substring(m.start))
+            case Some(AnyChoiceQuestion.QUESTION_START) =>
+              AnyChoiceQuestion.firstFromString(rawContent.substring(m.start))
             case Some(AskTFQuestion.QUESTION_START) => AskTFQuestion.firstFromString(rawContent.substring(m.start))
           }
         })

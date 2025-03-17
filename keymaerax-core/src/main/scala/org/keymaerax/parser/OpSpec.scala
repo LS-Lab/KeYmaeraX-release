@@ -5,12 +5,10 @@
 
 /**
  * Differential Dynamic Logic pretty printer in concrete KeYmaera X notation.
- * @author
- *   Andre Platzer
+ * @author Andre Platzer
  * @see
  *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
- * @note
- *   Code Review 2016-08-02
+ * @note Code Review 2016-08-02
  */
 package org.keymaerax.parser
 
@@ -66,10 +64,8 @@ object TernaryPrefixFormat extends TernaryNotation
 
 /**
  * Operator notation specification with precedence and associativity.
- * @author
- *   Andre Platzer
- * @todo
- *   Could add spacing weight information to determine how much spacing is added around an operator. Alternatively,
+ * @author Andre Platzer
+ * @todo Could add spacing weight information to determine how much spacing is added around an operator. Alternatively,
  *   spacing weight can be inferred from the prec numerics and how far they are apart.
  */
 trait OpSpec extends Ordered[OpSpec] {
@@ -157,9 +153,7 @@ object BinaryOpSpec {
   )
 }
 
-/**
- * Ternary operator notation specification with one terminal per operand, with constructor and expected argument kinds.
- */
+/** Ternary operator notation specification with one terminal per operand, with constructor and expected argument kinds. */
 case class TernaryOpSpec[T <: Expression](
     op: Terminal,
     op2: Terminal,
@@ -193,8 +187,7 @@ object TernaryOpSpec {
  *     binary versus unary operators.
  *   - sEquiv nonassociative to ensure that `p()<->q()<->r()` does not parse since binding unclear.
  *   - sAnd and sOr are right-associative to simplify stable position ordering during sequent decomposition.
- * @author
- *   Andre Platzer
+ * @author Andre Platzer
  */
 object OpSpec {
 

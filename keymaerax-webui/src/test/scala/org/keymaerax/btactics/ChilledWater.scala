@@ -114,14 +114,15 @@ class ChilledWater extends TacticTestBase {
   "Model 0" should "be provable" in withMathematica { _ =>
     // val s = KeYmaeraXProblemParser(scala.io.Source.fromFile("/path/to/file").getLines().mkString)
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/chilledwater/chilled-m0.kyx"))
-    val inv = """(Tw < Tl) &
-                |    (Tl < Tlu() &
-                |    a() <= Tw &                  /* needed for DA in model branch v:=1;Tw:=a() */
-                |    (l=1 -> v=1) &              /* If the load is on, the valve is open.        */
-                |    (v=0 -> l=0) &              /* If the valve is closed, the load is off.     */
-                |    (l=0 | l=1) &
-                |    (v=1 | v=0) &
-                |    (v=1 -> Tw=a()))""".stripMargin.asFormula
+    val inv =
+      """(Tw < Tl) &
+        |    (Tl < Tlu() &
+        |    a() <= Tw &                  /* needed for DA in model branch v:=1;Tw:=a() */
+        |    (l=1 -> v=1) &              /* If the load is on, the valve is open.        */
+        |    (v=0 -> l=0) &              /* If the valve is closed, the load is off.     */
+        |    (l=0 | l=1) &
+        |    (v=1 | v=0) &
+        |    (v=1 -> Tw=a()))""".stripMargin.asFormula
 
     val tactic = implyR(Symbol("_")) & SaturateTactic(andL(Symbol("_"))) & printIndexed("implyR then andL") &
       HybridProgramCalculus.loop(inv)(1) &
@@ -156,14 +157,15 @@ class ChilledWater extends TacticTestBase {
 
   it should "be provable with ODE" in withMathematica { _ =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/chilledwater/chilled-m0.kyx"))
-    val inv = """(Tw < Tl) &
-                |    (Tl < Tlu() &
-                |    a() <= Tw &                  /* needed for DA in model branch v:=1;Tw:=a() */
-                |    (l=1 -> v=1) &              /* If the load is on, the valve is open.        */
-                |    (v=0 -> l=0) &              /* If the valve is closed, the load is off.     */
-                |    (l=0 | l=1) &
-                |    (v=1 | v=0) &
-                |    (v=1 -> Tw=a()))""".stripMargin.asFormula
+    val inv =
+      """(Tw < Tl) &
+        |    (Tl < Tlu() &
+        |    a() <= Tw &                  /* needed for DA in model branch v:=1;Tw:=a() */
+        |    (l=1 -> v=1) &              /* If the load is on, the valve is open.        */
+        |    (v=0 -> l=0) &              /* If the valve is closed, the load is off.     */
+        |    (l=0 | l=1) &
+        |    (v=1 | v=0) &
+        |    (v=1 -> Tw=a()))""".stripMargin.asFormula
 
     val odeTlLessTlu = printIndexed("case split on model non-det. choices") <
       (
@@ -238,12 +240,13 @@ class ChilledWater extends TacticTestBase {
 
   "Model 1" should "be provable" in withMathematica { _ =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/chilledwater/chilled-m1.kyx"))
-    val inv = """(Tw < Tl) &
-                |    (Tl < Tlu() &
-                |    a() <= Tw &                  /* needed for DA in model branch v:=1;Tw:=a() */
-                |    (l=0 | l=1) &
-                |    (v=1 | v=0) &
-                |    (v=1 -> Tw=a()))""".stripMargin.asFormula
+    val inv =
+      """(Tw < Tl) &
+        |    (Tl < Tlu() &
+        |    a() <= Tw &                  /* needed for DA in model branch v:=1;Tw:=a() */
+        |    (l=0 | l=1) &
+        |    (v=1 | v=0) &
+        |    (v=1 -> Tw=a()))""".stripMargin.asFormula
 
     val tactic = implyR(Symbol("_")) & SaturateTactic(andL(Symbol("_"))) & printIndexed("implyR then andL") &
       HybridProgramCalculus.loop(inv)(1) &

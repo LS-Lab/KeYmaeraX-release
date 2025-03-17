@@ -28,8 +28,7 @@ import org.scalatest.PrivateMethodTester
 /**
  * Tests the JLink Mathematica implementation.
  *
- * @author
- *   Stefan Mitsch
+ * @author Stefan Mitsch
  */
 class JLinkMathematicaLinkTests extends TacticTestBase with PrivateMethodTester {
 

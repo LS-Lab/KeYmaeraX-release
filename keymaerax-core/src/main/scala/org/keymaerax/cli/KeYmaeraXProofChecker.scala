@@ -208,28 +208,19 @@ object KeYmaeraXProofChecker extends Logging {
   /**
    * Proves all entries in the given archive file.
    *
-   * @param in
-   *   Input archive file(s) (either a specific file or a wildcard, e.g. *.kyx)
-   * @param out
-   *   Output proof file (defaults to input file with .kyp suffix)
-   * @param ptOut
-   *   Output proof term s-expression into a file
-   * @param conjecture
-   *   Conjecture file to replace the model in the input file with (either a specific file or a wildcard, e.g. *.kyx)
-   * @param tactic
-   *   Either a file containing a tactic, or a parseable tactic. Used to prove the entry/entries in the input or
-   *   conjecture file.
-   * @param tacticName
-   *   Which of the tactics in the input file to use (default: check all, falling back to auto if no tactic is listed).
-   *   Only used if no tactic is specified.
-   * @param timeout
-   *   How long to try proving before giving up.
-   * @param verbose
-   *   Print verbose proof information.
-   * @param statistics
-   *   How to print proof statistics.
-   * @param args
-   *   Command line arguments, included when printing evidence.
+   * @param in Input archive file(s) (either a specific file or a wildcard, e.g. *.kyx)
+   * @param out Output proof file (defaults to input file with .kyp suffix)
+   * @param ptOut Output proof term s-expression into a file
+   * @param conjecture Conjecture file to replace the model in the input file with (either a specific file or a
+   *   wildcard, e.g. *.kyx)
+   * @param tactic Either a file containing a tactic, or a parseable tactic. Used to prove the entry/entries in the
+   *   input or conjecture file.
+   * @param tacticName Which of the tactics in the input file to use (default: check all, falling back to auto if no
+   *   tactic is listed). Only used if no tactic is specified.
+   * @param timeout How long to try proving before giving up.
+   * @param verbose Print verbose proof information.
+   * @param statistics How to print proof statistics.
+   * @param args Command line arguments, included when printing evidence.
    */
   def prove(
       in: String,
@@ -245,8 +236,8 @@ object KeYmaeraXProofChecker extends Logging {
     ProvableSig.PROOF_TERMS_ENABLED = false
 
     val inFiles = findFiles(in)
-    val archiveContent = inFiles
-      .map(p => p -> ArchiveParser.parseFromFile(p.toFile.getAbsolutePath).filterNot(_.isExercise))
+    val archiveContent =
+      inFiles.map(p => p -> ArchiveParser.parseFromFile(p.toFile.getAbsolutePath).filterNot(_.isExercise))
     logger.info(s"Proving entries from ${archiveContent.size} files")
 
     val conjectureFiles = conjecture.map(findFiles).getOrElse(List.empty)

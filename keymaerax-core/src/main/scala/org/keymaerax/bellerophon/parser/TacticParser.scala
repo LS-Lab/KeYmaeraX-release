@@ -6,10 +6,8 @@
 /**
  * Parser for Bellerophon tactics for Differential Dynamic Logic.
  *
- * @author
- *   Andre Platzer
- * @see
- *   [[org.keymaerax.Bibliography.ItpFultonMBP17 Bellerophon: Tactical theorem proving for hybrid systems]]
+ * @author Andre Platzer
+ * @see [[org.keymaerax.Bibliography.ItpFultonMBP17 Bellerophon: Tactical theorem proving for hybrid systems]]
  */
 
 package org.keymaerax.bellerophon.parser
@@ -30,34 +28,25 @@ import fastparse.P
  *   parser(printer(tactic)) == tactic
  * }}}
  *
- * @author
- *   Andre Platzer
- * @see
- *   [[org.keymaerax.Bibliography.ItpFultonMBP17 Bellerophon: Tactical theorem proving for hybrid systems]]
+ * @author Andre Platzer
+ * @see [[org.keymaerax.Bibliography.ItpFultonMBP17 Bellerophon: Tactical theorem proving for hybrid systems]]
  */
 trait TacticParser extends (String => BelleExpr) {
 
   /**
    * Parse the input string in the concrete syntax of Bellerophon tactics.
-   * @param input
-   *   the string to parse as a Bellerophon tactic.
-   * @ensures
-   *   apply(printer(\result)) == \result
-   * @throws ParseException
-   *   if `input` is not a well-formed Bellerophon tactic.
+   * @param input the string to parse as a Bellerophon tactic.
+   * @ensures apply(printer(\result)) == \result
+   * @throws ParseException if `input` is not a well-formed Bellerophon tactic.
    */
   final def apply(input: String): BelleExpr = apply(input, BuiltinSymbols.all)
 
   /**
    * Parse the input string in the concrete syntax of Bellerophon tactics.
-   * @param input
-   *   the string to parse as a Bellerophon tactic.
-   * @param defs
-   *   the definitions to elaborate variables/functions/predicates to their expected type.
-   * @ensures
-   *   apply(printer(\result)) == \result
-   * @throws ParseException
-   *   if `input` is not a well-formed Bellerophon tactic.
+   * @param input the string to parse as a Bellerophon tactic.
+   * @param defs the definitions to elaborate variables/functions/predicates to their expected type.
+   * @ensures apply(printer(\result)) == \result
+   * @throws ParseException if `input` is not a well-formed Bellerophon tactic.
    */
   def apply(input: String, defs: Declaration): BelleExpr
 
@@ -69,8 +58,7 @@ trait TacticParser extends (String => BelleExpr) {
 
   /**
    * A pretty-printer that can write the output that this parser reads
-   * @ensures
-   *   \forall e: apply(printer(e)) == e
+   * @ensures \forall e: apply(printer(e)) == e
    */
   val printer: BelleExpr => String
 

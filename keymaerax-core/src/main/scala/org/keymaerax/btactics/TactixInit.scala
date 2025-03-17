@@ -16,37 +16,30 @@ object TactixInit {
 
   /**
    * "Generator" that provides (hardcoded or user-provided) loop invariants and differential invariants to use.
-   * @see
-   *   [[TactixLibrary]]
-   * @see
-   *   [[InvariantGenerator]]
+   * @see [[TactixLibrary]]
+   * @see [[InvariantGenerator]]
    */
   var invSupplier: InvariantGenerator = FixedGenerator(Nil)
 
   /**
    * Default generator for loop invariants to use.
-   * @see
-   *   [[TactixLibrary]]
-   * @see
-   *   [[InvariantGenerator]]
+   * @see [[TactixLibrary]]
+   * @see [[InvariantGenerator]]
    */
   var loopInvGenerator: InvariantGenerator =
     InvariantGenerator.cached(InvariantGenerator.loopInvariantGenerator) // @note asks invSupplier
   // reinitialize with empty caches for test case separation
   /**
    * Default generator for differential invariants to use.
-   * @see
-   *   [[TactixLibrary]]
-   * @see
-   *   [[InvariantGenerator]]
+   * @see [[TactixLibrary]]
+   * @see [[InvariantGenerator]]
    */
-  var differentialInvGenerator: InvariantGenerator = InvariantGenerator
-    .cached(InvariantGenerator.differentialInvariantGenerator) // @note asks invSupplier
+  var differentialInvGenerator: InvariantGenerator =
+    InvariantGenerator.cached(InvariantGenerator.differentialInvariantGenerator) // @note asks invSupplier
 
   /**
    * Default generator that provides loop invariants and differential invariants to use.
-   * @see
-   *   [[InvariantGenerator]]
+   * @see [[InvariantGenerator]]
    */
   val invGenerator: InvariantGenerator = (sequent, pos, defs) =>
     sequent.sub(pos) match {

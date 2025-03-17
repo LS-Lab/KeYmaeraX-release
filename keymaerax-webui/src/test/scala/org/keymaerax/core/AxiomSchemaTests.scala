@@ -13,8 +13,7 @@ import scala.collection.immutable
 /**
  * Tests the implementation of axiom schemas.
  *
- * @author
- *   Yong Kiam Tan
+ * @author Yong Kiam Tan
  */
 class AxiomSchemaTests extends TacticTestBase {
 

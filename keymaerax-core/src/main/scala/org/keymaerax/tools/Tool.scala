@@ -20,17 +20,14 @@ trait Tool {
 
   /**
    * Check whether the managed tool is still alive and restart it if need be.
-   * @requires
-   *   isInitialized
-   * @ensures
-   *   isInitialized
+   * @requires isInitialized
+   * @ensures isInitialized
    */
   def restart(): Unit
 
   /**
    * Shutdown the tool
-   * @ensures
-   *   !isInitialized
+   * @ensures !isInitialized
    */
   def shutdown(): Unit
 

@@ -18,8 +18,7 @@ import org.scalatest.Inside._
 /**
  * These are probably unnecessary now that SimpleBelleParserTests is around, but they are very fast so additional
  * coverage can't hurt.
- * @author
- *   Nathan Fulton
+ * @author Nathan Fulton
  */
 class MoreSimpleBelleParserTests extends TacticTestBase {
 
@@ -102,17 +101,17 @@ class MoreSimpleBelleParserTests extends TacticTestBase {
   it should "parse exact matching search" in withTactics {
     parser("""implyR('R=="x>0->x>=0")""") shouldBe SequentCalculus.implyR(Symbol("R"), "x>0->x>=0".asFormula)
     parser("""andL('L=="x>0&x>=0")""") shouldBe SequentCalculus.andL(Symbol("L"), "x>0&x>=0".asFormula)
-    parser("""absExp('L=="#abs(x*y)#=2")""") shouldBe
-      TactixLibrary
-        .abs(Find.FindL(0, Some("abs(x*y)=2".asFormula), PosInExpr(0 :: Nil), exact = true, BuiltinSymbols.all))
+    parser("""absExp('L=="#abs(x*y)#=2")""") shouldBe TactixLibrary.abs(
+      Find.FindL(0, Some("abs(x*y)=2".asFormula), PosInExpr(0 :: Nil), exact = true, BuiltinSymbols.all)
+    )
   }
 
   it should "parse unifiable matching search" in withTactics {
     parser("""implyR('R~="x>0->x>=0")""") shouldBe SequentCalculus.implyR(Symbol("Rlike"), "x>0->x>=0".asFormula)
     parser("""andL('L~="x>0&x>=0")""") shouldBe SequentCalculus.andL(Symbol("Llike"), "x>0&x>=0".asFormula)
-    parser("""absExp('L~="#abs(x)#=3")""") shouldBe
-      TactixLibrary
-        .abs(Find.FindL(0, Some("abs(x)=3".asFormula), PosInExpr(0 :: Nil), exact = false, BuiltinSymbols.all))
+    parser("""absExp('L~="#abs(x)#=3")""") shouldBe TactixLibrary.abs(
+      Find.FindL(0, Some("abs(x)=3".asFormula), PosInExpr(0 :: Nil), exact = false, BuiltinSymbols.all)
+    )
   }
 
   it should "parse fancy dG" in withTactics {

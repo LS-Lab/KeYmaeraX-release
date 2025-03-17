@@ -16,7 +16,8 @@ import scala.collection.immutable._
 object RenUSubst {
   // @note semanticRenaming=false: to disallow renaming within semantic constructs as in the core.
   @inline
-  private[keymaerax] val semanticRenaming = false /*&& (try {
+  private[keymaerax] val semanticRenaming =
+    false /*&& (try {
     URename(Variable("quark"), Variable("quark", Some(5)))(ProgramConst("quarky")) == ProgramConst("quarky")
   } catch { case e: RenamingClashException => false })*/
 
@@ -68,8 +69,8 @@ object RenUSubst {
 
   /**
    * Occurrences of what symbol the generalized SubstitutionPair sp will be replacing.
-   * @return
-   *   Function/predicate/predicational or DotTerm or (Differential)ProgramConst whose occurrences we will replace.
+   * @return Function/predicate/predicational or DotTerm or (Differential)ProgramConst whose occurrences we will
+   *   replace.
    */
   private[infrastruct] def matchKey(sp: (Expression, Expression)): NamedSymbol = sp._1 match {
     case d: DotTerm => d
@@ -89,8 +90,7 @@ object RenUSubst {
 
   /**
    * The key characteristic expression constituents that this Substitution is matching on.
-   * @return
-   *   union of the matchKeys of all our substitution pairs.
+   * @return union of the matchKeys of all our substitution pairs.
    */
   private[infrastruct] def matchKeys(
       subsDefsInput: immutable.Seq[(Expression, Expression)]
@@ -107,20 +107,13 @@ object RenUSubst {
  * Liberal list of SubstitutionPair represented as merely a list of Pair, where the `Variable~>Variable` replacements
  * are by uniform renaming, and the other replacements are by uniform substitution.
  *
- * @author
- *   Andre Platzer
- * @see
- *   [[org.keymaerax.core.URename]]
- * @see
- *   [[org.keymaerax.core.USubst]]
- * @see
- *   [[USubstRen]]
- * @see
- *   [[org.keymaerax.infrastruct.Augmentors.TermAugmentor.~>()]]
- * @see
- *   [[org.keymaerax.infrastruct.Augmentors.FormulaAugmentor.~>()]]
- * @see
- *   [[org.keymaerax.infrastruct.Augmentors.ProgramAugmentor.~>()]]
+ * @author Andre Platzer
+ * @see [[org.keymaerax.core.URename]]
+ * @see [[org.keymaerax.core.USubst]]
+ * @see [[USubstRen]]
+ * @see [[org.keymaerax.infrastruct.Augmentors.TermAugmentor.~>()]]
+ * @see [[org.keymaerax.infrastruct.Augmentors.FormulaAugmentor.~>()]]
+ * @see [[org.keymaerax.infrastruct.Augmentors.ProgramAugmentor.~>()]]
  */
 sealed trait RenUSubst extends (Expression => Expression) {
 
@@ -142,14 +135,10 @@ sealed trait RenUSubst extends (Expression => Expression) {
 
   /**
    * A renaming substitution pair for a renaming uniform substitution.
-   * @see
-   *   [[org.keymaerax.core.SubstitutionPair]]
-   * @see
-   *   [[org.keymaerax.infrastruct.Augmentors.TermAugmentor.~>()]]
-   * @see
-   *   [[org.keymaerax.infrastruct.Augmentors.FormulaAugmentor.~>()]]
-   * @see
-   *   [[org.keymaerax.infrastruct.Augmentors.ProgramAugmentor.~>()]]
+   * @see [[org.keymaerax.core.SubstitutionPair]]
+   * @see [[org.keymaerax.infrastruct.Augmentors.TermAugmentor.~>()]]
+   * @see [[org.keymaerax.infrastruct.Augmentors.FormulaAugmentor.~>()]]
+   * @see [[org.keymaerax.infrastruct.Augmentors.ProgramAugmentor.~>()]]
    */
   type RenUSubstRepl = (Expression, Expression)
 
@@ -157,15 +146,13 @@ sealed trait RenUSubst extends (Expression => Expression) {
 
   /**
    * The uniform substitution part of this renaming uniform substitution as a USubst
-   * @see
-   *   [[substitution]]
+   * @see [[substitution]]
    */
   def usubst: USubst
 
   /**
    * The uniform substitution part of this renaming uniform substitution as a RenUSubst
-   * @see
-   *   [[usubst]]
+   * @see [[usubst]]
    */
   def substitution: RenUSubst
 
@@ -185,8 +172,7 @@ sealed trait RenUSubst extends (Expression => Expression) {
 
   /**
    * This RenUSubst implemented strictly from the core.
-   * @note
-   *   For contract purposes
+   * @note For contract purposes
    */
   def toCore: Expression => Expression
 
@@ -220,8 +206,9 @@ sealed trait RenUSubst extends (Expression => Expression) {
     } catch {
       case ex: ProverException => throw ex.inContext(s.toString)
       case ex: IllegalArgumentException =>
-        throw new SubstitutionClashException(toString, "undef", "undef", s.toString, "undef", ex.getMessage)
-          .initCause(ex)
+        throw new SubstitutionClashException(toString, "undef", "undef", s.toString, "undef", ex.getMessage).initCause(
+          ex
+        )
     }
   }
 }
@@ -241,17 +228,12 @@ sealed trait RenUSubst extends (Expression => Expression) {
  * substitutions and uniform renamings to the core when asked.
  *
  * @param subsDefsInput
- * @note
- *   reading in Hilbert direction from top to bottom, the uniform substitution comes first to ensure the subsequent
+ * @note reading in Hilbert direction from top to bottom, the uniform substitution comes first to ensure the subsequent
  *   uniform renaming no longer has nonrenamable program constants since no semantic renaming.
- * @author
- *   Andre Platzer
- * @see
- *   [[USubstRen]]
- * @see
- *   [[DirectUSubstAboveURen]]
- * @invariant
- *   subsDefsInput==subsDefsInput.distinct preserved if initially true
+ * @author Andre Platzer
+ * @see [[USubstRen]]
+ * @see [[DirectUSubstAboveURen]]
+ * @invariant subsDefsInput==subsDefsInput.distinct preserved if initially true
  */
 // US: uniform substitution to instantiate all symbols especially program constants to become renamable
 // UR: uniform renaming to rename preexisting variables to the present axioms
@@ -378,18 +360,12 @@ final class FastUSubstAboveURen(private[infrastruct] val subsDefsInput: immutabl
  * Base class for many common Renaming Uniform Substitution, combining [[URename]] and [[USubst]]. Liberal list of
  * SubstitutionPair represented as merely a list of Pair, where the `Variable~>Variable` replacements are by uniform
  * renaming, and the other replacements are by uniform substitution.
- * @author
- *   Andre Platzer
- * @see
- *   [[org.keymaerax.core.URename]]
- * @see
- *   [[org.keymaerax.core.USubst]]
- * @see
- *   [[org.keymaerax.infrastruct.Augmentors.TermAugmentor.~>()]]
- * @see
- *   [[org.keymaerax.infrastruct.Augmentors.FormulaAugmentor.~>()]]
- * @see
- *   [[org.keymaerax.infrastruct.Augmentors.ProgramAugmentor.~>()]]
+ * @author Andre Platzer
+ * @see [[org.keymaerax.core.URename]]
+ * @see [[org.keymaerax.core.USubst]]
+ * @see [[org.keymaerax.infrastruct.Augmentors.TermAugmentor.~>()]]
+ * @see [[org.keymaerax.infrastruct.Augmentors.FormulaAugmentor.~>()]]
+ * @see [[org.keymaerax.infrastruct.Augmentors.ProgramAugmentor.~>()]]
  */
 abstract class RenUSubstBase(private[infrastruct] val subsDefsInput: immutable.Seq[(Expression, Expression)])
     extends RenUSubst {
@@ -424,13 +400,11 @@ abstract class RenUSubstBase(private[infrastruct] val subsDefsInput: immutable.S
 
   /**
    * The uniform substitution part of this renaming uniform substitution
-   * @see
-   *   [[substitution]]
-   * @note
-   *   lazy val and postponing applicable() until actual use case would make it possible for useAt(inst) to modify
+   * @see [[substitution]]
+   * @note lazy val and postponing applicable() until actual use case would make it possible for useAt(inst) to modify
    *   before exception. Not sure that's worth it though.
    */
-  lazy final val usubst = USubst(subsDefs)
+  final lazy val usubst = USubst(subsDefs)
 
   private[infrastruct] def reapply(subsDefs: immutable.Seq[(Expression, Expression)]): RenUSubst
 
@@ -453,8 +427,7 @@ abstract class RenUSubstBase(private[infrastruct] val subsDefsInput: immutable.S
 
   /**
    * The uniform substitution part of this renaming uniform substitution
-   * @see
-   *   [[usubst]]
+   * @see [[usubst]]
    */
   def substitution: RenUSubst = reapply(subsDefs.map(sp => (sp.what, sp.repl)))
 
@@ -477,15 +450,13 @@ abstract class RenUSubstBase(private[infrastruct] val subsDefsInput: immutable.S
  *      G  |- D
  * }}}
  * @param subsDefsInput
- * @note
- *   reading in Hilbert direction from top to bottom, the uniform substitution comes first to ensure the subsequent
+ * @note reading in Hilbert direction from top to bottom, the uniform substitution comes first to ensure the subsequent
  *   uniform renaming no longer has nonrenamable program constants since no semantic renaming.
- * @author
- *   Andre Platzer
+ * @author Andre Platzer
  */
 // US: uniform substitution to instantiate all symbols especially program constants to become renamable
 // UR: uniform renaming to rename preexisting variables to the present axioms
-final class USubstAboveURen(private[infrastruct] override val subsDefsInput: immutable.Seq[(Expression, Expression)])
+final class USubstAboveURen(override private[infrastruct] val subsDefsInput: immutable.Seq[(Expression, Expression)])
     extends RenUSubstBase(subsDefsInput) {
   // @note explicit implementation to make RenUSubst equality independent of rens/subsDefs order
   override def equals(e: Any): Boolean = e match {
@@ -555,18 +526,15 @@ final class USubstAboveURen(private[infrastruct] override val subsDefsInput: imm
  * The final core pass does not support semantic renaming, but is only needed for the final unifier.
  *
  * @param subsDefsInput
- * @note
- *   reading in Hilbert direction from top to bottom, the uniform substitution comes first to ensure the subsequent
+ * @note reading in Hilbert direction from top to bottom, the uniform substitution comes first to ensure the subsequent
  *   uniform renaming no longer has nonrenamable program constants since no semantic renaming.
- * @see
- *   [[FastUSubstAboveURen]]
- * @author
- *   Andre Platzer
+ * @see [[FastUSubstAboveURen]]
+ * @author Andre Platzer
  */
 // US: uniform substitution to instantiate all symbols especially program constants to become renamable
 // UR: uniform renaming to rename preexisting variables to the present axioms
 final class DirectUSubstAboveURen(
-    private[infrastruct] override val subsDefsInput: immutable.Seq[(Expression, Expression)]
+    override private[infrastruct] val subsDefsInput: immutable.Seq[(Expression, Expression)]
 ) extends RenUSubstBase(subsDefsInput) {
   // @note explicit implementation to make RenUSubst equality independent of rens/subsDefs order
   override def equals(e: Any): Boolean = e match {
@@ -683,11 +651,10 @@ final class DirectUSubstAboveURen(
  *        G  |- D
  * }}}
  * @param subsDefsInput
- * @author
- *   Andre Platzer
+ * @author Andre Platzer
  */
 private final class URenAboveUSubst(
-    private[infrastruct] override val subsDefsInput: immutable.Seq[(Expression, Expression)]
+    override private[infrastruct] val subsDefsInput: immutable.Seq[(Expression, Expression)]
 ) extends RenUSubstBase(subsDefsInput) {
 
   /** whether to use semantic renaming */
@@ -758,15 +725,11 @@ private final class URenAboveUSubst(
  * Cleverly exploits semantic renaming on Provables on demand (although not in full generality yet).
  *
  * @param subsDefsInput
- * @note
- *   reading in Hilbert direction from top to bottom, the uniform renaming comes abiove first then the subsequent
+ * @note reading in Hilbert direction from top to bottom, the uniform renaming comes abiove first then the subsequent
  *   uniform substitution comes below as second.
- * @see
- *   [[USubstRen]]
- * @invariant
- *   subsDefsInput==subsDefsInput.distinct preserved if initially true
- * @author
- *   Andre Platzer
+ * @see [[USubstRen]]
+ * @invariant subsDefsInput==subsDefsInput.distinct preserved if initially true
+ * @author Andre Platzer
  */
 // US: uniform substitution to instantiate all symbols especially program constants to become renamable
 // UR: uniform renaming to rename preexisting variables to the present axioms

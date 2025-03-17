@@ -107,12 +107,9 @@ object KeymaeraxWebui extends Logging {
    * ModelPlex monitor synthesis for the given input files
    * {{{KeYmaeraXPrettyPrinter(ModelPlex(vars)(KeYmaeraXProblemParser(input))}}}
    *
-   * @param in
-   *   Input file
-   * @param out
-   *   Output file
-   * @param vars
-   *   The list of variables
+   * @param in Input file
+   * @param out Output file
+   * @param vars The list of variables
    */
   def modelplex(
       in: String,
@@ -261,16 +258,12 @@ object KeymaeraxWebui extends Logging {
    * Executes all entries in the input file to convert their tactics into `options('conversion)` format. Prints the
    * result to the output file.
    *
-   * @param in
-   *   Input file
-   * @param out
-   *   Output file
+   * @param in Input file
+   * @param out Output file
    */
   def convertTactics(in: String, out: String, conversion: TacticConversion.Value): Unit = {
     val src = scala.io.Source.fromFile(in.split("#")(0))
-    val fileContent =
-      try { src.mkString }
-      finally { src.close() }
+    val fileContent = try { src.mkString } finally { src.close() }
     val archiveContent = ArchiveParser.parseFromFile(in)
 
     def convertTactic(e: ParsedArchiveEntry): ParsedArchiveEntry = e.copy(tactics =

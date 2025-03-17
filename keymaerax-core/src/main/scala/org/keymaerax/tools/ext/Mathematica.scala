@@ -27,14 +27,11 @@ import scala.collection.mutable.ListBuffer
 
 /**
  * Mathematica/Wolfram Engine tool for quantifier elimination and solving differential equations.
- * @param link
- *   How to connect to the tool, either JLink or WolframScript.
+ * @param link How to connect to the tool, either JLink or WolframScript.
  *
  * Created by smitsch on 4/27/15.
- * @author
- *   Stefan Mitsch
- * @todo
- *   Code Review: Move non-critical tool implementations into a separate package tactictools
+ * @author Stefan Mitsch
+ * @todo Code Review: Move non-critical tool implementations into a separate package tactictools
  */
 class Mathematica(private[tools] val link: MathematicaLink, override val name: String)
     extends Tool
@@ -346,14 +343,10 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
 
   /**
    * Returns a formula describing the symbolic solution of the specified differential equation system.
-   * @param diffSys
-   *   The differential equation system
-   * @param diffArg
-   *   The independent variable of the ODE, usually time
-   * @param iv
-   *   Names of initial values per variable, e.g., x -> x_0
-   * @return
-   *   The solution, if found. None otherwise.
+   * @param diffSys The differential equation system
+   * @param diffArg The independent variable of the ODE, usually time
+   * @param iv Names of initial values per variable, e.g., x -> x_0
+   * @return The solution, if found. None otherwise.
    */
   override def odeSolve(
       diffSys: DifferentialProgram,
@@ -365,10 +358,8 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
 
   /**
    * Returns a counterexample for the specified formula.
-   * @param formula
-   *   The formula.
-   * @return
-   *   A counterexample, if found. None otherwise.
+   * @param formula The formula.
+   * @return A counterexample, if found. None otherwise.
    */
   override def findCounterExample(formula: Formula): Option[Predef.Map[NamedSymbol, Expression]] = {
     mCEX.timeout = Configuration.getInt(Configuration.Keys.CEX_SEARCH_DURATION).getOrElse(10)
@@ -379,17 +370,12 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
    * Returns a list of simulated states, where consecutive states in the list satisfy 'stateRelation'. The state
    * relation is a modality-free first-order formula. The simulation starts in a state where initial holds (first-order
    * formula).
-   * @param initial
-   *   A first-order formula describing the initial state.
-   * @param stateRelation
-   *   A first-order formula describing the relation between consecutive states. The relationship is by name convention:
-   *   postfix 'pre': prior state; no postfix: posterior state.
-   * @param steps
-   *   The length of the simulation run (i.e., number of states).
-   * @param n
-   *   The number of simulations (different initial states) to create.
-   * @return
-   *   'n' lists (length 'steps') of simulated states.
+   * @param initial A first-order formula describing the initial state.
+   * @param stateRelation A first-order formula describing the relation between consecutive states. The relationship is
+   *   by name convention: postfix 'pre': prior state; no postfix: posterior state.
+   * @param steps The length of the simulation run (i.e., number of states).
+   * @param n The number of simulations (different initial states) to create.
+   * @return 'n' lists (length 'steps') of simulated states.
    */
   override def simulate(initial: Formula, stateRelation: Formula, steps: Int = 10, n: Int = 1): Simulation = mSim
     .simulate(initial, stateRelation, steps, n)
@@ -397,29 +383,25 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
   /**
    * Returns a list of simulated states, where consecutive states in the list satisfy 'stateRelation'. The state
    * relation is a modality-free first-order formula. The simulation starts in the specified initial state.
-   * @param initial
-   *   The initial state: concrete values .
-   * @param stateRelation
-   *   A first-order formula describing the relation between consecutive states. The relationship is by name convention:
-   *   postfix 'pre': prior state; no postfix: posterior state.
-   * @param steps
-   *   The length of the simulation run (i.e., number of states).
-   * @return
-   *   A list (length 'steps') of simulated states.
+   * @param initial The initial state: concrete values .
+   * @param stateRelation A first-order formula describing the relation between consecutive states. The relationship is
+   *   by name convention: postfix 'pre': prior state; no postfix: posterior state.
+   * @param steps The length of the simulation run (i.e., number of states).
+   * @return A list (length 'steps') of simulated states.
    */
-  override def simulateRun(initial: SimState, stateRelation: Formula, steps: Int = 10): SimRun = mSim
-    .simulateRun(initial, stateRelation, steps)
+  override def simulateRun(initial: SimState, stateRelation: Formula, steps: Int = 10): SimRun =
+    mSim.simulateRun(initial, stateRelation, steps)
 
   /*override*/
   def pdeSolve(diffSys: DifferentialProgram): Iterator[Term] = mPDE.pdeSolve(diffSys)
   override def solve(equations: Formula, vars: List[Expression]): Option[Formula] = mSolve.solve(equations, vars)
-  override def quotientRemainder(term: Term, div: Term, x: Variable): (Term, Term) = mAlgebra
-    .quotientRemainder(term, div, x)
+  override def quotientRemainder(term: Term, div: Term, x: Variable): (Term, Term) =
+    mAlgebra.quotientRemainder(term, div, x)
   override def groebnerBasis(polynomials: List[Term]): List[Term] = mAlgebra.groebnerBasis(polynomials)
-  override def polynomialReduce(polynomial: Term, GB: List[Term]): (List[Term], Term) = mAlgebra
-    .polynomialReduce(polynomial, GB)
-  override def simplify(expr: Expression, assumptions: List[Formula]): Expression = mSimplify
-    .simplify(expr, assumptions)
+  override def polynomialReduce(polynomial: Term, GB: List[Term]): (List[Term], Term) =
+    mAlgebra.polynomialReduce(polynomial, GB)
+  override def simplify(expr: Expression, assumptions: List[Formula]): Expression =
+    mSimplify.simplify(expr, assumptions)
   override def simplify(expr: Formula, assumptions: List[Formula]): Formula = mSimplify.simplify(expr, assumptions)
   override def simplify(expr: Term, assumptions: List[Formula]): Term = mSimplify.simplify(expr, assumptions)
   override def invgen(

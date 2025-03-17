@@ -62,10 +62,11 @@ class SetupSimulationRequest(db: DBAbstraction, userId: String, proofId: String,
         if (ToolProvider.odeTool().isDefined) fml match {
           case Imply(initial, b @ Box(prg, _)) =>
             // all symbols because we need frame constraints for constants
-            val vars = (StaticSemantics.symbols(prg) ++ StaticSemantics.symbols(initial))
-              .filter(_.isInstanceOf[BaseVariable])
-            val Box(prgPre, _) = vars
-              .foldLeft[Formula](b)((b, v) => b.replaceAll(v, Variable("pre" + v.name, v.index, v.sort)))
+            val vars = (StaticSemantics.symbols(prg) ++ StaticSemantics.symbols(initial)).filter(
+              _.isInstanceOf[BaseVariable]
+            )
+            val Box(prgPre, _) =
+              vars.foldLeft[Formula](b)((b, v) => b.replaceAll(v, Variable("pre" + v.name, v.index, v.sort)))
             val stateRelEqs = vars
               .map(v => Equal(v.asInstanceOf[Term], Variable("pre" + v.name, v.index, v.sort)))
               .reduceRightOption(And.apply)

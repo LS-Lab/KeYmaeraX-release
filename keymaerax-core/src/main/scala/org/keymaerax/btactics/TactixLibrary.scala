@@ -76,24 +76,16 @@ import scala.util.Try
  *   - [[HybridProgramCalculus]]: Hybrid program derived proof rules for differential dynamic logic.
  *   - [[DifferentialEquationCalculus]]: Differential equation proof rules for differential dynamic logic.
  *
- * @author
- *   Andre Platzer
- * @author
- *   Stefan Mitsch
+ * @author Andre Platzer
+ * @author Stefan Mitsch
  * @see
  *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
- * @see
- *   [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
- * @see
- *   [[org.keymaerax.Bibliography.Platzer18 Logical Foundations of Cyber-Physical Systems]]
- * @see
- *   [[Ax]]
- * @see
- *   [[AxiomInfo]]
- * @see
- *   [[org.keymaerax.core.Rule]]
- * @see
- *   [[ToolProvider]]
+ * @see [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
+ * @see [[org.keymaerax.Bibliography.Platzer18 Logical Foundations of Cyber-Physical Systems]]
+ * @see [[Ax]]
+ * @see [[AxiomInfo]]
+ * @see [[org.keymaerax.core.Rule]]
+ * @see [[ToolProvider]]
  */
 @nowarn("msg=match may not be exhaustive") @nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
 @nowarn("cat=deprecation&origin=org.keymaerax.bellerophon.DependentTwoPositionTactic")
@@ -102,35 +94,28 @@ object TactixLibrary extends Logging {
 
   /**
    * "Generator" that provides (hardcoded or user-provided) loop invariants and differential invariants to use.
-   * @see
-   *   [[TactixInit]]
-   * @see
-   *   [[InvariantGenerator]]
+   * @see [[TactixInit]]
+   * @see [[InvariantGenerator]]
    */
   def invSupplier: InvariantGenerator = TactixInit.invSupplier
 
   /**
    * Default generator for loop invariants to use.
-   * @see
-   *   [[TactixInit]]
-   * @see
-   *   [[InvariantGenerator]]
+   * @see [[TactixInit]]
+   * @see [[InvariantGenerator]]
    */
   def loopInvGenerator: InvariantGenerator = TactixInit.loopInvGenerator
 
   /**
    * Default generator for differential invariants to use.
-   * @see
-   *   [[TactixInit]]
-   * @see
-   *   [[InvariantGenerator]]
+   * @see [[TactixInit]]
+   * @see [[InvariantGenerator]]
    */
   def differentialInvGenerator: InvariantGenerator = TactixInit.differentialInvGenerator
 
   /**
    * Default generator that provides loop invariants and differential invariants to use.
-   * @see
-   *   [[InvariantGenerator]]
+   * @see [[InvariantGenerator]]
    */
   val invGenerator: InvariantGenerator = TactixInit.invGenerator
 
@@ -141,9 +126,7 @@ object TactixLibrary extends Logging {
 
   // high-level generic proof automation
 
-  /**
-   * step: one canonical simplifying proof step at the indicated formula/term position (unless @invariant etc needed)
-   */
+  /** step: one canonical simplifying proof step at the indicated formula/term position (unless @invariant etc needed) */
   val step: DependentPositionTactic = "step".forward(doStep(sequentStepIndex))
 
   @Derivation
@@ -155,8 +138,8 @@ object TactixLibrary extends Logging {
     constructor = TacticConstructor0.create()(() => step),
   )
 
-  def doStep(index: Boolean => Expression => Option[DerivationInfo]): DependentPositionTactic = anon(
-    (pos: Position, seq: Sequent) =>
+  def doStep(index: Boolean => Expression => Option[DerivationInfo]): DependentPositionTactic =
+    anon((pos: Position, seq: Sequent) =>
       // @note AxiomIndex (basis for HilbertCalculus.stepAt) hands out assignment axioms, but those fail in front of an ODE -> try assignb if that happens
       TryCatch(
         // @todo optimizable: move assignb tactic into AxIndex once supported (but remember: assignb is applicable in context)
@@ -172,7 +155,7 @@ object TactixLibrary extends Logging {
             case _ => throw ex
           },
       )
-  )
+    )
 
   /** Normalize to sequent form. */
   lazy val normalize: BelleExpr = "normalize".by {
@@ -327,8 +310,8 @@ object TactixLibrary extends Logging {
   )
 
   /** Automated propositional reasoning, only keeps result if proved. */
-  val propClose: BelleExpr = "propClose"
-    .by { prop & DebuggingTactics.done("Not provable propositionally, please try other proof methods") }
+  val propClose: BelleExpr =
+    "propClose".by { prop & DebuggingTactics.done("Not provable propositionally, please try other proof methods") }
 
   @Derivation
   val propCloseInfo: PlainTacticInfo = PlainTacticInfo.create(
@@ -450,24 +433,23 @@ object TactixLibrary extends Logging {
         ) | PropositionalTactics.autoMP(Symbol("L")) | UnifyUSCalculus.nil
 
       onAll(decomposeToODE) & onAll(Idioms.doIf(!_.isProved)(
-        SequentCalculus
-          .close | SaturateTactic(onAll(Idioms.doIf(!_.isProved)(autoStep))) & Idioms.doIf(!_.isProved)(onAll(
-          propClose |
-            // @note apply equalities inside | to undo in case branches do not close
-            expandAllDefs(Nil) &
-            EqualityTactics.applyEqualities & Idioms.must(DifferentialTactics.endODEHeuristic) & QE & done | ?(
-              expandAllDefs(Nil) & EqualityTactics.applyEqualities & QE &
-                (if (keepQEFalse) UnifyUSCalculus.nil else done)
-            )
-        ))
+        SequentCalculus.close |
+          SaturateTactic(onAll(Idioms.doIf(!_.isProved)(autoStep))) & Idioms.doIf(!_.isProved)(onAll(
+            propClose |
+              // @note apply equalities inside | to undo in case branches do not close
+              expandAllDefs(Nil) &
+              EqualityTactics.applyEqualities & Idioms.must(DifferentialTactics.endODEHeuristic) & QE & done | ?(
+                expandAllDefs(Nil) & EqualityTactics.applyEqualities & QE &
+                  (if (keepQEFalse) UnifyUSCalculus.nil else done)
+              )
+          ))
       ))
     }
 
   /**
    * Automatic tactic that uses the generator `gen` to advance loop and ODE reasoning. `keepQEFalse` indicates whether
    * or not a result `false` of a QE step at the leaves is kept or undone (i.e., reverted to the QE input sequent).
-   * @see
-   *   [[autoClose]]
+   * @see [[autoClose]]
    */
   @deprecated("Use auto instead")
   def master(gen: InvariantGenerator = invGenerator, keepQEFalse: Boolean = true): BelleExpr =
@@ -477,11 +459,12 @@ object TactixLibrary extends Logging {
    * Automatic proof tactic that uses the generator `gen` to advance loop and ODE reasoning. `keepQEFalse` indicates
    * whether or not a result `false` of a QE step at the leaves is kept or undone (i.e., reverted to the QE input
    * sequent).
-   * @see
-   *   [[autoClose]]
+   * @see [[autoClose]]
    */
-  def auto(generator: InvariantGenerator, keepQEFalse: scala.Option[Formula]): InputTactic = "auto"
-    .byWithInputs(List(generator, keepQEFalse), autoImpl(loopauto(generator), ODE, keepQEFalse.getOrElse(True) == True))
+  def auto(generator: InvariantGenerator, keepQEFalse: scala.Option[Formula]): InputTactic = "auto".byWithInputs(
+    List(generator, keepQEFalse),
+    autoImpl(loopauto(generator), ODE, keepQEFalse.getOrElse(True) == True),
+  )
 
   @Derivation
   val autoInfo: InputTacticInfo = InputTacticInfo.create(
@@ -494,8 +477,8 @@ object TactixLibrary extends Logging {
   )
 
   @deprecated("Use auto instead")
-  def masterX(generator: InvariantGenerator, keepQEFalse: scala.Option[Formula]): InputTactic = "master"
-    .forward(auto(generator, keepQEFalse))
+  def masterX(generator: InvariantGenerator, keepQEFalse: scala.Option[Formula]): InputTactic =
+    "master".forward(auto(generator, keepQEFalse))
 
   @Derivation @nowarn("cat=deprecation&origin=org.keymaerax.btactics.TactixLibrary.masterX")
   val masterXInfo: InputTacticInfo = InputTacticInfo.create(
@@ -509,8 +492,7 @@ object TactixLibrary extends Logging {
   /**
    * Automatic proof tactic that uses the default loop invariant generator to make progress with loops and insists on
    * closing (i.e., reverts to the original input sequent if it fails to prove the goal).
-   * @see
-   *   [[auto]]
+   * @see [[auto]]
    */
   def autoClose: DependentTactic = "autoClose".bys { (_: ProvableSig) =>
     autoImpl(loopauto(InvariantGenerator.loopInvariantGenerator), ODE, keepQEFalse = true) &
@@ -613,8 +595,7 @@ object TactixLibrary extends Logging {
 
   /**
    * 'position' tactic t with universal abstraction at the same position afterwards
-   * @see
-   *   [[abstractionb]]
+   * @see [[abstractionb]]
    */
   @nowarn("msg=Exhaustivity analysis reached max recursion depth")
   def withAbstraction(t: AtPosition[_ <: BelleExpr]): DependentPositionTactic =
@@ -633,8 +614,7 @@ object TactixLibrary extends Logging {
 
   /**
    * loop: prove a property of a loop by induction, if the given invariant generator finds a loop invariant
-   * @see
-   *   [[HybridProgramCalculus.loop(Formula)]]
+   * @see [[HybridProgramCalculus.loop(Formula)]]
    */
   def loop(gen: InvariantGenerator): DependentPositionTactic = new DependentPositionTactic("I gen") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
@@ -648,8 +628,8 @@ object TactixLibrary extends Logging {
     }
   }
 
-  def loopautoX(gen: InvariantGenerator): DependentPositionWithAppliedInputTactic = "loopAuto"
-    .byWithInputs(List(gen), { (pos: Position, seq: Sequent) => loopauto(gen)(pos) })
+  def loopautoX(gen: InvariantGenerator): DependentPositionWithAppliedInputTactic =
+    "loopAuto".byWithInputs(List(gen), { (pos: Position, seq: Sequent) => loopauto(gen)(pos) })
 
   @Derivation
   val loopautoXInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
@@ -661,8 +641,7 @@ object TactixLibrary extends Logging {
 
   /**
    * loop: prove a property of a loop automatically by induction, trying hard to generate loop invariants.
-   * @see
-   *   [[HybridProgramCalculus.loop(Formula)]]
+   * @see [[HybridProgramCalculus.loop(Formula)]]
    */
   def loopauto(gen: InvariantGenerator = loopInvGenerator): DependentPositionTactic =
     anon((pos: Position, seq: Sequent, defs: Declaration) =>
@@ -708,10 +687,8 @@ object TactixLibrary extends Logging {
    * loopSR: cleverly prove a property of a loop automatically by induction, trying hard to generate loop invariants.
    * Uses [[SearchAndRescueAgain]] to avoid repetitive proving.
    *
-   * @see
-   *   [[loopauto]]
-   * @see
-   *   Example 32 in
+   * @see [[loopauto]]
+   * @see Example 32 in
    *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
    */
   def loopSR(gen: InvariantGenerator): DependentPositionTactic = InvariantProvers.loopSR(gen)
@@ -721,20 +698,16 @@ object TactixLibrary extends Logging {
    * [[SearchAndRescueAgain]] to avoid repetitive proving. Present implementation needs differential equations to occur
    * somewhere within the loop.
    *
-   * @author
-   *   Andre Platzer
-   * @author
-   *   Stefan Mitsch
-   * @see
-   *   Example 32 in
+   * @author Andre Platzer
+   * @author Stefan Mitsch
+   * @see Example 32 in
    *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
    */
   def loopPostMaster(gen: InvariantGenerator): DependentPositionTactic = InvariantProvers.loopPostMaster(gen)
 
   /**
    * I: prove a property of a loop [{a}*]P by induction axiom as P & [{a}*](P->[a]P) for hybrid systems.
-   * @see
-   *   [[loop()]]
+   * @see [[loop()]]
    */
   // def I      : DependentPositionTactic = useAt(DerivedAxioms.Ieq)
 
@@ -760,10 +733,8 @@ object TactixLibrary extends Logging {
    *   --------------------------------------------------------------------------------------------
    *   G |- <{a}*>p, D
    * }}}
-   * @param variant
-   *   The variant property or convergence property in terms of new variable `v`.
-   * @example
-   *   The variant `J(v) ~> (v = z)` is specified as `v=="v".asVariable`, `variant == "v = z".asFormula`
+   * @param variant The variant property or convergence property in terms of new variable `v`.
+   * @example The variant `J(v) ~> (v = z)` is specified as `v=="v".asVariable`, `variant == "v = z".asFormula`
    */
   def con(v: Variable, variant: Formula, pre: BelleExpr = SaturateTactic(alphaRule)): DependentPositionTactic =
     DLBySubst.con(v, variant, pre)
@@ -782,21 +753,14 @@ object TactixLibrary extends Logging {
    *   --------------------------------------------------------
    *   G |- [{x'=f(x)&q(x)}]p(x), D
    * }}}
-   * @see
-   *   [[solve]]
-   * @todo
-   *   \@see [[dC]]
-   * @see
-   *   [[dI]]
-   * @see
-   *   [[dW]]
-   * @see
-   *   [[dG]]
-   * @see
-   *   [[odeInvariant]]
-   * @example
-   *   For sequent `x=1 |- [{x'=x}]x >=-1`, the postcondition is not invariant but [[ODE]] proves it automatically using
-   *   e.g. `x>=1` as the generated invariant.
+   * @see [[solve]]
+   * @todo \@see [[dC]]
+   * @see [[dI]]
+   * @see [[dW]]
+   * @see [[dG]]
+   * @see [[odeInvariant]]
+   * @example For sequent `x=1 |- [{x'=x}]x >=-1`, the postcondition is not invariant but [[ODE]] proves it
+   *   automatically using e.g. `x>=1` as the generated invariant.
    */
   lazy val ODE: DependentPositionTactic = "ODE".forward(ODEImpl)
 
@@ -941,15 +905,12 @@ object TactixLibrary extends Logging {
    * G |- [x'=f(x)&Q]P, D
    * }}}
    *
-   * @see
-   *   [[org.keymaerax.Bibliography.JacmPlatzerT20 Differential equation invariance axiomatization]]
+   * @see [[org.keymaerax.Bibliography.JacmPlatzerT20 Differential equation invariance axiomatization]]
    * @see
    *   [[org.keymaerax.Bibliography.LicsPlatzerT18 Differential equation axiomatization: The impressive power of differential ghosts]]
-   * @see
-   *   [[odeInvariantComplete]]
-   * @example
-   *   For sequent `x=1 |- [{x'=x}]x`, `>=0` proves automatically since `x>=0` is an invariant of the ODE and initially
-   *   true.
+   * @see [[odeInvariantComplete]]
+   * @example For sequent `x=1 |- [{x'=x}]x`, `>=0` proves automatically since `x>=0` is an invariant of the ODE and
+   *   initially true.
    */
   lazy val odeInvariant: DependentPositionTactic = DifferentialTactics.odeInvariant(tryHard = false)
 
@@ -966,14 +927,11 @@ object TactixLibrary extends Logging {
    * G |- [x'=f(x)&Q]P
    * }}}
    *
-   * @see
-   *   [[org.keymaerax.Bibliography.JacmPlatzerT20 Differential equation invariance axiomatization]]
+   * @see [[org.keymaerax.Bibliography.JacmPlatzerT20 Differential equation invariance axiomatization]]
    * @see
    *   [[org.keymaerax.Bibliography.LicsPlatzerT18 Differential equation axiomatization: The impressive power of differential ghosts]]
-   * @see
-   *   [[odeInvariant]]
-   * @example
-   *   For sequent `x = 1 |- [{x'=y,y'=-x&x>=0 | y>=0 | x > 0 & y > 0}](x>-1 & x>=0)` proves automatically by
+   * @see [[odeInvariant]]
+   * @example For sequent `x = 1 |- [{x'=y,y'=-x&x>=0 | y>=0 | x > 0 & y > 0}](x>-1 & x>=0)` proves automatically by
    *   [[odeInvariantComplete]] but not [[odeInvariant]]
    */
   lazy val odeInvariantComplete: DependentPositionTactic = "odeInvC".forward(DifferentialTactics.odeInvariantComplete)
@@ -993,8 +951,7 @@ object TactixLibrary extends Logging {
   /**
    * DG/DA differential ghosts that are generated automatically to prove differential equations.
    *
-   * @see
-   *   [[dG]]
+   * @see [[dG]]
    */
   lazy val DGauto: DependentPositionTactic = "DGauto".forward(DifferentialTactics.DGauto)
 
@@ -1076,12 +1033,9 @@ object TactixLibrary extends Logging {
    * ------ QE if G|-D is a provable formula of first-order real arithmetic
    * G |- D
    * }}}
-   * @param order
-   *   the order of variables to use during quantifier elimination
-   * @see
-   *   [[QE]]
-   * @see
-   *   [[RCF]]
+   * @param order the order of variables to use during quantifier elimination
+   * @see [[QE]]
+   * @see [[RCF]]
    */
   def QE(
       defs: Declaration,
@@ -1124,8 +1078,7 @@ object TactixLibrary extends Logging {
   /**
    * Quantifier elimination returning equivalent result, irrespective of result being valid or not. Performs QE and
    * allows the goal to be reduced to something that isn't necessarily true.
-   * @note
-   *   You probably want to use fullQE most of the time, because partialQE will destroy the structure of the sequent
+   * @note You probably want to use fullQE most of the time, because partialQE will destroy the structure of the sequent
    */
   def partialQE: BelleExpr = "pQE".forward(ToolTactics.partialQE(
     ToolProvider.qeTool().getOrElse(throw new ProverSetupException("partialQE requires a QETool, but got None"))
@@ -1143,12 +1096,10 @@ object TactixLibrary extends Logging {
 
   /**
    * Splits propositional into many smallest possible QE calls.
-   * @param split
-   *   Configures how the tactic splits into smaller subgoals before QE (default: exhaustive alpha and beta rules).
-   * @param preQE
-   *   Tactic to execute before each individual QE call (default: skip).
-   * @param qe
-   *   How to QE
+   * @param split Configures how the tactic splits into smaller subgoals before QE (default: exhaustive alpha and beta
+   *   rules).
+   * @param preQE Tactic to execute before each individual QE call (default: skip).
+   * @param qe How to QE
    */
   def atomicQE(
       split: BelleExpr = SaturateTactic(onAll(alphaRule | betaRule)),
@@ -1157,8 +1108,9 @@ object TactixLibrary extends Logging {
   ): BelleExpr = split & onAll(preQE & qe & done)
   def atomicQE: BelleExpr = atomicQE()
 
-  def heuQE: BelleExpr = ToolTactics
-    .heuristicQE(ToolProvider.qeTool().getOrElse(throw new ProverSetupException("QE requires a QETool, but got None")))
+  def heuQE: BelleExpr = ToolTactics.heuristicQE(
+    ToolProvider.qeTool().getOrElse(throw new ProverSetupException("QE requires a QETool, but got None"))
+  )
   def heuQEPO(po: Ordering[Variable]): BelleExpr = ToolTactics.heuristicQE(
     ToolProvider.qeTool().getOrElse(throw new ProverSetupException("QE requires a QETool, but got None")),
     po,
@@ -1172,8 +1124,7 @@ object TactixLibrary extends Logging {
 
   /**
    * done: check that the current goal is proved and fail if it isn't.
-   * @see
-   *   [[skip]]
+   * @see [[skip]]
    */
   val done: BelleExpr = DebuggingTactics.done
 
@@ -1186,8 +1137,7 @@ object TactixLibrary extends Logging {
    *   ----------------------------------------abbrv(Variable("maxcd"))(1, 1::0::Nil)
    *                    |- a+b <= max(c, d) + e
    *   }}}
-   * @param name
-   *   The new variable to use as an abbreviation.
+   * @param name The new variable to use as an abbreviation.
    */
   def abbrv(name: Variable): BuiltInPositionTactic = EqualityTactics.abbrv(name)
 
@@ -1199,8 +1149,8 @@ object TactixLibrary extends Logging {
   // Response from BB:
   // Not a name clash if only one is annotated.
   // This appears to be correct because it maintains backwards-compatibility.
-  def abbrvAll(e: Term, x: scala.Option[Variable]): InputTactic = "abbrv"
-    .byWithInputs(List(e, x), EqualityTactics.abbrv(e, x))
+  def abbrvAll(e: Term, x: scala.Option[Variable]): InputTactic =
+    "abbrv".byWithInputs(List(e, x), EqualityTactics.abbrv(e, x))
 
   @Derivation
   val abbrvAllInfo: InputTacticInfo = InputTacticInfo.create(
@@ -1209,10 +1159,9 @@ object TactixLibrary extends Logging {
     displayPremises = "Γ(x), x=e |- Δ(x)",
     displayConclusion = "Γ(e) |- Δ(e)",
     revealInternalSteps = true,
-    constructor = TacticConstructor2
-      .create(TermArg("e"), OptionArg(VariableArg("x", List("x"))))((e: Term, x: scala.Option[Variable]) =>
-        abbrvAll(e, x)
-      ),
+    constructor = TacticConstructor2.create(TermArg("e"), OptionArg(VariableArg("x", List("x"))))(
+      (e: Term, x: scala.Option[Variable]) => abbrvAll(e, x)
+    ),
   )
 
   /**
@@ -1223,9 +1172,8 @@ object TactixLibrary extends Logging {
    *   ---------------------eqL2R(-1)(1)
    *   x=0 |- x*y=0, x+1>0
    *   }}}
-   * @param eqPos
-   *   The position of the equality. If it points to a formula, it rewrites all occurrences of left in that formula. If
-   *   it points to a specific term, then only this term is rewritten.
+   * @param eqPos The position of the equality. If it points to a formula, it rewrites all occurrences of left in that
+   *   formula. If it points to a specific term, then only this term is rewritten.
    */
   // @todo missing AxiomInfo for tactic extraction
   def eqL2R(eqPos: Int): BuiltInPositionTactic = EqualityTactics.eqL2R(eqPos)
@@ -1363,12 +1311,11 @@ object TactixLibrary extends Logging {
    *   -------------------------------transform("c".asFormula)(1, 1::Nil)
    *   a<c |- a<c+0
    *   }}}
-   * @param Q
-   *   The transformed formula or term that is desired as the result of this transformation.
+   * @param Q The transformed formula or term that is desired as the result of this transformation.
    */
 
-  def transform(Q: Expression): DependentPositionWithAppliedInputTactic = "transform"
-    .byWithInputs(List(Q), { (pos: Position) => ToolTactics.transform(Q)(pos) })
+  def transform(Q: Expression): DependentPositionWithAppliedInputTactic =
+    "transform".byWithInputs(List(Q), { (pos: Position) => ToolTactics.transform(Q)(pos) })
 
   @Derivation
   val transformInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
@@ -1385,8 +1332,8 @@ object TactixLibrary extends Logging {
    * Determines difference between expression at position and expression `to` and turns diff. into transformations and
    * abbreviations.
    */
-  def edit(to: Expression): DependentPositionWithAppliedInputTactic = "edit"
-    .byWithInputs(List(to), { (pos: Position) => ToolTactics.edit(to)(pos) })
+  def edit(to: Expression): DependentPositionWithAppliedInputTactic =
+    "edit".byWithInputs(List(to), { (pos: Position) => ToolTactics.edit(to)(pos) })
 
   @Derivation
   val editInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
@@ -1410,13 +1357,13 @@ object TactixLibrary extends Logging {
   def assertT(cond: Sequent => Boolean, msg: => String): BuiltInTactic = DebuggingTactics.assert(cond, msg)
 
   /** Assert that the sequent has the specified number of antecedent and succedent formulas, respectively. */
-  def assertT(antecedents: Int, succedents: Int, msg: => String = ""): BelleExpr = DebuggingTactics
-    .assert(antecedents, succedents, msg)
+  def assertT(antecedents: Int, succedents: Int, msg: => String = ""): BelleExpr =
+    DebuggingTactics.assert(antecedents, succedents, msg)
 
   // PositionTactic contracts
   /** Assert that the given condition holds for the sequent at the position where the tactic is applied */
-  def assertT(cond: (Sequent, Position) => Boolean, msg: => String): BuiltInPositionTactic = DebuggingTactics
-    .assert(cond, msg)
+  def assertT(cond: (Sequent, Position) => Boolean, msg: => String): BuiltInPositionTactic =
+    DebuggingTactics.assert(cond, msg)
 
   /** Assert that the given expression is present at the position in the sequent where this tactic is applied to. */
   def assertE(expected: => Expression, msg: => String): DependentPositionWithAppliedInputTactic = DebuggingTactics
@@ -1475,8 +1422,8 @@ object TactixLibrary extends Logging {
   }
 
   @Derivation
-  val alphaRuleInfo: PlainTacticInfo = PlainTacticInfo
-    .create(name = "alphaRule", constructor = TacticConstructor0.create()(() => alphaRule))
+  val alphaRuleInfo: PlainTacticInfo =
+    PlainTacticInfo.create(name = "alphaRule", constructor = TacticConstructor0.create()(() => alphaRule))
 
   /** Beta rules are propositional rules that split */
   lazy val betaRule: BuiltInTactic = "betaRule".by { (provable: ProvableSig) =>
@@ -1509,13 +1456,12 @@ object TactixLibrary extends Logging {
   }
 
   @Derivation
-  val betaRuleInfo: PlainTacticInfo = PlainTacticInfo
-    .create(name = "betaRule", constructor = TacticConstructor0.create()(() => betaRule))
+  val betaRuleInfo: PlainTacticInfo =
+    PlainTacticInfo.create(name = "betaRule", constructor = TacticConstructor0.create()(() => betaRule))
 
   /**
    * Real-closed field arithmetic on a single formula without any extra smarts and simplifications.
-   * @see
-   *   [[QE]]
+   * @see [[QE]]
    */
   def RCF: BuiltInTactic = "rcf".forward(ToolTactics.rcf(
     ToolProvider.qeTool().getOrElse(throw new ProverSetupException("RCF requires a QETool, but got None"))
@@ -1545,10 +1491,8 @@ object TactixLibrary extends Logging {
 
   /**
    * The position of `here()` in the formula `fml`.
-   * @return
-   *   The term or formula position where `here()` occurs in `fml`.
-   * @throws IllegalArgumentException
-   *   if `here()` does not occur in `fml`.
+   * @return The term or formula position where `here()` occurs in `fml`.
+   * @throws IllegalArgumentException if `here()` does not occur in `fml`.
    * @example
    *   {{{
    *   positionOf("p() & x>2 -> here() | x=y^2".asFormula) == PosInExpr(1::0::Nil)
@@ -1596,8 +1540,8 @@ object TactixLibrary extends Logging {
     case _ => generator // other generators do not include predefined invariants; they produce their results when asked
   }
 
-  def expand(n: String): StringInputTactic = "expand"
-    .byWithInputsS(List(n), { (p: ProvableSig) => expandFw(n.asNamedSymbol, None)(p) })
+  def expand(n: String): StringInputTactic =
+    "expand".byWithInputsS(List(n), { (p: ProvableSig) => expandFw(n.asNamedSymbol, None)(p) })
 
   @Derivation
   val expandInfo: InputTacticInfo = InputTacticInfo.create(
@@ -1610,8 +1554,7 @@ object TactixLibrary extends Logging {
   /**
    * Expands symbol `n` according to its definition in the provable, or if no definition is found, by uniform
    * substitution `s`.
-   * @see
-   *   [[USubstOne]]
+   * @see [[USubstOne]]
    */
   def expandFw(n: NamedSymbol, s: Option[SubstitutionPair]): BuiltInTactic = anon { (pr: ProvableSig) =>
     val subst = pr
@@ -1645,14 +1588,14 @@ object TactixLibrary extends Logging {
     UnifyUSCalculus.US(subst)(pr)
   }
 
-  def expandAllDefs(defs: List[SubstitutionPair]): InputTactic = "expandAllDefs"
-    .byWithInputs(List(defs), expandAllDefsFw(defs))
+  def expandAllDefs(defs: List[SubstitutionPair]): InputTactic =
+    "expandAllDefs".byWithInputs(List(defs), expandAllDefsFw(defs))
 
   @Derivation
   val expandAllDefsInfo: InputTacticInfo = InputTacticInfo.create(
     name = "expandAllDefs",
-    constructor = TacticConstructor1
-      .create(ListArg(SubstitutionArg("defs")))((defs: List[SubstitutionPair]) => expandAllDefs(defs)),
+    constructor =
+      TacticConstructor1.create(ListArg(SubstitutionArg("defs")))((defs: List[SubstitutionPair]) => expandAllDefs(defs)),
   )
 
   /**
@@ -1685,16 +1628,11 @@ object TactixLibrary extends Logging {
   /**
    * Prove the new goal by the given tactic, returning the resulting Provable
    *
-   * @param goal
-   *   The sequent to prove by running `tactic`.
-   * @param tactic
-   *   The Bellerophon tactic to run in the default interpreter on `goal`.
-   * @see
-   *   [[SequentialInterpreter]]
-   * @see
-   *   [[TactixLibrary.by(Provable)]]
-   * @see
-   *   [[proveBy()]]
+   * @param goal The sequent to prove by running `tactic`.
+   * @param tactic The Bellerophon tactic to run in the default interpreter on `goal`.
+   * @see [[SequentialInterpreter]]
+   * @see [[TactixLibrary.by(Provable)]]
+   * @see [[proveBy()]]
    * @example
    *   {{{
    *   import StringConverter._
@@ -1708,12 +1646,9 @@ object TactixLibrary extends Logging {
   /**
    * Prove the new goal by the given tactic, returning the resulting Provable
    *
-   * @param goal
-   *   The formula to prove by running `tactic`.
-   * @param tactic
-   *   The Bellerophon tactic to run in the default interpreter on `goal`.
-   * @see
-   *   [[TactixLibrary.by(Provable)]]
+   * @param goal The formula to prove by running `tactic`.
+   * @param tactic The Bellerophon tactic to run in the default interpreter on `goal`.
+   * @see [[TactixLibrary.by(Provable)]]
    * @example
    *   {{{
    *   import StringConverter._
@@ -1726,18 +1661,12 @@ object TactixLibrary extends Logging {
   /**
    * Prove the new goal by the given tactic, returning the resulting Provable.
    *
-   * @param goal
-   *   The Provable from which to start the proof by running `tactic` (on its subgoals).
-   * @param tactic
-   *   The Bellerophon tactic to run in the default interpreter on (the premises of) `goal`.
-   * @param defs
-   *   The definitions and declarations available in the current context.
-   * @see
-   *   [[SequentialInterpreter]]
-   * @see
-   *   [[TactixLibrary.by(Provable)]]
-   * @see
-   *   [[proveBy()]]
+   * @param goal The Provable from which to start the proof by running `tactic` (on its subgoals).
+   * @param tactic The Bellerophon tactic to run in the default interpreter on (the premises of) `goal`.
+   * @param defs The definitions and declarations available in the current context.
+   * @see [[SequentialInterpreter]]
+   * @see [[TactixLibrary.by(Provable)]]
+   * @see [[proveBy()]]
    */
   def proveBy(goal: ProvableSig, tactic: BelleExpr): ProvableSig = {
     val v = BelleProvable(goal, None)
@@ -1750,17 +1679,16 @@ object TactixLibrary extends Logging {
 
   // lemmas
 
-  def useLemmaX(lemma: String, tactic: scala.Option[String]): InputTactic = "useLemma"
-    .byWithInputs(List(lemma, tactic), TactixLibrary.useLemma(lemma, tactic.map(BelleParser)))
+  def useLemmaX(lemma: String, tactic: scala.Option[String]): InputTactic =
+    "useLemma".byWithInputs(List(lemma, tactic), TactixLibrary.useLemma(lemma, tactic.map(BelleParser)))
 
   @Derivation
   val useLemmaXInfo: InputTacticInfo = InputTacticInfo.create(
     name = "useLemma",
     displayNameLong = Some("Use Lemma"),
-    constructor = TacticConstructor2
-      .create(StringArg("lemma"), OptionArg(StringArg("tactic")))((lemma: String, tactic: scala.Option[String]) =>
-        useLemmaX(lemma, tactic)
-      ),
+    constructor = TacticConstructor2.create(StringArg("lemma"), OptionArg(StringArg("tactic")))(
+      (lemma: String, tactic: scala.Option[String]) => useLemmaX(lemma, tactic)
+    ),
   )
 
   /**
@@ -1829,8 +1757,7 @@ object TactixLibrary extends Logging {
       try { Some(RestrictedBiDiUnificationMatch(conclusion, goal)) }
       catch {
         case _: UnificationException =>
-          try { Some(RestrictedBiDiUnificationMatch(goal, conclusion)) }
-          catch { case _: UnificationException => None }
+          try { Some(RestrictedBiDiUnificationMatch(goal, conclusion)) } catch { case _: UnificationException => None }
       }
     val byLemma = subst.map(UnifyUSCalculus.by(lemma, _)).getOrElse(UnifyUSCalculus.by(lemma))
     def cutLemma(t: BelleExpr) = SequentCalculus.cut(subst.map(_(conclusion)).getOrElse(conclusion)) <
@@ -1874,10 +1801,9 @@ object TactixLibrary extends Logging {
   val useLemmaAtInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
     name = "useLemmaAt",
     displayNameLong = Some("Use Lemma at Position"),
-    constructor = TacticConstructor2
-      .create(StringArg("lemma"), OptionArg(PosInExprArg("key")))((lemma: String, key: Option[PosInExpr]) =>
-        useLemmaAt(lemma, key)
-      ),
+    constructor = TacticConstructor2.create(StringArg("lemma"), OptionArg(PosInExprArg("key")))(
+      (lemma: String, key: Option[PosInExpr]) => useLemmaAt(lemma, key)
+    ),
   )
 
   /** Finds a counter example, indicating that the specified formula is not valid. */
@@ -1890,12 +1816,9 @@ object TactixLibrary extends Logging {
 
   /**
    * Axiom and tactic index for [[TactixLibrary.step]]
-   * @param isAnte
-   *   true if occurs at top-level in antecedent, false if top-level in succedent
-   * @param expr
-   *   the expression for which a canonical tactic step is sought.
-   * @see
-   *   [[AxIndex]]
+   * @param isAnte true if occurs at top-level in antecedent, false if top-level in succedent
+   * @param expr the expression for which a canonical tactic step is sought.
+   * @see [[AxIndex]]
    */
   private def sequentStepIndex(isAnte: Boolean)(expr: Expression): Option[DerivationInfo] = (expr, isAnte) match {
     case (True, false) => Some(ProofRuleTactics.closeTrueInfo)
@@ -1936,12 +1859,9 @@ object TactixLibrary extends Logging {
    * -----------------------------------
    * G_FOLR, p=0 |- q<=0, r<0, D_FOLR
    * }}}
-   * @see
-   *   [[org.keymaerax.Bibliography.CadePlatzerQR09 Real world verification]]
-   * @see
-   *   [[QE]]
-   * @example
-   *   `x >= 1 -> x > 1 | x =1` proves by SOS automatically
+   * @see [[org.keymaerax.Bibliography.CadePlatzerQR09 Real world verification]]
+   * @see [[QE]]
+   * @example `x >= 1 -> x > 1 | x =1` proves by SOS automatically
    */
   val sosQE: BelleExpr = "sosQE".by(anon(SOSSolve.sos()))
 

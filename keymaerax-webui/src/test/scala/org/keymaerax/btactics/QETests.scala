@@ -27,10 +27,8 @@ import org.scalatest.exceptions.TestFailedDueToTimeoutException
 
 /**
  * Tests [[ToolTactics.fullQE]] and [[ToolTactics.partialQE]].
- * @author
- *   Nathan Fulton
- * @author
- *   Stefan Mitsch
+ * @author Nathan Fulton
+ * @author Stefan Mitsch
  */
 class QETests extends TacticTestBase {
 

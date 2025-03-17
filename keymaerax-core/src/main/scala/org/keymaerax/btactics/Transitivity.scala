@@ -20,12 +20,10 @@ import scala.collection.immutable
  *
  * These goals ought to close by QE, but often don't (e.g., when function symbols are involved).
  *
- * @todo
- *   There's a bug -- this function might find the string of inequalities a >= b >= c and claim it's a proof for a>c.
- *   The fix for this bug is to check in search() that the result contains at least one strict inequalities if the
+ * @todo There's a bug -- this function might find the string of inequalities a >= b >= c and claim it's a proof for
+ *   a>c. The fix for this bug is to check in search() that the result contains at least one strict inequalities if the
  *   goal() has form a > c.
- * @author
- *   Nathan Fulton
+ * @author Nathan Fulton
  */
 object Transitivity {
   val closeTransitive: DependentTactic = "closeTransitive".by { (s: Sequent) =>
@@ -36,8 +34,10 @@ object Transitivity {
         )
     }
 
-    DebuggingTactics
-      .debug(s"[closeTransitive] formulas: ${transitiveInequalities.map(_.prettyString).reduce(_ + "," + _)}", true)
+    DebuggingTactics.debug(
+      s"[closeTransitive] formulas: ${transitiveInequalities.map(_.prettyString).reduce(_ + "," + _)}",
+      true,
+    )
     SequentCalculus.cut(transitivityLemma(transitiveInequalities)) <
       (
         instantiations(transitiveInequalities)
@@ -69,8 +69,7 @@ object Transitivity {
 
   /**
    * Computes the sequence of variable ~> term instantiations for the transitivity lemma.
-   * @todo
-   *   rewrite this code so it's even remotely readable...
+   * @todo rewrite this code so it's even remotely readable...
    */
   def instantiations(formulas: List[Formula]): List[(Variable, Term)] = {
     val inequalities = formulas.map(decomposeInequality(_).get)

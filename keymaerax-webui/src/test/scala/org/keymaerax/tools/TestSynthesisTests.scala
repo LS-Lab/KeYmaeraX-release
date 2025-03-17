@@ -17,8 +17,7 @@ import scala.language.postfixOps
 
 /**
  * Tests the test synthesis tactics.
- * @author
- *   Stefan Mitsch
+ * @author Stefan Mitsch
  */
 @nowarn("msg=match may not be exhaustive")
 class TestSynthesisTests extends TacticTestBase {
@@ -89,8 +88,11 @@ class TestSynthesisTests extends TacticTestBase {
   }
 
   it should "generate no tests when safety margin range is invalid" in withMathematica { tool =>
-    val ModelPlexConjecture(_, modelplexInput, assumptions) = ModelPlex
-      .createMonitorSpecificationConjecture("true -> [x:=2;]x>=2".asFormula, List(Variable("x")), ListMap.empty)
+    val ModelPlexConjecture(_, modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(
+      "true -> [x:=2;]x>=2".asFormula,
+      List(Variable("x")),
+      ListMap.empty,
+    )
 
     val Sequent(IndexedSeq(), IndexedSeq(monitor)) = proveBy(
       modelplexInput,
@@ -130,8 +132,11 @@ class TestSynthesisTests extends TacticTestBase {
   }
 
   it should "find the maximum even when safety margin range is a point" in withMathematica { tool =>
-    val ModelPlexConjecture(_, modelplexInput, assumptions) = ModelPlex
-      .createMonitorSpecificationConjecture("true -> [x:=2;]x>=2".asFormula, List(Variable("x")), ListMap.empty)
+    val ModelPlexConjecture(_, modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(
+      "true -> [x:=2;]x>=2".asFormula,
+      List(Variable("x")),
+      ListMap.empty,
+    )
 
     val Sequent(IndexedSeq(), IndexedSeq(monitor)) = proveBy(
       modelplexInput,

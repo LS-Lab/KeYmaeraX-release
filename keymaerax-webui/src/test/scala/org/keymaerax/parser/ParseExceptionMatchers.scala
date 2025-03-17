@@ -33,22 +33,17 @@ trait ParseExceptionMatchers {
 
   /**
    * Matches the location the [[ParseException]] refers to.
-   * @param line
-   *   The number of the line the parser error occurred in.
-   * @param column
-   *   The number of the column where the error occurred.
-   * @return
-   *   A [[Matcher]] matching [[ParseException]] on lhs.
+   * @param line The number of the line the parser error occurred in.
+   * @param column The number of the column where the error occurred.
+   * @return A [[Matcher]] matching [[ParseException]] on lhs.
    */
   def pointAt(line: Int, column: Int) = new ExceptionPointsAtLocationMatcher(line, column)
 
   /**
    * Matches a [[ParseException]] whenever it mentions a specified substring in its error message. Matching is performed
    * completely case-insensitive.
-   * @param part
-   *   The substring the exceptions message should contain.
-   * @return
-   *   A [[Matcher]] matching [[ParseException]] on lhs.
+   * @param part The substring the exceptions message should contain.
+   * @return A [[Matcher]] matching [[ParseException]] on lhs.
    */
   def mention(part: String) = new ExceptionMessageMentionsMatcher(part)
 

@@ -11,46 +11,35 @@ import org.keymaerax.tools.ToolInterface
 /**
  * Tool for computing the symbolic solution of a differential equation system.
  *
- * @author
- *   smitsch
- * @see
- *   [[org.keymaerax.btactics.ToolProvider]]
+ * @author smitsch
+ * @see [[org.keymaerax.btactics.ToolProvider]]
  */
 trait ODESolverTool extends ToolInterface {
 
   /**
    * Computes the symbolic solution of a differential equation in normal form.
-   * @param diffSys
-   *   The system of differential equations of the form x' = theta & H.
-   * @param diffArg
-   *   The name of the differential argument (dx/d diffArg = theta).
-   * @param iv
-   *   The variables for initial values per derivative.
-   * @return
-   *   The solution if found; None otherwise The solution should be a
+   * @param diffSys The system of differential equations of the form x' = theta & H.
+   * @param diffArg The name of the differential argument (dx/d diffArg = theta).
+   * @param iv The variables for initial values per derivative.
+   * @return The solution if found; None otherwise The solution should be a
    */
   def odeSolve(diffSys: DifferentialProgram, diffArg: Variable, iv: Map[Variable, Variable]): Option[Formula]
 }
 
 /**
  * Tool for computing the solution of an equation system.
- * @author
- *   Andre Platzer
- * @see
- *   [[org.keymaerax.btactics.ToolProvider]]
+ * @author Andre Platzer
+ * @see [[org.keymaerax.btactics.ToolProvider]]
  */
 trait EquationSolverTool extends ToolInterface {
 
   /**
    * Computes the symbolic solution of an equation system written as a conjunction of equations.
-   * @param equations
-   *   The system of equations as a conjunction of equations.
-   * @param vars
-   *   The variables or symbols to solve for. Within reason, it may also be possible to solve for compound expressions
-   *   like solve for j(z).
-   * @return
-   *   The solution if found; None otherwise The solution should be a conjunction of explicit equations for the vars. Or
-   *   a disjunction of a conjunction of explicit equations for the vars.
+   * @param equations The system of equations as a conjunction of equations.
+   * @param vars The variables or symbols to solve for. Within reason, it may also be possible to solve for compound
+   *   expressions like solve for j(z).
+   * @return The solution if found; None otherwise The solution should be a conjunction of explicit equations for the
+   *   vars. Or a disjunction of a conjunction of explicit equations for the vars.
    * @example
    *   {{{
    *   solve("z+1=3&x+5=z-1".asFormula, Variable("z")::Variable("x")::Nil) == Some("z=2&x=-4")
@@ -61,18 +50,15 @@ trait EquationSolverTool extends ToolInterface {
 
 /**
  * Tool for computing the symbolic solution of a partial differential equation system.
- * @author
- *   Andre Platzer
- * @see
- *   [[org.keymaerax.btactics.ToolProvider]]
+ * @author Andre Platzer
+ * @see [[org.keymaerax.btactics.ToolProvider]]
  */
 trait PDESolverTool extends ToolInterface {
 
   /**
    * Computes the symbolic solution of the inverse characteristic partial differential equation corresponding to an
    * ordinary differential equation.
-   * @param diffSys
-   *   The system of differential equations of the form x'=theta,y'=eta.
+   * @param diffSys The system of differential equations of the form x'=theta,y'=eta.
    * @return
    *   A list of solutions for `f` of the inverse characteristic PDE
    *   {{{
@@ -95,41 +81,32 @@ trait LyapunovSolverTool extends ToolInterface {
 
 /**
  * Counterexample generation tool for first-order real arithmetic formulas.
- * @see
- *   [[org.keymaerax.btactics.ToolProvider]]
+ * @see [[org.keymaerax.btactics.ToolProvider]]
  */
 trait CounterExampleTool extends ToolInterface {
 
   /**
    * Returns a counterexample for the specified formula.
-   * @param formula
-   *   The formula of first-order real arithmetic.
-   * @return
-   *   A counterexample, if found. None otherwise.
+   * @param formula The formula of first-order real arithmetic.
+   * @return A counterexample, if found. None otherwise.
    */
   def findCounterExample(formula: Formula): Option[Map[NamedSymbol, Expression]]
 }
 
 /**
  * Tool for simplifying logical and/or arithmetical expressions.
- * @author
- *   Andre Platzer
- * @see
- *   [[org.keymaerax.btactics.ToolProvider]]
- * @see
- *   [[[org.keymaerax.btactics.SimplifierV3]]
+ * @author Andre Platzer
+ * @see [[org.keymaerax.btactics.ToolProvider]]
+ * @see [[[org.keymaerax.btactics.SimplifierV3]]
  */
 trait SimplificationTool extends ToolInterface {
 
   /**
    * Simplifies the given expression `expr`, under the list of assumptions.
-   * @param expr
-   *   The formula or term to simplify.
-   * @param assumptions
-   *   The list of logical formulas whose conjunction is assumed to hold during the simplification. The assumptions are
-   *   allowed to contain additional conjunctions.
-   * @return
-   *   A simplified version of `expr`.
+   * @param expr The formula or term to simplify.
+   * @param assumptions The list of logical formulas whose conjunction is assumed to hold during the simplification. The
+   *   assumptions are allowed to contain additional conjunctions.
+   * @return A simplified version of `expr`.
    * @example
    *   {{{
    *   simplify("a*x^2+b^2 > a*x^3+b*abs(b)".asFormula, "x>1".asFormula :: "b>0".asFormula::Nil) == "a<0".asFormula
@@ -143,24 +120,19 @@ trait SimplificationTool extends ToolInterface {
 
 /**
  * Tool for computer algebraic computations.
- * @author
- *   Andre Platzer
- * @see
- *   [[org.keymaerax.btactics.ToolProvider]]
+ * @author Andre Platzer
+ * @see [[org.keymaerax.btactics.ToolProvider]]
  */
 trait AlgebraTool extends ToolInterface {
 
   /**
    * Computes the quotient and remainder of `term` divided by `div`.
-   * @param term
-   *   the polynomial term to divide, considered as a univariate polynomial in variable `v` with coefficients that may
-   *   have other variables.
-   * @param div
-   *   the polynomial term to divide `term` by, considered as a univariate polynomial in variable `v` with coefficients
+   * @param term the polynomial term to divide, considered as a univariate polynomial in variable `v` with coefficients
    *   that may have other variables.
-   * @param v
-   *   the variable with respect to which `term` and `div` are regarded as univariate polynomials (with coefficients
-   *   that may have other variables).
+   * @param div the polynomial term to divide `term` by, considered as a univariate polynomial in variable `v` with
+   *   coefficients that may have other variables.
+   * @param v the variable with respect to which `term` and `div` are regarded as univariate polynomials (with
+   *   coefficients that may have other variables).
    * @example
    *   {{{
    *   quotientRemainder("6*x^2+4*x+8".asTerm, "2*x".asTerm, Variable("x")) == (3*x+2, 8)
@@ -188,11 +160,9 @@ trait AlgebraTool extends ToolInterface {
    * The former leading monomial `X^v` no longer occurs in the resulting polynomial and `p` got smaller or is now 0. To
    * determine leading terms, polynomial reduction uses the same fixed monomial order that [[groeberBasis()]] uses. The
    * remainders will be unique (independent of the order of divisions) iff `GB` is a [[groeberBasis() Gröbner Basis]].
-   * @param polynomial
-   *   the multivariate polynomial to divide by the elements of `GB` until saturation.
-   * @param GB
-   *   the set of multivariate polynomials that `polynomial` will repeatedly be divided by. The result of this algorithm
-   *   is particularly insightful (and has unique remainders) if `GB` is a Gröbner Basis.
+   * @param polynomial the multivariate polynomial to divide by the elements of `GB` until saturation.
+   * @param GB the set of multivariate polynomials that `polynomial` will repeatedly be divided by. The result of this
+   *   algorithm is particularly insightful (and has unique remainders) if `GB` is a Gröbner Basis.
    * @return
    *   (coeff, rem) where `rem` is the result of multivariate polynomial division of `polynomial` by `GB` and `coeff`
    *   are the respective coefficients of the polynomials in `GB` that explain the result. That is
@@ -210,21 +180,17 @@ trait AlgebraTool extends ToolInterface {
    *   polynomialReduce("y^3 + 2*x^2*y".asTerm, List("x^2-y".asTerm, "y^2+5".asTerm)) = ((2*y :: 2 + y), -5*y-10)
    *   // because y^3 + 2*x^2*y == (2*y) * (x^2-y) + (2+y) * (y^2+5) + (-5*y-10)
    *   }}}
-   * @see
-   *   [[groebnerBasis()]]
+   * @see [[groebnerBasis()]]
    */
   def polynomialReduce(polynomial: Term, GB: List[Term]): (List[Term], Term)
 
   /**
    * Computes the Gröbner Basis of the given set of polynomials (with respect to some fixed monomial order). Gröbner
    * Bases can be made unique for the fixed monomial order, when reduced, modulo scaling by constants.
-   * @param polynomials,
-   *   the list of polynomial terms to form a Gröbner Basis for.
-   * @return
-   *   The Gröbner Basis of `polynomials`. The Gröbner Basis spans the same ideal as `polynomials` but has unique
+   * @param polynomials, the list of polynomial terms to form a Gröbner Basis for.
+   * @return The Gröbner Basis of `polynomials`. The Gröbner Basis spans the same ideal as `polynomials` but has unique
    *   remainders of polynomialReduce.
-   * @see
-   *   [[polynomialReduce()]]
+   * @see [[polynomialReduce()]]
    * @see
    *   [[https://lfcps.org/orbital/Orbital-doc/api/orbital/math/AlgebraicAlgorithms.html#groebnerBasis(java.util.Set,%20java.util.Comparator)]]
    */
@@ -233,8 +199,7 @@ trait AlgebraTool extends ToolInterface {
 
 /**
  * Tool for computing symbolic derivatives (oracle for tactics).
- * @author
- *   Andre Platzer
+ * @author Andre Platzer
  */
 trait DerivativeTool extends ToolInterface {
 
@@ -245,12 +210,9 @@ trait DerivativeTool extends ToolInterface {
    *   ------
    *     dv
    * }}}
-   * @param term
-   *   The term whose partial derivative is sought.
-   * @param v
-   *   The variable to derive by.
-   * @return
-   *   The partial derivative of `term` by `v`.
+   * @param term The term whose partial derivative is sought.
+   * @param v The variable to derive by.
+   * @return The partial derivative of `term` by `v`.
    */
   def deriveBy(term: Term, v: Variable): Term
 }
@@ -264,8 +226,7 @@ object SimulationTool {
 
 /**
  * Simulation tool.
- * @see
- *   [[org.keymaerax.btactics.ToolProvider]]
+ * @see [[org.keymaerax.btactics.ToolProvider]]
  */
 trait SimulationTool extends ToolInterface {
   import SimulationTool._
@@ -274,32 +235,23 @@ trait SimulationTool extends ToolInterface {
    * Returns a list of simulated states, where consecutive states in the list satisfy 'stateRelation'. The state
    * relation is a modality-free first-order formula. The simulation starts in a state where initial holds (first-order
    * formula).
-   * @param initial
-   *   A first-order formula describing the initial state.
-   * @param stateRelation
-   *   A first-order formula describing the relation between consecutive states. The relationship is by name convention:
-   *   postfix 'pre': prior state; no postfix: posterior state.
-   * @param steps
-   *   The length of the simulation run (i.e., number of states).
-   * @param n
-   *   The number of simulations (different initial states) to create.
-   * @return
-   *   'n' lists (length 'steps') of simulated states.
+   * @param initial A first-order formula describing the initial state.
+   * @param stateRelation A first-order formula describing the relation between consecutive states. The relationship is
+   *   by name convention: postfix 'pre': prior state; no postfix: posterior state.
+   * @param steps The length of the simulation run (i.e., number of states).
+   * @param n The number of simulations (different initial states) to create.
+   * @return 'n' lists (length 'steps') of simulated states.
    */
   def simulate(initial: Formula, stateRelation: Formula, steps: Int = 10, n: Int = 1): Simulation
 
   /**
    * Returns a list of simulated states, where consecutive states in the list satisfy 'stateRelation'. The state
    * relation is a modality-free first-order formula. The simulation starts in the specified initial state.
-   * @param initial
-   *   The initial state: concrete values .
-   * @param stateRelation
-   *   A first-order formula describing the relation between consecutive states. The relationship is by name convention:
-   *   postfix 'pre': prior state; no postfix: posterior state.
-   * @param steps
-   *   The length of the simulation run (i.e., number of states).
-   * @return
-   *   A list (length 'steps') of simulated states.
+   * @param initial The initial state: concrete values .
+   * @param stateRelation A first-order formula describing the relation between consecutive states. The relationship is
+   *   by name convention: postfix 'pre': prior state; no postfix: posterior state.
+   * @param steps The length of the simulation run (i.e., number of states).
+   * @return A list (length 'steps') of simulated states.
    */
   def simulateRun(initial: SimState, stateRelation: Formula, steps: Int = 10): SimRun
 }

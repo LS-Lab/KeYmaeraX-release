@@ -6,20 +6,14 @@
 /**
  * Uniform Substitution for KeYmaera X
  *
- * @author
- *   Andre Platzer
- * @author
- *   smitsch
+ * @author Andre Platzer
+ * @author smitsch
  * @see
  *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
- * @see
- *   [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
- * @see
- *   [[org.keymaerax.Bibliography.CadePlatzer18 Uniform substitution for differential game logic]]
- * @see
- *   [[org.keymaerax.Bibliography.ToclPlatzer15 Differential game logic]]
- * @note
- *   Code Review: 2020-02-17
+ * @see [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
+ * @see [[org.keymaerax.Bibliography.CadePlatzer18 Uniform substitution for differential game logic]]
+ * @see [[org.keymaerax.Bibliography.ToclPlatzer15 Differential game logic]]
+ * @note Code Review: 2020-02-17
  */
 package org.keymaerax.core
 
@@ -39,27 +33,19 @@ import scala.collection.immutable
  *
  * This type implements the application of uniform substitutions to terms, formulas, programs, and sequents.
  *
- * @note
- *   Implements the "global" version that checks admissibility eagerly at bound variables rather than computing bounds
- *   on the fly and checking upon occurrence. Main ingredient of prover core.
- * @note
- *   Superseded by faster alternative [[USubstOne]].
- * @note
- *   soundness-critical
- * @author
- *   Andre Platzer
+ * @note Implements the "global" version that checks admissibility eagerly at bound variables rather than computing
+ *   bounds on the fly and checking upon occurrence. Main ingredient of prover core.
+ * @note Superseded by faster alternative [[USubstOne]].
+ * @note soundness-critical
+ * @author Andre Platzer
  * @see
  *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
- * @see
- *   [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
- * @see
- *   [[org.keymaerax.Bibliography.CadePlatzer18 Uniform substitution for differential game logic]]
- * @see
- *   [[org.keymaerax.Bibliography.ToclPlatzer15 Differential game logic]]
+ * @see [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
+ * @see [[org.keymaerax.Bibliography.CadePlatzer18 Uniform substitution for differential game logic]]
+ * @see [[org.keymaerax.Bibliography.ToclPlatzer15 Differential game logic]]
  * @see
  *   [[org.keymaerax.core.Provable.apply(subst:edu\.cmu\.cs\.ls\.keymaerax\.core\.USubstChurch):edu\.cmu\.cs\.ls\.keymaerax\.core\.Provable*]]
- * @see
- *   [[USubstOne]]
+ * @see [[USubstOne]]
  * @example
  *   Uniform substitution can be applied to a formula
  *   {{{
@@ -151,25 +137,22 @@ final case class USubstChurch(subsDefsInput: immutable.Seq[SubstitutionPair]) ex
    * The (new) free variables that this substitution introduces (without DotTerm/DotFormula arguments). That is the
    * (new) free variables introduced by this substitution, i.e. free variables of all repl that are not bound as
    * arguments in what.
-   * @return
-   *   union of the freeVars of all our substitution pairs.
+   * @return union of the freeVars of all our substitution pairs.
    */
   lazy val freeVars: SetLattice[Variable] = subsDefs.foldLeft(bottom[Variable])((a, b) => a ++ b.freeVars)
 
   /**
    * The signature of the replacement introduced by this substitution.
-   * @return
-   *   union of the freeVars of all our substitution pairs.
+   * @return union of the freeVars of all our substitution pairs.
    */
   lazy val signature: immutable.Set[NamedSymbol] = subsDefs.foldLeft(Set.empty[NamedSymbol])((a, b) => a ++ b.signature)
 
   /**
    * The key characteristic expression constituents that this Substitution is matching on.
-   * @return
-   *   union of the matchKeys of all our substitution pairs.
+   * @return union of the matchKeys of all our substitution pairs.
    */
-  private[core] lazy val matchKeys: immutable.List[NamedSymbol] = subsDefs
-    .foldLeft(immutable.List[NamedSymbol]())((a, b) => a :+ b.matchKey)
+  private[core] lazy val matchKeys: immutable.List[NamedSymbol] =
+    subsDefs.foldLeft(immutable.List[NamedSymbol]())((a, b) => a :+ b.matchKey)
 
   // apply calls usubst, augmenting with contract and exception context handling
 
@@ -244,9 +227,8 @@ final case class USubstChurch(subsDefsInput: immutable.Seq[SubstitutionPair]) ex
 
   /**
    * Union of uniform substitutions, i.e., both replacement lists merged.
-   * @note
-   *   Convenience method not used in the core, but used for stapling uniform substitutions together during unification
-   *   etc.
+   * @note Convenience method not used in the core, but used for stapling uniform substitutions together during
+   *   unification etc.
    */
   def ++(other: USubstChurch): USubstChurch = USubstChurch((this.subsDefsInput ++ other.subsDefsInput).distinct)
 
@@ -255,8 +237,8 @@ final case class USubstChurch(subsDefsInput: immutable.Seq[SubstitutionPair]) ex
    * matches e.
    */
   @inline
-  private def matchHead(e: ApplicationOf): Boolean = subsDefs
-    .exists(sp => sp.what.isInstanceOf[ApplicationOf] && sp.sameHead(e))
+  private def matchHead(e: ApplicationOf): Boolean =
+    subsDefs.exists(sp => sp.what.isInstanceOf[ApplicationOf] && sp.sameHead(e))
 
   // implementation of uniform substitution application
   // @see Figure 1 in [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
@@ -282,8 +264,7 @@ final case class USubstChurch(subsDefsInput: immutable.Seq[SubstitutionPair]) ex
         assert(
           !subsDefs.exists(sp => sp.what == Nothing /*&& sp.repl != Nothing*/ ),
           "can replace Nothing only by Nothing, and nothing else",
-        );
-        Nothing
+        ); Nothing
       case d: DotTerm if subsDefs.exists(_.what == d) => subsDefs.find(_.what == d).get.repl.asInstanceOf[Term]
       case d: DotTerm if !subsDefs.exists(_.what == d) => term
       case n: Number => n
@@ -418,8 +399,7 @@ final case class USubstChurch(subsDefsInput: immutable.Seq[SubstitutionPair]) ex
 
   /**
    * uniform substitutions on differential programs
-   * @param odeBV
-   *   the bound variables of the whole ODESystem within which ode occurs, so all odeBV are taboo during the
+   * @param odeBV the bound variables of the whole ODESystem within which ode occurs, so all odeBV are taboo during the
    *   substitution.
    */
   @nowarn("msg=match may not be exhaustive")
@@ -439,8 +419,7 @@ final case class USubstChurch(subsDefsInput: immutable.Seq[SubstitutionPair]) ex
 
   /**
    * Turns matching terms into substitution pairs (traverses pairs to create component-wise substitutions).
-   * @return
-   *   The SubstitutionPair `w ~> usubst(r)` or such substitutions on the components in case w and r are Pairs.
+   * @return The SubstitutionPair `w ~> usubst(r)` or such substitutions on the components in case w and r are Pairs.
    */
   private def toSubsPairs(w: Term, r: Term): List[SubstitutionPair] = (w, r) match {
     case (Pair(wl, wr), Pair(rl, rr)) => toSubsPairs(wl, rl) ++ toSubsPairs(wr, rr)
@@ -453,9 +432,7 @@ final case class USubstChurch(subsDefsInput: immutable.Seq[SubstitutionPair]) ex
   @inline
   private def admissible(U: SetLattice[Variable], e: Expression): Boolean = admissible(U, StaticSemantics.signature(e))
 
-  /**
-   * Require that this uniform substitution is U-admissible for expression e, and raise informative exception if not.
-   */
+  /** Require that this uniform substitution is U-admissible for expression e, and raise informative exception if not. */
   @inline
   private def requireAdmissible(U: SetLattice[Variable], e: Expression, context: Expression): Unit =
     if (!admissible(U, e)) throw SubstitutionClashException(
@@ -471,15 +448,11 @@ final case class USubstChurch(subsDefsInput: immutable.Seq[SubstitutionPair]) ex
    * check whether this substitution is U-admissible for an expression with the given occurrences of
    * functions/predicates symbols.
    *
-   * @param U
-   *   taboo list of variables
-   * @param occurrences
-   *   the function and predicate symbols occurring in the expression of interest.
-   * @see
-   *   Definition 19 in
+   * @param U taboo list of variables
+   * @param occurrences the function and predicate symbols occurring in the expression of interest.
+   * @see Definition 19 in
    *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
-   * @see
-   *   arXiv:1503.01981 Definition 12.
+   * @see arXiv:1503.01981 Definition 12.
    */
   @inline
   private def admissible(U: SetLattice[Variable], occurrences: immutable.Set[NamedSymbol]): Boolean =
@@ -491,19 +464,13 @@ final case class USubstChurch(subsDefsInput: immutable.Seq[SubstitutionPair]) ex
    * Compute the set of all symbols for which this substitution clashes because it is not U-admissible for the given
    * expression.
    *
-   * @param U
-   *   taboo list of variables
-   * @param e
-   *   the expression of interest.
-   * @return
-   *   FV(restrict this to occurrences) /\ U
-   * @see
-   *   Definition 19 in
+   * @param U taboo list of variables
+   * @param e the expression of interest.
+   * @return FV(restrict this to occurrences) /\ U
+   * @see Definition 19 in
    *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
-   * @see
-   *   arXiv:1503.01981 Definition 12.
-   * @note
-   *   not used often
+   * @see arXiv:1503.01981 Definition 12.
+   * @note not used often
    */
   @inline
   private def clashSet(U: SetLattice[Variable], e: Expression): SetLattice[Variable] =
@@ -513,17 +480,12 @@ final case class USubstChurch(subsDefsInput: immutable.Seq[SubstitutionPair]) ex
    * Compute the set of all symbols for which this substitution clashes because it is not U-admissible for an expression
    * with the given occurrences of functions/predicates symbols.
    *
-   * @param U
-   *   taboo list of variables
-   * @param occurrences
-   *   the function and predicate symbols occurring in the expression of interest.
-   * @return
-   *   FV(restrict this to occurrences) /\ U
-   * @see
-   *   Definition 19 in
+   * @param U taboo list of variables
+   * @param occurrences the function and predicate symbols occurring in the expression of interest.
+   * @return FV(restrict this to occurrences) /\ U
+   * @see Definition 19 in
    *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
-   * @see
-   *   arXiv:1503.01981 Definition 12.
+   * @see arXiv:1503.01981 Definition 12.
    */
   @inline
   private def clashSet(U: SetLattice[Variable], occurrences: immutable.Set[NamedSymbol]): SetLattice[Variable] =
@@ -532,11 +494,9 @@ final case class USubstChurch(subsDefsInput: immutable.Seq[SubstitutionPair]) ex
   /**
    * Projects / restricts a substitution to only those that affect the symbols listed in occurrences.
    *
-   * @see
-   *   Definition 19 in
+   * @see Definition 19 in
    *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
-   * @see
-   *   arXiv:1503.01981 Definition 12.
+   * @see arXiv:1503.01981 Definition 12.
    */
   @inline
   private def projection(affected: immutable.Set[NamedSymbol]): USubstChurch =

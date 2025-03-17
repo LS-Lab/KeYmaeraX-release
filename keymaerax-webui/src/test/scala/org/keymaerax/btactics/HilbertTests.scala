@@ -25,10 +25,8 @@ import scala.collection.immutable._
 
 /**
  * Tests Hilbert Calculus.
- * @see
- *   [[HilbertCalculus]]
- * @author
- *   Andre Platzer
+ * @see [[HilbertCalculus]]
+ * @author Andre Platzer
  */
 @SummaryTest @UsualTest @CheckinTest @nowarn("msg=Exhaustivity analysis reached max recursion depth")
 @nowarn("msg=match may not be exhaustive") @nowarn("cat=deprecation&origin=org.keymaerax.btactics.TactixLibrary.master")
@@ -223,7 +221,7 @@ class HilbertTests extends TacticTestBase {
             Dgreaterequal(1, 1 :: 1 :: Nil) &
             Dvar(1, 1 :: 1 :: 0 :: Nil) &
             Dconst(1, 1 :: 1 :: 1 :: Nil) &
-            Dassignb(1, 1 :: Nil) & abstractionb(1) & QE
+            Dassignb(1, 1 :: Nil) & abstractionb(1) & QE,
         ),
     ) shouldBe Symbol("proved")
   }
@@ -235,7 +233,7 @@ class HilbertTests extends TacticTestBase {
         DI(1) & (implyR(1) & andR(1)) < (
           prop,
           DE(1) & derive(1, 1 :: 1 :: Nil) &
-            Dassignb(1, 1 :: Nil) & abstractionb(1) & QE
+            Dassignb(1, 1 :: Nil) & abstractionb(1) & QE,
         ),
     ) shouldBe Symbol("proved")
   }
@@ -266,7 +264,7 @@ class HilbertTests extends TacticTestBase {
           // @todo the problem is that DI should be used in show prereq branch of useAt instead of defaulting to master
           DC("5<=x".asFormula)(1) < (
             debug("DC to DI") & DifferentialEquationCalculus.dI()(1),
-            debug("DC to DW") & DW(1) & abstractionb(1) & QE
+            debug("DC to DW") & DW(1) & abstractionb(1) & QE,
           ),
       ) shouldBe Symbol("proved")
   }
@@ -508,13 +506,15 @@ class HilbertTests extends TacticTestBase {
   }
 
   it should "chase [{x'=22}](2*x+x*y>=5)'" in withMathematica { _ =>
-    proveBy("[{x'=22}](2*x+x*y>=5)'".asFormula, chase(1, 1 :: Nil))
-      .subgoals shouldBe List(Sequent(IndexedSeq(), IndexedSeq("[{x'=22}]2*x'+(x'*y+x*y')>=0".asFormula)))
+    proveBy("[{x'=22}](2*x+x*y>=5)'".asFormula, chase(1, 1 :: Nil)).subgoals shouldBe List(
+      Sequent(IndexedSeq(), IndexedSeq("[{x'=22}]2*x'+(x'*y+x*y')>=0".asFormula))
+    )
   }
 
   it should "chase [{x'=22}][?x>0;x:=x+1; ++ ?x=0;x:=1;]x>=1" in withTactics {
-    proveBy("[{x'=22}][?x>0;x:=x+1; ++ ?x=0;x:=1;]x>=1".asFormula, chase(1, 1 :: Nil))
-      .subgoals shouldBe List(Sequent(IndexedSeq(), IndexedSeq("[{x'=22}]((x>0->x+1>=1) & (x=0->1>=1))".asFormula)))
+    proveBy("[{x'=22}][?x>0;x:=x+1; ++ ?x=0;x:=1;]x>=1".asFormula, chase(1, 1 :: Nil)).subgoals shouldBe List(
+      Sequent(IndexedSeq(), IndexedSeq("[{x'=22}]((x>0->x+1>=1) & (x=0->1>=1))".asFormula))
+    )
   }
 
   it should "prove x>=5 -> [x:=x+1;{x'=2}]x>=5" in withMathematica { _ =>
@@ -529,19 +529,23 @@ class HilbertTests extends TacticTestBase {
   }
 
   "CMon monotonicity" should "prove x<99 -> y<2 & x>5 |- x<99 -> y<2 & x>2 from x>5 |- x>2" in withTactics {
-    val done = CMon(Context("x<99 -> y<2 & ⎵".asFormula))(ProvableSig.startPlainProof(
-      Sequent(IndexedSeq("x>5".asFormula), IndexedSeq("x>2".asFormula))
-    ))
+    val done = CMon(
+      Context("x<99 -> y<2 & ⎵".asFormula)
+    )(ProvableSig.startPlainProof(Sequent(IndexedSeq("x>5".asFormula), IndexedSeq("x>2".asFormula))))
     done.subgoals shouldBe List(Sequent(IndexedSeq("x>5".asFormula), IndexedSeq("x>2".asFormula)))
-    done
-      .conclusion shouldBe Sequent(IndexedSeq("x<99 -> y<2 & x>5".asFormula), IndexedSeq("x<99 -> y<2 & x>2".asFormula))
+    done.conclusion shouldBe Sequent(
+      IndexedSeq("x<99 -> y<2 & x>5".asFormula),
+      IndexedSeq("x<99 -> y<2 & x>2".asFormula),
+    )
   }
 
   it should "prove x<99 -> y<2 & x>5 |- x<99 -> y<2 & x>2 from provable x>5 |- x>2" in withMathematica { _ =>
     val done = CMon(Context("x<99 -> y<2 & ⎵".asFormula))(basicImpl)
     done shouldBe Symbol("proved")
-    done
-      .conclusion shouldBe Sequent(IndexedSeq("x<99 -> y<2 & x>5".asFormula), IndexedSeq("x<99 -> y<2 & x>2".asFormula))
+    done.conclusion shouldBe Sequent(
+      IndexedSeq("x<99 -> y<2 & x>5".asFormula),
+      IndexedSeq("x<99 -> y<2 & x>2".asFormula),
+    )
   }
 
   private def shouldCMon(ctx: Context[Formula], basic: ProvableSig = basicImpl): Unit = {
@@ -645,8 +649,8 @@ class HilbertTests extends TacticTestBase {
     shouldCMon(Context("((⎵ -> y<2) -> z=0) & x<10 | x=7".asFormula))
   }
 
-  private lazy val basicImpl = TactixLibrary
-    .proveBy(Sequent(IndexedSeq("x>5".asFormula), IndexedSeq("x>2".asFormula)), TactixLibrary.QE)
+  private lazy val basicImpl =
+    TactixLibrary.proveBy(Sequent(IndexedSeq("x>5".asFormula), IndexedSeq("x>2".asFormula)), TactixLibrary.QE)
 
   it should "prove C{x>5} |- C{x>2} from provable x>5 |- x>2 in most random positive contexts" in withMathematica { _ =>
     for (_ <- 1 to randomTrials) {

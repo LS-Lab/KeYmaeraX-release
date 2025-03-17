@@ -22,8 +22,7 @@ import scala.annotation.nowarn
 
 /**
  * A continuous invariant implementation using Mathematica over the JLink interface.
- * @author
- *   Andrew Sogokon, based on QETool by Nathan Fulton and Stefan Mitsch
+ * @author Andrew Sogokon, based on QETool by Nathan Fulton and Stefan Mitsch
  */
 class MathematicaInvGenTool(override val link: MathematicaLink)
     extends BaseKeYmaeraMathematicaBridge[Expression](link, PegasusK2MConverter, PegasusM2KConverter)
@@ -333,14 +332,10 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
   /**
    * Returns dimension and classification of the problem defined by `ode` with assumptions `assumptions` and
    * postcondition `postCond`.
-   * @param ode
-   *   The differential equation system including evolution domain constraint.
-   * @param assumptions
-   *   Assumptions on the initial state.
-   * @param postCond
-   *   Postcondition
-   * @return
-   *   The dimension and classification of the problem.
+   * @param ode The differential equation system including evolution domain constraint.
+   * @param assumptions Assumptions on the initial state.
+   * @param postCond Postcondition
+   * @return The dimension and classification of the problem.
    */
   def problemClassification(
       ode: ODESystem,

@@ -16,8 +16,7 @@ import org.scalatest.matchers.should.Matchers
 
 /**
  * Base class for KeYmaera X system tests without tactics need.
- * @see
- *   [[org.keymaerax.btactics.TacticTestBase]]
+ * @see [[org.keymaerax.btactics.TacticTestBase]]
  */
 class SystemTestBase extends AnyFlatSpec with Matchers with BeforeAndAfterEach {
 

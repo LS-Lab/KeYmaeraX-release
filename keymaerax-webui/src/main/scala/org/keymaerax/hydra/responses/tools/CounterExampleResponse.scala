@@ -105,8 +105,7 @@ class CounterExampleResponse(
                   val cexCmp = TactixLibrary.proveBy(replaceWithCexVals(cmp, cex), TactixLibrary.RCF)
                   if (
                     cexCmp.subgoals.size > 1 || cexCmp.subgoals.headOption.getOrElse(makeSeq(True)) == makeSeq(False)
-                  ) { Right(And(False, And(cmp, False))) }
-                  else Right(cmp)
+                  ) { Right(And(False, And(cmp, False))) } else Right(cmp)
                 case _ => Left(None)
               }
           },
@@ -126,8 +125,8 @@ class CounterExampleResponse(
           val replacement =
             if (s"${m.before}$cexSym".endsWith("false")) { cexSym }
             else {
-              val cexVal = UIKeYmaeraXPrettyPrinter
-                .htmlEncode(cex.find(_._1.prettyString == cexSym).get._2.prettyString)
+              val cexVal =
+                UIKeYmaeraXPrettyPrinter.htmlEncode(cex.find(_._1.prettyString == cexSym).get._2.prettyString)
               s"""<div class="k4-cex-fml"><ul><li>$cexVal</li></ul>$cexSym</div>"""
             }
           Regex.quoteReplacement(replacement)

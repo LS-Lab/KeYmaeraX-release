@@ -10,8 +10,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 /**
  * Tests printing for no pretty printer in vanilla configuration.
  *
- * @author
- *   Andre Platzer
+ * @author Andre Platzer
  */
 class NoPrinterVanilla extends AnyFlatSpec {
   "No Pretty Printer" should "use default printer" in { PrettyPrinter.printer(Number(42)) }

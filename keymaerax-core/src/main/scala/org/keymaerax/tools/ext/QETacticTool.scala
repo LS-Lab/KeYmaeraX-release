@@ -29,10 +29,8 @@ trait QETacticTool {
 
   /**
    * Returns a lemma witnessing equivalence between a quantifier-free formula and the specified formula.
-   * @param formula
-   *   The formula whose quantifier-free equivalent is sought.
-   * @return
-   *   A lemma showing equivalence between `formula` and a quantifier-free formula, with tool evidence.
+   * @param formula The formula whose quantifier-free equivalent is sought.
+   * @return A lemma showing equivalence between `formula` and a quantifier-free formula, with tool evidence.
    */
   def qe(formula: Formula): Lemma
 

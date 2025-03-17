@@ -52,16 +52,14 @@ abstract class BelleThrowable(msg: => String, cause: Throwable = null) extends P
  * example, forgetting to provide an expected position or applying a left tactic on the right. BelleInterpreter will
  * raise the error to the user's attention but it needs an internal fix to KeYmaera X.
  */
-abstract class BelleCriticalException(msg: => String, cause: Throwable = null)
-    extends BelleThrowable(msg, cause)
+abstract class BelleCriticalException(msg: => String, cause: Throwable = null) extends BelleThrowable(msg, cause)
 
 /**
  * User feedback: Indicates that the user has provided an unsuitable input problem or made a correctable error in a
  * proof step. They will be reported back to the user along with a legible message describing what needs to be changed
  * in the problem or proof.
  */
-abstract class BelleUserCorrectableException(msg: => String, cause: Throwable = null)
-    extends BelleThrowable(msg, cause)
+abstract class BelleUserCorrectableException(msg: => String, cause: Throwable = null) extends BelleThrowable(msg, cause)
 
 /**
  * Search control: Silently raises issues to control proof search, indicating that one proof attempt did not succeed so
@@ -69,13 +67,10 @@ abstract class BelleUserCorrectableException(msg: => String, cause: Throwable = 
  * else instead. For example, trying to apply an implyR tactic at a succedent position that contains an Or will be
  * inapplicable but does not indicate a bug in the tactic, merely that a different branch needs to be taken in proof
  * search.
- * @see
- *   [[BelleTacticFailure]]
- * @see
- *   [[TacticInapplicableFailure]]
+ * @see [[BelleTacticFailure]]
+ * @see [[TacticInapplicableFailure]]
  */
-abstract class BelleProofSearchControl(msg: => String, cause: Throwable = null)
-    extends BelleThrowable(msg, cause)
+abstract class BelleProofSearchControl(msg: => String, cause: Throwable = null) extends BelleThrowable(msg, cause)
 
 //</editor-fold>
 
@@ -100,12 +95,9 @@ class BelleUnexpectedProofStateError(msg: => String, val proofState: Provable, c
 
 /**
  * Raised to indicate that two expressions are not unifiable in the single-sided matching sense.
- * @param shape
- *   The shape against which to match.
- * @param input
- *   The expression that we were trying to match against the given shape.
- * @param info
- *   Additional information
+ * @param shape The shape against which to match.
+ * @param input The expression that we were trying to match against the given shape.
+ * @param info Additional information
  */
 class UnificationException(val shape: Expression, val input: Expression, info: String = "", cause: Throwable = null)
     extends BelleCriticalException(
@@ -137,10 +129,8 @@ class InfiniteTacticLoopError(msg: => String) extends BelleCriticalException(msg
 /**
  * A Bellerophon critical exception that consists of two reasons why it is being raised, for example, if two things went
  * wrong out of which it would have sufficed if only one succeeds.
- * @param left
- *   Primary reason.
- * @param right
- *   Alternate reason.
+ * @param left Primary reason.
+ * @param right Alternate reason.
  */
 class CompoundCriticalException(val left: BelleThrowable, val right: BelleThrowable)
 //@note critical for now since raised only in interpreter
@@ -157,15 +147,13 @@ class UnprovableAnnotatedInvariant(msg: => String, cause: Throwable = null)
 class UnexpandedDefinitionsFailure(msg: => String, cause: Throwable = null)
     extends BelleUserCorrectableException(msg, cause)
 
-class MissingLyapunovFunction(msg: => String, cause: Throwable = null)
-    extends BelleUserCorrectableException(msg, cause)
+class MissingLyapunovFunction(msg: => String, cause: Throwable = null) extends BelleUserCorrectableException(msg, cause)
 
 /**
  * Signaling that a tactic was not applicable or did not work at the current goal. BelleTacticFailures will be consumed
  * by the BelleInterpreter which will try something else instead.
  */
-abstract class BelleTacticFailure(msg: => String, cause: Throwable = null)
-    extends BelleProofSearchControl(msg, cause)
+abstract class BelleTacticFailure(msg: => String, cause: Throwable = null) extends BelleProofSearchControl(msg, cause)
 
 /**
  * Tactic happens to not be applicable as indicated in the present sequent. For example, InapplicableTactic can be
@@ -180,8 +168,7 @@ class TacticInapplicableFailure(msg: => String, cause: Throwable = null) extends
  * indicating genuine unifiable situations, this may indicate that the wrong key was chosen for the (derived) axiom in
  * its [[org.keymaerax.btactics.macros.AxiomInfo]].
  */
-class InapplicableUnificationKeyFailure(msg: => String, cause: Throwable = null)
-    extends BelleTacticFailure(msg, cause)
+class InapplicableUnificationKeyFailure(msg: => String, cause: Throwable = null) extends BelleTacticFailure(msg, cause)
 
 /**
  * Signaling that a tactic's implementation was incomplete and did not work out as planned, so tactic execution might
@@ -205,13 +192,10 @@ class ProofSearchFailure(msg: => String, cause: Throwable = null) extends BelleT
 /**
  * Raised when a tactic decides that all further tactical work on a goal is useless and bellerophon should immediately
  * stop
- * @param status
- *   signaling the status of the goal such as Counterexample, Valid
- * @param msg
- *   readable description of the issue
+ * @param status signaling the status of the goal such as Counterexample, Valid
+ * @param msg readable description of the issue
  */
-class BelleAbort(status: => String, msg: => String, cause: Throwable = null)
-    extends BelleProofSearchControl(msg, cause)
+class BelleAbort(status: => String, msg: => String, cause: Throwable = null) extends BelleProofSearchControl(msg, cause)
 
 /** Raised when a tactic wants to indicate that it is/was not able to make progress on the goal. */
 class BelleNoProgress(msg: => String, cause: Throwable = null) extends BelleProofSearchControl(msg, cause)
@@ -219,22 +203,19 @@ class BelleNoProgress(msg: => String, cause: Throwable = null) extends BelleProo
 /** Raised when provable `p` is not yet proved. */
 case class BelleUnfinished(msg: String, p: Provable)
     extends BelleProofSearchControl(
-      if (p.subgoals.size == 1 && p.subgoals.head.ante.isEmpty && p.subgoals.head.succ == False :: Nil)
-        msg + { if (msg.nonEmpty) ": " else "" } + "expected to have proved, but got false"
+      if (p.subgoals.size == 1 && p.subgoals.head.ante.isEmpty && p.subgoals.head.succ == False :: Nil) msg +
+        { if (msg.nonEmpty) ": " else "" } + "expected to have proved, but got false"
       else msg + { if (msg.nonEmpty) ": " else "" } + "expected to have proved, but got open goals"
     )
 
 /** Raised when counterexamples are found in sequent `s`; `cex` contains counterexample values per named symbol. */
-case class BelleCEX(msg: String, cex: Map[NamedSymbol, Expression], s: Sequent)
-    extends BelleProofSearchControl(msg)
+case class BelleCEX(msg: String, cex: Map[NamedSymbol, Expression], s: Sequent) extends BelleProofSearchControl(msg)
 
 /**
  * A Bellerophon proof search exception that consists of two reasons why it is being raised, for example, if two things
  * went wrong out of which it would have sufficed if only one succeeds.
- * @param left
- *   Primary reason.
- * @param right
- *   Alternate reason.
+ * @param left Primary reason.
+ * @param right Alternate reason.
  */
 class CompoundProofSearchException(val left: BelleThrowable, val right: BelleThrowable)
     extends BelleProofSearchControl("Left: " + left.getMessage + "\nRight: " + right.getMessage + ")", left)

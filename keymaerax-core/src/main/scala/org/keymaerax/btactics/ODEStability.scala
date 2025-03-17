@@ -44,10 +44,8 @@ object ODEStability {
 
   /**
    * Attractivity
-   * @param ode
-   *   the ODE
-   * @return
-   *   Formula specifying attractivity of the origin for the input ODE
+   * @param ode the ODE
+   * @return Formula specifying attractivity of the origin for the input ODE
    */
   def attrODE(ode: DifferentialProgram): Formula = {
     val eps = TacticHelper.freshNamedSymbol(Variable("eps"), Box(ode, True))
@@ -74,12 +72,9 @@ object ODEStability {
 
   /**
    * Exponential stability
-   * @param ode
-   *   the ODE
-   * @param P
-   *   the region of exponential stability
-   * @return
-   *   Formula specifying exponential stability of the origin for the input ODE with respect to formula P
+   * @param ode the ODE
+   * @param P the region of exponential stability
+   * @return Formula specifying exponential stability of the origin for the input ODE with respect to formula P
    */
   def estabODEP(ode: DifferentialProgram, P: Formula): Formula = {
     val alpha = TacticHelper.freshNamedSymbol(Variable("alp"), Box(ode, P))

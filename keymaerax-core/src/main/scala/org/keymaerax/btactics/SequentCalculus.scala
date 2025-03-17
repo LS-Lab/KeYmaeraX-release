@@ -37,20 +37,13 @@ import scala.annotation.nowarn
 
 /**
  * Sequent Calculus for propositional and first-order logic.
- * @author
- *   Andre Platzer
- * @author
- *   Stefan Mitsch
- * @see
- *   [[org.keymaerax.Bibliography.JarPlatzer08 Differential dynamic logic for hybrid systems]]
- * @see
- *   [[org.keymaerax.Bibliography.Platzer18 Logical Foundations of Cyber-Physical Systems]]
- * @see
- *   [[org.keymaerax.core.Rule]]
- * @see
- *   [[TactixLibrary]]
- * @Tactic
- *   complete
+ * @author Andre Platzer
+ * @author Stefan Mitsch
+ * @see [[org.keymaerax.Bibliography.JarPlatzer08 Differential dynamic logic for hybrid systems]]
+ * @see [[org.keymaerax.Bibliography.Platzer18 Logical Foundations of Cyber-Physical Systems]]
+ * @see [[org.keymaerax.core.Rule]]
+ * @see [[TactixLibrary]]
+ * @Tactic complete
  */
 @nowarn("msg=match may not be exhaustive")
 @nowarn("cat=deprecation&origin=org.keymaerax.btactics.ProofRuleTactics.closeTrue")
@@ -412,8 +405,8 @@ object SequentCalculus {
   val implyRiX: BuiltInTwoPositionTactic = "implyRi".forward(PropositionalTactics.implyRi(keep = false))
 
   @Derivation
-  val implyRiInfo: TwoPositionTacticInfo = TwoPositionTacticInfo
-    .create(name = "implyRi", constructor = TacticConstructor0.create()(() => implyRiX))
+  val implyRiInfo: TwoPositionTacticInfo =
+    TwoPositionTacticInfo.create(name = "implyRi", constructor = TacticConstructor0.create()(() => implyRiX))
 
   /**
    * <->L Equiv left: use an equivalence by considering both true or both false cases ([[org.keymaerax.core.EquivLeft
@@ -454,9 +447,7 @@ object SequentCalculus {
     constructor = TacticConstructor0.create()(() => equivLRule),
   )
 
-  /**
-   * <->R Equiv right: prove an equivalence by proving both implications ([[org.keymaerax.core.EquivRight EquivRight]])
-   */
+  /** <->R Equiv right: prove an equivalence by proving both implications ([[org.keymaerax.core.EquivRight EquivRight]]) */
   val equivR: DependentPositionTactic = "equivR".by { (pos: Position, seq: Sequent) =>
     corelabelledby(
       "equivR",
@@ -502,8 +493,8 @@ object SequentCalculus {
    *         G |- D
    * }}}
    */
-  def cut(f: Formula): InputTactic = "cut"
-    .byWithInputs(List(f), cutX(f) & Idioms.<(label(BelleLabels.cutUse), label(BelleLabels.cutShow)))
+  def cut(f: Formula): InputTactic =
+    "cut".byWithInputs(List(f), cutX(f) & Idioms.<(label(BelleLabels.cutUse), label(BelleLabels.cutShow)))
 
   @Derivation
   val cutInfo: InputTacticInfo = InputTacticInfo.create(
@@ -580,12 +571,14 @@ object SequentCalculus {
    *        G |- p, D
    * }}}
    */
-  def cutLR(f: Formula): DependentPositionWithAppliedInputTactic = "cutLR"
-    .byWithInputs(List(f), { cutLRFw(f)(_: Position) })
+  def cutLR(f: Formula): DependentPositionWithAppliedInputTactic =
+    "cutLR".byWithInputs(List(f), { cutLRFw(f)(_: Position) })
 
   @Derivation
-  val cutLRInfo: InputPositionTacticInfo = InputPositionTacticInfo
-    .create(name = "cutLR", constructor = TacticConstructor1.create(FormulaArg("f"))((f: Formula) => cutLR(f)))
+  val cutLRInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
+    name = "cutLR",
+    constructor = TacticConstructor1.create(FormulaArg("f"))((f: Formula) => cutLR(f)),
+  )
 
   /** Builtin forward implementation of cutLR. */
   private[btactics] def cutLRFw(f: Formula): BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
@@ -650,8 +643,7 @@ object SequentCalculus {
    * ----------------------- (Skolemize) provided x not in G,D
    * G |- \forall x p(x), D
    * }}}
-   * @see
-   *   [[org.keymaerax.core.Skolemize]]
+   * @see [[org.keymaerax.core.Skolemize]]
    * @example
    *   {{{
    *   y>5   |- x^2>=0
@@ -679,8 +671,8 @@ object SequentCalculus {
     constructor = TacticConstructor0.create()(() => allR),
   )
 
-  def allRi(t: Term, x: scala.Option[Variable]): DependentPositionWithAppliedInputTactic = "allRi"
-    .byWithInputs(List(t, x), { FOQuantifierTactics.universalGen(x, t)(_: Position) })
+  def allRi(t: Term, x: scala.Option[Variable]): DependentPositionWithAppliedInputTactic =
+    "allRi".byWithInputs(List(t, x), { FOQuantifierTactics.universalGen(x, t)(_: Position) })
 
   @Derivation
   val allRiInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
@@ -690,8 +682,9 @@ object SequentCalculus {
     displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ |- ∀x p(f(x)), Δ",
     displayConclusion = "Γ |- p(f(y)), Δ",
-    constructor = TacticConstructor2
-      .create(TermArg("f"), OptionArg(VariableArg("x", List("x"))))((t: Term, x: scala.Option[Variable]) => allRi(t, x)),
+    constructor = TacticConstructor2.create(TermArg("f"), OptionArg(VariableArg("x", List("x"))))(
+      (t: Term, x: scala.Option[Variable]) => allRi(t, x)
+    ),
   )
 
   /**
@@ -705,8 +698,8 @@ object SequentCalculus {
   def allL(x: Variable, inst: Term): BuiltInPositionTactic = FOQuantifierTactics.allInstantiate(Some(x), Some(inst))
 
   /** all left: instantiate a universal quantifier in the antecedent by the concrete instance `e` (itself if None). */
-  def allL(e: scala.Option[Term]): DependentPositionWithAppliedInputTactic = "allL"
-    .byWithInputs(List(e), { FOQuantifierTactics.allInstantiate(None, e)(_: Position) })
+  def allL(e: scala.Option[Term]): DependentPositionWithAppliedInputTactic =
+    "allL".byWithInputs(List(e), { FOQuantifierTactics.allInstantiate(None, e)(_: Position) })
 
   @Derivation
   val allLInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
@@ -834,8 +827,8 @@ object SequentCalculus {
     constructor = TacticConstructor0.create()(() => existsL),
   )
 
-  def existsLi(t: Term, x: scala.Option[Variable]): DependentPositionWithAppliedInputTactic = "existsLi"
-    .byWithInputs(List(t, x), { FOQuantifierTactics.existsGen(x, t)(_: Position) })
+  def existsLi(t: Term, x: scala.Option[Variable]): DependentPositionWithAppliedInputTactic =
+    "existsLi".byWithInputs(List(t, x), { FOQuantifierTactics.existsGen(x, t)(_: Position) })
 
   @Derivation
   val existsLiInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
@@ -845,10 +838,9 @@ object SequentCalculus {
     displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ, ∃x p(f(x)) |- Δ",
     displayConclusion = "Γ, p(f(y)) |- Δ",
-    constructor = TacticConstructor2
-      .create(TermArg("f"), OptionArg(VariableArg("x", List("x"))))((t: Term, x: scala.Option[Variable]) =>
-        existsLi(t, x)
-      ),
+    constructor = TacticConstructor2.create(TermArg("f"), OptionArg(VariableArg("x", List("x"))))(
+      (t: Term, x: scala.Option[Variable]) => existsLi(t, x)
+    ),
   )
 
   /**
@@ -860,13 +852,13 @@ object SequentCalculus {
    * G |- \exists x p(x), D
    * }}}
    */
-  def existsR(x: Variable, inst: Term): BuiltInPositionTactic = FOQuantifierTactics
-    .existsInstantiate(Some(x), Some(inst))
+  def existsR(x: Variable, inst: Term): BuiltInPositionTactic =
+    FOQuantifierTactics.existsInstantiate(Some(x), Some(inst))
 
   /** exists right: instantiate an existential quantifier in the succedent by a concrete instance `inst` as a witness */
 
-  def existsR(e: scala.Option[Term]): DependentPositionWithAppliedInputTactic = "existsR"
-    .byWithInputs(List(e), { (pos: Position) => FOQuantifierTactics.existsInstantiate(None, e)(pos) })
+  def existsR(e: scala.Option[Term]): DependentPositionWithAppliedInputTactic =
+    "existsR".byWithInputs(List(e), { (pos: Position) => FOQuantifierTactics.existsInstantiate(None, e)(pos) })
 
   @Derivation
   val existsRInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
@@ -995,9 +987,7 @@ object SequentCalculus {
     }
   }}*/
 
-  /**
-   * Find a succedent True or an antecedent False or the same formula left and right and give back its closing tactic.
-   */
+  /** Find a succedent True or an antecedent False or the same formula left and right and give back its closing tactic. */
   private def findClose: BuiltInTactic = anon { (provable: ProvableSig) =>
     @inline
     def findCloseImp(pr: ProvableSig): ProvableSig = {
@@ -1195,8 +1185,9 @@ object SequentCalculus {
     displayNameLong = Some("Alpha Bound Rename"),
     displayPremises = "Γ |- P(y), Δ ;; Γ |- P(x), Δ, x=y",
     displayConclusion = "Γ |- P(x), Δ",
-    constructor = TacticConstructor2
-      .create(VariableArg("x"), VariableArg("y", List("y")))((what: Variable, to: Variable) => alphaRen(what, to)),
+    constructor = TacticConstructor2.create(VariableArg("x"), VariableArg("y", List("y")))(
+      (what: Variable, to: Variable) => alphaRen(what, to)
+    ),
   )
 
   /**
@@ -1269,8 +1260,9 @@ object SequentCalculus {
     displayNameLong = Some("Alpha Rename All"),
     displayPremises = "Γ(y) |- Δ(y) ;; Γ(x) |- Δ(x), x=y",
     displayConclusion = "Γ(x) |- Δ(x)",
-    constructor = TacticConstructor2
-      .create(VariableArg("x"), VariableArg("y", List("y")))((what: Variable, to: Variable) => alphaRenAll(what, to)),
+    constructor = TacticConstructor2.create(VariableArg("x"), VariableArg("y", List("y")))(
+      (what: Variable, to: Variable) => alphaRenAll(what, to)
+    ),
   )
 
   /** Alpha renaming everywhere in the sequent using an equality at a specific position in the antecedent. */
@@ -1388,13 +1380,11 @@ object SequentCalculus {
    *   ---------------- modusPonens
    *   p, p->q, G |- D
    *   }}}
-   * @param assumption
-   *   Position pointing to p
-   * @param implication
-   *   Position pointing to p->q
+   * @param assumption Position pointing to p
+   * @param implication Position pointing to p->q
    */
-  def modusPonens(assumption: AntePos, implication: AntePos): BelleExpr = PropositionalTactics
-    .modusPonens(assumption, implication)
+  def modusPonens(assumption: AntePos, implication: AntePos): BelleExpr =
+    PropositionalTactics.modusPonens(assumption, implication)
 
   /**
    * Commute equivalence on the left [[org.keymaerax.core.CommuteEquivLeft CommuteEquivLeft]].
@@ -1466,35 +1456,30 @@ object SequentCalculus {
 
   /**
    * Call/label the current proof branch by the given label `s`.
-   * @see
-   *   [[Idioms.<()]]
-   * @see
-   *   [[sublabel()]]
-   * @see
-   *   [[BelleLabels]]
+   * @see [[Idioms.<()]]
+   * @see [[sublabel()]]
+   * @see [[BelleLabels]]
    */
   def label(s: BelleLabel): BelleExpr = LabelBranch(s)
 
   /**
    * Call/label the current proof branch by the top-level label `s`.
-   * @see
-   *   [[Idioms.<()]]
-   * @see
-   *   [[sublabel()]]
-   * @see
-   *   [[BelleLabels]]
+   * @see [[Idioms.<()]]
+   * @see [[sublabel()]]
+   * @see [[BelleLabels]]
    */
   def label(s: String): InputTactic = "label".byWithInputs(List(s), label(BelleTopLevelLabel(s)))
 
   @Derivation
-  val labelInfo: InputTacticInfo = InputTacticInfo
-    .create(name = "label", constructor = TacticConstructor1.create(StringArg("s"))(((s: String) => label(s))))
+  val labelInfo: InputTacticInfo = InputTacticInfo.create(
+    name = "label",
+    constructor = TacticConstructor1.create(StringArg("s"))(((s: String) => label(s))),
+  )
 
   /**
    * Mark the current proof branch and all subbranches `s``.
    *
-   * @see
-   *   [[label()]]
+   * @see [[label()]]
    */
   def sublabel(s: String): BelleExpr = UnifyUSCalculus.skip // LabelBranch(BelleSubLabel(???, s))
 

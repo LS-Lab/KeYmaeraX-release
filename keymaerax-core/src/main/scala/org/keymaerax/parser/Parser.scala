@@ -6,8 +6,7 @@
 /**
  * Differential Dynamic Logic parser for concrete KeYmaera X notation.
  *
- * @author
- *   Andre Platzer
+ * @author Andre Platzer
  * @see
  *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
  */
@@ -30,10 +29,8 @@ import scala.util.Try
  *   parser(printer(expr)) == expr
  * }}}
  *
- * @author
- *   Andre Platzer
- * @see
- *   [[TokenParser]]
+ * @author Andre Platzer
+ * @see [[TokenParser]]
  * @see
  *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
  */
@@ -41,67 +38,60 @@ trait Parser extends (String => Expression) {
 
   /**
    * Parse the input string in the concrete syntax as a differential dynamic logic expression
-   * @param input
-   *   the string to parse as a dL formula, dL term, or dL program.
-   * @ensures
-   *   apply(printer(\result)) == \result
-   * @throws ParseException
-   *   if `input` is not a well-formed expression of differential dynamic logic or differential game logic.
+   * @param input the string to parse as a dL formula, dL term, or dL program.
+   * @ensures apply(printer(\result)) == \result
+   * @throws ParseException if `input` is not a well-formed expression of differential dynamic logic or differential
+   *   game logic.
    */
   def apply(input: String): Expression
 
   /**
    * Parse the input string in the concrete syntax as a differential dynamic logic term.
-   * @throws ParseException
-   *   whenever its `input` is not a well-formed term of differential dynamic logic or differential game logic.
+   * @throws ParseException whenever its `input` is not a well-formed term of differential dynamic logic or differential
+   *   game logic.
    */
   val termParser: String => Term
 
   /**
    * Parse the input string in the concrete syntax as a differential dynamic logic formula.
-   * @throws ParseException
-   *   whenever its `input` is not a well-formed formula of differential dynamic logic or differential game logic.
+   * @throws ParseException whenever its `input` is not a well-formed formula of differential dynamic logic or
+   *   differential game logic.
    */
   val formulaParser: String => Formula
 
   /**
    * Parse the input string in the concrete syntax as a differential dynamic logic program.
-   * @throws ParseException
-   *   whenever its `input` is not a well-formed program of differential dynamic logic or game of differential game
-   *   logic.
+   * @throws ParseException whenever its `input` is not a well-formed program of differential dynamic logic or game of
+   *   differential game logic.
    */
   val programParser: String => Program
 
   /**
    * Parse the input string in the concrete syntax as a differential dynamic logic differential program.
-   * @throws ParseException
-   *   whenever its `input` is not a well-formed differential program of differential dynamic logic or differential game
-   *   of differential game logic.
+   * @throws ParseException whenever its `input` is not a well-formed differential program of differential dynamic logic
+   *   or differential game of differential game logic.
    */
   val differentialProgramParser: String => DifferentialProgram
 
   /**
    * Parse the input string in the concrete syntax as a differential dynamic logic sequent.
-   * @throws ParseException
-   *   whenever its `input` is not a well-formed sequent of differential dynamic logic or differential game logic.
+   * @throws ParseException whenever its `input` is not a well-formed sequent of differential dynamic logic or
+   *   differential game logic.
    */
   val sequentParser: String => Sequent
 
   /**
    * Parse the input string in the concrete syntax as a stored differential dynamic logic inference.
-   * @return
-   *   A parser turning strings into the list of conclusion:subgoals corresponding to the input string.
-   * @throws ParseException
-   *   whenever its `input` is not a syntactically well-formed inference of differential dynamic logic or differential
-   *   game logic. Syntactical well-formedness does not require the inference to be according to a proof rule or axiom,
-   *   merely plausible input.
+   * @return A parser turning strings into the list of conclusion:subgoals corresponding to the input string.
+   * @throws ParseException whenever its `input` is not a syntactically well-formed inference of differential dynamic
+   *   logic or differential game logic. Syntactical well-formedness does not require the inference to be according to a
+   *   proof rule or axiom, merely plausible input.
    */
   val storedInferenceParser: (String => List[Sequent])
 
   /**
    * A pretty-printer that can write the output that this parser reads
-   * @ensures
-   *   \forall e: apply(printer(e)) == e
+   * @ensures \forall e: apply(printer(e)) == e
    */
   val printer: PrettyPrinter
 
@@ -164,8 +154,8 @@ object Parser extends (String => Expression) {
     else {
       val namesList = symbols.toList.map(s => (s.name, s.index, s.isInstanceOf[DifferentialSymbol]))
       val duplicateNames = namesList.diff(namesList.distinct)
-      val duplicates = symbols
-        .filter(s => duplicateNames.contains((s.name, s.index, s.isInstanceOf[DifferentialSymbol])))
+      val duplicates =
+        symbols.filter(s => duplicateNames.contains((s.name, s.index, s.isInstanceOf[DifferentialSymbol])))
       duplicates
     }
   }

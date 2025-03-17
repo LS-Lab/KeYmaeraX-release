@@ -230,8 +230,8 @@ private case class EXPRESSION_SUB(override val exprString: String, override val 
     val (expr, inExpr) =
       if (undelimitedExprString.indexOf(subString) != subStart) {
         // marked sub-expression is not leftmost in expr, mark with "hash" placeholders
-        val (markedStr, placeholder) = PositionLocator
-          .withMarkers(undelimitedExprString, sub, subStart - 1, subEnd - subStart + 2)
+        val (markedStr, placeholder) =
+          PositionLocator.withMarkers(undelimitedExprString, sub, subStart - 1, subEnd - subStart + 2)
         val expr = Parser(markedStr)
         (
           Parser(PositionLocator.replaceHashesParenthesized(undelimitedExprString, sub.kind)),

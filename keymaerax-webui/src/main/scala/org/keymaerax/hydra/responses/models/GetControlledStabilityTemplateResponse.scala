@@ -17,18 +17,12 @@ class GetControlledStabilityTemplateResponse(code: String, switched: SwitchedSys
   private val prg = switched.asProgram
   private val printer = new KeYmaeraXPrettierPrinter(80)
   private val fmls = specKind.map({
-    case s @ "stability" => s ->
-        printer(SwitchedSystems.stabilitySpec(switched))
-          .linesWithSeparators
-          .zipWithIndex
-          .map({ case (l, i) => if (i == 0) l else "  " + l })
-          .mkString
-    case s @ "attractivity" => s ->
-        printer(SwitchedSystems.attractivitySpec(switched))
-          .linesWithSeparators
-          .zipWithIndex
-          .map({ case (l, i) => if (i == 0) l else "  " + l })
-          .mkString
+    case s @ "stability" => s -> printer(
+        SwitchedSystems.stabilitySpec(switched)
+      ).linesWithSeparators.zipWithIndex.map({ case (l, i) => if (i == 0) l else "  " + l }).mkString
+    case s @ "attractivity" => s -> printer(
+        SwitchedSystems.attractivitySpec(switched)
+      ).linesWithSeparators.zipWithIndex.map({ case (l, i) => if (i == 0) l else "  " + l }).mkString
     case s @ "custom" => s ->
         s"""true /* todo */ ->
            |  [ ${printer(prg)

@@ -29,8 +29,7 @@ object SessionManager {
         if (
           Configuration.getString(Configuration.Keys.USE_DEFAULT_USER).contains("true") &&
           Configuration.contains(Configuration.Keys.DEFAULT_USER)
-        ) { createToken(key, user) }
-        else NewlyExpiredToken(key)
+        ) { createToken(key, user) } else NewlyExpiredToken(key)
       }
     case None => EmptyToken()
   }
@@ -67,8 +66,7 @@ object SessionManager {
       if (
         Configuration.getString(Configuration.Keys.USE_DEFAULT_USER).contains("true") &&
         Configuration.contains(Configuration.Keys.DEFAULT_USER)
-      ) { Int.MaxValue }
-      else 7
+      ) { Int.MaxValue } else 7
     c.add(Calendar.DATE, expiresIn)
     c.getTime
   }

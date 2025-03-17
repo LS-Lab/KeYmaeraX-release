@@ -14,7 +14,6 @@ package org.keymaerax
  * This package defines
  *   - [[org.keymaerax.pt.ProofTerm Proof term]] language
  *   - [[org.keymaerax.pt.ProofChecker]] to interpret the proof term language
- * @author
- *   Nathan Fulton
+ * @author Nathan Fulton
  */
 package object pt {}

@@ -8,11 +8,8 @@ package org.keymaerax
 /**
  * Simple interface to the tactics exposed to the web UI and REST-API. Tactic combinator parser. Main tactics are
  * provided in [[org.keymaerax.tactics.TactixLibrary]]
- * @author
- *   Andre Platzer
- * @todo
- *   Stub. Describe for real.
- * @see
- *   [[org.keymaerax.tactics]]
+ * @author Andre Platzer
+ * @todo Stub. Describe for real.
+ * @see [[org.keymaerax.tactics]]
  */
 package object tacticsinterface {}

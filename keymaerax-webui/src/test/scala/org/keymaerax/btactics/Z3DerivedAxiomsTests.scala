@@ -23,12 +23,9 @@ import scala.collection.immutable
 /**
  * Tests [[org.keymaerax.btactics.Ax]]
  *
- * @see
- *   [[CodeNameChecker]]
- * @see
- *   [[DerivedAxiomsTests]]
- * @note
- *   Must be separate test suite from same tests withZ3, otherwise lazy vals in DerivedAxioms corrupt tests.
+ * @see [[CodeNameChecker]]
+ * @see [[DerivedAxiomsTests]]
+ * @note Must be separate test suite from same tests withZ3, otherwise lazy vals in DerivedAxioms corrupt tests.
  */
 @IgnoreInBuildTest // otherwise it deletes derived lemmas while other tests are running
 @CheckinTest @SummaryTest @UsualTest
@@ -79,7 +76,7 @@ class Z3DerivedAxiomsTests extends TacticTestBase(registerAxTactics = None) {
       })
     }
   }
-  */
+   */
 
   "Derived Axioms" should "prove <-> reflexive" in { check(equivReflexive) }
   it should "prove !!" in { check(doubleNegation) }
@@ -286,5 +283,5 @@ class Z3DerivedAxiomsTests extends TacticTestBase(registerAxTactics = None) {
     val fields = fns.map(fn => fn -> ru.typeOf[Ax.type].member(ru.TermName(fn)).asMethod.getter.asMethod)
     fields.map(f => f._2.toString -> im.reflectMethod(f._2))
   }
-  */
+   */
 }

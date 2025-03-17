@@ -21,10 +21,8 @@ import scala.collection.immutable._
 
 /**
  * Tests UnifyUSCalculus useAt parts.
- * @see
- *   [[UnifyUSCalculus]]
- * @author
- *   Andre Platzer
+ * @see [[UnifyUSCalculus]]
+ * @author Andre Platzer
  */
 @SummaryTest @UsualTest @CheckinTest
 class UnifyUSCalculusTest extends TacticTestBase {
@@ -142,11 +140,13 @@ class UnifyUSCalculusTest extends TacticTestBase {
 
   it should "use a conditional equivalence subproof" in withTactics {
     val mainProof = ProvableSig.startPlainProof("x=1 ==> !y*x>0 <-> !y>0".asSequent)
-    val subProof = ProvableSig
-      .startPlainProof("==> x=1 -> (y*x>0 <-> y>0)".asSequent)(implyR(1), 0)(eqL2R(-1)(SuccPosition(1, List(0))), 0)(
-        useAt(Ax.timesIdentity)(SuccPosition(1, List(0, 0))),
-        0,
-      )(CoHideRight(SuccPos(0)), 0)(byUS(Ax.equivReflexive.provable), 0)
+    val subProof = ProvableSig.startPlainProof("==> x=1 -> (y*x>0 <-> y>0)".asSequent)(implyR(1), 0)(
+      eqL2R(-1)(SuccPosition(1, List(0))),
+      0,
+    )(useAt(Ax.timesIdentity)(SuccPosition(1, List(0, 0))), 0)(CoHideRight(SuccPos(0)), 0)(
+      byUS(Ax.equivReflexive.provable),
+      0,
+    )
     proveBy(mainProof, useAt(subProof, PosInExpr(List(1, 0)))(1, PosInExpr(List(0, 0)))).subgoals.loneElement shouldBe
       "x=1 ==> !y>0 <-> !y>0".asSequent
   }
@@ -160,8 +160,8 @@ class UnifyUSCalculusTest extends TacticTestBase {
 
   it should "use a conditional equality subproof" in withTactics {
     val mainProof = ProvableSig.startPlainProof("x=1 ==> !(y*x!=y)".asSequent)
-    val subProof = ProvableSig
-      .startPlainProof("==> x=1 -> y*x=y".asSequent)(implyR(1), 0)(eqL2R(-1)(SuccPosition(1, List(0))), 0)(
+    val subProof =
+      ProvableSig.startPlainProof("==> x=1 -> y*x=y".asSequent)(implyR(1), 0)(eqL2R(-1)(SuccPosition(1, List(0))), 0)(
         useAt(Ax.timesIdentity)(SuccPosition(1, List(0))),
         0,
       )(CoHideRight(SuccPos(0)), 0)(byUS(Ax.equalReflexive.provable), 0)
@@ -264,9 +264,9 @@ class UnifyUSCalculusTest extends TacticTestBase {
   }
 
   "CMon monotonicity" should "prove x<99 -> y<2 & x>5 |- x<99 -> y<2 & x>2 from x>5 |- x>2" in withTactics {
-    val done = CMon(Context("x<99 -> y<2 & ⎵".asFormula))(ProvableSig.startPlainProof(
-      Sequent(IndexedSeq("x>5".asFormula), IndexedSeq("x>2".asFormula))
-    ))
+    val done = CMon(
+      Context("x<99 -> y<2 & ⎵".asFormula)
+    )(ProvableSig.startPlainProof(Sequent(IndexedSeq("x>5".asFormula), IndexedSeq("x>2".asFormula))))
     done.subgoals shouldBe List(Sequent(IndexedSeq("x>5".asFormula), IndexedSeq("x>2".asFormula)))
     done.conclusion shouldBe
       Sequent(IndexedSeq("x<99 -> y<2 & x>5".asFormula), IndexedSeq("x<99 -> y<2 & x>2".asFormula))
@@ -376,8 +376,8 @@ class UnifyUSCalculusTest extends TacticTestBase {
     shouldCMon(Context("((⎵ -> y<2) -> z=0) & x<10 | x=7".asFormula))
   }
 
-  lazy val basicImpl = TactixLibrary
-    .proveBy(Sequent(IndexedSeq("x>5".asFormula), IndexedSeq("x>2".asFormula)), TactixLibrary.QE)
+  lazy val basicImpl =
+    TactixLibrary.proveBy(Sequent(IndexedSeq("x>5".asFormula), IndexedSeq("x>2".asFormula)), TactixLibrary.QE)
 
   it should "prove C{x>5} |- C{x>2} from provable x>5 |- x>2 in most random positive contexts" in withMathematica {
     qeTool =>

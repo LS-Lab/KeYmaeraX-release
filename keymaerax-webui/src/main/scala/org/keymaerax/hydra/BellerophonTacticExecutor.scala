@@ -12,8 +12,7 @@ import org.keymaerax.bellerophon.{BelleExpr, BelleThrowable, BelleValue, Interpr
 
 /**
  * Scheduler for Bellerophon tactics
- * @author
- *   Nathan Fulton
+ * @author Nathan Fulton
  */
 object BellerophonTacticExecutor {
   val defaultSize = 10
@@ -46,14 +45,10 @@ class BellerophonTacticExecutor(poolSize: Int) {
 
   /**
    * Schedules a tactic for execution.
-   * @param tactic
-   *   The tactic to run
-   * @param value
-   *   The value to apply the tactic to.
-   * @param interpreter
-   *   The interpreter that actually runs the tactic.
-   * @return
-   *   The ID that [[BellerophonTacticExecutor]] uses to identify this tactic.
+   * @param tactic The tactic to run
+   * @param value The value to apply the tactic to.
+   * @param interpreter The interpreter that actually runs the tactic.
+   * @return The ID that [[BellerophonTacticExecutor]] uses to identify this tactic.
    */
   def schedule(userId: String, tactic: BelleExpr, value: BelleValue, interpreter: Interpreter): String = {
     val id = java.util.UUID.randomUUID().toString
@@ -81,11 +76,9 @@ class BellerophonTacticExecutor(poolSize: Int) {
     synchronized { if (isDone(id)) Some(scheduledTactics(id).get()) else None }
 
   /**
-   * @param id
-   *   The schedule id of the tactic to remove.
-   * @param force
-   *   If true, then the tactic can be removed even if it is currently running. In that case, the tactic execution is
-   *   halted first. Defaults to false.
+   * @param id The schedule id of the tactic to remove.
+   * @param force If true, then the tactic can be removed even if it is currently running. In that case, the tactic
+   *   execution is halted first. Defaults to false.
    */
   def tryRemove(id: String, force: Boolean = false): Unit = synchronized {
     if (scheduledTactics.contains(id)) {
@@ -103,11 +96,9 @@ class BellerophonTacticExecutor(poolSize: Int) {
   } ensures (!scheduledTactics.contains(id))
 
   /**
-   * @param id
-   *   The schedule id of the tactic to remove.
-   * @param force
-   *   If true, then the tactic can be removed even if it is currently running. In that case, the tactic execution is
-   *   halted first. Defaults to false.
+   * @param id The schedule id of the tactic to remove.
+   * @param force If true, then the tactic can be removed even if it is currently running. In that case, the tactic
+   *   execution is halted first. Defaults to false.
    */
   def remove(id: String, force: Boolean = false): Unit = {
     require(scheduledTactics.contains(id), "Cannot remove a tactic whose ID is not in the key set of scheduledTactics.")
@@ -115,10 +106,8 @@ class BellerophonTacticExecutor(poolSize: Int) {
   }
 
   /**
-   * @param id
-   *   The schedule id of the tactic to wait on
-   * @param millis
-   *   The duration in milliseconds to sleep between polling attempts
+   * @param id The schedule id of the tactic to wait on
+   * @param millis The duration in milliseconds to sleep between polling attempts
    */
   def wait(id: String, millis: Int = 10): Option[Either[BelleValue, BelleThrowable]] = {
     try {

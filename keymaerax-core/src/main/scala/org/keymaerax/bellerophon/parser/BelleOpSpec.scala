@@ -13,8 +13,7 @@ import scala.annotation.nowarn
 import scala.collection.immutable._
 
 /**
- * @note
- *   Needs some work because the constructors for Belle expressions are far more diverse than the constructors for
+ * @note Needs some work because the constructors for Belle expressions are far more diverse than the constructors for
  *   KeYmaera X expressions
  */
 sealed trait BelleOpSpec {

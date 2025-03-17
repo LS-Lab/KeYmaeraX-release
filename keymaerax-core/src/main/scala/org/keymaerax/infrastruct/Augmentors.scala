@@ -31,10 +31,8 @@ import scala.collection.mutable.ListBuffer
  *   val other = f.replaceAt(PosInExpr(1::1::Nil), parser("x^2>y"))
  *   println(other)
  *   }}}
- * @author
- *   Andre Platzer
- * @see
- *   [[Context]]
+ * @author Andre Platzer
+ * @see [[Context]]
  */
 object Augmentors {
 
@@ -43,16 +41,14 @@ object Augmentors {
 
   /**
    * Augment expressions with additional tactics-only helper functions.
-   * @author
-   *   Andre Platzer
+   * @author Andre Platzer
    */
 //  implicit class ExpressionAugmentor(val expr: Expression) {
 //  }
 
   /**
    * Augment terms with additional tactics-only helper functions.
-   * @author
-   *   Andre Platzer
+   * @author Andre Platzer
    */
   implicit class TermAugmentor(val term: Term) {
 
@@ -61,8 +57,7 @@ object Augmentors {
 
     /** Subexpression at indicated position if exists, or None */
     def sub(pos: PosInExpr): Option[Expression] =
-      try { Some(Context.sub(term, pos)) }
-      catch { case _: IllegalArgumentException => None }
+      try { Some(Context.sub(term, pos)) } catch { case _: IllegalArgumentException => None }
 
     /** Split into expression and its context at the indicated position */
     def at(pos: PosInExpr): (Context[Term], Expression) = Context.at(term, pos)
@@ -75,18 +70,15 @@ object Augmentors {
 
     /**
      * Find the first (i.e., left-most) position of a subexpression satisfying `condition`, if any.
-     * @param condition
-     *   the condition that the subexpression sought for has to satisfy.
-     * @return
-     *   The first position, or None if no subexpression satisfies `condition`.
+     * @param condition the condition that the subexpression sought for has to satisfy.
+     * @return The first position, or None if no subexpression satisfies `condition`.
      */
     def find(condition: Term => Boolean): Option[(PosInExpr, Term)] = {
       var pos: Option[(PosInExpr, Term)] = None
       ExpressionTraversal.traverse(
         new ExpressionTraversalFunction() {
           override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] =
-            if (condition(e)) { pos = Some((p, e)); Left(Some(ExpressionTraversal.stop)) }
-            else Left(None)
+            if (condition(e)) { pos = Some((p, e)); Left(Some(ExpressionTraversal.stop)) } else Left(None)
         },
         term,
       )
@@ -95,8 +87,7 @@ object Augmentors {
 
     /**
      * Find the first (i.e., left-most) position of the given term `e`, if any.
-     * @return
-     *   The first position, or None if `e` does not occur.
+     * @return The first position, or None if `e` does not occur.
      */
     def find(e: Term): Option[PosInExpr] = find(t => e == t) match {
       case Some((pos, _)) => Some(pos)
@@ -109,8 +100,7 @@ object Augmentors {
 
   /**
    * Augment formulas with additional tactics-only helper functions.
-   * @author
-   *   Andre Platzer
+   * @author Andre Platzer
    */
   implicit class FormulaAugmentor(val fml: Formula) {
 
@@ -119,8 +109,7 @@ object Augmentors {
 
     /** Subexpression at indicated position if exists, or None */
     def sub(pos: PosInExpr): Option[Expression] =
-      try { Some(Context.sub(fml, pos)) }
-      catch { case _: IllegalArgumentException => None }
+      try { Some(Context.sub(fml, pos)) } catch { case _: IllegalArgumentException => None }
 
     /** Split into expression and its context at the indicated position */
     def at(pos: PosInExpr): (Context[Formula], Expression) = Context.at(fml, pos)
@@ -133,21 +122,18 @@ object Augmentors {
 
     /**
      * Find the first (i.e., left-most) position of a subexpression satisfying `condition`, if any.
-     * @param condition
-     *   the condition that the subexpression sought for has to satisfy.
-     * @return
-     *   The first position and the subexpression at that position, or None if no subexpression satisfies `condition`.
+     * @param condition the condition that the subexpression sought for has to satisfy.
+     * @return The first position and the subexpression at that position, or None if no subexpression satisfies
+     *   `condition`.
      */
     def find(condition: Expression => Boolean): Option[(PosInExpr, Expression)] = {
       var pos: Option[(PosInExpr, Expression)] = None
       ExpressionTraversal.traverse(
         new ExpressionTraversalFunction() {
           override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] =
-            if (condition(e)) { pos = Some((p, e)); Left(Some(ExpressionTraversal.stop)) }
-            else Left(None)
+            if (condition(e)) { pos = Some((p, e)); Left(Some(ExpressionTraversal.stop)) } else Left(None)
           override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] =
-            if (condition(e)) { pos = Some((p, e)); Left(Some(ExpressionTraversal.stop)) }
-            else Left(None)
+            if (condition(e)) { pos = Some((p, e)); Left(Some(ExpressionTraversal.stop)) } else Left(None)
         },
         fml,
       )
@@ -156,8 +142,7 @@ object Augmentors {
 
     /**
      * Find the first (i.e., left-most) position of the given expression `e`, if any.
-     * @return
-     *   The first position, or None if `e` does not occur.
+     * @return The first position, or None if `e` does not occur.
      */
     def find(e: Term): Option[PosInExpr] = find(t => e == t) match {
       case Some((pos, _)) => Some(pos)
@@ -166,18 +151,15 @@ object Augmentors {
 
     /**
      * Find the first (i.e., left-most) position of a subformula satisfying `condition`, if any.
-     * @param condition
-     *   the condition that the subformula sought for has to satisfy.
-     * @return
-     *   The first position and subformula at that position, or None if no subformula satisfies `condition`.
+     * @param condition the condition that the subformula sought for has to satisfy.
+     * @return The first position and subformula at that position, or None if no subformula satisfies `condition`.
      */
     def findSubformula(condition: Formula => Boolean): Option[(PosInExpr, Formula)] = {
       var pos: Option[(PosInExpr, Formula)] = None
       ExpressionTraversal.traverse(
         new ExpressionTraversalFunction() {
           override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] =
-            if (condition(e)) { pos = Some((p, e)); Left(Some(ExpressionTraversal.stop)) }
-            else Left(None)
+            if (condition(e)) { pos = Some((p, e)); Left(Some(ExpressionTraversal.stop)) } else Left(None)
         },
         fml,
       )
@@ -250,8 +232,7 @@ object Augmentors {
 
   /**
    * Augment programs with additional tactics-only helper functions.
-   * @author
-   *   Andre Platzer
+   * @author Andre Platzer
    */
   implicit class ProgramAugmentor(val prog: Program) {
 
@@ -260,8 +241,7 @@ object Augmentors {
 
     /** Subexpression at indicated position if exists, or None */
     def sub(pos: PosInExpr): Option[Expression] =
-      try { Some(Context.sub(prog, pos)) }
-      catch { case _: IllegalArgumentException => None }
+      try { Some(Context.sub(prog, pos)) } catch { case _: IllegalArgumentException => None }
 
     /** Split into expression and its context at the indicated position */
     def at(pos: PosInExpr): (Context[Program], Expression) = Context.at(prog, pos)
@@ -278,8 +258,7 @@ object Augmentors {
 
   /**
    * Augment sequent with additional tactics-only helper functions.
-   * @author
-   *   Andre Platzer
+   * @author Andre Platzer
    */
   implicit class SequentAugmentor(val seq: Sequent) {
 
@@ -365,9 +344,8 @@ object Augmentors {
      * Replace all occurrences of `what` in `e` by `repl`. `what` and `repl` must be of the same kind, either Term,
      * Formula, or Program. Replaces literal occurrences even in places disallowed by uniform substitution (minimal
      * safeguarding to not replace in some obvious invalid places).
-     * @throws ClassCastException
-     *   When `repl` cannot be cast to the type expected at an occurrence of `what` (e.g., when replacing x with f()
-     *   inside x:=y).
+     * @throws ClassCastException When `repl` cannot be cast to the type expected at an occurrence of `what` (e.g., when
+     *   replacing x with f() inside x:=y).
      */
     def replaceAll(what: Expression, repl: Expression): E = replaceAll(Map(what -> repl))
 
@@ -375,9 +353,8 @@ object Augmentors {
      * Replace all occurrences of `what` in `e` by `repl`. `what` and `repl` must be of the same kind, either Term,
      * Formula, or Program. Replaces literal occurrences even in places disallowed by uniform substitution (minimal
      * safeguarding to not replace in some obvious invalid places).
-     * @throws ClassCastException
-     *   When `repl` cannot be cast to the type expected at an occurrence of `what` (e.g., when replacing x with f()
-     *   inside x:=y).
+     * @throws ClassCastException When `repl` cannot be cast to the type expected at an occurrence of `what` (e.g., when
+     *   replacing x with f() inside x:=y).
      */
     @nowarn("msg=match may not be exhaustive")
     def replaceAll(repls: Map[Expression, Expression]): E = {
@@ -715,8 +692,7 @@ object Augmentors {
 
   /**
    * Augment sorts with additional tactics-only helper functions.
-   * @author
-   *   Stefan Mitsch
+   * @author Stefan Mitsch
    */
   implicit class SortAugmentor(val sort: Sort) {
 

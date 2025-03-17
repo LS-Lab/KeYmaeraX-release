@@ -180,9 +180,10 @@ class ODETests extends TacticTestBase(registerAxTactics = Some("z3")) {
 
   "Pretest" should "PDEify x^2+y^2=1&f=x -> [{x'=-y,y'=f,f'=-y}](x^2+y^2=1&f=x)" in withQE { _ =>
     withTemporaryConfig(Map(Configuration.Keys.ODE_TIMEOUT_FINALQE -> "-1")) {
-      TactixLibrary
-        .proveBy("x^2+y^2=1&f=x -> [{x'=-y,y'=f,f'=-y}](x^2+y^2=1&f=x)".asFormula, implyR(1) & ODE(1)) shouldBe
-        Symbol("proved")
+      TactixLibrary.proveBy(
+        "x^2+y^2=1&f=x -> [{x'=-y,y'=f,f'=-y}](x^2+y^2=1&f=x)".asFormula,
+        implyR(1) & ODE(1),
+      ) shouldBe Symbol("proved")
     }
   }
 
@@ -376,18 +377,19 @@ class ODETests extends TacticTestBase(registerAxTactics = Some("z3")) {
       """.stripMargin
       )
 
-      val t = """
-                |implyR(1) ; andL(-1) ; andL(-2) ; loop("v>=0", 1) ; <(
-                |  auto,
-                |  auto,
-                |  composeb(1) ; choiceb(1) ; andR(1) ; <(
-                |    composeb(1) ; testb(1) ; implyR(1) ; assignb(1) ; ODE(1),
-                |    choiceb(1) ; assignb(1.0) ; assignb(1.1) ; andR(1) ; <(
-                |      solve(1) ; auto,
-                |      solve(1) ; auto
-                |      )
-                |    )
-                |  )
+      val t =
+        """
+          |implyR(1) ; andL(-1) ; andL(-2) ; loop("v>=0", 1) ; <(
+          |  auto,
+          |  auto,
+          |  composeb(1) ; choiceb(1) ; andR(1) ; <(
+          |    composeb(1) ; testb(1) ; implyR(1) ; assignb(1) ; ODE(1),
+          |    choiceb(1) ; assignb(1.0) ; assignb(1.1) ; andR(1) ; <(
+          |      solve(1) ; auto,
+          |      solve(1) ; auto
+          |      )
+          |    )
+          |  )
       """.stripMargin.asTactic
 
       TactixLibrary.proveBy(f, t) shouldBe Symbol("proved")

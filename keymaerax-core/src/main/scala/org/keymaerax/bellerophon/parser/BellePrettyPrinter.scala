@@ -30,10 +30,8 @@ import scala.util.Try
 /**
  * A pretty-printer for the Bellerophon tactics language.
  *
- * @author
- *   Nathan Fulton
- * @note
- *   Prefer this implementation over [[BelleExpr.prettyString]].
+ * @author Nathan Fulton
+ * @note Prefer this implementation over [[BelleExpr.prettyString]].
  */
 object BellePrettyPrinter extends (BelleExpr => String) {
   override def apply(e: BelleExpr): String = pp(e, 0)

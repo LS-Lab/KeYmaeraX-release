@@ -23,8 +23,7 @@ import scala.collection.immutable
 /**
  * Tests [[org.keymaerax.btactics.Ax]]
  *
- * @see
- *   [[CodeNameChecker]]
+ * @see [[CodeNameChecker]]
  */
 @CheckinTest @SummaryTest @UsualTest
 @IgnoreInBuildTest // otherwise it deletes derived lemmas while other tests are running
@@ -465,12 +464,16 @@ class DerivedAxiomsTests extends TacticTestBase(registerAxTactics = None) {
 
       TactixLibrary.proveBy(
         dgZeroEquilibrium,
-        SequentCalculus.implyR(1) & DifferentialEquationCalculus
-          .dG("y' = ( (-c*x^(n-1)) / 2)*y".asDifferentialProgram, Some("x*y^2=0&y>0".asFormula))(1) &
+        SequentCalculus.implyR(1) & DifferentialEquationCalculus.dG(
+          "y' = ( (-c*x^(n-1)) / 2)*y".asDifferentialProgram,
+          Some("x*y^2=0&y>0".asFormula),
+        )(1) &
           HilbertCalculus.boxAnd(1, 0 :: Nil) &
           DifferentialTactics.diffInd()(1, 0 :: 0 :: Nil) &
-          DifferentialEquationCalculus
-            .dG("z' = (c*x^(n-1)/4) * z".asDifferentialProgram, Some("y*z^2 = 1".asFormula))(1, 0 :: 1 :: Nil) &
+          DifferentialEquationCalculus.dG("z' = (c*x^(n-1)/4) * z".asDifferentialProgram, Some("y*z^2 = 1".asFormula))(
+            1,
+            0 :: 1 :: Nil,
+          ) &
           DifferentialEquationCalculus.dI()(1, 0 :: 1 :: 0 :: Nil) & QE,
       ) shouldBe Symbol("proved")
     },
@@ -516,5 +519,5 @@ class DerivedAxiomsTests extends TacticTestBase(registerAxTactics = None) {
     val fields = fns.map(fn => fn -> ru.typeOf[Ax.type].member(ru.TermName(fn)).asMethod.getter.asMethod)
     fields.map(f => f._2.toString -> im.reflectMethod(f._2))
   }
-  */
+   */
 }

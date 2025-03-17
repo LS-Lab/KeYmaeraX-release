@@ -7,8 +7,7 @@ package org.keymaerax.parser
 
 /**
  * The location where a Terminal is located in an input stream.
- * @note
- *   Serializable to make sure sbt test allows Location in ParseException errors.
+ * @note Serializable to make sure sbt test allows Location in ParseException errors.
  */
 sealed trait Location extends Serializable {
 
@@ -73,8 +72,7 @@ case class Region(line: Int, column: Int, endLine: Int, endColumn: Int) extends 
   def addLines(numLines: Int): Location = Region(line + numLines, column, endLine + numLines, endColumn)
 
   override def toString: String = {
-    if (column == endColumn && line == endLine) { s"$line:$column" }
-    else { s"$line:$column to $endLine:$endColumn" }
+    if (column == endColumn && line == endLine) { s"$line:$column" } else { s"$line:$column to $endLine:$endColumn" }
   }
 }
 
@@ -100,10 +98,8 @@ object Region {
 
 /**
  * Like a region, but extends until the end of the input.
- * @param line
- *   The starting line.
- * @param column
- *   The ending line.
+ * @param line The starting line.
+ * @param column The ending line.
  */
 case class SuffixRegion(line: Int, column: Int) extends Location {
   def begin: Location = Region(line, column, line, column)

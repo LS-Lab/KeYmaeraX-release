@@ -27,10 +27,10 @@ class CachedLemmaDB(db: LemmaDB) extends LemmaDB with Logging {
   final def clearCache(): Unit = cachedLemmas.clear()
 
   /** @inheritdoc */
-  final override def contains(lemmaID: LemmaID): Boolean = cachedLemmas.keySet.contains(lemmaID) || db.contains(lemmaID)
+  override final def contains(lemmaID: LemmaID): Boolean = cachedLemmas.keySet.contains(lemmaID) || db.contains(lemmaID)
 
   /** @inheritdoc */
-  final override def get(lemmaIDs: List[LemmaID]): Option[List[Lemma]] = {
+  override final def get(lemmaIDs: List[LemmaID]): Option[List[Lemma]] = {
     /* Get as many lemmas as possible from the cache */
     val (cached, uncached) = lemmaIDs.zipWithIndex.partition { case (x, _) => cachedLemmas.contains(x) }
     val fromCache = cached.map({ case (x, i) => (cachedLemmas(x), i) })
@@ -51,7 +51,7 @@ class CachedLemmaDB(db: LemmaDB) extends LemmaDB with Logging {
   }
 
   /** @inheritdoc */
-  final override def add(lemma: Lemma): LemmaID = {
+  override final def add(lemma: Lemma): LemmaID = {
     // @note strip definitions to keep cache and database consistent, since Lemma.toString always prints without definitions
     val stored = lemma.copy(fact = lemma.fact.reapply(Declaration(Map.empty)))
     val id = db.add(stored)
@@ -60,24 +60,24 @@ class CachedLemmaDB(db: LemmaDB) extends LemmaDB with Logging {
   }
 
   /** @inheritdoc */
-  final override def deleteDatabase(): Unit = {
+  override final def deleteDatabase(): Unit = {
     cachedLemmas.clear()
     db.deleteDatabase()
   }
 
   /** @inheritdoc */
-  final override def remove(id: LemmaID): Unit = {
+  override final def remove(id: LemmaID): Unit = {
     cachedLemmas -= id
     db.remove(id)
   }
 
   /** @inheritdoc */
-  final override def removeAll(folderName: LemmaID): Unit = {
+  override final def removeAll(folderName: LemmaID): Unit = {
     val remove = cachedLemmas.filter(_._1.startsWith(folderName)).keys
     cachedLemmas --= remove
     db.removeAll(folderName)
   }
 
   /** @inheritdoc */
-  final override def version(): VersionNumber = db.version()
+  override final def version(): VersionNumber = db.version()
 }

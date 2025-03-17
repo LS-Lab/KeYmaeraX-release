@@ -21,8 +21,7 @@ object VersionNumber {
    * Parse a version from a string with the format `<major>.<minor>.<patch>`. The fields `major`, `minor`, `patch` are
    * positive integers with at least one digit and no additional leading zeroes.
    *
-   * @throws IllegalArgumentException
-   *   invalid version string
+   * @throws IllegalArgumentException invalid version string
    */
   def parse(s: String): VersionNumber = {
     val versionFormat = """^(?<major>0|[1-9][0-9]*)\.(?<minor>0|[1-9][0-9]*)\.(?<patch>0|[1-9][0-9]*)$""".r
@@ -42,6 +41,5 @@ object VersionNumber {
 
   /** Like [[parse]] but return [[None]] if version is invalid. */
   def parseOption(s: String): Option[VersionNumber] =
-    try { Some(parse(s)) }
-    catch { case _: IllegalArgumentException => None }
+    try { Some(parse(s)) } catch { case _: IllegalArgumentException => None }
 }

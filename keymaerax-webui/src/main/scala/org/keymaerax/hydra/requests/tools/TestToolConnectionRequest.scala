@@ -18,8 +18,7 @@ class TestToolConnectionRequest(db: DBAbstraction, toolId: String) extends Local
     ToolProvider.tool(toolId) match {
       case Some(t: QETool) =>
         val simpleQeTask = new FutureTask[Either[Formula, Throwable]](() =>
-          try { Left(t.quantifierElimination("1+2=3".asFormula)) }
-          catch { case e: Throwable => Right(e) }
+          try { Left(t.quantifierElimination("1+2=3".asFormula)) } catch { case e: Throwable => Right(e) }
         )
         new Thread(simpleQeTask).start()
         try {

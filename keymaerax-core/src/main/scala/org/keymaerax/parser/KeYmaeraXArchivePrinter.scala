@@ -241,7 +241,9 @@ object KeYmaeraXArchivePrinter {
             case Trafo => "" // @todo program arguments not yet supported
             case _ => "(" + printDomain(domain.getOrElse(Unit), args.getOrElse(List.empty).map(_._1)) + ")"
           }
-          s"  ${printSort(codomain)} ${printName(name, idx)}${printInterpretation(interpretation)}$printedDomain${printDef(codomain, args, interpretation)};"
+          s"  ${printSort(codomain)} ${printName(name, idx)}${printInterpretation(
+              interpretation
+            )}$printedDomain${printDef(codomain, args, interpretation)};"
         case _ => ""
       })
       .filter(_.nonEmpty)
@@ -376,7 +378,9 @@ class KeYmaeraXLegacyArchivePrinter(withComments: Boolean = false) extends (Pars
           case (Name(name, idx), Signature(_, codomain, _, interpretation, _)) if codomain == Trafo =>
             s"  ${printSort(codomain)} ${printName(name, idx)} ${printDef(codomain, interpretation)}."
           case (Name(name, idx), Signature(domain, codomain, _, interpretation, _)) if codomain != Trafo =>
-            s"  ${printSort(codomain)} ${printName(name, idx)}(${printSort(domain.getOrElse(Unit))})${printDef(codomain, interpretation)}."
+            s"  ${printSort(codomain)} ${printName(name, idx)}(${printSort(
+                domain.getOrElse(Unit)
+              )})${printDef(codomain, interpretation)}."
           case _ => ""
         })
         .filter(_.nonEmpty)

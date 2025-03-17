@@ -66,19 +66,12 @@ package org.keymaerax
  *
  * Which of the available tactics is actually shown on the User Interface is determined by [[UIIndex]].
  *
- * @author
- *   Nathan Fulton
- * @author
- *   Stefan Mitsch
- * @author
- *   Andre Platzer
- * @see
- *   [[org.keymaerax.Bibliography.ItpFultonMBP17 Bellerophon: Tactical theorem proving for hybrid systems]]
- * @see
- *   [[BelleExpr]]
- * @see
- *   [[SequentialInterpreter]]
- * @see
- *   [[UIIndex]]
+ * @author Nathan Fulton
+ * @author Stefan Mitsch
+ * @author Andre Platzer
+ * @see [[org.keymaerax.Bibliography.ItpFultonMBP17 Bellerophon: Tactical theorem proving for hybrid systems]]
+ * @see [[BelleExpr]]
+ * @see [[SequentialInterpreter]]
+ * @see [[UIIndex]]
  */
 package object bellerophon {}

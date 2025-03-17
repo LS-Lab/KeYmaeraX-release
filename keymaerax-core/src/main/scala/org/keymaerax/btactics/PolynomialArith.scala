@@ -320,8 +320,7 @@ object PolynomialArith extends Logging {
         case (n: Number, m: Number) => 0 // Impossible for normalized monomials
         case (Times(l, Power(vl, nl: Number)), Times(r, Power(vr, nr: Number))) =>
           val cmp = VarOrd.compare(vl, vr)
-          if (cmp == 0) { if (nl.value < nr.value) -1 else if (nl.value == nr.value) lexMono(l, r) else 1 }
-          else cmp
+          if (cmp == 0) { if (nl.value < nr.value) -1 else if (nl.value == nr.value) lexMono(l, r) else 1 } else cmp
         case _ => ???
       }
     }
@@ -918,9 +917,7 @@ object PolynomialArith extends Logging {
     }
   }
 
-  /**
-   * * Updated procedure using g<>0 |- g^2 + SOS > 0 (previously, g = 1 was just a special case)
-   */
+  /** * Updated procedure using g<>0 |- g^2 + SOS > 0 (previously, g = 1 was just a special case) */
 
   // Input: list of pairs a_i, p_i
   // Proves sum_i (a_i * p_i ^2) >= 0

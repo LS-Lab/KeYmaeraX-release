@@ -42,8 +42,8 @@ object Users {
     }
   }
 
-  val setDefaultUser: Route =
-    pathPrefix("user" / Segment / Segment / "setDefaultUser" / Segment) { (username, password, useDefault) =>
+  val setDefaultUser: Route = pathPrefix("user" / Segment / Segment / "setDefaultUser" / Segment) {
+    (username, password, useDefault) =>
       {
         pathEnd {
           post {
@@ -52,7 +52,7 @@ object Users {
           }
         }
       }
-    }
+  }
 
   val logoff: SessionToken => Route = (t: SessionToken) =>
     path("user" / "logoff") {

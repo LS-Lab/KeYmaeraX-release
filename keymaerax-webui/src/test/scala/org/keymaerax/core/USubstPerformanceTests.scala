@@ -21,8 +21,7 @@ import scala.concurrent.duration.Duration
 
 /**
  * Repeatably randomly test and compare and stat uniform substitution application mechanisms USubstOne and USubstChurch.
- * @author
- *   Andre Platzer
+ * @author Andre Platzer
  */
 @USubstTest @SlowTest
 // This test compares the old USubstChurch against USubstOne.
@@ -101,17 +100,14 @@ class USubstPerformanceTests extends AnyFlatSpec with Matchers with BeforeAndAft
           print("usubst:  " + us)
           print("formula: " + fml)
           val t10 = System.nanoTime()
-          val r1 =
-            try { Some(USubstOne(us.subsDefsInput)(fml)) }
-            catch { case e: SubstitutionClashException => None }
+          val r1 = try { Some(USubstOne(us.subsDefsInput)(fml)) } catch { case e: SubstitutionClashException => None }
           val locduration1 = System.nanoTime() - t10
           us1duration += locduration1
           print("result:  " + r1.getOrElse("clash"))
 
           val t20 = System.nanoTime()
           val r2 =
-            try { Some(USubstChurch(us.subsDefsInput)(fml)) }
-            catch { case e: SubstitutionClashException => None }
+            try { Some(USubstChurch(us.subsDefsInput)(fml)) } catch { case e: SubstitutionClashException => None }
           val locduration2 = System.nanoTime() - t20
           us2duration += locduration2
           print("result:  " + r2.getOrElse("clash"))
@@ -187,17 +183,13 @@ class USubstPerformanceTests extends AnyFlatSpec with Matchers with BeforeAndAft
       print("usubst:  " + us)
       print("formula: " + fml)
       val t10 = System.nanoTime()
-      val r1 =
-        try { Some(USubstOne(us.subsDefsInput)(fml)) }
-        catch { case e: SubstitutionClashException => None }
+      val r1 = try { Some(USubstOne(us.subsDefsInput)(fml)) } catch { case e: SubstitutionClashException => None }
       val locduration1 = System.nanoTime() - t10
       us1duration += locduration1
       print("result:  " + r1.getOrElse("clash"))
 
       val t20 = System.nanoTime()
-      val r2 =
-        try { Some(USubstChurch(us.subsDefsInput)(fml)) }
-        catch { case e: SubstitutionClashException => None }
+      val r2 = try { Some(USubstChurch(us.subsDefsInput)(fml)) } catch { case e: SubstitutionClashException => None }
       val locduration2 = System.nanoTime() - t20
       us2duration += locduration2
       print("result:  " + r2.getOrElse("clash"))
@@ -254,17 +246,13 @@ class USubstPerformanceTests extends AnyFlatSpec with Matchers with BeforeAndAft
       print("usubst:  " + us)
       print("formula: " + fml)
       val t10 = System.nanoTime()
-      val r1 =
-        try { Some(USubstOne(us.subsDefsInput)(fml)) }
-        catch { case e: SubstitutionClashException => None }
+      val r1 = try { Some(USubstOne(us.subsDefsInput)(fml)) } catch { case e: SubstitutionClashException => None }
       val locduration1 = System.nanoTime() - t10
       us1duration += locduration1
       print("result:  " + r1.getOrElse("clash"))
 
       val t20 = System.nanoTime()
-      val r2 =
-        try { Some(USubstChurch(us.subsDefsInput)(fml)) }
-        catch { case e: SubstitutionClashException => None }
+      val r2 = try { Some(USubstChurch(us.subsDefsInput)(fml)) } catch { case e: SubstitutionClashException => None }
       val locduration2 = System.nanoTime() - t20
       us2duration += locduration2
       print("result:  " + r2.getOrElse("clash"))

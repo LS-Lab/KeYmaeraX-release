@@ -16,8 +16,7 @@ import scala.collection.mutable.ListBuffer
 
 /**
  * When registered to a BelleInterpreter, listens to all inferences and records them in the database `db`.
- * @param ruleName
- *   A display name merely for UI purposes
+ * @param ruleName A display name merely for UI purposes
  */
 class TraceRecordingListener(
     db: DBAbstraction,

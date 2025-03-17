@@ -41,8 +41,7 @@ object CMonitorGenerator {
 
 /**
  * Generates a monitor from a ModelPlex expression.
- * @author
- *   Stefan Mitsch
+ * @author Stefan Mitsch
  */
 class CMonitorGenerator(conjunctionsAs: Symbol, defs: Declaration)
     extends MonitorGenerator(conjunctionsAs, defs, CPrettyPrinter, CMonitorGenerator.termContainer) {

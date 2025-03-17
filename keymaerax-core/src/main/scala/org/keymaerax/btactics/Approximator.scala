@@ -40,8 +40,7 @@ import scala.annotation.nowarn
  *   - Add an (efficient) tactic that tries to close the proof using successively longer approximations. Maybe also a
  *     tactic that looks at an entire formula and tries to deduce how far to go based on pre/post-conditions and
  *     statements in discrete fragments for programs or in ev dom constraints.
- * @author
- *   Nathan Fulton
+ * @author Nathan Fulton
  */
 object Approximator extends Logging {
   // region The [[approximate]] tactic with helpers for figuring out which approximation to use.
@@ -50,10 +49,8 @@ object Approximator extends Logging {
 
   /**
    * Approximates the variable `t` in the ODE up to the `n^th` term.
-   * @param n
-   *   The number of terms to expand the series/
-   * @return
-   *   The relevant tactic.
+   * @param n The number of terms to expand the series/
+   * @return The relevant tactic.
    */
   def autoApproximate(n: Number): DependentPositionWithAppliedInputTactic = "autoApproximate".byWithInputs(
     List(n),
@@ -143,8 +140,7 @@ object Approximator extends Logging {
 
   /**
    * Cuts in Taylor approximations for circular dynamics {{{x'=y,y'=-x}}}.
-   * @todo
-   *   Good error messages for when the first cut or two fail ==> "missing assumptions."
+   * @todo Good error messages for when the first cut or two fail ==> "missing assumptions."
    */
   def circularApproximate(s: Variable, c: Variable, n: Number): DependentPositionWithAppliedInputTactic =
     new org.keymaerax.btactics.TacticFactory.TacticForNameFactory("circularApproximate").byWithInputs(
@@ -198,9 +194,10 @@ object Approximator extends Logging {
               ) & DebuggingTactics.assertProvableSize(1) & DebuggingTactics.debug(s"Successfully cut $cut", DEBUG)
           )
 
-        DebuggingTactics
-          .debug(s"Beginning expApproximation on ${s.prettyString}, ${c.prettyString}, ${n.prettyString}", DEBUG) &
-          isOnCircle & cutTactics.reduce(_ & _)
+        DebuggingTactics.debug(
+          s"Beginning expApproximation on ${s.prettyString}, ${c.prettyString}, ${n.prettyString}",
+          DEBUG,
+        ) & isOnCircle & cutTactics.reduce(_ & _)
       },
     )
 
@@ -210,8 +207,10 @@ object Approximator extends Logging {
     displayName = Some("Circular Dynamics Approximation"),
     displayPremises = "Γ |- [{c1,sin\'=cos,cos\'=-sin,c2 & approximate(num)}], Δ",
     displayConclusion = "Γ |- [{c1,sin\'=cos,cos\'=-sin,c2}], Δ",
-    constructor = TacticConstructor3
-      .create(VariableArg("sin", List("sin")), VariableArg("cos", List("cos")), NumberArg("num"))(circularApproximate),
+    constructor =
+      TacticConstructor3.create(VariableArg("sin", List("sin")), VariableArg("cos", List("cos")), NumberArg("num"))(
+        circularApproximate
+      ),
   )
 
   // region Definitions of series.
@@ -260,14 +259,10 @@ object Approximator extends Logging {
 
   /**
    * Produces a witness that [c&q]p -> [c&q&cut]p when cutProof proves that cut is an invariant.
-   * @param f
-   *   The current goal [c&q]p
-   * @param cut
-   *   The diff cut
-   * @param cutProof
-   *   The proof that [c&q]cut
-   * @return
-   *   A proved implication of the form [c&q]p -> [c&q&cut]p
+   * @param f The current goal [c&q]p
+   * @param cut The diff cut
+   * @param cutProof The proof that [c&q]cut
+   * @return A proved implication of the form [c&q]p -> [c&q&cut]p
    */
   def dcInCtx(f: Formula, cut: Formula, cutProof: BelleExpr): ProvableSig = f match {
     case m: Modal if m.program.isInstanceOf[ODESystem] => {
@@ -280,8 +275,8 @@ object Approximator extends Logging {
           (
             DebuggingTactics.debug("lemma branch 1: closeId", DEBUG) & SequentCalculus.id & DebuggingTactics.done,
             DebuggingTactics.debug("lemma branch 2: use provided tactic to prove cut", DEBUG) &
-              SequentCalculus
-                .hideL(-1) & cutProof & DebuggingTactics.debug("should've been done", true) & DebuggingTactics.done,
+              SequentCalculus.hideL(-1) & cutProof & DebuggingTactics.debug("should've been done", true) &
+              DebuggingTactics.done,
           ) & DebuggingTactics.debug(s"Successfully proved lemma $fact", DEBUG),
       )
 
@@ -292,8 +287,9 @@ object Approximator extends Logging {
 
   /** Does a CEat with extendEvDomAndProve. */
   def extendEvDomAndProve(f: Formula, cut: Formula, cutProof: BelleExpr): BuiltInPositionTactic = {
-    UnifyUSCalculus
-      .CEat(dcInCtx(f, cut, cutProof)) // @todo this doesn't work because initial conditions are missing. Need a useAt
+    UnifyUSCalculus.CEat(
+      dcInCtx(f, cut, cutProof)
+    ) // @todo this doesn't work because initial conditions are missing. Need a useAt
   }
 
   // endregion

@@ -16,10 +16,8 @@ import scala.collection.{immutable, mutable}
 
 /**
  * Additional tools read off from the static semantics for the tactics.
- * @author
- *   Andre Platzer
- * @see
- *   [[org.keymaerax.core.StaticSemantics]]
+ * @author Andre Platzer
+ * @see [[org.keymaerax.core.StaticSemantics]]
  */
 object StaticSemanticsTools {
 
@@ -70,8 +68,7 @@ object StaticSemanticsTools {
    * The set of variables that, if they occurred at formula(pos) would be bound occurrences, because there was an
    * operator in formula on the path to pos for which it was binding. If an occurrence of a variable at formula(pos) is
    * not boundAt(formula,pos) then it is a free occurrence.
-   * @see
-   *   [[Context.at()]]
+   * @see [[Context.at()]]
    */
   def boundAt(formula: Formula, pos: PosInExpr): SetLattice[Variable] =
     if (pos == HereP) bottom
@@ -94,8 +91,7 @@ object StaticSemanticsTools {
    * The set of variables that, if they occurred at program(pos) would be bound occurrences, because there was an
    * operator in program on the path to pos for which it was binding. If an occurrence of a variable at program(pos) is
    * not boundAt(program,pos) then it is a free occurrence.
-   * @see
-   *   [[Context.at()]]
+   * @see [[Context.at()]]
    */
   def boundAt(program: Program, pos: PosInExpr): SetLattice[Variable] =
     if (pos == HereP) bottom
@@ -126,14 +122,10 @@ object StaticSemanticsTools {
    *   dependencies("a:=-b;{x'=v,v'=a,t'=1}".asProgram) == (a->{b}, x->{v}, v->{a}, t->{})
    *   dependencies("a:=-b+a;{x'=y,y'=-x,z'=x^2+y}".asProgram) == (a->{a,b}, x->{y}, y->{x}, z->{x,y})
    *   }}}
-   * @note
-   *   so far only a simple data flow dependencies ignoring all control flow.
-   * @note
-   *   currently ignores some differential symbol dependencies.
-   * @note
-   *   ignores self-dependency from x'=1
-   * @todo
-   *   could respect control-flow dependencies too but might degenerate.
+   * @note so far only a simple data flow dependencies ignoring all control flow.
+   * @note currently ignores some differential symbol dependencies.
+   * @note ignores self-dependency from x'=1
+   * @todo could respect control-flow dependencies too but might degenerate.
    */
   def dependencies(program: Program): immutable.Map[Variable, immutable.Set[Variable]] = convert(depend(program))
   def dependencies(ode: DifferentialProgram): immutable.Map[Variable, immutable.Set[Variable]] = convert(depend(ode))
@@ -148,14 +140,10 @@ object StaticSemanticsTools {
    *   dependencies("a:=-b;{x'=v,v'=a,t'=1}".asProgram) == (a->{b}, x->{a,v}, v->{a}, t->{})
    *   dependencies("a:=-b+a;{x'=y,y'=-x,z'=x^2+y}".asProgram) == (a->{a,b}, x->{x,y}, y->{y,x}, z->{x,y})
    *   }}}
-   * @note
-   *   so far only a simple data flow dependencies ignoring all control flow.
-   * @note
-   *   currently ignores some differential symbol dependencies.
-   * @note
-   *   ignores self-dependency from x'=1
-   * @todo
-   *   could respect control-flow dependencies too but might degenerate.
+   * @note so far only a simple data flow dependencies ignoring all control flow.
+   * @note currently ignores some differential symbol dependencies.
+   * @note ignores self-dependency from x'=1
+   * @todo could respect control-flow dependencies too but might degenerate.
    */
   def transitiveDependencies(program: Program): immutable.Map[Variable, immutable.List[Variable]] =
     transitivize(dependencies(program))

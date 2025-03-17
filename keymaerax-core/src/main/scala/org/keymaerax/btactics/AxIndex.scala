@@ -16,24 +16,16 @@ import scala.annotation.nowarn
  * Central Axiom Indexing data structures for canonical proof strategies, including [[UnifyUSCalculus.chase]],
  * [[UnifyUSCalculus.chaseFor()]] and [[TactixLibrary.step]] and [[TactixLibrary.stepAt]].
  *
- * @note
- *   Could be generated automatically, yet better in a precomputation fashion, not on the fly.
- * @author
- *   Andre Platzer
+ * @note Could be generated automatically, yet better in a precomputation fashion, not on the fly.
+ * @author Andre Platzer
  * @see
  *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
- * @see
- *   [[org.keymaerax.core.AxiomBase]]
- * @see
- *   [[org.keymaerax.btactics.macros.AxiomInfo]]
- * @see
- *   [[org.keymaerax.btactics.UnifyUSCalculus.chase]]
- * @see
- *   [[org.keymaerax.btactics.UnifyUSCalculus.chaseFor]]
- * @see
- *   [[TactixLibrary.step]]
- * @see
- *   [[TactixLibrary.sequentStepIndex]]
+ * @see [[org.keymaerax.core.AxiomBase]]
+ * @see [[org.keymaerax.btactics.macros.AxiomInfo]]
+ * @see [[org.keymaerax.btactics.UnifyUSCalculus.chase]]
+ * @see [[org.keymaerax.btactics.UnifyUSCalculus.chaseFor]]
+ * @see [[TactixLibrary.step]]
+ * @see [[TactixLibrary.sequentStepIndex]]
  */
 object AxIndex extends (Expression => List[DerivationInfo]) with Logging {
 
@@ -52,18 +44,12 @@ object AxIndex extends (Expression => List[DerivationInfo]) with Logging {
    * Return (derived) axiom index with key for matching and list of recursors on other sibling, i.e., for chasing after
    * useAt/useFor.
    *
-   * @see
-   *   [[org.keymaerax.btactics.UnifyUSCalculus.chase()]]
-   * @see
-   *   [[org.keymaerax.btactics.UnifyUSCalculus.chaseFor()]]
-   * @see
-   *   [[AxiomInfo.theKey]]
-   * @see
-   *   [[AxiomInfo.theRecursor]]
-   * @see
-   *   [[org.keymaerax.btactics.macros.Axiom]]
-   * @todo
-   *   copy documentation from chase
+   * @see [[org.keymaerax.btactics.UnifyUSCalculus.chase()]]
+   * @see [[org.keymaerax.btactics.UnifyUSCalculus.chaseFor()]]
+   * @see [[AxiomInfo.theKey]]
+   * @see [[AxiomInfo.theRecursor]]
+   * @see [[org.keymaerax.btactics.macros.Axiom]]
+   * @todo copy documentation from chase
    */
   @nowarn("msg=match may not be exhaustive")
   def axiomIndex(axiom: ProvableInfo): AxiomIndex = axiom match {
@@ -74,15 +60,13 @@ object AxIndex extends (Expression => List[DerivationInfo]) with Logging {
 
   /**
    * Give the first canonical (derived) axiom or tactic that simplifies the expression `expr`.
-   * @see
-   *   [[axiomsFor()]]
+   * @see [[axiomsFor()]]
    */
   def axiomFor(expr: Expression): Option[ProvableInfo] = axiomsFor(expr).headOption
 
   /**
    * Return ordered list of all canonical (derived) axioms or tactics that simplify the expression `expr`.
-   * @see
-   *   [[axiomFor()]]
+   * @see [[axiomFor()]]
    */
   def axiomsFor(expr: Expression): List[ProvableInfo] = expr match {
     case term: Term => term match {

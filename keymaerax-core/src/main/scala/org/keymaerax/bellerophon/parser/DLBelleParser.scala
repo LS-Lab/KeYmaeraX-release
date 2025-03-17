@@ -5,8 +5,7 @@
 
 /**
  * Bellerophon tactic parser for Differential Dynamic Logic.
- * @author
- *   Andre Platzer
+ * @author Andre Platzer
  * @see
  *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
  */
@@ -44,10 +43,8 @@ import scala.util.Try
 /**
  * Bellerophon tactic parser for Differential Dynamic Logic reads input strings in the concrete syntax of Bellerophon
  * tactics for KeYmaera X. It uses `tacticProvider` to map names and inputs to concrete tactic expressions.
- * @author
- *   Andre Platzer
- * @see
- *   [[BelleParser]]
+ * @author Andre Platzer
+ * @see [[BelleParser]]
  */
 class DLBelleParser(
     override val printer: BelleExpr => String,
@@ -148,8 +145,8 @@ class DLBelleParser(
         p,
         (p, e) => Fixed(p, Some(e), exact = false),
       ) // @note check e.g. 2.1~="[x:=1;]#x=1#" consistent
-    case (p, Some((_, (_, posIn)))) => Fail
-        .opaque("Non-conflicting sub-positions (but " + p.inExpr.prettyString + " != " + posIn.prettyString + ")")
+    case (p, Some((_, (_, posIn)))) =>
+      Fail.opaque("Non-conflicting sub-positions (but " + p.inExpr.prettyString + " != " + posIn.prettyString + ")")
   })
   @nowarn("msg=match may not be exhaustive")
   def searchLocator[$: P]: P[PositionLocator] = P(
@@ -172,8 +169,9 @@ class DLBelleParser(
     // BUT perhaps the left side is ambiguous and the right side is a formula. So in
     // this case both must be false. :(
     (NoCut(formula ~ "~>" ~ formula) | term(false) ~ "~>" ~ term(false) |
-      (GlobalState.parser.systemSymbol | GlobalState.parser.programSymbol) ~ "~>" ~ program)
-      .map(pair => pair._1.implicitSubst(defs.elaborateToSystemConsts(defs.elaborateToFunctions(pair._2))))
+      (GlobalState.parser.systemSymbol | GlobalState.parser.programSymbol) ~ "~>" ~ program).map(pair =>
+      pair._1.implicitSubst(defs.elaborateToSystemConsts(defs.elaborateToFunctions(pair._2)))
+    )
   )
 
   def argList[$: P, A](p: => P[A]): P[List[A]] = P(
@@ -328,11 +326,11 @@ class DLBelleParser(
     case (_, t) => t
   })
 
-  def seqTac[$: P]: P[BelleExpr] = P(optionTac.rep(min = 1, sep = CharIn(";&")./))("tactic;tactic", implicitly)
-    .map(SeqTactic.apply)
+  def seqTac[$: P]: P[BelleExpr] =
+    P(optionTac.rep(min = 1, sep = CharIn(";&")./))("tactic;tactic", implicitly).map(SeqTactic.apply)
 
-  def eitherTac[$: P]: P[BelleExpr] = P(seqTac.rep(min = 1, sep = "|"./))("tactic|tactic", implicitly)
-    .map(EitherTactic.apply)
+  def eitherTac[$: P]: P[BelleExpr] =
+    P(seqTac.rep(min = 1, sep = "|"./))("tactic|tactic", implicitly).map(EitherTactic.apply)
 
 //  //@note macro-expands
 //  def ifthen[$: P]: P[BelleExpr] = P( "if" ~/ parenF ~ braceP ~ ("else" ~/ braceP).? ).
@@ -397,8 +395,8 @@ class DLBelleParser(
         if (strWithoutHashes.indexOf(betweenHashes) != hashStart + 1) {
           // marked sub-expression is not leftmost instance in expr
           // mark with "hash" placeholder function/predicate/program depending on subExpr sort
-          val (markedStr, placeholder) = PositionLocator
-            .withMarkers(strWithoutHashes, subExpr, hashStart, hashEnd - hashStart + 1)
+          val (markedStr, placeholder) =
+            PositionLocator.withMarkers(strWithoutHashes, subExpr, hashStart, hashEnd - hashStart + 1)
           val markedExpr = fastparse.parse(markedStr, implicit p => GlobalState.parser.fullFormula).get.value
           FormulaTools.posOf(markedExpr, placeholder)
         } else {

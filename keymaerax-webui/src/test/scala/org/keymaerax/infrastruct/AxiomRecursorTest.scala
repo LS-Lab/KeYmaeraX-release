@@ -19,18 +19,12 @@ import org.scalatest.BeforeAndAfterAll
 /**
  * Test whether axiom recursors are defined after using their key.
  *
- * @author
- *   Andre Platzer
- * @see
- *   [[UnificationMatch]]
- * @see
- *   [[UnificationMatchTest]]
- * @see
- *   [[AxiomInfo.theKey]]
- * @see
- *   [[AxiomInfo.theRecursor]]
- * @see
- *   [[AxiomInfo.unifier]]
+ * @author Andre Platzer
+ * @see [[UnificationMatch]]
+ * @see [[UnificationMatchTest]]
+ * @see [[AxiomInfo.theKey]]
+ * @see [[AxiomInfo.theRecursor]]
+ * @see [[AxiomInfo.unifier]]
  */
 @SummaryTest
 class AxiomRecursorTest extends TacticTestBase with BeforeAndAfterAll {

@@ -19,8 +19,7 @@ import scala.annotation.tailrec
  * The KeYmaera X tool, initializes the pretty printer.
  *
  * Created by smitsch on 4/27/15.
- * @author
- *   Stefan Mitsch
+ * @author Stefan Mitsch
  */
 object KeYmaeraXTool extends Tool with Logging {
   // TODO Convert to Scala 3 enum
@@ -42,8 +41,7 @@ object KeYmaeraXTool extends Tool with Logging {
   /**
    * Initialize KeYmaera X global state.
    *
-   * @param initDerivationInfoRegistry
-   *   whether to initialize the axiom and tactic library
+   * @param initDerivationInfoRegistry whether to initialize the axiom and tactic library
    */
   def init(
       interpreter: InterpreterChoice = InterpreterChoice.LazySequential,

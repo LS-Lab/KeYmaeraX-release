@@ -19,10 +19,8 @@ import scala.util.Try
  *
  * `Unify(shape, input)` matches second argument `input` against the pattern `shape` of the first argument but not vice
  * versa. Matcher leaves `input` alone and only substitutes into `shape`, i.e., gives a single-sided matcher.
- * @see
- *   [[Matcher]]
- * @author
- *   Andre Platzer
+ * @see [[Matcher]]
+ * @author Andre Platzer
  */
 // 1 pass for semanticRenaming
 //object UnificationMatch extends UnificationMatchBase {require(RenUSubst.semanticRenaming, "This implementation is meant for tactics built assuming semantic renaming")}
@@ -49,8 +47,7 @@ object UnificationMatch extends FreshUnificationMatch
  * Unify(shape, input) matches second argument `input` against the pattern `shape` of the first argument but not vice
  * versa. Matcher leaves input alone and only substitutes into shape. Reasonably fast single-pass matcher. Defined by
  * recursive unification from compositions.
- * @author
- *   Andre Platzer
+ * @author Andre Platzer
  */
 abstract class SchematicComposedUnificationMatch extends SchematicUnificationMatch {
 
@@ -59,7 +56,7 @@ abstract class SchematicComposedUnificationMatch extends SchematicUnificationMat
    * Implemented by unifying from left to right, but will fall back to converse direction if exception.
    */
   // @note optimized: repeated implementation per type to enable the static type inference that Scala generics won't give.
-  protected override def unifies2(s1: Expression, s2: Expression, t1: Expression, t2: Expression): List[SubstRepl] = {
+  override protected def unifies2(s1: Expression, s2: Expression, t1: Expression, t2: Expression): List[SubstRepl] = {
     val u1 = unify(s1, t1)
     try { compose(unify(Subst(u1)(s2), t2), u1) }
     catch {
@@ -69,7 +66,7 @@ abstract class SchematicComposedUnificationMatch extends SchematicUnificationMat
         compose(unify(t1, Subst(u2)(s1)), u2)
     }
   }
-  protected override def unifies2(s1: Term, s2: Term, t1: Term, t2: Term): List[SubstRepl] = {
+  override protected def unifies2(s1: Term, s2: Term, t1: Term, t2: Term): List[SubstRepl] = {
     val u1 = unify(s1, t1)
     try { compose(unify(Subst(u1)(s2), t2), u1) }
     catch {
@@ -79,7 +76,7 @@ abstract class SchematicComposedUnificationMatch extends SchematicUnificationMat
         compose(unify(t1, Subst(u2)(s1)), u2)
     }
   }
-  protected override def unifies2(s1: Formula, s2: Formula, t1: Formula, t2: Formula): List[SubstRepl] = {
+  override protected def unifies2(s1: Formula, s2: Formula, t1: Formula, t2: Formula): List[SubstRepl] = {
     val u1 = unify(s1, t1)
     try {
       compose(unify(Subst(u1)(s2), t2), u1) // @note fails on x=1, p(x)
@@ -101,7 +98,7 @@ abstract class SchematicComposedUnificationMatch extends SchematicUnificationMat
         }
     }
   }
-  protected override def unifies2(s1: Program, s2: Program, t1: Program, t2: Program): List[SubstRepl] = {
+  override protected def unifies2(s1: Program, s2: Program, t1: Program, t2: Program): List[SubstRepl] = {
     val u1 = unify(s1, t1)
     try { compose(unify(Subst(u1)(s2), t2), u1) }
     catch {
@@ -111,7 +108,7 @@ abstract class SchematicComposedUnificationMatch extends SchematicUnificationMat
         compose(unify(t1, Subst(u2)(s1)), u2)
     }
   }
-  protected override def unifiesODE2(
+  override protected def unifiesODE2(
       s1: DifferentialProgram,
       s2: DifferentialProgram,
       t1: DifferentialProgram,
@@ -127,7 +124,7 @@ abstract class SchematicComposedUnificationMatch extends SchematicUnificationMat
     }
   }
 
-  protected override def unify(s1: Sequent, s2: Sequent): List[SubstRepl] =
+  override protected def unify(s1: Sequent, s2: Sequent): List[SubstRepl] =
     if (!(s1.ante.length == s2.ante.length && s1.succ.length == s2.succ.length)) ununifiable(s1, s2)
     else {
       val composeFolder = (u1: List[SubstRepl], f1: Formula, f2: Formula) => compose(unify(Subst(u1)(f1), f2), u1)
@@ -147,8 +144,7 @@ abstract class SchematicComposedUnificationMatch extends SchematicUnificationMat
 
   /**
    * Make `repl` distinct (if this algorithm does not preserve distinctness).
-   * @return
-   *   repl.distinct
+   * @return repl.distinct
    */
   protected def distinctIfNeedBe(repl: List[SubstRepl]): List[SubstRepl] = repl.distinct
 }
@@ -158,13 +154,12 @@ abstract class SchematicComposedUnificationMatch extends SchematicUnificationMat
  *
  * Unify(shape, input) matches second argument `input` against the pattern `shape` of the first argument but not vice
  * versa. Matcher leaves input alone and only substitutes into shape. Reasonably fast single-pass matcher.
- * @author
- *   Andre Platzer
+ * @author Andre Platzer
  */
 class UnificationMatchBase extends SchematicComposedUnificationMatch {
 
   /** @inheritdoc */
-  protected override def compose(after: List[SubstRepl], before: List[SubstRepl]): List[SubstRepl] =
+  override protected def compose(after: List[SubstRepl], before: List[SubstRepl]): List[SubstRepl] =
     if (after.isEmpty) before
     else if (before.isEmpty) after
     else {
@@ -179,13 +174,13 @@ class UnificationMatchBase extends SchematicComposedUnificationMatch {
               throw e.inContext("unify.compose failed on " + sp._1 + " and " + sp._2 + " for " + us)
           }
         ) ++ after.filter(sp => !before.exists(op => op._1 == sp._1))
-        logger
-          .trace(s"      unify.compose: ${after.mkString(", ")} with ${before.mkString(", ")} is ${r.mkString(", ")}")
+        logger.trace(
+          s"      unify.compose: ${after.mkString(", ")} with ${before.mkString(", ")} is ${r.mkString(", ")}"
+        )
         r
       } catch {
         case e: Throwable =>
-          logger.trace(s"UnificationMatch.compose({${after.mkString(", ")}} , {${before.mkString(", ")}})");
-          throw e
+          logger.trace(s"UnificationMatch.compose({${after.mkString(", ")}} , {${before.mkString(", ")}})"); throw e
       }
     }
 
@@ -197,11 +192,9 @@ class UnificationMatchBase extends SchematicComposedUnificationMatch {
  * Unify(shape, input) matches second argument `input` against the pattern `shape` of the first argument but not vice
  * versa. Matcher leaves input alone and only substitutes into shape. Reasonably fast single-pass matcher.
  *
- * @note
- *   Expects shape to have fresh names that do not occur in the input. Usually shape has all built-in names ending in
- *   underscore _ and no input is like that.
- * @author
- *   Andre Platzer
+ * @note Expects shape to have fresh names that do not occur in the input. Usually shape has all built-in names ending
+ *   in underscore _ and no input is like that.
+ * @author Andre Platzer
  */
 class FreshUnificationMatch extends SchematicComposedUnificationMatch {
 
@@ -229,28 +222,26 @@ class FreshUnificationMatch extends SchematicComposedUnificationMatch {
   /**
    * Quickly compose patterns coming from fresh shapes by just concatenating them. If indeed the shape used fresh names
    * that did not occur in the input, this fast composition is fine.
-   * @ensures
-   *   s==s.distinct && t==t.distinct => \result==\result.distinct
+   * @ensures s==s.distinct && t==t.distinct => \result==\result.distinct
    */
-  protected override def compose(after: List[SubstRepl], before: List[SubstRepl]): List[SubstRepl] =
+  override protected def compose(after: List[SubstRepl], before: List[SubstRepl]): List[SubstRepl] =
     //  after ++ renameAllIfNeedBe(after, before)
     // @todo would this fail and crossrename if both before and after have renaming parts?
     join(renameAllIfNeedBe(after, before), renameAllIfNeedBe(before, after))
 
   /**
    * Make `repl` distinct fast by directly returning it since this algorithm preserves distinctness in [[compose]].
-   * @return
-   *   repl.distinct
+   * @return repl.distinct
    */
-  protected override def distinctIfNeedBe(repl: List[SubstRepl]): List[SubstRepl] = repl
+  override protected def distinctIfNeedBe(repl: List[SubstRepl]): List[SubstRepl] = repl
 
   /**
    * @inheritdoc
    * Faster since [[compose]] preserves distinctness.
    */
-  protected override def Subst(subs: List[SubstRepl]): Subst = RenUSubst(subs)
+  override protected def Subst(subs: List[SubstRepl]): Subst = RenUSubst(subs)
 
-  protected override def unifier(e1: Expression, e2: Expression, us: List[SubstRepl]): Subst = {
+  override protected def unifier(e1: Expression, e2: Expression, us: List[SubstRepl]): Subst = {
     if (true)
       try { Subst(us) }
       catch { case ex: Throwable => throw new UnificationException(e1, e2, "Invalid substitution computed", ex) }
@@ -520,8 +511,7 @@ class RestrictedBiDiUnificationMatch extends FreshUnificationMatch {
             val repl =
               try {
                 val m = this(sp._2, el._2)
-                if (m.subsDefsInput.nonEmpty) { if (m(sp._2) != sp._2) Some(el -> sp) else Some(sp -> el) }
-                else None
+                if (m.subsDefsInput.nonEmpty) { if (m(sp._2) != sp._2) Some(el -> sp) else Some(sp -> el) } else None
               } catch { case _: UnificationException => None }
             repl match {
               case Some((what, repl)) => j = j.map({
@@ -546,23 +536,20 @@ class RestrictedBiDiUnificationMatch extends FreshUnificationMatch {
  * versa. Matcher leaves input alone and only substitutes into shape. Reasonably fast 1.5-pass matcher gathering
  * uncomposed unifiers with a subsequent post-processing pass preparing for the after renaming.
  *
- * @note
- *   Expects shape to have fresh names that do not occur in the input. Usually shape has all built-in names ending in
- *   underscore _ and no input is like that.
- * @author
- *   Andre Platzer
+ * @note Expects shape to have fresh names that do not occur in the input. Usually shape has all built-in names ending
+ *   in underscore _ and no input is like that.
+ * @author Andre Platzer
  */
 private class FreshPostUnificationMatch extends SchematicComposedUnificationMatch {
 
   /**
    * Quickly compose patterns coming from fresh shapes by just concatenating them. If indeed the shape used fresh names
    * that did not occur in the input, this fash composition is fine.
-   * @note
-   *   May contain duplicates but that will be filtered out when forming Subst() anyhow.
+   * @note May contain duplicates but that will be filtered out when forming Subst() anyhow.
    */
-  protected override def compose(after: List[SubstRepl], before: List[SubstRepl]): List[SubstRepl] = before ++ after
+  override protected def compose(after: List[SubstRepl], before: List[SubstRepl]): List[SubstRepl] = before ++ after
 
-  protected override def unifier(e1: Expression, e2: Expression, us: List[SubstRepl]): Subst = {
+  override protected def unifier(e1: Expression, e2: Expression, us: List[SubstRepl]): Subst = {
     val uss = us.distinct
     val ren = MultiRename(RenUSubst.renamingPartOnly(uss))
     Subst(uss.map(sp =>
@@ -584,8 +571,7 @@ private class FreshPostUnificationMatch extends SchematicComposedUnificationMatc
  * versa. Matcher leaves input alone and only substitutes into shape.
  *
  * This matcher only excerpts variable renaming, ignoring all other reasons to unify.
- * @author
- *   Andre Platzer
+ * @author Andre Platzer
  */
 private final object RenUnificationMatch extends UnificationMatchBase {
   // incomplete unification cannot succeed during REVERIFY
@@ -616,8 +602,7 @@ private final object RenUnificationMatch extends UnificationMatchBase {
  *
  * Unify(shape, input) matches second argument `input` against the pattern `shape` of the first argument but not vice
  * versa. Matcher leaves input alone and only substitutes into shape.
- * @author
- *   Andre Platzer
+ * @author Andre Platzer
  */
 private class UnificationMatchURenAboveUSubst extends /*Insistent*/ Matcher with Logging {
   outer =>

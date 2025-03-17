@@ -62,8 +62,13 @@ class RunBelleTermRequest(
     }
     // @note stepAt(pos) may refer to a search tactic without position (e.g, closeTrue, closeFalse)
     val (specificTerm: String, adaptedPos: Option[PositionLocator], adaptedPos2: Option[PositionLocator], args) =
-      if (consultAxiomInfo) RequestHelper
-        .getSpecificName(belleTerm, sequent, pos, pos2, session(proofId).asInstanceOf[ProofSession]) match {
+      if (consultAxiomInfo) RequestHelper.getSpecificName(
+        belleTerm,
+        sequent,
+        pos,
+        pos2,
+        session(proofId).asInstanceOf[ProofSession],
+      ) match {
         case Left(s) => (s, pos, pos2, Nil)
         // @note improve tactic maintainability by position search with formula shape on universally applicable tactics
         case Right(t: PositionTacticInfo) if t.codeName == "hideL" || t.codeName == "hideR" =>
@@ -256,8 +261,8 @@ class RunBelleTermRequest(
                 }
               } else {
                 // @note execute clicked single-step tactics on sequential interpreter right away
-                val taskId = node
-                  .runTactic(userId, ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), expr, ruleName)
+                val taskId =
+                  node.runTactic(userId, ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), expr, ruleName)
                 val info = "Executing " + executionInfo(belleTerm)
                 RunBelleTermResponse(proofId, node.id.toString, taskId, info)
               }

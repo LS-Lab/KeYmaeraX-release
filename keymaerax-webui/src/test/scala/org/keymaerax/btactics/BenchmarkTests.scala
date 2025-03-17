@@ -98,8 +98,8 @@ class BenchmarkExporter(val benchmarkName: String, val url: String) extends Tact
   }
 
   it should "export KeYmaera X stripped" ignore withTactics {
-    def stripEntry(e: ParsedArchiveEntry): ParsedArchiveEntry = e
-      .copy(defs = Declaration(Map.empty), tactics = Nil, annotations = Nil)
+    def stripEntry(e: ParsedArchiveEntry): ParsedArchiveEntry =
+      e.copy(defs = Declaration(Map.empty), tactics = Nil, annotations = Nil)
 
     val entries = ArchiveParser.parse(content, parseTactics = false)
     val printer = new KeYmaeraXArchivePrinter(PrettierPrintFormatProvider(_, 80))
@@ -218,8 +218,8 @@ class BenchmarkTester(val benchmarkName: String, val url: String, val timeout: I
   })
 
   it should "prove interactive benchmarks with Z3" in withZ3 { _ =>
-    val results = entries
-      .map(e => runInteractive(e.name, e.model, e.tactic.headOption.map(_._2), () => withZ3(_ => {})))
+    val results =
+      entries.map(e => runInteractive(e.name, e.model, e.tactic.headOption.map(_._2), () => withZ3(_ => {})))
     val writer = new PrintWriter(benchmarkName + "_interactive_z3.csv")
     writer.write(
       "Name,Status,Timeout[min],Duration[ms],Proof Steps,Tactic Size\r\n" + results.map(_.toCsv()).mkString("\r\n")

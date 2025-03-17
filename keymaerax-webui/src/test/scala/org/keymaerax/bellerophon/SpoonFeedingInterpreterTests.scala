@@ -1141,9 +1141,9 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         implyR(1) & andR(1) < (
           cut("eq(x,one())".asFormula) < (
             QE, // Expand(eq, None) & Using(List("x=x".asFormula), SimplifierV3.fullSimplify) & closeT,
-            QE
+            QE,
           ),
-          QE // Expand(eq, None) & Expand(Function("one", None, Unit, Real), None) & QE
+          QE, // Expand(eq, None) & Expand(Function("one", None, Unit, Real), None) & QE
         ),
         BelleProvable.plain(ProvableSig.startProof(problem.asFormula, defs)),
       )
@@ -1167,9 +1167,9 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         implyR(1) & andR(1) < (
           cut("eq(x,1)".asFormula) < (
             expandFw(eq, None) & Using(List("x=x".asFormula), SimplifierV3.fullSimplify) & closeT,
-            Using("eq(x,one()), eq(x,1)".asFormulaList, QE)
+            Using("eq(x,one()), eq(x,1)".asFormulaList, QE),
           ),
-          expandFw(eq, None) & expandFw(Function("one", None, Unit, Real), None) & QE
+          expandFw(eq, None) & expandFw(Function("one", None, Unit, Real), None) & QE,
         ),
         BelleProvable.plain(ProvableSig.startProof(problem.asFormula, defs)),
       )
@@ -1319,7 +1319,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   }
 
   "Listeners" should "not be informed when doing auxiliary inner proofs" in withMathematica { _ =>
-    class MockListener extends IOListener{
+    class MockListener extends IOListener {
       var beginnings: List[(BelleValue, BelleExpr)] = Nil
       override def begin(input: BelleValue, expr: BelleExpr): Unit = beginnings = beginnings :+ (input -> expr)
       override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, Throwable]): Unit = {}
@@ -2548,9 +2548,11 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     }
   }
 
-  private def stepInto(node: ProofTreeNode, expectedStep: String, depth: Int = 1)(
-      db: DBAbstraction
-  ): (Int, BelleExpr) = {
+  private def stepInto(
+      node: ProofTreeNode,
+      expectedStep: String,
+      depth: Int = 1,
+  )(db: DBAbstraction): (Int, BelleExpr) = {
     val (localProvable, step) = (ProvableSig.startPlainProof(node.conclusion), node.maker.getOrElse("nil"))
     step shouldBe expectedStep
     val localProofId = db.createProof(localProvable)
@@ -2708,17 +2710,18 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
       // @todo QE uses AnonymousLemmas.cacheTacticResult, which is neither serializable nor executes internal steps visible to the spoonfeeding interpreter
       // (either looks up a lemma or starts a new nested proof; would want to re-execute its tactic for spoonfeeding, instead of useLemma)
       tree.locate("(3,0)") match {
-        case Some(node) => stepInto(node, "QE")(db.db)
-            ._2 shouldBe tacticParser("toSingleFormula ; universalClosure(1) ; rcf")
+        case Some(node) =>
+          stepInto(node, "QE")(db.db)._2 shouldBe tacticParser("toSingleFormula ; universalClosure(1) ; rcf")
       }
     }
   }
 
   it should "work for dC+DI" in withZ3 { _ =>
-    val problem = """w()^2*x^2 + y^2 <= c()^2
-                    |  & d>=0
-                    |->
-                    |  [{x'=y, y'=-w()^2*x-2*d*w()*y, d'=7 & w()>=0}]w()^2*x^2 + y^2 <= c()^2
+    val problem =
+      """w()^2*x^2 + y^2 <= c()^2
+        |  & d>=0
+        |->
+        |  [{x'=y, y'=-w()^2*x-2*d*w()*y, d'=7 & w()>=0}]w()^2*x^2 + y^2 <= c()^2
       """.stripMargin
     val p = ProvableSig.startPlainProof(problem.asFormula)
     implicit val db: DBAbstraction = new InMemoryDB()
@@ -2740,10 +2743,11 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         DbProofTree(db, id1.toString).locate("(2,0)") match {
           case Some(n2) =>
             val (_, tactic2) = stepInto(n2, """dC("d>=0", 1)""")(db)
-            val tacticString = """DC("d>=0", 'R=="[{x'=y,y'=-w()^2*x-2*d*w()*y,d'=7&w()>=0}]w()^2*x^2+y^2<=c()^2"); <(
-                                 |  "Use": todo,
-                                 |  "Show": todo
-                                 |)""".stripMargin
+            val tacticString =
+              """DC("d>=0", 'R=="[{x'=y,y'=-w()^2*x-2*d*w()*y,d'=7&w()>=0}]w()^2*x^2+y^2<=c()^2"); <(
+                |  "Use": todo,
+                |  "Show": todo
+                |)""".stripMargin
             tactic2 shouldBe tacticParser(tacticString)
             BellePrettyPrinter(tactic2) should equal(tacticString)(after being whiteSpaceRemoved)
         }
@@ -2751,18 +2755,19 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         DbProofTree(db, id1.toString).locate("(3,1)") match {
           case Some(n2) =>
             val (_, tactic) = stepInto(n2, "dI(1)")(db)
-            val tacticString = """DI('R=="[{x'=y,y'=-w()^2*x-2*d*w()*y,d'=7&w()>=0}]d>=0");
-                                 |implyR('R=="w()>=0->d>=0&[{x'=y,y'=-w()^2*x-2*d*w()*y,d'=7&w()>=0}](d>=0)'");
-                                 |andR('Rlast); <(
-                                 |  "d>=0": QE,
-                                 |  "[{x'=y,y'=-w()^2*x-2*d*w()*y,d'=7&w()>=0}](d>=0)'":
-                                 |    derive('Rlast.1);
-                                 |    DE('Rlast);
-                                 |    Dassignb('Rlast.1);Dassignb('Rlast.1);Dassignb('Rlast.1);
-                                 |    DW('Rlast);
-                                 |    GV('Rlast);
-                                 |    QE
-                                 |)""".stripMargin
+            val tacticString =
+              """DI('R=="[{x'=y,y'=-w()^2*x-2*d*w()*y,d'=7&w()>=0}]d>=0");
+                |implyR('R=="w()>=0->d>=0&[{x'=y,y'=-w()^2*x-2*d*w()*y,d'=7&w()>=0}](d>=0)'");
+                |andR('Rlast); <(
+                |  "d>=0": QE,
+                |  "[{x'=y,y'=-w()^2*x-2*d*w()*y,d'=7&w()>=0}](d>=0)'":
+                |    derive('Rlast.1);
+                |    DE('Rlast);
+                |    Dassignb('Rlast.1);Dassignb('Rlast.1);Dassignb('Rlast.1);
+                |    DW('Rlast);
+                |    GV('Rlast);
+                |    QE
+                |)""".stripMargin
             tactic shouldBe tacticParser(tacticString)
             BellePrettyPrinter(tactic) should equal(tacticString)(after being whiteSpaceRemoved)
         }
@@ -2781,17 +2786,18 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     tree.locate("(1,0)") match {
       case Some(n1) =>
         val (_, tactic) = stepInto(n1, "dI(1)")(db)
-        val tacticString = """DI('R=="[{x'=3}]x>0");
-                             |implyR('R=="true->x>0&[{x'=3}](x>0)'");
-                             |andR('Rlast); <(
-                             |  "x>0": QE,
-                             |  "[{x'=3}](x>0)'":
-                             |    derive('Rlast.1);
-                             |    DE('Rlast);
-                             |    Dassignb('Rlast.1);
-                             |    GV('Rlast);
-                             |    QE
-                             |)""".stripMargin
+        val tacticString =
+          """DI('R=="[{x'=3}]x>0");
+            |implyR('R=="true->x>0&[{x'=3}](x>0)'");
+            |andR('Rlast); <(
+            |  "x>0": QE,
+            |  "[{x'=3}](x>0)'":
+            |    derive('Rlast.1);
+            |    DE('Rlast);
+            |    Dassignb('Rlast.1);
+            |    GV('Rlast);
+            |    QE
+            |)""".stripMargin
         tactic shouldBe tacticParser(tacticString)
         BellePrettyPrinter(tactic) should equal(tacticString)(after being whiteSpaceRemoved)
         proveBy(problem, implyR(1) & tactic) shouldBe Symbol("proved")
@@ -2810,17 +2816,18 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     tree.locate("(1,0)") match {
       case Some(n1) =>
         val (_, tactic) = stepInto(n1, "dI(1)")(db)
-        val tacticString = """DI('R=="[{x'=a}]x>0");
-                             |implyR('R=="true->x>0&[{x'=a}](x>0)'");
-                             |andR('Rlast); <(
-                             |  "x>0": QE,
-                             |  "[{x'=a}](x>0)'":
-                             |    derive('Rlast.1);
-                             |    DE('Rlast);
-                             |    Dassignb('Rlast.1);
-                             |    GV('Rlast);
-                             |    QE
-                             |)""".stripMargin
+        val tacticString =
+          """DI('R=="[{x'=a}]x>0");
+            |implyR('R=="true->x>0&[{x'=a}](x>0)'");
+            |andR('Rlast); <(
+            |  "x>0": QE,
+            |  "[{x'=a}](x>0)'":
+            |    derive('Rlast.1);
+            |    DE('Rlast);
+            |    Dassignb('Rlast.1);
+            |    GV('Rlast);
+            |    QE
+            |)""".stripMargin
         tactic shouldBe tacticParser(tacticString)
         BellePrettyPrinter(tactic) should equal(tacticString)(after being whiteSpaceRemoved)
         proveBy(problem, implyR(1) & tactic) shouldBe Symbol("proved")
@@ -2839,17 +2846,18 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     tree.locate("(1,0)") match {
       case Some(n1) =>
         val (_, tactic) = stepInto(n1, "dI(1)")(db)
-        val tacticString = """DI('R=="[{x'=5}]x>a()");
-                             |implyR('R=="true->x>a()&[{x'=5}](x>a())'");
-                             |andR('Rlast); <(
-                             |  "x>a()": QE,
-                             |  "[{x'=5}](x>a())'":
-                             |    derive('Rlast.1);
-                             |    DE('Rlast);
-                             |    Dassignb('Rlast.1);
-                             |    GV('Rlast);
-                             |    QE
-                             |)""".stripMargin
+        val tacticString =
+          """DI('R=="[{x'=5}]x>a()");
+            |implyR('R=="true->x>a()&[{x'=5}](x>a())'");
+            |andR('Rlast); <(
+            |  "x>a()": QE,
+            |  "[{x'=5}](x>a())'":
+            |    derive('Rlast.1);
+            |    DE('Rlast);
+            |    Dassignb('Rlast.1);
+            |    GV('Rlast);
+            |    QE
+            |)""".stripMargin
         tactic shouldBe tacticParser(tacticString)
         BellePrettyPrinter(tactic) should equal(tacticString)(after being whiteSpaceRemoved)
     }
@@ -2878,19 +2886,20 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val innerId = interpreter.innerProofId.getOrElse(proofId)
     val tree = DbProofTree(db, innerId.toString)
     val tactic = tree.tactic
-    val tacticString = """DI('R=="[{x'=5}]x>a()");
-                         |implyR('R=="true->x>a()&[{x'=5}](x>a())'");
-                         |andR('Rlast); <(
-                         |  "x>a()":
-                         |    QE;
-                         |    todo,
-                         |  "[{x'=5}](x>a())'":
-                         |    derive('Rlast.1);
-                         |    DE('Rlast);
-                         |    Dassignb('Rlast.1);
-                         |    GV('Rlast);
-                         |    QE
-                         |)""".stripMargin
+    val tacticString =
+      """DI('R=="[{x'=5}]x>a()");
+        |implyR('R=="true->x>a()&[{x'=5}](x>a())'");
+        |andR('Rlast); <(
+        |  "x>a()":
+        |    QE;
+        |    todo,
+        |  "[{x'=5}](x>a())'":
+        |    derive('Rlast.1);
+        |    DE('Rlast);
+        |    Dassignb('Rlast.1);
+        |    GV('Rlast);
+        |    QE
+        |)""".stripMargin
     tactic shouldBe tacticParser(tacticString)
     BellePrettyPrinter(tactic) should equal(tacticString)(after being whiteSpaceRemoved)
   }
@@ -2918,19 +2927,20 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val innerId = interpreter.innerProofId.getOrElse(proofId)
     val tactic = DbProofTree(db, innerId.toString).tactic
     // @todo want pending("QE") or pending("QE & done | done") instead of nil
-    val tacticString = """DI('R=="[{x'=5}]x>a()+b()");
-                         |implyR('R=="true->x>a()+b()&[{x'=5}](x>a()+b())'");
-                         |andR('Rlast); <(
-                         |  "x>a()+b()":
-                         |    QE;
-                         |    todo,
-                         |  "[{x'=5}](x>a()+b())'":
-                         |    derive('Rlast.1);
-                         |    DE('Rlast);
-                         |    Dassignb('Rlast.1);
-                         |    GV('Rlast);
-                         |    QE
-                         |)""".stripMargin
+    val tacticString =
+      """DI('R=="[{x'=5}]x>a()+b()");
+        |implyR('R=="true->x>a()+b()&[{x'=5}](x>a()+b())'");
+        |andR('Rlast); <(
+        |  "x>a()+b()":
+        |    QE;
+        |    todo,
+        |  "[{x'=5}](x>a()+b())'":
+        |    derive('Rlast.1);
+        |    DE('Rlast);
+        |    Dassignb('Rlast.1);
+        |    GV('Rlast);
+        |    QE
+        |)""".stripMargin
     tactic shouldBe tacticParser(tacticString)
     BellePrettyPrinter(tactic) should equal(tacticString)(after being whiteSpaceRemoved)
   }
@@ -2942,8 +2952,9 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
       val p = ProvableSig.startPlainProof(problem)
       val pId = sql.createProof(modelFile, "model1")
       val tactic = prop & done
-      intercept[BelleThrowable] { proveBy(problem, tactic) }
-        .getMessage should startWith("expected to have proved, but got open goals")
+      intercept[BelleThrowable] { proveBy(problem, tactic) }.getMessage should startWith(
+        "expected to have proved, but got open goals"
+      )
       sql.extractTactic(pId) shouldBe tacticParser("todo")
 
       implicit val db: DBAbstraction = new InMemoryDB()
@@ -2961,8 +2972,9 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         recordInternal = true,
       ))
       interpreter(tactic, BelleProvable.plain(p))
-      DbProofTree(db, proofId.toString)
-        .tactic shouldBe tacticParser("""implyR('R=="x=1&y=2->x=3"); andL('L=="x=1&y=2"); pending("done"); todo""")
+      DbProofTree(db, proofId.toString).tactic shouldBe tacticParser(
+        """implyR('R=="x=1&y=2->x=3"); andL('L=="x=1&y=2"); pending("done"); todo"""
+      )
     }
   }
 
@@ -3347,27 +3359,28 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
   it should "support tactic-internal definition expansion" in withMathematica { _ =>
     withDatabase { db =>
-      val s = """ArchiveEntry "Test"
-                |Definitions
-                |  import kyx.math.{abs,max};
-                |  Real wUp()= -1;
-                |  Real wLo()=  1;
-                |  Real alo, hp, rp;
-                |  Real maxI(Real v, Real w, Real vlo) = max(0, w*(vlo-v));
-                |End.
-                |ProgramVariables
-                |  Real h, w, v, vlo, r, rv;
-                |End.
-                |Problem
-                |(w=wUp()|w=wLo()) &
-                |(0 < maxI(v,w,vlo)/alo() | 0>=maxI(v,w,vlo)/alo() & 0=-w*maxI(v,w,vlo)^2/(2*alo())
-                |   -> abs(r)>rp()|w*h < -hp()) &
-                |rp()>=0 & hp()>0 & rv>=0 & alo()>0
-                |->
-                |abs(r)>rp() | abs(h)>hp()
-                |End.
-                |End.
-                |""".stripMargin
+      val s =
+        """ArchiveEntry "Test"
+          |Definitions
+          |  import kyx.math.{abs,max};
+          |  Real wUp()= -1;
+          |  Real wLo()=  1;
+          |  Real alo, hp, rp;
+          |  Real maxI(Real v, Real w, Real vlo) = max(0, w*(vlo-v));
+          |End.
+          |ProgramVariables
+          |  Real h, w, v, vlo, r, rv;
+          |End.
+          |Problem
+          |(w=wUp()|w=wLo()) &
+          |(0 < maxI(v,w,vlo)/alo() | 0>=maxI(v,w,vlo)/alo() & 0=-w*maxI(v,w,vlo)^2/(2*alo())
+          |   -> abs(r)>rp()|w*h < -hp()) &
+          |rp()>=0 & hp()>0 & rv>=0 & alo()>0
+          |->
+          |abs(r)>rp() | abs(h)>hp()
+          |End.
+          |End.
+          |""".stripMargin
 
       val entry = ArchiveParser.parse(s).head
 
@@ -3395,19 +3408,20 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
   it should "correctly plug into branch parents when tactics expand definitions internally" in withMathematica { _ =>
     withDatabase { db =>
-      val s = """ArchiveEntry "Test"
-                |Definitions
-                |  Real f;
-                |  Real one = 1;
-                |End.
-                |ProgramVariables Real a, b, x, y, z; End.
-                |Problem
-                |y>=0 & f()=1 ->
-                |((x>=0 -> y*x>=0) & (a=0 -> y*a=0)) &
-                |(z>=1&z<=2 -> (y/(z*one())>=0 & (b=0 -> b/z=0)))
-                |End.
-                |End.
-                |""".stripMargin
+      val s =
+        """ArchiveEntry "Test"
+          |Definitions
+          |  Real f;
+          |  Real one = 1;
+          |End.
+          |ProgramVariables Real a, b, x, y, z; End.
+          |Problem
+          |y>=0 & f()=1 ->
+          |((x>=0 -> y*x>=0) & (a=0 -> y*a=0)) &
+          |(z>=1&z<=2 -> (y/(z*one())>=0 & (b=0 -> b/z=0)))
+          |End.
+          |End.
+          |""".stripMargin
 
       val entry = ArchiveParser.parse(s).head
 

@@ -5,12 +5,9 @@
 
 /**
  * HyDRA API Responses
- * @author
- *   Nathan Fulton
- * @author
- *   Stefan Mitsch
- * @author
- *   Ran Ji
+ * @author Nathan Fulton
+ * @author Stefan Mitsch
+ * @author Ran Ji
  */
 package org.keymaerax.hydra
 

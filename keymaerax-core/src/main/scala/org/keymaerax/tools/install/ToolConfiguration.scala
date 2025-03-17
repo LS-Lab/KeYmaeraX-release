@@ -21,8 +21,7 @@ case class ToolConfiguration(
 /**
  * Tool configuration from config file/default configuration.
  *
- * @author
- *   Stefan Mitsch
+ * @author Stefan Mitsch
  */
 object ToolConfiguration {
   def defaultMathematicaConfig: ToolConfiguration = {

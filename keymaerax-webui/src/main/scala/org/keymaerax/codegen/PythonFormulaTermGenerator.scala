@@ -14,10 +14,8 @@ import scala.annotation.nowarn
 /**
  * Generates formula and term evaluation C code. `termContainer` configures the location where primitive terms are
  * looked up (e.g., structs).
- * @author
- *   Stefan Mitsch
- * @author
- *   Ran Ji
+ * @author Stefan Mitsch
+ * @author Ran Ji
  */
 @deprecated("Use GenericFormulaTermGenerator instead")
 class PythonFormulaTermGenerator(termContainer: Expression => String, defs: Declaration)

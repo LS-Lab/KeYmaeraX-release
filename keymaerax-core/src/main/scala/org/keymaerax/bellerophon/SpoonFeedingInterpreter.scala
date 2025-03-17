@@ -90,27 +90,18 @@ case class DbBranchPointer(parent: Int, branch: Int, predStep: Int, openBranches
 /**
  * Sequential interpreter for Bellerophon tactic expressions: breaks apart combinators and spoon-feeds "atomic" tactics
  * to another interpreter.
- * @param rootProofId
- *   The ID of the proof this interpreter is working on.
- * @param startStepIndex
- *   The index in the proof trace where the interpreter starts appending steps (-1 for none, e.g., in a fresh proof).
- * @param idProvider
- *   Provides IDs for child provables created in this interpreter.
- * @param listenerFactory
- *   Creates listener that are notified from the inner interpreter, takes (tactic name, parent step index in trace,
- *   branch).
- * @param inner
- *   Processes atomic tactics.
- * @param descend
- *   How far to descend into depending tactics (default: do not descend)
- * @param strict
- *   If true, follow tactic strictly; otherwise perform some optimizations (e.g., do not execute nil).
- * @author
- *   Nathan Fulton
- * @author
- *   Andre Platzer
- * @author
- *   Stefan Mitsch
+ * @param rootProofId The ID of the proof this interpreter is working on.
+ * @param startStepIndex The index in the proof trace where the interpreter starts appending steps (-1 for none, e.g.,
+ *   in a fresh proof).
+ * @param idProvider Provides IDs for child provables created in this interpreter.
+ * @param listenerFactory Creates listener that are notified from the inner interpreter, takes (tactic name, parent step
+ *   index in trace, branch).
+ * @param inner Processes atomic tactics.
+ * @param descend How far to descend into depending tactics (default: do not descend)
+ * @param strict If true, follow tactic strictly; otherwise perform some optimizations (e.g., do not execute nil).
+ * @author Nathan Fulton
+ * @author Andre Platzer
+ * @author Stefan Mitsch
  */
 case class SpoonFeedingInterpreter(
     rootProofId: Int,
@@ -146,18 +137,14 @@ case class SpoonFeedingInterpreter(
     }
   }
 
-  /**
-   * Updates the labels `orig` at position `at` to include the labels of `p`. Keeps original labels if `p.label`==None.
-   */
+  /** Updates the labels `orig` at position `at` to include the labels of `p`. Keeps original labels if `p.label`==None. */
   private def updateLabels(orig: Option[List[BelleLabel]], at: Int, p: BelleProvable): Option[List[BelleLabel]] =
     p.label match {
       case Some(l) => Some(orig.map(_.patch(at, l, 1)).getOrElse(l))
       case None => if (p.p.subgoals.isEmpty) orig.map(_.patch(at, List.empty, 1)) else orig
     }
 
-  /**
-   * Updates the labels `orig` at position `at` to include the labels of `p`. Keeps original labels if `p.label`==None.
-   */
+  /** Updates the labels `orig` at position `at` to include the labels of `p`. Keeps original labels if `p.label`==None. */
   private def updateLabels(orig: List[BelleLabel], at: Int, p: BelleProvable): List[BelleLabel] =
     updateLabels(Some(orig), at, p).getOrElse(Nil)
 
@@ -332,8 +319,8 @@ case class SpoonFeedingInterpreter(
                     " subgoals (v)\n" + p.subgoals.map(_.prettyString).mkString("\n===================\n")
                 ).inContext(tactic, "")
 
-                val branchTactics: Seq[(BelleExpr, BelleValue)] = children
-                  .zip(p.subgoals.indices.map(i => BelleProvable(p.sub(i), labels.map(_(i) :: Nil))))
+                val branchTactics: Seq[(BelleExpr, BelleValue)] =
+                  children.zip(p.subgoals.indices.map(i => BelleProvable(p.sub(i), labels.map(_(i) :: Nil))))
                 val branchCtxs = ctx.branch(children.size)
 
                 // @note execute in reverse for stable global subgoal indexing
@@ -628,8 +615,10 @@ case class SpoonFeedingInterpreter(
             }
             result match {
               case Some(r) => r
-              case None => throw new BelleNoProgress("ChooseSome did not succeed with any of its options")
-                  .inContext(ChooseSome(options, e), "Failed all options in ChooseSome: " + opts.toList + "\n" + errors)
+              case None => throw new BelleNoProgress("ChooseSome did not succeed with any of its options").inContext(
+                  ChooseSome(options, e),
+                  "Failed all options in ChooseSome: " + opts.toList + "\n" + errors,
+                )
             }
 
           // look into tactics

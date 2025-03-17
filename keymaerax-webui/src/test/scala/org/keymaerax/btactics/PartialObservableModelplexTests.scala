@@ -64,8 +64,9 @@ class PartialObservableModelplexTests extends TacticTestBase {
     println(s"Duration create approximation [s]: ${(approxEnd - start) / 1000}")
     println(s"Duration derive monitor [s]: ${(synthEnd - approxEnd) / 1000}")
     println(s"Duration Partial QE [s]: ${(partialQEEnd - synthEnd) / 1000}")
-    println(s"Sum (QE/synthesis duration) [s]: ${(qeDurationListener
-        .duration + (partialQEEnd - synthEnd)) / 1000}/${(partialQEEnd - start) / 1000}")
+    println(s"Sum (QE/synthesis duration) [s]: ${(qeDurationListener.duration + (partialQEEnd - synthEnd)) / 1000}/${(
+        partialQEEnd - start
+      ) / 1000}")
   }
 
   private def deriveMonitor[K <: NamedSymbol](
@@ -121,8 +122,8 @@ class PartialObservableModelplexTests extends TacticTestBase {
 
     val synthEnd = System.currentTimeMillis()
 
-    val stepwiseQEProof = ModelPlex
-      .stepwisePartialQE(synthResult.subgoals.loneElement.succ.loneElement, assumptions, entry.defs, tool)
+    val stepwiseQEProof =
+      ModelPlex.stepwisePartialQE(synthResult.subgoals.loneElement.succ.loneElement, assumptions, entry.defs, tool)
     stepwiseQEProof shouldBe Symbol("proved")
 
     val expand = StaticSemantics.symbols(synthResult.subgoals.head) --
@@ -164,9 +165,9 @@ class PartialObservableModelplexTests extends TacticTestBase {
         case _ => Set.empty[Variable]
       })
       .toList
-    val observable = stateVars
-      .diff(unobservable.keySet.filter(_.isInstanceOf[BaseVariable]).map(_.asInstanceOf[BaseVariable])) ++
-      sensorsForUnobservables.map(_.asInstanceOf[BaseVariable])
+    val observable =
+      stateVars.diff(unobservable.keySet.filter(_.isInstanceOf[BaseVariable]).map(_.asInstanceOf[BaseVariable])) ++
+        sensorsForUnobservables.map(_.asInstanceOf[BaseVariable])
     println("Exporting code...")
     val (monitorCodeDefs, monitorCodeBody) = (new PythonGenerator(
       new PythonMonitorGenerator(Symbol("resist"), entry.defs),
@@ -822,8 +823,9 @@ class PartialObservableModelplexTests extends TacticTestBase {
       )
       .head
     val unobservableVars = ListMap(
-      List("dx_0", "t_0", "yo_0", "w_0", "x_0", "y_0", "yo_0", "vo_0", "xo_0", "dy_0", "v_0")
-        .map(_.asVariable -> None): _*
+      List("dx_0", "t_0", "yo_0", "w_0", "x_0", "y_0", "yo_0", "vo_0", "xo_0", "dy_0", "v_0").map(
+        _.asVariable -> None
+      ): _*
     )
     deriveMonitor(entry, Some(entry.tactics.head._3), unobservableVars, tool)
   }

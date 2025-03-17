@@ -36,8 +36,7 @@ import scala.language.postfixOps
 
 /**
  * Tactix Library Test.
- * @author
- *   Andre Platzer
+ * @author Andre Platzer
  */
 @SummaryTest @UsualTest @nowarn("msg=Exhaustivity analysis reached max recursion depth")
 @nowarn("msg=match may not be exhaustive")
@@ -160,8 +159,7 @@ class TactixLibraryTests extends TacticTestBase {
   }
 
   /**
-   * @see
-   *   UnificationMatchTest should "unify j()=x+y with s()=s()" unifiable but not by mere matching, needs a proper
+   * @see UnificationMatchTest should "unify j()=x+y with s()=s()" unifiable but not by mere matching, needs a proper
    *   unifier instead of a single sided matcher
    */
   it should "post-hoc find a j() closing (x+x*y)'=j()" taggedAs (TodoTest, IgnoreInBuildTest) ignore withMathematica {
@@ -230,27 +228,29 @@ class TactixLibraryTests extends TacticTestBase {
   }
 
   it should "find an invariant for curvebot" in withMathematica { _ =>
-    val fml = """x!=ox | y!=oy ->
-                #  [{
-                #    {?(x+w/-1-ox)^2+(y-v/-1-oy)^2!=v^2+w^2; om:=-1;
-                #    ++ ?(x+w-ox)^2+(y-v-oy)^2!=v^2+w^2; om:=1;
-                #    ++ ?(ox-x)*w!=(oy-y)*v; om:=0;}
-                #    {x'=v,y'=w,v'=om*w,w'=-om*v}
-                #   }*
-                #  ] !(x=ox & y=oy)""".stripMargin('#').asFormula
+    val fml =
+      """x!=ox | y!=oy ->
+        #  [{
+        #    {?(x+w/-1-ox)^2+(y-v/-1-oy)^2!=v^2+w^2; om:=-1;
+        #    ++ ?(x+w-ox)^2+(y-v-oy)^2!=v^2+w^2; om:=1;
+        #    ++ ?(ox-x)*w!=(oy-y)*v; om:=0;}
+        #    {x'=v,y'=w,v'=om*w,w'=-om*v}
+        #   }*
+        #  ] !(x=ox & y=oy)""".stripMargin('#').asFormula
     // @note postcondition is invariant
     proveBy(fml, implyR(1) & loopPostMaster((_, _, _) => Nil.to(LazyList))(1)) shouldBe Symbol("proved")
   }
 
   it should "find an invariant for curvebot with fns" in withMathematica { _ =>
-    val fml = """x!=ox() | y!=oy() ->
-                #  [{
-                #    {?(x+w/-1-ox())^2+(y-v/-1-oy())^2!=v^2+w^2; om:=-1;
-                #    ++ ?(x+w-ox())^2+(y-v-oy())^2!=v^2+w^2; om:=1;
-                #    ++ ?(ox()-x)*w!=(oy()-y)*v; om:=0;}
-                #    {x'=v,y'=w,v'=om*w,w'=-om*v}
-                #   }*
-                #  ] !(x=ox() & y=oy())""".stripMargin('#').asFormula
+    val fml =
+      """x!=ox() | y!=oy() ->
+        #  [{
+        #    {?(x+w/-1-ox())^2+(y-v/-1-oy())^2!=v^2+w^2; om:=-1;
+        #    ++ ?(x+w-ox())^2+(y-v-oy())^2!=v^2+w^2; om:=1;
+        #    ++ ?(ox()-x)*w!=(oy()-y)*v; om:=0;}
+        #    {x'=v,y'=w,v'=om*w,w'=-om*v}
+        #   }*
+        #  ] !(x=ox() & y=oy())""".stripMargin('#').asFormula
     // @note postcondition is invariant
     proveBy(fml, implyR(1) & loopPostMaster((_, _, _) => Nil.to(LazyList))(1)) shouldBe Symbol("proved")
   }
@@ -470,8 +470,8 @@ class TactixLibraryTests extends TacticTestBase {
     val bt = List("[z:=x;](z=x|z>=y)".asLabel -> useAt(Ax.equalRefl)(1), "[z:=y;{z'=1}](z=x|z>=y)".asLabel -> solve(1))
       .permutations
     bt.foreach(t =>
-      proveBy("x>=0 | y>=0 -> [z:=x; ++ z:=y;{z'=1}](z=x|z>=y)".asFormula, normalize & CaseTactic(t))
-        .subgoals should contain theSameElementsAs
+      proveBy("x>=0 | y>=0 -> [z:=x; ++ z:=y;{z'=1}](z=x|z>=y)".asFormula, normalize & CaseTactic(t)).subgoals should
+        contain theSameElementsAs
         List("x>=0|y>=0 ==> true, x>=y".asSequent, "x>=0|y>=0, z=y ==> \\forall t_ (t_>=0 -> t_+z=x|t_+z>=y)".asSequent)
     )
   }
@@ -676,55 +676,56 @@ class TactixLibraryTests extends TacticTestBase {
 
   "Master" should "not split unnecessarily early" in withMathematica(
     { _ =>
-      val fml = """
-                  |  /* INITIAL CONDITIONS */
-                  |  (velCtrl >= 0 & velLead >= 0 & A > 0 & B > 0 & T > 0 & posCtrl <= posLead &
-                  |  /* The car has to be safe in the 'worst case' where the lead car brakes to a
-                  |     stop. This means that we must be able to brake to a stop as before we
-                  |     reach the lead car's final position */
-                  |  posCtrl + velCtrl^2/(2*B) <= posLead + velLead^2 /(2*B))
-                  |  ->
-                  |  [
-                  |    {
-                  |      /* CONTROL */
-                  |      {
-                  |        /* We only allow accelerations where after accelerating for time
-                  |           T, we are still safe (by the above definition).
-                  |           Note that the lead car might already start braking to a stop in this
-                  |           scenario.
-                  |           Therefore, our final position after 1 acceleration cycle then
-                  |           braking to a stop must be <= the lead car's final position if it
-                  |           brakes to a stop right now.
-                  |           {a:=A; ? a>=0 & a <= A &
-                  |            (posCtrl + velCtrl * T + a/2 * T^2) + (velCtrl+a*T)^2/(2*B) <=
-                  |            (posLead + velLead^2/(2*B)); accCtrl:=a;}
-                  |        */
-                  |        {
-                  |          {?((posCtrl + velCtrl * T + A/2 * T^2) + (velCtrl+A*T)^2/(2*B) <=
-                  |            (posLead + velLead^2/(2*B))); accCtrl:=A;}
-                  |          ++
-                  |          {if (velCtrl = 0) {accCtrl:=0;} else {accCtrl := -B;}}
-                  |        }
-                  |        {
-                  |          accLead := A;
-                  |          ++
-                  |          {if (velLead = 0) {accLead:=0;} else {accLead := -B;}}
-                  |        }
-                  |      }
-                  |      /* CONTINUOUS DYNAMICS */
-                  |      t := 0;
-                  |      {
-                  |        { posLead' = velLead, velLead' = accLead,
-                  |          posCtrl' = velCtrl, velCtrl' = accCtrl , t' = 1 &
-                  |          (velCtrl >= 0 & velLead >= 0 & t <= T)
-                  |        } /* evolution domain and event-trigger */
-                  |      }
-                  |    }*@invariant(
-                  |      posCtrl <= posLead &
-                  |      posCtrl + velCtrl^2/(2*B) <= posLead + velLead^2 /(2*B) &
-                  |      velLead >= 0 & velCtrl >= 0)
-                  |  ]
-                  |  (posCtrl <= posLead) /* safety condition */""".stripMargin.asFormula
+      val fml =
+        """
+          |  /* INITIAL CONDITIONS */
+          |  (velCtrl >= 0 & velLead >= 0 & A > 0 & B > 0 & T > 0 & posCtrl <= posLead &
+          |  /* The car has to be safe in the 'worst case' where the lead car brakes to a
+          |     stop. This means that we must be able to brake to a stop as before we
+          |     reach the lead car's final position */
+          |  posCtrl + velCtrl^2/(2*B) <= posLead + velLead^2 /(2*B))
+          |  ->
+          |  [
+          |    {
+          |      /* CONTROL */
+          |      {
+          |        /* We only allow accelerations where after accelerating for time
+          |           T, we are still safe (by the above definition).
+          |           Note that the lead car might already start braking to a stop in this
+          |           scenario.
+          |           Therefore, our final position after 1 acceleration cycle then
+          |           braking to a stop must be <= the lead car's final position if it
+          |           brakes to a stop right now.
+          |           {a:=A; ? a>=0 & a <= A &
+          |            (posCtrl + velCtrl * T + a/2 * T^2) + (velCtrl+a*T)^2/(2*B) <=
+          |            (posLead + velLead^2/(2*B)); accCtrl:=a;}
+          |        */
+          |        {
+          |          {?((posCtrl + velCtrl * T + A/2 * T^2) + (velCtrl+A*T)^2/(2*B) <=
+          |            (posLead + velLead^2/(2*B))); accCtrl:=A;}
+          |          ++
+          |          {if (velCtrl = 0) {accCtrl:=0;} else {accCtrl := -B;}}
+          |        }
+          |        {
+          |          accLead := A;
+          |          ++
+          |          {if (velLead = 0) {accLead:=0;} else {accLead := -B;}}
+          |        }
+          |      }
+          |      /* CONTINUOUS DYNAMICS */
+          |      t := 0;
+          |      {
+          |        { posLead' = velLead, velLead' = accLead,
+          |          posCtrl' = velCtrl, velCtrl' = accCtrl , t' = 1 &
+          |          (velCtrl >= 0 & velLead >= 0 & t <= T)
+          |        } /* evolution domain and event-trigger */
+          |      }
+          |    }*@invariant(
+          |      posCtrl <= posLead &
+          |      posCtrl + velCtrl^2/(2*B) <= posLead + velLead^2 /(2*B) &
+          |      velLead >= 0 & velCtrl >= 0)
+          |  ]
+          |  (posCtrl <= posLead) /* safety condition */""".stripMargin.asFormula
 
       proveBy(fml, auto(TactixLibrary.invGenerator, None)) shouldBe Symbol("proved")
     },
@@ -806,7 +807,8 @@ class TactixLibraryTests extends TacticTestBase {
     }
 
   it should "prove regardless of order" taggedAs SlowTest in withQE { _ =>
-    val problem1 = """
+    val problem1 =
+      """
       v^2<=2*b*(m-x) & v>=0  & A>=0 & b>0
       -> [
            {
@@ -817,7 +819,8 @@ class TactixLibraryTests extends TacticTestBase {
          ] x <= m""".stripMargin(' ').asFormula
     proveBy(problem1, auto(TactixLibrary.invGenerator, None)) shouldBe Symbol("proved")
 
-    val problem2 = """
+    val problem2 =
+      """
       v^2<=2*b*(m-x) & v>=0  & A>=0 & b>0
       -> [
            {

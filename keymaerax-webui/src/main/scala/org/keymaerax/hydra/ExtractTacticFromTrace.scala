@@ -109,8 +109,8 @@ abstract class TraceToTacticConverterBase(defs: Declaration) extends TraceToTact
       "Duplicate label in " + l.map(_.prettyString).mkString("::") + "\n(verbose) " + l.map(_.toString).mkString("::")
     )
     val projectedLabels = l.map(_.components.takeRight(depth).map(_.label))
-    if (projectedLabels.size == projectedLabels.toSet.size) projectedLabels
-      .map(l => l.tail.foldLeft[BelleLabel](BelleTopLevelLabel(l.head))(BelleSubLabel.apply))
+    if (projectedLabels.size == projectedLabels.toSet.size)
+      projectedLabels.map(l => l.tail.foldLeft[BelleLabel](BelleTopLevelLabel(l.head))(BelleSubLabel.apply))
     else minimize(l, depth + 1)
   }
 

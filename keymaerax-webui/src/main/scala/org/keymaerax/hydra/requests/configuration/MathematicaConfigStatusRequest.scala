@@ -17,8 +17,8 @@ class MathematicaConfigStatusRequest(db: DBAbstraction) extends Request with Rea
       case Some(_) => new ToolConfigStatusResponse(
           ToolName.Mathematica,
           Configuration.contains(Configuration.Keys.MATHEMATICA_LINK_NAME) &&
-            Configuration
-              .contains(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR) && ToolProvider.tool("mathematica").isDefined,
+            Configuration.contains(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR) &&
+            ToolProvider.tool("mathematica").isDefined,
         )
       case None => new ToolConfigErrorResponse(
           ToolName.Mathematica,

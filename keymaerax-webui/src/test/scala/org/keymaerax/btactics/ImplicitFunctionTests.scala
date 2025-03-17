@@ -29,8 +29,7 @@ import scala.language.postfixOps
 
 /**
  * Tests for implicit function definitions & the involved substitutions.
- * @author
- *   James Gallicchio
+ * @author James Gallicchio
  */
 class ImplicitFunctionTests extends TacticTestBase {
   PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter)
@@ -55,46 +54,50 @@ class ImplicitFunctionTests extends TacticTestBase {
   }
 
   "DLArchiveParser" should "parse built-in interpreted functions correctly" in {
-    val input = """ArchiveEntry "entry1"
-                  | Definitions import kyx.math.abs; End.
-                  | Problem abs(-1) = 1 End.
-                  |End.
-                  |""".stripMargin
+    val input =
+      """ArchiveEntry "entry1"
+        | Definitions import kyx.math.abs; End.
+        | Problem abs(-1) = 1 End.
+        |End.
+        |""".stripMargin
     val prog = parse(input)
 
     prog.model shouldBe Equal(FuncOf(InterpretedSymbols.absF, Neg(Number(1))), Number(1))
   }
 
   it should "parse inline function interps correctly" in {
-    val input = """ArchiveEntry "entry1"
-                  | Definitions Real myAbs<<._1 < 0 & ._0 = -(._1) | ._1 >= 0 & ._0 = ._1>>(Real x); End.
-                  | Problem myAbs(-1) = 1 End.
-                  |End.
-                  |""".stripMargin
+    val input =
+      """ArchiveEntry "entry1"
+        | Definitions Real myAbs<<._1 < 0 & ._0 = -(._1) | ._1 >= 0 & ._0 = ._1>>(Real x); End.
+        | Problem myAbs(-1) = 1 End.
+        |End.
+        |""".stripMargin
     val prog = parse(input)
 
     prog.model shouldBe Equal(FuncOf(renBuiltin(InterpretedSymbols.absF, "myAbs"), Neg(Number(1))), Number(1))
   }
 
   it should "parse implicit ODE definitions correctly" in {
-    val input = """ArchiveEntry "entry1"
-                  | Definitions
-                  |  implicit Real myExp(Real t) = {{t:=0;myExp:=1;}; {t'=1,myExp'=myExp}};
-                  | End.
-                  | Problem myExp(0) = 1 End.
-                  |End.
-                  |""".stripMargin
+    val input =
+      """ArchiveEntry "entry1"
+        | Definitions
+        |  implicit Real myExp(Real t) = {{t:=0;myExp:=1;}; {t'=1,myExp'=myExp}};
+        | End.
+        | Problem myExp(0) = 1 End.
+        |End.
+        |""".stripMargin
     val prog = parse(input)
 
     prog.expandedModel shouldBe Equal(FuncOf(renBuiltin(InterpretedSymbols.expF, "myExp"), Number(0)), Number(1))
   }
 
   "Archive printer" should "print interpretations" in {
-    val input = """ArchiveEntry "entry1"
-                  | Definitions Real myAbs<<(._1 < 0 & ._0 = -(._1)) | (._1 >= 0 & ._0 = ._1)>>(Real x); End.
-                  | Problem myAbs(-1) = 1 End.
-                  |End.
-                  |""".stripMargin
+    val input =
+      """ArchiveEntry "entry1"
+        | Definitions Real myAbs<<(._1 < 0 & ._0 = -(._1)) | (._1 >= 0 & ._0 = ._1)>>(Real x); End.
+        | Problem myAbs(-1) = 1 End.
+        |End.
+        |""".stripMargin
     val prog = parse(input)
 
     val printer = new KeYmaeraXArchivePrinter(PrettierPrintFormatProvider(_, 80))
@@ -106,13 +109,14 @@ class ImplicitFunctionTests extends TacticTestBase {
   }
 
   it should "print from implicitly defined interpretation" in {
-    val input = """ArchiveEntry "entry1"
-                  | Definitions
-                  |  implicit Real myExp(Real t) = {{t:=0;myExp:=1;}; {t'=1,myExp'=myExp}};
-                  | End.
-                  | Problem myExp(0) = 1 End.
-                  |End.
-                  |""".stripMargin
+    val input =
+      """ArchiveEntry "entry1"
+        | Definitions
+        |  implicit Real myExp(Real t) = {{t:=0;myExp:=1;}; {t'=1,myExp'=myExp}};
+        | End.
+        | Problem myExp(0) = 1 End.
+        |End.
+        |""".stripMargin
     val prog = parse(input)
 
     val printer = new KeYmaeraXArchivePrinter(PrettierPrintFormatProvider(_, 80))

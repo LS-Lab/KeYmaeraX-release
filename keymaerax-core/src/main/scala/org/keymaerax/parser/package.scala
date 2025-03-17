@@ -183,22 +183,16 @@ import org.keymaerax.core.CoreException
  *   println("Printed:  " + sequent.prettyString)
  * }}}
  *
- * @author
- *   Andre Platzer
+ * @author Andre Platzer
  * @see
  *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
- * @see
- *   [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
- * @see
- *   [[org.keymaerax.Bibliography.ToclPlatzer15 Differential game logic]]
+ * @see [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
+ * @see [[org.keymaerax.Bibliography.ToclPlatzer15 Differential game logic]]
  * @see
  *   [[org.keymaerax.Bibliography.CadeFultonMQVP15 KeYmaera X: An aXiomatic tactical theorem prover for hybrid systems]]
- * @see
- *   [[http://keymaeraX.org/doc/dL-grammar.md Grammar of Differential Dynamic Logic]]
- * @see
- *   [[org.keymaerax.parser.KeYmaeraXParser]]
- * @see
- *   [[org.keymaerax.parser.KeYmaeraXPrettyPrinter]]
+ * @see [[http://keymaeraX.org/doc/dL-grammar.md Grammar of Differential Dynamic Logic]]
+ * @see [[org.keymaerax.parser.KeYmaeraXParser]]
+ * @see [[org.keymaerax.parser.KeYmaeraXPrettyPrinter]]
  */
 package object parser {
 
@@ -206,16 +200,11 @@ package object parser {
    * Check input for requirement being true, throwing a [[ParseException]] if false. This method is a require coming
    * from the parser that cannot be disabled. Blame is on the user input.
    *
-   * @param requirement
-   *   the expression to test for being true
-   * @param message
-   *   a String explaining what is expected.
-   * @param loc
-   *   the location where the parse error occurred.
-   * @param state
-   *   information about the parser state in which the parse error occurred.
-   * @see
-   *   [[scala.Predef.require()]]
+   * @param requirement the expression to test for being true
+   * @param message a String explaining what is expected.
+   * @param loc the location where the parse error occurred.
+   * @param state information about the parser state in which the parse error occurred.
+   * @see [[scala.Predef.require()]]
    */
   @inline
   final def checkInput(

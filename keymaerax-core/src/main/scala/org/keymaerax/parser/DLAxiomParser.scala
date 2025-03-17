@@ -15,19 +15,15 @@ import scala.collection.immutable._
 
 /**
  * Parse an axiom string to a list of named formulas that are to be used as axioms in a theory.
- * @author
- *   Andre Platzer
- * @see
- *   [[KeYmaeraXAxiomParser]]
+ * @author Andre Platzer
+ * @see [[KeYmaeraXAxiomParser]]
  */
 object DLAxiomParser extends (String => List[(String, Formula)]) {
 
   /**
    * Parse an axiom string into a list of named axioms.
-   * @param input
-   *   The contents of the axiom file.
-   * @return
-   *   A list of named axioms occurring in the string.
+   * @param input The contents of the axiom file.
+   * @return A list of named axioms occurring in the string.
    */
   def apply(input: String): List[(String, Formula)] = axiomParser(input)
 

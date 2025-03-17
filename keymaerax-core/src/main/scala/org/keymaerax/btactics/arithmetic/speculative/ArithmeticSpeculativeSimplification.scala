@@ -24,8 +24,7 @@ import scala.collection.mutable.ListBuffer
 
 /**
  * Tactics for simplifying arithmetic sub-goals.
- * @author
- *   Stefan Mitsch
+ * @author Stefan Mitsch
  */
 object ArithmeticSpeculativeSimplification {
   private val DEBUG = false

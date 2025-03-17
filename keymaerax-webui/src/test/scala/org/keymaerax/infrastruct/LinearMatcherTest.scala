@@ -17,8 +17,7 @@ import scala.collection.immutable._
 /**
  * Testing linear matcher.
  *
- * @author
- *   Andre Platzer
+ * @author Andre Platzer
  */
 @SummaryTest @UsualTest
 class LinearMatcherTest extends SystemTestBase {
@@ -470,18 +469,17 @@ class LinearMatcherTest extends SystemTestBase {
     )
   }
 
-  it should
-    "maybe unify renaming and instance p(||)<->[y:=y;]p(||) and (y_0>77&true)<->[y_0:=y_0;](y_0>77&true)" ignore {
-      shouldMatch(
-        "p(||)<->[y:=y;]p(||)".asPlainFormula,
-        "(y_0>77&true)<->[y_0:=y_0;](y_0>77&true)".asPlainFormula,
-        RenUSubst(
-          (Variable("y"), Variable("y", Some(0))) ::
-            (UnitPredicational("p", AnyArg), (if (semanticRenaming) "(y_0>77&true)" else "y>77&true").asPlainFormula) ::
-            Nil
-        ),
-      )
-    }
+  it should "maybe unify renaming and instance p(||)<->[y:=y;]p(||) and (y_0>77&true)<->[y_0:=y_0;](y_0>77&true)" ignore {
+    shouldMatch(
+      "p(||)<->[y:=y;]p(||)".asPlainFormula,
+      "(y_0>77&true)<->[y_0:=y_0;](y_0>77&true)".asPlainFormula,
+      RenUSubst(
+        (Variable("y"), Variable("y", Some(0))) ::
+          (UnitPredicational("p", AnyArg), (if (semanticRenaming) "(y_0>77&true)" else "y>77&true").asPlainFormula) ::
+          Nil
+      ),
+    )
+  }
 
   it should "maybe unify renaming and instance [y:=y;]p(||)<->p(||) and [y_0:=y_0;](y_0>77&true)<->(y_0>77&true)" in {
     shouldMatch(

@@ -118,9 +118,7 @@ object TacticHelper extends Logging {
     s.ante.filter(f => (StaticSemantics.freeVars(f) -- constants).isEmpty).toList
   } // @todo tests and then use this function to determine which formulas should be added to a loop invariant.
 
-  /**
-   * Returns the set of variables we should consider as constant in invariant proofs for the modality located at pos.
-   */
+  /** Returns the set of variables we should consider as constant in invariant proofs for the modality located at pos. */
   private def invariantSymbols(s: Sequent, pos: SeqPos): Set[Variable] = {
     val (program: Program, formula: Formula) = s(pos) match {
       case Box(p, f) => (p, f)
@@ -170,8 +168,7 @@ object TacticHelper extends Logging {
   /**
    * Returns monomial iff t is (approximately, locally) a monomial; i.e., has the form {{{coeff(|x|)*x^exp(|x|)}}} where
    * coeff and exp are optional.
-   * @return
-   *   Optional coefficient, variable, optional exponent; or None if this isn't a monomial
+   * @return Optional coefficient, variable, optional exponent; or None if this isn't a monomial
    */
   def asMonomial(t: Term): Option[(Option[Term], Variable, Option[Term])] = t match {
     case v: Variable => Some(None, v, None)

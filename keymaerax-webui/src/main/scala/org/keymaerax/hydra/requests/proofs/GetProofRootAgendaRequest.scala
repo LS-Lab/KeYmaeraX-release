@@ -15,12 +15,9 @@ import scala.collection.immutable.{::, List, Nil}
 /**
  * Gets the proof root as agenda item (browse a proof from root to leaves).
  *
- * @param db
- *   Access to the database.
- * @param userId
- *   Identifies the user.
- * @param proofId
- *   Identifies the proof.
+ * @param db Access to the database.
+ * @param userId Identifies the user.
+ * @param proofId Identifies the proof.
  */
 class GetProofRootAgendaRequest(db: DBAbstraction, userId: String, proofId: String)
     extends UserProofRequest(db, userId, proofId) with ReadRequest {

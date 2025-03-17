@@ -982,9 +982,12 @@ object Proofs {
             if (entries.length != 1) complete(completeResponse(new ErrorResponse(
               s"Expected exactly one model in the archive but found ${entries.length}"
             )))
-            else if (entries.head.tactics.length != 1) complete(completeResponse(new ErrorResponse(
-              s"Expected exactly one proof in the archive but found ${entries.head.tactics.length} proofs. Make sure you export from the Proofs page, not the Models page."
-            )))
+            else if (entries.head.tactics.length != 1) complete(
+              completeResponse(new ErrorResponse(s"Expected exactly one proof in the archive but found ${entries
+                  .head
+                  .tactics
+                  .length} proofs. Make sure you export from the Proofs page, not the Models page."))
+            )
             else {
               val entry = entries.head
               val model = entry.model.asInstanceOf[Formula]

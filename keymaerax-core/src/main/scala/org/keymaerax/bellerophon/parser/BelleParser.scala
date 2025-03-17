@@ -21,10 +21,8 @@ import scala.util.matching.Regex
 /**
  * The Bellerophon parser
  *
- * @author
- *   Nathan Fulton
- * @see
- *   [[DLBelleParser]]
+ * @author Nathan Fulton
+ * @see [[DLBelleParser]]
  */
 object BelleParser extends TacticParser with Logging {
   // @todo some might better be terminal symbols
@@ -83,7 +81,8 @@ object BelleParser extends TacticParser with Logging {
       expandAll: Boolean = false,
   ): BelleExpr = firstUnacceptableCharacter(s) match {
     case Some((loc, char)) => throw ParseException(
-        s"Found an unacceptable character when parsing tactic (allowed unicode: ${allowedUnicodeChars.toString}): $char",
+        s"Found an unacceptable character when parsing tactic (allowed unicode: ${allowedUnicodeChars
+            .toString}): $char",
         loc,
         "<unknown>",
         "<unknown>",
@@ -96,7 +95,8 @@ object BelleParser extends TacticParser with Logging {
   def parseWithTacticDefs(s: String, defs: Map[String, BelleExpr]): BelleExpr = {
     firstUnacceptableCharacter(s) match {
       case Some((loc, char)) => throw ParseException(
-          s"Found an unacceptable character when parsing tactic (allowed unicode: ${allowedUnicodeChars.toString}): $char",
+          s"Found an unacceptable character when parsing tactic (allowed unicode: ${allowedUnicodeChars
+              .toString}): $char",
           loc,
           "<unknown>",
           "<unknown>",
@@ -136,9 +136,7 @@ object BelleParser extends TacticParser with Logging {
   /** Detects whether a tactic string uses `US(...)`. */
   def tacticSubstsDefsExplicitly(s: String): Boolean = TACTICS_SUBSTS.findFirstMatchIn(s).isDefined
 
-  /**
-   * Returns the location and value of the first non-ASCII character in a string that is not in [[allowedUnicodeChars]]
-   */
+  /** Returns the location and value of the first non-ASCII character in a string that is not in [[allowedUnicodeChars]] */
   def firstUnacceptableCharacter(s: String): Option[(Location, Char)] = {
     val pattern = """([^\p{ASCII}])""".r
     val nonAsciiChars = pattern.findAllIn(s).matchData.map(_.group(0).toCharArray.last).toList
@@ -157,7 +155,8 @@ object BelleParser extends TacticParser with Logging {
       val lines = prefix.split("\n")
       assert(
         lines != null && lines.nonEmpty,
-        s"Expected a 'last' element but found $lines because there is a disallowed unicode character _${disallowedChars.mkString(" ")}_",
+        s"Expected a 'last' element but found $lines because there is a disallowed unicode character _${disallowedChars
+            .mkString(" ")}_",
       )
       val lineNumber = lines.length
       val columnNumber = lines.last.length + 1
@@ -681,16 +680,14 @@ object BelleParser extends TacticParser with Logging {
 
   type TacticArg = Either[Any, PositionLocator]
 
-  private def elaborate[T <: Expression](e: T, defs: Declaration): T = defs
-    .implicitSubst(defs.elaborateToSystemConsts(defs.elaborateToFunctions(e)))
+  private def elaborate[T <: Expression](e: T, defs: Declaration): T =
+    defs.implicitSubst(defs.elaborateToSystemConsts(defs.elaborateToFunctions(e)))
 
   /**
    * An ad-hoc parser for argument lists.
    *
-   * @param input
-   *   A TokenStream containing: arg :: "," :: arg :: "," :: arg :: "," :: ... :: ")" :: remainder
-   * @return
-   *   Parsed arguments and the remainder token string.
+   * @param input A TokenStream containing: arg :: "," :: arg :: "," :: arg :: "," :: ... :: ")" :: remainder
+   * @return Parsed arguments and the remainder token string.
    */
   @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   private def parseArgumentList(
@@ -709,8 +706,8 @@ object BelleParser extends TacticParser with Logging {
       val remainder = closeParenAndRemainder.tail
 
       def expand[T <: Expression](e: T): T =
-        if (expandAll) defs
-          .implicitSubst(defs.exhaustiveSubst(defs.elaborateToSystemConsts(defs.elaborateToFunctions(e))))
+        if (expandAll)
+          defs.implicitSubst(defs.exhaustiveSubst(defs.elaborateToSystemConsts(defs.elaborateToFunctions(e))))
         else elaborate(e, defs)
 
       // Parse all the arguments.
@@ -722,8 +719,9 @@ object BelleParser extends TacticParser with Logging {
           if (!DerivationInfo.hasCodeName(codeName)) throw ParseException("Unknown tactic '" + codeName + "'", loc)
           val expectedInputs = DerivationInfo(codeName).persistentInputs
           if (nonPosArgCount >= expectedInputs.length) throw ParseException(
-            s"Too many expr arguments were passed to $codeName (expected ${expectedInputs
-                .map(_.name)} but found at least ${nonPosArgCount + 1} arguments)",
+            s"Too many expr arguments were passed to $codeName (expected ${expectedInputs.map(
+                _.name
+              )} but found at least ${nonPosArgCount + 1} arguments)",
             loc,
           )
           val theArg = parseArgumentToken(Some(expectedInputs(nonPosArgCount)), defs)(tok, loc) match {
@@ -773,8 +771,7 @@ object BelleParser extends TacticParser with Logging {
   /**
    * Takes a COMMA-delimited list of arguments and extracts only the argument tokens.
    *
-   * @see
-   *   parseArgumentList
+   * @see parseArgumentList
    */
   private def removeCommas(toks: TokenStream, commaExpected: Boolean): List[BelleToken] = toks match {
     case BelleToken(COMMA, commaPos) :: Nil => throw ParseException("Expected argument but found none", commaPos)
@@ -792,12 +789,9 @@ object BelleParser extends TacticParser with Logging {
 
   /**
    * Parses a tactic argument token.
-   * @param expectedType
-   *   The expected type of the argument..
-   * @param tok
-   *   The argument token that's currently being processed.
-   * @return
-   *   The argument corresponding to the current token.
+   * @param expectedType The expected type of the argument..
+   * @param tok The argument token that's currently being processed.
+   * @return The argument corresponding to the current token.
    */
   private def parseArgumentToken(
       expectedType: Option[ArgInfo],
@@ -905,8 +899,7 @@ object BelleParser extends TacticParser with Logging {
    * Parses a string of the form int.int.int.int to a Bellerophon position. Public because this is a useful utility
    * function.
    *
-   * @see
-   *   [[parseArgumentToken]]
+   * @see [[parseArgumentToken]]
    */
   def parsePositionLocator(
       s: String,
@@ -942,8 +935,7 @@ object BelleParser extends TacticParser with Logging {
   /**
    * Parses s to a non-zero integer or else throws a ParseException pointing to location.
    *
-   * @see
-   *   [[parsePositionLocator]]
+   * @see [[parsePositionLocator]]
    */
   private def parseInt(s: String, location: Location, nonZero: Boolean = true) =
     try {

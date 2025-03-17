@@ -21,16 +21,11 @@ import scala.collection.immutable
  *
  * This file mimics [[org.keymaerax.core.Provable]] outside the core and forwards all operations to the core.
  *
- * @author
- *   Andre Platzer
- * @author
- *   Nathan Fulton
- * @author
- *   Brandon Bohrer
- * @author
- *   Andre Platzer
- * @see
- *   [[Provable]]
+ * @author Andre Platzer
+ * @author Nathan Fulton
+ * @author Brandon Bohrer
+ * @author Andre Platzer
+ * @see [[Provable]]
  */
 sealed trait ProvableSig {
 
@@ -67,18 +62,15 @@ sealed trait ProvableSig {
   /**
    * Checks whether this Provable proves its conclusion.
    *
-   * @return
-   *   true if conclusion is proved by this Provable, false if subgoals are missing that need to be proved first.
-   * @see
-   *   [[Provable.isProved]]
+   * @return true if conclusion is proved by this Provable, false if subgoals are missing that need to be proved first.
+   * @see [[Provable.isProved]]
    */
   final def isProved: Boolean = underlyingProvable.isProved
 
   /**
    * What conclusion this Provable proves if isProved.
    *
-   * @requires
-   *   isProved
+   * @requires isProved
    */
   def proved: Sequent
 
@@ -96,15 +88,11 @@ sealed trait ProvableSig {
    *                Gi |- Di
    * }}}
    *
-   * @param rule
-   *   the proof rule to apply to the indicated subgoal of this Provable derivation.
-   * @param subgoal
-   *   which of our subgoals to apply the given proof rule to.
-   * @return
-   *   A Provable derivation that proves the premise subgoal by using the given proof rule. Will return a Provable with
-   *   the same conclusion but an updated set of premises.
-   * @requires
-   *   0 <= subgoal && subgoal < subgoals.length
+   * @param rule the proof rule to apply to the indicated subgoal of this Provable derivation.
+   * @param subgoal which of our subgoals to apply the given proof rule to.
+   * @return A Provable derivation that proves the premise subgoal by using the given proof rule. Will return a Provable
+   *   with the same conclusion but an updated set of premises.
+   * @requires 0 <= subgoal && subgoal < subgoals.length
    */
   def apply(rule: Rule, subgoal: Provable.Subgoal): ProvableSig
 
@@ -130,18 +118,13 @@ sealed trait ProvableSig {
    *                Gi |- Di
    * }}}
    *
-   * @param subderivation
-   *   the Provable derivation that proves premise subgoal.
-   * @param subgoal
-   *   the index of our subgoal that the given subderivation concludes.
-   * @return
-   *   A Provable derivation that joins our derivation and subderivation to a joint derivation of our conclusion using
-   *   subderivation to show our subgoal. Will return a Provable with the same conclusion but an updated set of
+   * @param subderivation the Provable derivation that proves premise subgoal.
+   * @param subgoal the index of our subgoal that the given subderivation concludes.
+   * @return A Provable derivation that joins our derivation and subderivation to a joint derivation of our conclusion
+   *   using subderivation to show our subgoal. Will return a Provable with the same conclusion but an updated set of
    *   premises.
-   * @requires
-   *   0 <= subgoal && subgoal < subgoals.length
-   * @requires
-   *   subderivation.conclusion == subgoals(subgoal)
+   * @requires 0 <= subgoal && subgoal < subgoals.length
+   * @requires subderivation.conclusion == subgoals(subgoal)
    */
   def apply(subderivation: ProvableSig, subgoal: Provable.Subgoal): ProvableSig
 
@@ -164,14 +147,11 @@ sealed trait ProvableSig {
    *            G |- D                                s(G) |- s(D)
    * }}}
    *
-   * @param subst
-   *   The uniform substitution (of no free variables) to be used on the premises and conclusion of this Provable.
-   * @return
-   *   The Provable resulting from applying `subst` to our subgoals and conclusion.
-   * @author
-   *   Andre Platzer
-   * @see
-   *   Theorem 26+27 in
+   * @param subst The uniform substitution (of no free variables) to be used on the premises and conclusion of this
+   *   Provable.
+   * @return The Provable resulting from applying `subst` to our subgoals and conclusion.
+   * @author Andre Platzer
+   * @see Theorem 26+27 in
    *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
    */
   def apply(subst: USubst): ProvableSig
@@ -195,13 +175,10 @@ sealed trait ProvableSig {
    *         newConsequence
    * }}}
    *
-   * @param newConsequence
-   *   the new conclusion that the rule shows to follow from this.conclusion
-   * @param rule
-   *   the proof rule to apply to concludes to reduce it to this.conclusion.
-   * @return
-   *   A Provable derivation that proves concludes from the same subgoals by using the given proof rule. Will return a
-   *   Provable with the same subgoals but an updated conclusion.
+   * @param newConsequence the new conclusion that the rule shows to follow from this.conclusion
+   * @param rule the proof rule to apply to concludes to reduce it to this.conclusion.
+   * @return A Provable derivation that proves concludes from the same subgoals by using the given proof rule. Will
+   *   return a Provable with the same subgoals but an updated conclusion.
    */
   def apply(newConsequence: Sequent, rule: Rule): ProvableSig
 
@@ -220,10 +197,9 @@ sealed trait ProvableSig {
    *           G0 |- D0
    * }}}
    *
-   * @param prolongation
-   *   the subderivation used to prolong this Provable. Where subderivation has a subgoal equaling our conclusion.
-   * @return
-   *   A Provable derivation that proves prolongation's conclusion from our subgoals.
+   * @param prolongation the subderivation used to prolong this Provable. Where subderivation has a subgoal equaling our
+   *   conclusion.
+   * @return A Provable derivation that proves prolongation's conclusion from our subgoals.
    */
   def apply(prolongation: ProvableSig): ProvableSig
 
@@ -231,8 +207,7 @@ sealed trait ProvableSig {
    * Sub-Provable: Get a sub-Provable corresponding to a Provable with the given subgoal as conclusion. Provables
    * resulting from the returned subgoal can be merged into this Provable to prove said subgoal.
    *
-   * @param subgoal
-   *   the index of our subgoal for which to return a new open Provable.
+   * @param subgoal the index of our subgoal for which to return a new open Provable.
    * @return
    *   an initial unfinished open Provable for the subgoal `i`:
    *   {{{
@@ -257,8 +232,7 @@ sealed trait ProvableSig {
    *    |- axiom
    * }}}
    *
-   * @see
-   *   [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
+   * @see [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
    */
   val axioms: Map[String, ProvableSig]
 
@@ -270,10 +244,8 @@ sealed trait ProvableSig {
    *     G |- D
    * }}}
    *
-   * @see
-   *   [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
-   * @see
-   *   [[Provable.apply(USubst)]]
+   * @see [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
+   * @see [[Provable.apply(USubst)]]
    */
   val rules: immutable.Map[String, ProvableSig]
 
@@ -285,10 +257,8 @@ sealed trait ProvableSig {
    *    goal
    * }}}
    *
-   * @param goal
-   *   the desired conclusion.
-   * @return
-   *   a Provable whose subgoals need to be all proved in order to prove goal.
+   * @param goal the desired conclusion.
+   * @return a Provable whose subgoals need to be all proved in order to prove goal.
    */
   def startProof(goal: Sequent): ProvableSig
 
@@ -300,22 +270,17 @@ sealed trait ProvableSig {
    *    |- goal
    * }}}
    *
-   * @param goal
-   *   the desired conclusion formula for the succedent.
-   * @return
-   *   a Provable whose subgoals need to be all proved in order to prove goal.
+   * @param goal the desired conclusion formula for the succedent.
+   * @return a Provable whose subgoals need to be all proved in order to prove goal.
    */
   def startProof(goal: Formula): ProvableSig
 
   /**
    * Proves a formula f in real arithmetic using an external tool for quantifier elimination.
    *
-   * @param t
-   *   The quantifier-elimination tool.
-   * @param f
-   *   The formula.
-   * @return
-   *   a Lemma with a quantifier-free formula equivalent to f and evidence as provided by the tool.
+   * @param t The quantifier-elimination tool.
+   * @param f The formula.
+   * @return a Lemma with a quantifier-free formula equivalent to f and evidence as provided by the tool.
    */
   def proveArithmeticLemma(t: QETool, f: Formula): Lemma
 
@@ -343,8 +308,7 @@ object ProvableSig {
    *    |- axiom
    * }}}
    *
-   * @see
-   *   [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
+   * @see [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
    */
   def axioms: immutable.Map[String, ProvableSig] = {
     if (PROOF_TERMS_ENABLED) TermProvable.axioms else ElidingProvable.axioms
@@ -358,10 +322,8 @@ object ProvableSig {
    *     G |- D
    * }}}
    *
-   * @see
-   *   [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
-   * @see
-   *   [[Provable.apply(USubst)]]
+   * @see [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
+   * @see [[Provable.apply(USubst)]]
    */
   def rules: immutable.Map[String, ProvableSig] = {
     if (PROOF_TERMS_ENABLED) TermProvable.rules else ElidingProvable.rules
@@ -375,10 +337,8 @@ object ProvableSig {
    *    goal
    * }}}
    *
-   * @param goal
-   *   the desired conclusion.
-   * @return
-   *   a Provable whose subgoals need to be all proved in order to prove goal.
+   * @param goal the desired conclusion.
+   * @return a Provable whose subgoals need to be all proved in order to prove goal.
    */
   def startProof(goal: Sequent, defs: Declaration): ProvableSig =
     if (PROOF_TERMS_ENABLED) TermProvable.startProof(goal, defs) else ElidingProvable.startProof(goal, defs)
@@ -394,10 +354,8 @@ object ProvableSig {
    *    |- goal
    * }}}
    *
-   * @param goal
-   *   the desired conclusion formula for the succedent.
-   * @return
-   *   a Provable whose subgoals need to be all proved in order to prove goal.
+   * @param goal the desired conclusion formula for the succedent.
+   * @return a Provable whose subgoals need to be all proved in order to prove goal.
    */
   def startProof(goal: Formula, defs: Declaration): ProvableSig =
     if (PROOF_TERMS_ENABLED) TermProvable.startProof(goal, defs) else ElidingProvable.startProof(goal, defs)
@@ -411,12 +369,9 @@ object ProvableSig {
   /**
    * Proves a formula f in real arithmetic using an external tool for quantifier elimination.
    *
-   * @param t
-   *   The quantifier-elimination tool.
-   * @param f
-   *   The formula.
-   * @return
-   *   a Lemma with a quantifier-free formula equivalent to f and evidence as provided by the tool.
+   * @param t The quantifier-elimination tool.
+   * @param f The formula.
+   * @return a Lemma with a quantifier-free formula equivalent to f and evidence as provided by the tool.
    */
   def proveArithmeticLemma(t: QETool, f: Formula): Lemma =
     if (PROOF_TERMS_ENABLED) TermProvable.proveArithmeticLemma(t, f) else ElidingProvable.proveArithmeticLemma(t, f)
@@ -441,8 +396,8 @@ case class ElidingProvable(provable: Provable, steps: Int, defs: Declaration) ex
 
   override def apply(subderivation: ProvableSig, subgoal: Provable.Subgoal): ProvableSig = {
     // @note subderivation may have expanded definitions
-    val subst = UnificationTools
-      .collectSubst(underlyingProvable, subgoal, subderivation.underlyingProvable, defs.substs)
+    val subst =
+      UnificationTools.collectSubst(underlyingProvable, subgoal, subderivation.underlyingProvable, defs.substs)
     ElidingProvable(
       ProvableHelper.exhaustiveSubst(provable, subst)(subderivation.underlyingProvable, subgoal),
       steps + subderivation.steps,
@@ -548,10 +503,8 @@ object TermProvable {
 /**
  * TermProvable has the same signature as Provable, but constructs proof terms alongside Provables. The ProofTerms
  * remember how the provable was proved.
- * @author
- *   Nathan Fulton
- * @author
- *   Brandon Bohrer
+ * @author Nathan Fulton
+ * @author Brandon Bohrer
  */
 case class TermProvable(provable: ProvableSig, pt: ProofTerm, defs: Declaration) extends ProvableSig with Logging {
 

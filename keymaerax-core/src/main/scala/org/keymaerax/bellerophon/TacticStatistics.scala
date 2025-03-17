@@ -12,8 +12,7 @@ import scala.io.Source
 /**
  * Computes tactic statistics (e.g., size).
  *
- * @author
- *   Stefan Mitsch
+ * @author Stefan Mitsch
  */
 object TacticStatistics {
 

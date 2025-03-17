@@ -18,10 +18,8 @@ import scala.collection.immutable._
 
 /**
  * Advocatus Test when substituting too many primes into axioms.
- * @author
- *   Yong Kiam Tan
- * @author
- *   Andre Platzer
+ * @author Yong Kiam Tan
+ * @author Andre Platzer
  */
 @AdvocatusTest
 class PrimeSubstituterTest extends TacticTestBase {

@@ -27,7 +27,7 @@ case class GeneratorArg(override val name: String) extends ArgInfo {
   override val allowsFresh: List[String] = Nil
 }
 
-abstract sealed class ExpressionArgBase(override val name: String, override val allowsFresh: List[String] = Nil)
+sealed abstract class ExpressionArgBase(override val name: String, override val allowsFresh: List[String] = Nil)
     extends ArgInfo {
   val sort = "expression"
 }
@@ -35,7 +35,7 @@ abstract sealed class ExpressionArgBase(override val name: String, override val 
 case class ExpressionArg(override val name: String, override val allowsFresh: List[String] = Nil)
     extends ExpressionArgBase(name, allowsFresh) {}
 
-abstract sealed class TermArgBase(override val name: String, override val allowsFresh: List[String] = Nil)
+sealed abstract class TermArgBase(override val name: String, override val allowsFresh: List[String] = Nil)
     extends ExpressionArgBase(name, allowsFresh) {
   override val sort = "term"
 }

@@ -9,12 +9,9 @@ import scala.util.matching.Regex
 
 /**
  * Bellerophon labels for proof branches.
- * @see
- *   [[org.keymaerax.btactics.TactixLibrary.label()]]
- * @see
- *   [[org.keymaerax.btactics.Idioms.<()]]
- * @see
- *   [[org.keymaerax.btactics.BelleLabels]]
+ * @see [[org.keymaerax.btactics.TactixLibrary.label()]]
+ * @see [[org.keymaerax.btactics.Idioms.<()]]
+ * @see [[org.keymaerax.btactics.BelleLabels]]
  */
 trait BelleLabel {
 

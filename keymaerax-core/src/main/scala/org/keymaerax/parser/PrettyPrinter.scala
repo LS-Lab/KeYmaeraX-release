@@ -6,12 +6,10 @@
 /**
  * Differential Dynamic Logic pretty-printer for concrete KeYmaera X notation.
  *
- * @author
- *   Andre Platzer
+ * @author Andre Platzer
  * @see
  *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
- * @note
- *   Code Review 2020-02-14
+ * @note Code Review 2020-02-14
  */
 package org.keymaerax.parser
 
@@ -26,10 +24,8 @@ import org.keymaerax.core._
  *     PrettyPrinter: Expression => String
  * }}}
  *
- * @author
- *   Andre Platzer
- * @see
- *   [[org.keymaerax.core.PrettyPrinter]]
+ * @author Andre Platzer
+ * @see [[org.keymaerax.core.PrettyPrinter]]
  * @see
  *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
  */
@@ -37,28 +33,22 @@ trait PrettyPrinter extends (Expression => String) {
 
   /**
    * Pretty-print expression to a string.
-   * @ensures
-   *   parser(\result) == expr
-   * @ensures
-   *   apply(e1)==apply(e2) => e1==e2
+   * @ensures parser(\result) == expr
+   * @ensures apply(e1)==apply(e2) => e1==e2
    */
   def apply(expr: Expression): String
 
   /**
    * Pretty-print sequent to a string.
-   * @ensures
-   *   parser(\result) == expr
-   * @ensures
-   *   apply(seq1)==apply(seq2) => seq1==seq2
+   * @ensures parser(\result) == expr
+   * @ensures apply(seq1)==apply(seq2) => seq1==seq2
    */
   def apply(seq: Sequent): String
 
   /**
    * The corresponding full-form pretty printer producing full parentheses.
-   * @ensures
-   *   parser(fullPrinter(expr)) == expr
-   * @ensures
-   *   fullPrinter(e1)==fullPrinter(e2) => e1==e2
+   * @ensures parser(fullPrinter(expr)) == expr
+   * @ensures fullPrinter(e1)==fullPrinter(e2) => e1==e2
    */
   val fullPrinter: (Expression => String)
 

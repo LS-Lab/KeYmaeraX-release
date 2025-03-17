@@ -22,8 +22,7 @@ import scala.collection.immutable._
 
 /**
  * Random Provable constructions that are stored, read again, tampered with, read again.
- * @author
- *   Andre Platzer
+ * @author Andre Platzer
  */
 @nowarn("msg=match may not be exhaustive")
 class StoredProvableTest extends AnyFlatSpec with Matchers with PrivateMethodTester with TimeLimits {
@@ -36,10 +35,9 @@ class StoredProvableTest extends AnyFlatSpec with Matchers with PrivateMethodTes
   val rand = new RandomFormula()
 
   "Future-compatible Stored Provable" should "FEATURE_REQUEST: already support block quantifiers" taggedAs TodoTest in {
-    val pr = Provable.startProof(Forall(Variable("x") :: Variable("y") :: Nil, True))(Skolemize(SuccPos(0)), 0)(
-      CloseTrue(SuccPos(0)),
-      0,
-    )
+    val pr = Provable.startProof(
+      Forall(Variable("x") :: Variable("y") :: Nil, True)
+    )(Skolemize(SuccPos(0)), 0)(CloseTrue(SuccPos(0)), 0)
     pr shouldBe Symbol("proved")
     val str = Provable.toStorageString(pr)
     println(str)

@@ -19,16 +19,11 @@ import org.scalatest.BeforeAndAfterAll
 /**
  * Test whether unification algorithm can instantiate axioms correctly.
  *
- * @author
- *   Andre Platzer
- * @see
- *   [[UnificationMatch]]
- * @see
- *   [[UnificationMatchTest]]
- * @see
- *   [[AxiomInfo.theKey]]
- * @see
- *   [[AxiomInfo.unifier]]
+ * @author Andre Platzer
+ * @see [[UnificationMatch]]
+ * @see [[UnificationMatchTest]]
+ * @see [[AxiomInfo.theKey]]
+ * @see [[AxiomInfo.unifier]]
  */
 // Some tests require z3 to compute DerivationInfo, by proving the derived axioms not already in the lemma database.
 @CheckinTest

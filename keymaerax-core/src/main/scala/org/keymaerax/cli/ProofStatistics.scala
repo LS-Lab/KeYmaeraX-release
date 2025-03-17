@@ -24,6 +24,6 @@ case class ProofStatistics(
 ) {
 
   /** Short single-line summary. */
-  override def toString: String =
-    s"${status.toUpperCase} $name: tactic=$tacticName,tacticsize=$tacticSize,budget=$timeout,duration=$duration[ms],qe=$qeDuration[ms],rcf=$rcfDuration,steps=$proofSteps"
+  override def toString: String = s"${status
+      .toUpperCase} $name: tactic=$tacticName,tacticsize=$tacticSize,budget=$timeout,duration=$duration[ms],qe=$qeDuration[ms],rcf=$rcfDuration,steps=$proofSteps"
 }

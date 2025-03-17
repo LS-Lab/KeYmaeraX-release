@@ -18,8 +18,7 @@ import org.scalatest.matchers.should.Matchers
 /**
  * Instantiate generic tester for KeYmaera X formula parser
  *
- * @author
- *   Brandon Bohrer
+ * @author Brandon Bohrer
  */
 class KeYmaeraXRandomParserTests
     extends RandomParserTests(
@@ -41,10 +40,8 @@ class KeYmaeraXDeterministicParserTests
 /**
  * Generic parser tester, tests some parser on pretty prints of randomly generated formulas
  *
- * @author
- *   Andre Platzer
- * @author
- *   Brandon Bohrer
+ * @author Andre Platzer
+ * @author Brandon Bohrer
  */
 class RandomParserTests(parser: String => Formula, rand: RandomFormula)
     extends AnyFlatSpec with Matchers with BeforeAndAfterAll {

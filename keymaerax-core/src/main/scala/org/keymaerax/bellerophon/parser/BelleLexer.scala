@@ -18,8 +18,7 @@ import scala.util.matching.Regex
 /**
  * A lexer for the Bellerophon tactics language.
  *
- * @author
- *   Nathan Fulton
+ * @author Nathan Fulton
  */
 object BelleLexer extends (String => List[BelleToken]) with Logging {
   type TokenStream = List[BelleToken]
@@ -40,10 +39,9 @@ object BelleLexer extends (String => List[BelleToken]) with Logging {
   }
 
   /**
-   * @param input
-   *   The input
-   * @param inputLocation
-   *   The location of this input. If this is a recursive call, then inputLocation might not be (0,0).
+   * @param input The input
+   * @param inputLocation The location of this input. If this is a recursive call, then inputLocation might not be
+   *   (0,0).
    */
   private def lex(input: String, inputLocation: Location): TokenStream = {
     var remaining = input
@@ -67,12 +65,9 @@ object BelleLexer extends (String => List[BelleToken]) with Logging {
   /**
    * Helper method for findNextToken
    *
-   * @param cols
-   *   Number of columns to move cursor.
-   * @param terminal
-   *   terminal to generate a token for.
-   * @return
-   *   Return value of findNextToken
+   * @param cols Number of columns to move cursor.
+   * @param terminal terminal to generate a token for.
+   * @return Return value of findNextToken
    */
   private def consumeColumns(s: String, cols: Int, terminal: BelleTerminal, loc: Location) = {
     assert(cols > 0, "Cannot move cursor less than 1 columns.")
@@ -231,7 +226,9 @@ object BelleLexer extends (String => List[BelleToken]) with Logging {
         case Some(Left(lexed)) => findNextToken(lexed._1, lexed._2)
         case Some(Right(lexed)) => lexed
         case None => throw LexException(
-            s"${loc.begin} Lexer does not recognize input at $loc in `\n$input\n` beginning with character `${input(0)}`=${input(0).getNumericValue}",
+            s"${loc.begin} Lexer does not recognize input at $loc in `\n$input\n` beginning with character `${input(
+                0
+              )}`=${input(0).getNumericValue}",
             loc,
           ).inInput(input)
       }
@@ -242,12 +239,9 @@ object BelleLexer extends (String => List[BelleToken]) with Logging {
    * Returns the region containing everything between the starting position of the current location location and the
    * indicated offset of from the starting positiong of the current location, inclusive.
    *
-   * @param location
-   *   Current location
-   * @param endColOffset
-   *   Column offset of the region
-   * @return
-   *   The region spanning from the start of ``location" to the offset from the start of ``location".
+   * @param location Current location
+   * @param endColOffset Column offset of the region
+   * @return The region spanning from the start of ``location" to the offset from the start of ``location".
    */
   private def spanningRegion(location: Location, endColOffset: Int) = location match {
     case UnknownLocation => UnknownLocation
@@ -256,13 +250,10 @@ object BelleLexer extends (String => List[BelleToken]) with Logging {
   }
 
   /**
-   * @param location
-   *   Current location
-   * @param colOffset
-   *   Number of columns to chop off from the starting position of location.
-   * @return
-   *   A region containing all of location except the indicated columns in the initial row. I.e., the colOffset-suffix
-   *   of location.
+   * @param location Current location
+   * @param colOffset Number of columns to chop off from the starting position of location.
+   * @return A region containing all of location except the indicated columns in the initial row. I.e., the
+   *   colOffset-suffix of location.
    */
   private def suffixOf(location: Location, colOffset: Int): Location = location match {
     case UnknownLocation => UnknownLocation

@@ -16,8 +16,7 @@ import org.scalatest.LoneElement._
 
 /**
  * Tactic Examples with different proof styles.
- * @author
- *   Andre Platzer
+ * @author Andre Platzer
  */
 @SummaryTest
 class BTacticExamples extends TacticTestBase {
@@ -48,8 +47,10 @@ class BTacticExamples extends TacticTestBase {
   it should "prove !!p() <-> p() with modern index" in withTactics {
     import SequentCalculus._
     // Explicit proof tactic for |- !!p() <-> p()
-    val proof = TactixLibrary
-      .proveBy("==> !!p() <-> p()".asSequent, equivR(1) < ((notL(-1) & notR(2) & id), (notR(1) & notL(-2) & id)))
+    val proof = TactixLibrary.proveBy(
+      "==> !!p() <-> p()".asSequent,
+      equivR(1) < ((notL(-1) & notR(2) & id), (notR(1) & notL(-2) & id)),
+    )
     proof shouldBe Symbol("proved")
     proof.proved shouldBe "==> !!p() <-> p()".asSequent
   }
@@ -58,8 +59,10 @@ class BTacticExamples extends TacticTestBase {
   "Proof by Search" should "prove (p() & q()) & r() <-> p() & (q() & r())" in withTactics {
     import TactixLibrary._
     // Proof by search of |- (p() & q()) & r() <-> p() & (q() & r())
-    val proof = TactixLibrary
-      .proveBy(Sequent(IndexedSeq(), IndexedSeq("(p() & q()) & r() <-> p() & (q() & r())".asFormula)), prop)
+    val proof = TactixLibrary.proveBy(
+      Sequent(IndexedSeq(), IndexedSeq("(p() & q()) & r() <-> p() & (q() & r())".asFormula)),
+      prop,
+    )
     proof shouldBe Symbol("proved")
     proof.proved shouldBe Sequent(IndexedSeq(), IndexedSeq("(p() & q()) & r() <-> p() & (q() & r())".asFormula))
   }

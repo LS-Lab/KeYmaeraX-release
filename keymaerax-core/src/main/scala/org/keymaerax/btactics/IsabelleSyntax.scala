@@ -25,8 +25,7 @@ import scala.collection.immutable._
 /**
  * Tactics for converting a ModelPlex formula to Isabelle/HOL (no need for interval arithmetic)
  *
- * @author
- *   Yong Kiam Tan
+ * @author Yong Kiam Tan
  */
 object IsabelleSyntax {
 
@@ -42,14 +41,10 @@ object IsabelleSyntax {
 
   // Optimization from formula into a dL program that uses temporaries to minimize re-calculation
   /**
-   * @param vars
-   *   maps terms that have already been generated to the variable containing that term
-   * @param tempctr
-   *   counter for fresh temporaries
-   * @param t
-   *   the term to decompose
-   * @return
-   *   the accumulators for vars,tempctr, a program, and a term calculated by that program
+   * @param vars maps terms that have already been generated to the variable containing that term
+   * @param tempctr counter for fresh temporaries
+   * @param t the term to decompose
+   * @return the accumulators for vars,tempctr, a program, and a term calculated by that program
    */
   def deriveTermProgram(
       t: Term,

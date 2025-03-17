@@ -24,11 +24,11 @@ class UploadArchiveRequest(db: DBAbstraction, userId: String, archiveText: Strin
           parsedArchiveEntries.head.copy(name = modelName.getOrElse("undefined")) :: Nil
         } else parsedArchiveEntries
 
-      val (failedModels, succeededModels) = archiveEntries
-        .foldLeft((List[String](), List[(String, Int)]()))({ case ((failedImports, succeededImports), entry) =>
+      val (failedModels, succeededModels) = archiveEntries.foldLeft((List[String](), List[(String, Int)]()))({
+        case ((failedImports, succeededImports), entry) =>
           val result = DatabasePopulator.importModel(db, userId)(DatabasePopulator.toTutorialEntry(entry))
           (failedImports ++ result.toSeq, succeededImports ++ result.left.toSeq)
-        })
+      })
       if (failedModels.isEmpty) {
         if (archiveEntries.size == 1) { ModelUploadResponse(Some(succeededModels.head._2.toString), None) }
         else BooleanResponse(flag = true)

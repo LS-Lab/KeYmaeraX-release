@@ -5,8 +5,7 @@
 
 /**
  * Sequents and positioning.
- * @note
- *   Code Review: 2020-02-17
+ * @note Code Review: 2020-02-17
  */
 package org.keymaerax.core
 
@@ -15,14 +14,10 @@ import scala.collection.immutable
 /**
  * Position of a formula in a sequent, i.e. antecedent or succedent positions.
  *
- * @see
- *   [[SeqPos$.apply(signedPos:Int):edu\.cmu\.cs\.ls\.keymaerax\.core\.SeqPos*]]
- * @see
- *   [[Sequent.apply(pos:edu\.cmu\.cs\.ls\.keymaerax\.core\.SeqPos):edu\.cmu\.cs\.ls\.keymaerax\.core\.Formula*]]
- * @see
- *   [[AntePos]]
- * @see
- *   [[SuccPos]]
+ * @see [[SeqPos$.apply(signedPos:Int):edu\.cmu\.cs\.ls\.keymaerax\.core\.SeqPos*]]
+ * @see [[Sequent.apply(pos:edu\.cmu\.cs\.ls\.keymaerax\.core\.SeqPos):edu\.cmu\.cs\.ls\.keymaerax\.core\.Formula*]]
+ * @see [[AntePos]]
+ * @see [[SuccPos]]
  */
 sealed trait SeqPos {
 
@@ -39,12 +34,9 @@ sealed trait SeqPos {
    * The '''signed''' position for the antecedent or succedent list, respectively, '''1-indexed'''. Negative numbers
    * indicate antecedent positions, -1, -2, -3, .... Positive numbers indicate succedent positions, 1, 2, 3. Zero is
    * unused.
-   * @see
-   *   [[SeqPos.apply(signedPos:Int):edu\.cmu\.cs\.ls\.keymaerax\.core\.SeqPos*]]
+   * @see [[SeqPos.apply(signedPos:Int):edu\.cmu\.cs\.ls\.keymaerax\.core\.SeqPos*]]
    */
-  final lazy val getPos: Int =
-    if (isSucc) { assert(!isAnte); getIndex + 1 }
-    else { assert(isAnte); -(getIndex + 1) }
+  final lazy val getPos: Int = if (isSucc) { assert(!isAnte); getIndex + 1 } else { assert(isAnte); -(getIndex + 1) }
 
   override def toString: String = getPos.toString
 }
@@ -52,8 +44,7 @@ sealed trait SeqPos {
 /**
  * Antecedent Positions of formulas in a sequent, i.e. in the assumptions on the left of the sequent arrow.
  *
- * @param index
- *   the position 0-indexed in antecedent.
+ * @param index the position 0-indexed in antecedent.
  */
 final case class AntePos private[keymaerax] (private[core] val index: Int) extends SeqPos {
   val isAnte: Boolean = true
@@ -66,8 +57,7 @@ final case class AntePos private[keymaerax] (private[core] val index: Int) exten
 /**
  * Antecedent Positions of formulas in a sequent, i.e. on the right of the sequent arrow.
  *
- * @param index
- *   the position 0-indexed in succedent.
+ * @param index the position 0-indexed in succedent.
  */
 final case class SuccPos private[keymaerax] (private[core] val index: Int) extends SeqPos {
   val isAnte: Boolean = false
@@ -82,11 +72,9 @@ object SeqPos {
   /**
    * Sequent position of signed index `signedPos` where positive is succedent and negative antecedent.
    *
-   * @param signedPos
-   *   the signed integer position of the formula in the antecedent or succedent, respectively. Negative numbers
-   *   indicate antecedent positions, -1, -2, -3, .... Positive numbers indicate succedent positions, 1, 2, 3.
-   * @see
-   *   [[SeqPos.getPos]]
+   * @param signedPos the signed integer position of the formula in the antecedent or succedent, respectively. Negative
+   *   numbers indicate antecedent positions, -1, -2, -3, .... Positive numbers indicate succedent positions, 1, 2, 3.
+   * @see [[SeqPos.getPos]]
    */
   def apply(signedPos: Int): SeqPos =
     if (signedPos > 0) { SuccPos(signedPos - 1) }
@@ -113,24 +101,18 @@ object SeqPos {
  * The semantics of sequent `ante |- succ` is the conjunction of the formulas in `ante` implying the disjunction of the
  * formulas in `succ`.
  *
- * @param ante
- *   The ordered list of antecedents of this sequent whose conjunction is assumed.
- * @param succ
- *   The ordered list of succedents of this sequent whose disjunction needs to be shown.
- * @author
- *   Andre Platzer
- * @see
- *   [[org.keymaerax.Bibliography.JarPlatzer08 Differential dynamic logic for hybrid systems]]
+ * @param ante The ordered list of antecedents of this sequent whose conjunction is assumed.
+ * @param succ The ordered list of succedents of this sequent whose disjunction needs to be shown.
+ * @author Andre Platzer
+ * @see [[org.keymaerax.Bibliography.JarPlatzer08 Differential dynamic logic for hybrid systems]]
  */
 final case class Sequent(ante: immutable.IndexedSeq[Formula], succ: immutable.IndexedSeq[Formula]) {
 
   /**
    * Retrieves the formula in sequent at a given position.
    *
-   * @param pos
-   *   the position of the formula
-   * @return
-   *   the formula at the given position either from the antecedent or the succedent
+   * @param pos the position of the formula
+   * @return the formula at the given position either from the antecedent or the succedent
    */
   def apply(pos: SeqPos): Formula = pos match {
     case ap: AntePos => apply(ap)
@@ -139,24 +121,18 @@ final case class Sequent(ante: immutable.IndexedSeq[Formula], succ: immutable.In
 
   /**
    * Retrieves the formula in sequent at a given succedent position.
-   * @param pos
-   *   the succedent position of the formula
-   * @return
-   *   the formula at the given position from the succedent
-   * @note
-   *   slightly faster version with the same result as
+   * @param pos the succedent position of the formula
+   * @return the formula at the given position from the succedent
+   * @note slightly faster version with the same result as
    *   [[Sequent.apply(pos:edu\.cmu\.cs\.ls\.keymaerax\.core\.SeqPos):edu\.cmu\.cs\.ls\.keymaerax\.core\.Formula*]]
    */
   def apply(pos: AntePos): Formula = ante(pos.getIndex)
 
   /**
    * Retrieves the formula in sequent at a given antecedent position.
-   * @param pos
-   *   the antecedent position of the formula
-   * @return
-   *   the formula at the given position from the antecedent
-   * @note
-   *   slightly faster version with the same result as
+   * @param pos the antecedent position of the formula
+   * @return the formula at the given position from the antecedent
+   * @note slightly faster version with the same result as
    *   [[Sequent.apply(pos:edu\.cmu\.cs\.ls\.keymaerax\.core\.SeqPos):edu\.cmu\.cs\.ls\.keymaerax\.core\.Formula*]]
    */
   def apply(pos: SuccPos): Formula = succ(pos.getIndex)
@@ -166,14 +142,11 @@ final case class Sequent(ante: immutable.IndexedSeq[Formula], succ: immutable.In
   /**
    * A copy of this sequent concatenated with given sequent s. Sequent(A,S) glue Sequent(B,T) == Sequent(A++B, S++T)
    *
-   * @param s
-   *   the sequent whose antecedent to append to ours and whose succedent to append to ours.
-   * @return
-   *   a copy of this sequent concatenated with s. Results in a least upper bound with respect to subsets of this and s.
+   * @param s the sequent whose antecedent to append to ours and whose succedent to append to ours.
+   * @return a copy of this sequent concatenated with s. Results in a least upper bound with respect to subsets of this
+   *   and s.
    */
-  def glue(s: Sequent): Sequent = {
-    Sequent(ante ++ s.ante, succ ++ s.succ)
-  } ensures
+  def glue(s: Sequent): Sequent = { Sequent(ante ++ s.ante, succ ++ s.succ) } ensures
     (
       r =>
         this.subsequentOf(r) && s.subsequentOf(r) && r.ante.forall(f => this.ante.contains(f) || s.ante.contains(f)) &&
@@ -184,12 +157,9 @@ final case class Sequent(ante: immutable.IndexedSeq[Formula], succ: immutable.In
   /**
    * A copy of this sequent with the indicated position replaced by the formula f.
    *
-   * @param p
-   *   the position of the replacement
-   * @param f
-   *   the replacing formula
-   * @return
-   *   a copy of this sequent with the formula at position p replaced by f.
+   * @param p the position of the replacement
+   * @param f the replacing formula
+   * @return a copy of this sequent with the formula at position p replaced by f.
    */
   def updated(p: SeqPos, f: Formula): Sequent = p match {
     case sp: SuccPos => updated(sp, f)
@@ -211,16 +181,12 @@ final case class Sequent(ante: immutable.IndexedSeq[Formula], succ: immutable.In
   /**
    * A copy of this sequent with the indicated position replaced by gluing the sequent s.
    *
-   * @param p
-   *   the position of the replacement
-   * @param s
-   *   the sequent glued / concatenated to this sequent after dropping p.
-   * @return
-   *   a copy of this sequent with the formula at position p removed and the sequent s appended.
+   * @param p the position of the replacement
+   * @param s the sequent glued / concatenated to this sequent after dropping p.
+   * @return a copy of this sequent with the formula at position p removed and the sequent s appended.
    * @see
    *   [[Sequent.updated(p:edu\.cmu\.cs\.ls\.keymaerax\.core\.SeqPos,f:edu\.cmu\.cs\.ls\.keymaerax\.core\.Formula):edu\.cmu\.cs\.ls\.keymaerax\.core\.Sequent*]]
-   * @see
-   *   [[Sequent.glue(s:edu\.cmu\.cs\.ls\.keymaerax\.core\.Sequent):edu\.cmu\.cs\.ls\.keymaerax\.core\.Sequent*]]
+   * @see [[Sequent.glue(s:edu\.cmu\.cs\.ls\.keymaerax\.core\.Sequent):edu\.cmu\.cs\.ls\.keymaerax\.core\.Sequent*]]
    */
   def updated(p: SeqPos, s: Sequent): Sequent = p match {
     case sp: SuccPos => updated(sp, s)
@@ -231,9 +197,7 @@ final case class Sequent(ante: immutable.IndexedSeq[Formula], succ: immutable.In
    * A copy of this sequent with the indicated antecedent position replaced by gluing the sequent s, same as
    * [[updated(p:edu\.cmu\.cs\.ls\.keymaerax\.core\.SeqPos,s:edu\.cmu\.cs\.ls\.keymaerax\.core\.Sequent):edu\.cmu\.cs\.ls\.keymaerax\.core\.Sequent*]]
    */
-  def updated(p: AntePos, s: Sequent): Sequent = {
-    Sequent(ante.patch(p.getIndex, Nil, 1), succ).glue(s)
-  } ensures
+  def updated(p: AntePos, s: Sequent): Sequent = { Sequent(ante.patch(p.getIndex, Nil, 1), succ).glue(s) } ensures
     (
       r => r.glue(Sequent(immutable.IndexedSeq(this(p)), immutable.IndexedSeq())).sameSequentAs(this.glue(s)),
       "result after re-including updated formula is equivalent to " + this + " glue " + s,
@@ -243,9 +207,7 @@ final case class Sequent(ante: immutable.IndexedSeq[Formula], succ: immutable.In
    * A copy of this sequent with the indicated succedent position replaced by gluing the sequent s, same as
    * [[updated(p:edu\.cmu\.cs\.ls\.keymaerax\.core\.SeqPos,s:edu\.cmu\.cs\.ls\.keymaerax\.core\.Sequent):edu\.cmu\.cs\.ls\.keymaerax\.core\.Sequent*]]
    */
-  def updated(p: SuccPos, s: Sequent): Sequent = {
-    Sequent(ante, succ.patch(p.getIndex, Nil, 1)).glue(s)
-  } ensures
+  def updated(p: SuccPos, s: Sequent): Sequent = { Sequent(ante, succ.patch(p.getIndex, Nil, 1)).glue(s) } ensures
     (
       r => r.glue(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(this(p)))).sameSequentAs(this.glue(s)),
       "result after re-including updated formula is equivalent to " + this + " glue " + s,
@@ -253,15 +215,13 @@ final case class Sequent(ante: immutable.IndexedSeq[Formula], succ: immutable.In
 
   /**
    * Check whether this sequent is a subsequent of the given sequent r (considered as sets)
-   * @note
-   *   Used for contracts in the core.
+   * @note Used for contracts in the core.
    */
   def subsequentOf(r: Sequent): Boolean = ante.toSet.subsetOf(r.ante.toSet) && succ.toSet.subsetOf(r.succ.toSet)
 
   /**
    * Check whether this sequent is the same as the given sequent r (considered as sets)
-   * @note
-   *   Used for contracts in the core.
+   * @note Used for contracts in the core.
    */
   def sameSequentAs(r: Sequent): Boolean = this.subsequentOf(r) && r.subsequentOf(this)
 

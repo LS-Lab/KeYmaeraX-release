@@ -49,8 +49,8 @@ class CheckIsProvedRequest(db: DBAbstraction, userId: String, proofId: String)
     if (!Files.exists(proofbackupPath)) Files.createDirectories(proofbackupPath)
 
     val sanitizedModelName = model.name.replaceAll("\\W", "_")
-    val proofName = sanitizedModelName + "_" + new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss")
-      .format(Calendar.getInstance().getTime)
+    val proofName = sanitizedModelName + "_" +
+      new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(Calendar.getInstance().getTime)
     var i = 0
     var uniqueProofName = proofName
     while (Files.exists(proofbackupPath.resolve(uniqueProofName))) {

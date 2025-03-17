@@ -18,8 +18,7 @@ import scala.annotation.nowarn
  *
  * Created by smitsch on 12/6/16.
  *
- * @author
- *   Stefan Mitsch
+ * @author Stefan Mitsch
  */
 class TestSynthesis(mathematicaTool: Mathematica)
     extends BaseKeYmaeraMathematicaBridge[Either[KExpr, NamedSymbol]](
@@ -71,8 +70,9 @@ class TestSynthesis(mathematicaTool: Mathematica)
   @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def synthesizeSafetyMarginCheck(fml: Formula, vals: Map[Term, Term]): Number = {
     val metricExpr = k2m.convert(Left(safetyMarginTerm(fml)))
-    val valsExpr = MathematicaOpSpec
-      .list(vals.map({ case (k, v) => ExtMathematicaOpSpec.set(k2m.convert(Left(k)), k2m.convert(Left(v))) }).toSeq: _*)
+    val valsExpr = MathematicaOpSpec.list(
+      vals.map({ case (k, v) => ExtMathematicaOpSpec.set(k2m.convert(Left(k)), k2m.convert(Left(v))) }).toSeq: _*
+    )
     val cmd = MathematicaOpSpec.module(valsExpr, metricExpr)
     run(cmd) match {
       case (_, Left(t: Number)) => t

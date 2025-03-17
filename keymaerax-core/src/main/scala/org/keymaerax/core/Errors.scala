@@ -5,10 +5,8 @@
 
 /**
  * KeYmaera X Exception and Error Hierarchy.
- * @author
- *   Andre Platzer
- * @note
- *   Code Review: 2020-02-17
+ * @author Andre Platzer
+ * @note Code Review: 2020-02-17
  */
 package org.keymaerax.core
 
@@ -36,11 +34,9 @@ class ProverException(msg: String, cause: Throwable = null) extends RuntimeExcep
 
   /**
    * Add the context information to this exception, returning the resulting exception to be thrown.
-   * @param context
-   *   textual description of the context within which this prover exception occurred.
-   * @param additionalMessage
-   *   optional additional information about the situation in which this prover exception occurred, e.g., the state of
-   *   affairs.
+   * @param context textual description of the context within which this prover exception occurred.
+   * @param additionalMessage optional additional information about the situation in which this prover exception
+   *   occurred, e.g., the state of affairs.
    */
   def inContext(context: => String, additionalMessage: => String = ""): ProverException = {
     logicalContext.append(() => (context, additionalMessage))
@@ -85,8 +81,7 @@ case class SubderivationSubstitutionException(
 
 /**
  * Substitution clashes are raised for unsound substitution reasoning attempts.
- * @see
- *   [[USubstOne]]
+ * @see [[USubstOne]]
  * @see
  *   [[org.keymaerax.core.Provable.apply(subst:edu\.cmu\.cs\.ls\.keymaerax\.core\.USubstChurch):edu\.cmu\.cs\.ls\.keymaerax\.core\.Provable*]]
  */
@@ -104,12 +99,9 @@ case class SubstitutionClashException(
 
 /**
  * Uniform or bound renaming clashes are unsound renaming reasoning attempts.
- * @see
- *   [[BoundRenaming]]
- * @see
- *   [[UniformRenaming]]
- * @see
- *   [[URename]]
+ * @see [[BoundRenaming]]
+ * @see [[UniformRenaming]]
+ * @see [[URename]]
  * @see
  *   [[org.keymaerax.core.Provable.apply(ren:edu\.cmu\.cs\.ls\.keymaerax\.core\.URename):edu\.cmu\.cs\.ls\.keymaerax\.core\.Provable*]]
  */
@@ -118,8 +110,7 @@ case class RenamingClashException(msg: String, ren: String /*URename*/, e: Strin
 
 /**
  * Skolem symbol clashes are unsound Skolemization reasoning attempts.
- * @see
- *   [[Skolemize]]
+ * @see [[Skolemize]]
  */
 case class SkolemClashException(
     msg: String,
@@ -135,10 +126,8 @@ case class MalformedProgramException(dp: DifferentialProgram)
 
 /**
  * Exception indicating an attempt to steal a proved sequent from a Provable that was not proved.
- * @see
- *   [[Provable.proved]]
- * @see
- *   [[Provable.isProved]]
+ * @see [[Provable.proved]]
+ * @see [[Provable.isProved]]
  */
 class UnprovedException(msg: String, provable: String)
     extends CoreException("Unproved provable: " + msg + "\n" + provable)
@@ -146,8 +135,7 @@ class UnprovedException(msg: String, provable: String)
 /**
  * Exception indicating that a Provable Storage representation as a String cannot be read, because it has been tampered
  * with.
- * @see
- *   [[Provable.fromStorageString]]
+ * @see [[Provable.fromStorageString]]
  */
 class ProvableStorageException(msg: String, storedProvable: String)
     extends CoreException("Stored Provable " + msg + "\n" + storedProvable)
@@ -166,16 +154,11 @@ class NoncriticalCoreException(msg: String) extends CoreException(msg)
  * an And formula. For readability and code performance reasons, the prover kernel may also raise [[scala.MatchError]]
  * if the shape of a formula is not as expected, but core tactics will then convert MatchError to
  * InapplicableRuleException.
- * @see
- *   [[Rule]]
- * @see
- *   [[Close]]
- * @see
- *   [[CloseFalse]]
- * @see
- *   [[CloseTrue]]
- * @see
- *   [[Skolemize]]
+ * @see [[Rule]]
+ * @see [[Close]]
+ * @see [[CloseFalse]]
+ * @see [[CloseTrue]]
+ * @see [[Skolemize]]
  */
 case class InapplicableRuleException(msg: String, r: Rule, s: Sequent = null)
     extends NoncriticalCoreException(

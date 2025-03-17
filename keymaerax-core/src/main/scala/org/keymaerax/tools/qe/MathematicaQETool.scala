@@ -13,12 +13,9 @@ import org.keymaerax.tools.qe.MathematicaOpSpec._
 
 /**
  * A QE tool implementation using the provided link to Mathematica/Wolfram Engine.
- * @param link
- *   The link to Mathematica/Wolfram Engine.
- * @author
- *   Nathan Fulton
- * @author
- *   Stefan Mitsch
+ * @param link The link to Mathematica/Wolfram Engine.
+ * @author Nathan Fulton
+ * @author Stefan Mitsch
  */
 class MathematicaQETool(val link: MathematicaCommandRunner) extends QETool {
 
@@ -49,9 +46,9 @@ class MathematicaQETool(val link: MathematicaCommandRunner) extends QETool {
   private def singleQE(formula: Formula): Formula = {
     val input =
       if (qeOptions.nonEmpty) compoundExpr(
-        MathematicaOpSpec(symbol("SetSystemOptions"))(
-          rule(string("InequalitySolvingOptions"), list(qeOptions: _*)) :: Nil
-        ),
+        MathematicaOpSpec(
+          symbol("SetSystemOptions")
+        )(rule(string("InequalitySolvingOptions"), list(qeOptions: _*)) :: Nil),
         qe(formula),
       )
       else qe(formula)

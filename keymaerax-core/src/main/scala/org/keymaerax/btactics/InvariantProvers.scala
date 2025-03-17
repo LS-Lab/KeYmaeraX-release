@@ -21,8 +21,7 @@ import scala.util.control.Breaks.*
 /**
  * Invariant proof automation with generators.
  *
- * @author
- *   Andre Platzer
+ * @author Andre Platzer
  */
 object InvariantProvers extends Logging {
   import TactixLibrary.*
@@ -31,10 +30,8 @@ object InvariantProvers extends Logging {
   /**
    * loopSR: cleverly prove a property of a loop automatically by induction, trying hard to generate loop invariants.
    * Uses [[SearchAndRescueAgain]] to avoid repetitive proving.
-   * @see
-   *   [[loopauto]]
-   * @see
-   *   Example 32 in
+   * @see [[loopauto]]
+   * @see Example 32 in
    *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
    */
   @nowarn("cat=deprecation&origin=org.keymaerax.btactics.TactixLibrary.master")

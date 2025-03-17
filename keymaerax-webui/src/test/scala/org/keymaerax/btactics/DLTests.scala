@@ -813,8 +813,9 @@ class DLTests extends TacticTestBase {
 
   "Loop" should "work with abstract invariant" in withTactics {
     val fml = "x>0 -> [{x:=x+1;}*]x>0".asFormula
-    val tactic = implyR(Symbol("R")) & HybridProgramCalculus
-      .loop("J(x)".asFormula)(Symbol("R")) < (skip, skip, assignb(Symbol("R")))
+    val tactic = implyR(
+      Symbol("R")
+    ) & HybridProgramCalculus.loop("J(x)".asFormula)(Symbol("R")) < (skip, skip, assignb(Symbol("R")))
     val result = proveBy(fml, tactic)
 
     result.subgoals should have size 3
@@ -872,8 +873,8 @@ class DLTests extends TacticTestBase {
 
   it should "work with multi-variate abstract invariant" in withTactics {
     val fml = "x>1 & y < -1 -> [{x:=x+1;y:=y-1;}*](x>0&y<0)".asFormula
-    val tactic = implyR(Symbol("R")) & HybridProgramCalculus
-      .loop("J(x,y)".asFormula)(Symbol("R")) < (skip, skip, normalize)
+    val tactic =
+      implyR(Symbol("R")) & HybridProgramCalculus.loop("J(x,y)".asFormula)(Symbol("R")) < (skip, skip, normalize)
     val result = proveBy(fml, tactic)
 
     result.subgoals should have size 3

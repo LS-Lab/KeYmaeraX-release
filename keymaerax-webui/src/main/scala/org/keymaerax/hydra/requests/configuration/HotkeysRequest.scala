@@ -24,7 +24,6 @@ class HotkeysRequest extends LocalhostOnlyRequest {
       } finally { s.close }
     }
     val hotkeys = Source.fromFile(f)
-    try { JSResponse(hotkeys.mkString) }
-    finally { hotkeys.close }
+    try { JSResponse(hotkeys.mkString) } finally { hotkeys.close }
   }
 }

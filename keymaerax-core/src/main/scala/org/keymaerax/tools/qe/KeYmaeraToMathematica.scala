@@ -20,10 +20,8 @@ import scala.collection.immutable._
 
 /**
  * Converts KeYmaeara X [[org.keymaerax.core.Expression expression data structures]] to Mathematica Expr objects.
- * @author
- *   Stefan Mitsch
- * @author
- *   Nathan Fulton
+ * @author Stefan Mitsch
+ * @author Nathan Fulton
  */
 object KeYmaeraToMathematica extends KeYmaeraToMathematica
 class KeYmaeraToMathematica extends K2MConverter[KExpr] {

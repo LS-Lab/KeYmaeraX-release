@@ -12,9 +12,7 @@ case class DisplayNames(
     /** ASCII-only version of [[name]]. */
     nameAscii: String,
 
-    /**
-     * Descriptive long name used in some menus in the user interface. Should be a short, grammatical English phrase.
-     */
+    /** Descriptive long name used in some menus in the user interface. Should be a short, grammatical English phrase. */
     nameLong: String,
 ) {
   require(!name.isBlank, "name must not be blank")

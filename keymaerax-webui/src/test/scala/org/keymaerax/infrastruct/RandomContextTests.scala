@@ -17,8 +17,7 @@ import org.scalatest.matchers.should.Matchers
 
 /**
  * Tests the context splitting on randomly generated formulas
- * @author
- *   Andre Platzer
+ * @author Andre Platzer
  */
 class RandomContextTests extends AnyFlatSpec with Matchers with BeforeAndAfterAll {
   private val randomTrials = 400
@@ -52,9 +51,7 @@ class RandomContextTests extends AnyFlatSpec with Matchers with BeforeAndAfterAl
         case _: IllegalArgumentException => (Context(DotFormula), origin)
         case _: SubstitutionClashException => (Context(DotFormula), origin)
       }
-    val reassemble =
-      try { Some(ctx(e)) }
-      catch { case _: SubstitutionClashException => None }
+    val reassemble = try { Some(ctx(e)) } catch { case _: SubstitutionClashException => None }
     if (reassemble.isDefined && e != Nothing && !noCtx(ctx)) reassemble.get shouldBe origin
     true
   }

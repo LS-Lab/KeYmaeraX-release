@@ -66,8 +66,7 @@ object TreeForm {
 
     /**
      * Works best if the input is an output of Tree.binaryTree
-     * @return
-     *   A Tree where as many n-ary operators as possible have been recovered from their binary equivalents
+     * @return A Tree where as many n-ary operators as possible have been recovered from their binary equivalents
      */
     private def simplify: Tree = this match {
       case Tree(Operator("+", _), lst) =>
@@ -104,8 +103,8 @@ object TreeForm {
         })
         Tree(Operator("/", Some(n)), Tree(Operator("*", Some(mult.length)), mult) :: div)
       case Tree(Operator("^", Some(n1)), l) => l.last match {
-          case Tree(Operator("^", Some(n2)), l2) =>
-            Tree(Operator("^", Some(n1 + n2 - 1)), l.take(l.length - 1) ++ l2).simplify
+          case Tree(Operator("^", Some(n2)), l2) => Tree(Operator("^", Some(n1 + n2 - 1)), l.take(l.length - 1) ++ l2)
+              .simplify
           case _ => Tree(Operator("^", Some(n1)), l.map({ case t => t.simplify }))
         }
       case Tree(hd, l) => Tree(hd, l.map({ case t => t.simplify }))
@@ -185,8 +184,7 @@ object TreeForm {
    * Knuth-Bendix orderings assign a constant weight to each symbol and then weigh the terms based on the sum of all the
    * symbols within and compare by the weight. Weights for operators without an arity specified apply to all arities for
    * that operator.
-   * @see
-   *   Knuth, D. E., Bendix, P. B.Simple word problems in universal algebras.
+   * @see Knuth, D. E., Bendix, P. B.Simple word problems in universal algebras.
    */
   class KnuthBendixOrdering(weighting: List[(TermSymbol, Int)]) extends Ordering[Term] {
     def compare(x: Term, y: Term): Int = { new GenericKBOrdering(weighting, id, id, Stat.countOrdering).compare(x, y) }
@@ -252,8 +250,7 @@ object TreeForm {
    * Recursive path orderings are one general way to extend orderings on logical symbols to orderings on terms. They
    * obey some of the intuition one might want from a term ordering. For example, if the most complex symbol in t1 is
    * more complex than the most complex symbol of t2, then t1 > t2.
-   * @see
-   *   Nachum Dershowitz. Orderings for Term-Rewriting Systems. Theoretical Computer Science, 1982.
+   * @see Nachum Dershowitz. Orderings for Term-Rewriting Systems. Theoretical Computer Science, 1982.
    */
   class RecursivePathOrdering(ord: Ordering[TermSymbol]) extends Ordering[Term] {
     object TreeOrdering extends Ordering[Tree] {

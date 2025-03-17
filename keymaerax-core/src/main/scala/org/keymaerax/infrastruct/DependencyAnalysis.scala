@@ -144,16 +144,11 @@ object DependencyAnalysis {
 
   /**
    * Dependency Analysis for ODEs
-   * @param p
-   *   the ODE system to analyse
-   * @param s
-   *   the set of variables concerned with
-   * @param ignoreTest
-   *   whether to check the domain constraint
-   * @param checkLinear
-   *   whether to account for linearity
-   * @return
-   *   the sets of variables and function symbols that s depends on in the ODE
+   * @param p the ODE system to analyse
+   * @param s the set of variables concerned with
+   * @param ignoreTest whether to check the domain constraint
+   * @param checkLinear whether to account for linearity
+   * @return the sets of variables and function symbols that s depends on in the ODE
    */
   def analyseODE(
       p: ODESystem,

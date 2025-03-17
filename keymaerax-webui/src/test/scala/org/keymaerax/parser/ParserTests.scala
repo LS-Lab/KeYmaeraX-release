@@ -31,40 +31,43 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
   override def afterEach(): Unit = { GlobalState.parser.setAnnotationListener((_, _) => {}) }
 
   // type declaration header for tests
-  def makeInput(program: String): String = s"""
-                                              |ArchiveEntry "Test"
-                                              |Definitions Bool a, b, c; End.
-                                              |ProgramVariables Real p, q, r, s, r_0; End.
-                                              |Problem $program End.
-                                              |End.""".stripMargin
+  def makeInput(program: String): String =
+    s"""
+       |ArchiveEntry "Test"
+       |Definitions Bool a, b, c; End.
+       |ProgramVariables Real p, q, r, s, r_0; End.
+       |Problem $program End.
+       |End.""".stripMargin
 
   private val x = Variable("x", None, Real)
   private val y = Variable("y", None, Real)
 
   "The problem parser" should "reject strings containing non-ASCII characters" in {
-    def input(s: String) = s"""
-                              |ArchiveEntry "Test"
-                              |ProgramVariables Real x; End.
-                              |Problem [x := $s;]x > 3 End.
-                              |End.
+    def input(s: String) =
+      s"""
+         |ArchiveEntry "Test"
+         |ProgramVariables Real x; End.
+         |Problem [x := $s;]x > 3 End.
+         |End.
       """.stripMargin
     GlobalState.archiveParser(input("1")) // the problem should be exactly the fact that we pass in some unicode.
     a[Exception] shouldBe thrownBy(GlobalState.archiveParser("\\u03C0"))
   }
 
   it should "parse nullary predicate definitions" in {
-    val input = """
-                  |ArchiveEntry "Test"
-                  |Definitions
-                  |  Bool J() <-> 1>=0;
-                  |End.
-                  |ProgramVariables
-                  |  Real x;
-                  |End.
-                  |Problem
-                  |  J() -> [{x:=x+1;}*@invariant(J())]J()
-                  |End.
-                  |End.
+    val input =
+      """
+        |ArchiveEntry "Test"
+        |Definitions
+        |  Bool J() <-> 1>=0;
+        |End.
+        |ProgramVariables
+        |  Real x;
+        |End.
+        |Problem
+        |  J() -> [{x:=x+1;}*@invariant(J())]J()
+        |End.
+        |End.
     """.stripMargin
     val entry = GlobalState.archiveParser(input).loneElement
     entry.defs.decls(Name("J", None)).interpretation.toOption.value.value shouldBe "1>=0".asFormula
@@ -72,18 +75,19 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
   }
 
   it should "parse unary predicate definitions" in {
-    val input = """
-                  |ArchiveEntry "Test"
-                  |Definitions
-                  |  Bool J(Real x) <-> x>=0;
-                  |End.
-                  |ProgramVariables
-                  |  Real x;
-                  |End.
-                  |Problem
-                  |  J(x) -> [{x:=x+1;}*@invariant(J(x))]J(x)
-                  |End.
-                  |End.
+    val input =
+      """
+        |ArchiveEntry "Test"
+        |Definitions
+        |  Bool J(Real x) <-> x>=0;
+        |End.
+        |ProgramVariables
+        |  Real x;
+        |End.
+        |Problem
+        |  J(x) -> [{x:=x+1;}*@invariant(J(x))]J(x)
+        |End.
+        |End.
     """.stripMargin
     val entry = GlobalState.archiveParser(input).loneElement
     inside(entry.defs.decls(Name("J", None))) { case Signature(domain, sort, argNames, expr, _) =>
@@ -96,18 +100,19 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
   }
 
   it should "parse binary predicate definitions" in {
-    val input = """
-                  |ArchiveEntry "Test"
-                  |Definitions
-                  |  Bool J(Real x, Real y) <-> x>=y;
-                  |End.
-                  |ProgramVariables
-                  |  Real x, y;
-                  |End.
-                  |Problem
-                  |  J(x,y) -> [{x:=x+1;}*@invariant(J(x,y))]J(x,y)
-                  |End.
-                  |End.
+    val input =
+      """
+        |ArchiveEntry "Test"
+        |Definitions
+        |  Bool J(Real x, Real y) <-> x>=y;
+        |End.
+        |ProgramVariables
+        |  Real x, y;
+        |End.
+        |Problem
+        |  J(x,y) -> [{x:=x+1;}*@invariant(J(x,y))]J(x,y)
+        |End.
+        |End.
     """.stripMargin
     val entry = GlobalState.archiveParser(input).loneElement
     inside(entry.defs.decls(Name("J", None))) { case Signature(domain, sort, argNames, expr, _) =>
@@ -120,18 +125,19 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
   }
 
   it should "parse program definitions" in {
-    val input = """
-                  |ArchiveEntry "Test"
-                  |Definitions
-                  |  HP prg ::= { x:=x+1; };
-                  |End.
-                  |ProgramVariables
-                  |  Real x;
-                  |End.
-                  |Problem
-                  |  x>=0 -> [{prg;}*@invariant(x>=0)]x>=0
-                  |End.
-                  |End.
+    val input =
+      """
+        |ArchiveEntry "Test"
+        |Definitions
+        |  HP prg ::= { x:=x+1; };
+        |End.
+        |ProgramVariables
+        |  Real x;
+        |End.
+        |Problem
+        |  x>=0 -> [{prg;}*@invariant(x>=0)]x>=0
+        |End.
+        |End.
     """.stripMargin
     val entry = GlobalState.archiveParser(input).loneElement
     inside(entry.defs.decls(Name("prg", None))) { case Signature(domain, sort, argNames, expr, _) =>
@@ -144,14 +150,15 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
   }
 
   it should "report useful message on missing semicolon in program variable declaration" in {
-    val input = """ArchiveEntry "Test"
-                  |ProgramVariables
-                  |  Real x
-                  |End.
-                  |Problem
-                  |  x>=0 -> [{prg;}*@invariant(x>=0)]x>=0
-                  |End.
-                  |End.
+    val input =
+      """ArchiveEntry "Test"
+        |ProgramVariables
+        |  Real x
+        |End.
+        |Problem
+        |  x>=0 -> [{prg;}*@invariant(x>=0)]x>=0
+        |End.
+        |End.
                 """.stripMargin
 
     val ex = the[ParseException] thrownBy GlobalState.archiveParser(input)
@@ -163,17 +170,18 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
   }
 
   it should "report useful message on missing semicolon in function definitions" in {
-    val input = """ArchiveEntry "Test"
-                  |Definitions
-                  |  Real func() = 4
-                  |End.
-                  |ProgramVariables
-                  |  Real x;
-                  |End.
-                  |Problem
-                  |  x>=0 -> [{prg;}*@invariant(x>=0)]x>=0
-                  |End.
-                  |End.
+    val input =
+      """ArchiveEntry "Test"
+        |Definitions
+        |  Real func() = 4
+        |End.
+        |ProgramVariables
+        |  Real x;
+        |End.
+        |Problem
+        |  x>=0 -> [{prg;}*@invariant(x>=0)]x>=0
+        |End.
+        |End.
                 """.stripMargin
     the[ParseException] thrownBy GlobalState.archiveParser(input) should
       (have message
@@ -188,17 +196,18 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
   }
 
   it should "report useful message on missing semicolon in program definitions" in {
-    val input = """ArchiveEntry "Test"
-                  |Definitions
-                  |  HP prg ::= { x:=x+1; }
-                  |End.
-                  |ProgramVariables
-                  |  Real x;
-                  |End.
-                  |Problem
-                  |  x>=0 -> [{prg;}*@invariant(x>=0)]x>=0
-                  |End.
-                  |End.
+    val input =
+      """ArchiveEntry "Test"
+        |Definitions
+        |  HP prg ::= { x:=x+1; }
+        |End.
+        |ProgramVariables
+        |  Real x;
+        |End.
+        |Problem
+        |  x>=0 -> [{prg;}*@invariant(x>=0)]x>=0
+        |End.
+        |End.
                 """.stripMargin
     the[ParseException] thrownBy GlobalState.archiveParser(input) should
       (have message
@@ -213,17 +222,18 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
   }
 
   it should "report useful message on missing braces in program definitions" in {
-    val input = """ArchiveEntry "Test"
-                  |Definitions
-                  |  HP prg ::= x:=x+1;
-                  |End.
-                  |ProgramVariables
-                  |  Real x;
-                  |End.
-                  |Problem
-                  |  x>=0 -> [{prg;}*@invariant(x>=0)]x>=0
-                  |End.
-                  |End.
+    val input =
+      """ArchiveEntry "Test"
+        |Definitions
+        |  HP prg ::= x:=x+1;
+        |End.
+        |ProgramVariables
+        |  Real x;
+        |End.
+        |Problem
+        |  x>=0 -> [{prg;}*@invariant(x>=0)]x>=0
+        |End.
+        |End.
                 """.stripMargin
     the[ParseException] thrownBy GlobalState.archiveParser(input) should
       (have message
@@ -547,11 +557,12 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
   }
 
   it should "elaborate variables to function in type analysis" in {
-    val input = """ArchiveEntry "Test"
-                  |Definitions Real A; End.
-                  |ProgramVariables Real x; End.
-                  |Problem A>=0 -> [x:=A;]x>=0 End.
-                  |End.
+    val input =
+      """ArchiveEntry "Test"
+        |Definitions Real A; End.
+        |ProgramVariables Real x; End.
+        |Problem A>=0 -> [x:=A;]x>=0 End.
+        |End.
       """.stripMargin
 
     val fml = GlobalState.archiveParser(input).loneElement.model
@@ -561,11 +572,12 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
   }
 
   it should "not elaborate bound variables to functions in type analysis" in {
-    val input = """ArchiveEntry "Test"
-                  |Definitions Real A; End.
-                  |ProgramVariables Real x; End.
-                  |Problem A>=0 -> [x:=A;A:=2;]x>=0 End.
-                  |End.
+    val input =
+      """ArchiveEntry "Test"
+        |Definitions Real A; End.
+        |ProgramVariables Real x; End.
+        |Problem A>=0 -> [x:=A;A:=2;]x>=0 End.
+        |End.
       """.stripMargin
 
     the[ParseException] thrownBy GlobalState.archiveParser(input) should have message

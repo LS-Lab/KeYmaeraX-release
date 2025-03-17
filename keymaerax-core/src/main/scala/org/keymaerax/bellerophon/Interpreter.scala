@@ -21,10 +21,8 @@ import scala.util.Try
  *   Interpreter : BelleExpr * BelleValue => BelleValue
  * }}}
  *
- * @author
- *   Nathan Fulton
- * @see
- *   [[SequentialInterpreter]]
+ * @author Nathan Fulton
+ * @see [[SequentialInterpreter]]
  */
 trait Interpreter {
 
@@ -57,29 +55,25 @@ trait Interpreter {
   }
 
   /** Collects substitutions (of `defs`) that are needed to make `sub` fit the `i`-th subgoal of `goal`. */
-  protected def collectSubst(goal: ProvableSig, i: Int, sub: ProvableSig): USubst = UnificationTools
-    .collectSubst(goal.underlyingProvable, i, sub.underlyingProvable, goal.defs.substs)
+  protected def collectSubst(goal: ProvableSig, i: Int, sub: ProvableSig): USubst =
+    UnificationTools.collectSubst(goal.underlyingProvable, i, sub.underlyingProvable, goal.defs.substs)
 
   /** Collects substitutions (of `defs`) that are needed to make `have` fit `goal`. */
   protected def collectSubst(goal: Sequent, have: Sequent, haveIsProved: Boolean, defs: Declaration): USubst =
     UnificationTools.collectSubst(goal, have, haveIsProved, defs.substs)
 
   /** Applies substitutions `s` to provable `p` exhaustively. */
-  protected def exhaustiveSubst(p: ProvableSig, s: USubst): ProvableSig = p
-    .reapply(ProvableHelper.exhaustiveSubst(p.underlyingProvable, s))
+  protected def exhaustiveSubst(p: ProvableSig, s: USubst): ProvableSig =
+    p.reapply(ProvableHelper.exhaustiveSubst(p.underlyingProvable, s))
 
   /**
    * Replaces the nth subgoal of `original` with the remaining subgoals of `subderivation`.
    *
-   * @param original
-   *   A Provable whose nth subgoal is equal to the conclusion of `subderivation` (modulo substitution).
-   * @param n
-   *   The numerical index of the subgoal of original to rewrite (Seqs are zero-indexed)
-   * @param subderivation
-   *   The provable to replace the original subgoal.
-   * @return
-   *   A tuple of: * Indicator whether `original` and `subderivation` were merged. * A new provable that is identical to
-   *   `original`, except that the nth subgoal is replaced with the remaining subgoals of `subderivation`.
+   * @param original A Provable whose nth subgoal is equal to the conclusion of `subderivation` (modulo substitution).
+   * @param n The numerical index of the subgoal of original to rewrite (Seqs are zero-indexed)
+   * @param subderivation The provable to replace the original subgoal.
+   * @return A tuple of: * Indicator whether `original` and `subderivation` were merged. * A new provable that is
+   *   identical to `original`, except that the nth subgoal is replaced with the remaining subgoals of `subderivation`.
    */
   protected def applySubDerivation(
       original: ProvableSig,
@@ -149,7 +143,9 @@ trait Interpreter {
       !subMatchesModuloConstification(parent.subgoals(n), sub.conclusion, subst)
     ) {
       throw new BelleUnexpectedProofStateError(
-        s"Subgoal #$n of the original provable (${parent.subgoals(n)}})\nshould be equal to the conclusion of the subderivation\n(${sub
+        s"Subgoal #$n of the original provable (${parent.subgoals(
+            n
+          )}})\nshould be equal to the conclusion of the subderivation\n(${sub
             .conclusion}}),\nbut is not despite substitution $subst",
         sub.underlyingProvable,
       )
@@ -167,7 +163,8 @@ trait Interpreter {
   ): Unit = {
     if (!subMatchesModuloConstification(parent.conclusion, sub.conclusion, subst))
       throw new BelleUnexpectedProofStateError(
-        s"Conclusion of the original provable (${parent.conclusion}})\nshould be equal to the conclusion of the subderivation\n(${sub
+        s"Conclusion of the original provable (${parent
+            .conclusion}})\nshould be equal to the conclusion of the subderivation\n(${sub
             .conclusion}}),\nbut is not despite substitution $subst",
         sub.underlyingProvable,
       )

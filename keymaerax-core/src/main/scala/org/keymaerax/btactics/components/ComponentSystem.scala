@@ -29,8 +29,7 @@ import scala.annotation.nowarn
  *
  * @see
  *   [[org.keymaerax.Bibliography.StttMullerMRSP18 Tactical contract composition for hybrid system component verification]]
- * @author
- *   Stefan Mitsch
+ * @author Stefan Mitsch
  */
 object ComponentSystem {
   private val namespace = "components"
@@ -49,11 +48,17 @@ object ComponentSystem {
     namespace,
   )
   @nowarn("cat=deprecation&origin=org.keymaerax.btactics.TactixLibrary.master")
-  private lazy val assignmentIndependence3 = AnonymousLemmas
-    .remember("[x_:=*;][y_:=*;]p_(x_,y_) <-> [y_:=*;][x_:=*;]p_(x_,y_)".asFormula, master() & prop & done, namespace)
+  private lazy val assignmentIndependence3 = AnonymousLemmas.remember(
+    "[x_:=*;][y_:=*;]p_(x_,y_) <-> [y_:=*;][x_:=*;]p_(x_,y_)".asFormula,
+    master() & prop & done,
+    namespace,
+  )
   @nowarn("cat=deprecation&origin=org.keymaerax.btactics.TactixLibrary.master")
-  private lazy val assignmentIndependence4 = AnonymousLemmas
-    .remember("[x_:=s_();][?q_();]p_(x_) <-> [?q_();][x_:=s_();]p_(x_)".asFormula, master() & prop & done, namespace)
+  private lazy val assignmentIndependence4 = AnonymousLemmas.remember(
+    "[x_:=s_();][?q_();]p_(x_) <-> [?q_();][x_:=s_();]p_(x_)".asFormula,
+    master() & prop & done,
+    namespace,
+  )
   private lazy val assignmentIndependence5 = AnonymousLemmas.remember(
     "[x_:=*;][?q_();]p_(x_) <-> [?q_();][x_:=*;]p_(x_)".asFormula,
     SeqTactic(
@@ -68,8 +73,11 @@ object ComponentSystem {
     namespace,
   )
   @nowarn("cat=deprecation&origin=org.keymaerax.btactics.TactixLibrary.master")
-  private lazy val testIndependence = AnonymousLemmas
-    .remember("[?q_();][?r_();]p_() <-> [?r_();][?q_();]p_()".asFormula, master() & prop & done, namespace)
+  private lazy val testIndependence = AnonymousLemmas.remember(
+    "[?q_();][?r_();]p_() <-> [?r_();][?q_();]p_()".asFormula,
+    master() & prop & done,
+    namespace,
+  )
 
   /** STTT Lemma 1 */
   def programIndependence(swapCompose: Boolean = true): DependentPositionTactic =
@@ -509,105 +517,107 @@ object ComponentSystem {
         SeqTactic(
           DebuggingTactics.print("Justify Fout"),
           cohideOnlyR(pos),
-          (if (foutSafety == True) SeqTactic(
-             implyR(1),
-             abstractionb(1, 1 :: 1 :: 1 :: Nil),
-             abstractionb(1, 1 :: 1 :: Nil),
-             abstractionb(1, 1 :: Nil),
-             abstractionb(1),
-             closeT,
-           )
-           else SeqTactic(
-             dropPlant(keepPlantVars)(1, 1 :: 1 :: 1 :: 1 :: Nil),
-             DebuggingTactics.print("Dropped plant1"),
-             composeb(1, 1 :: 1 :: Nil),
-             dropControl(1, 1 :: 1 :: Nil),
-             DebuggingTactics.print("Dropped ctrl1"),
-             composeb(1, 1 :: Nil),
-             dropControl(1, 1 :: Nil),
-             DebuggingTactics.print("Dropped delta1"),
-             cutAt(Diamond(Compose(in2, cp2), foutSafety))(1, 1 :: 1 :: 1 :: 1 :: 1 :: Nil),
-             BranchTactic(
-               // use
-               SeqTactic(
-                 useAt(Ax.boxDiamondSubstPropagation, PosInExpr(1 :: 1 :: Nil))(1, 1 :: 1 :: 1 :: 1 :: 1 :: Nil),
-                 BranchTactic(
-                   SeqTactic(
-                     DebuggingTactics.print("Strengthen"), /* todo: hide all non-const factcs */
-                     hideL(-1) /* End todo */,
-                     HybridProgramCalculus.generalize(c2inv)(1, 1 :: 1 :: 1 :: 1 :: 1 :: Nil),
-                     BranchTactic(
-                       SeqTactic(
-                         DebuggingTactics.print("Close by C2 induction step"),
-                         boxAnd(1, 1 :: 1 :: 1 :: 1 :: Nil),
-                         abstractionb(1, 1 :: 1 :: 1 :: 1 :: 0 :: Nil),
-                         boxAnd(1, 1 :: 1 :: 1 :: Nil),
-                         abstractionb(1, 1 :: 1 :: 1 :: 0 :: Nil),
-                         boxAnd(1, 1 :: 1 :: Nil),
-                         abstractionb(1, 1 :: 1 :: 0 :: Nil),
-                         boxAnd(1, 1 :: Nil),
-                         abstractionb(1, 1 :: 0 :: Nil),
-                         implyR(1),
-                         andR(1),
-                         BranchTactic(prop, nil),
-                         DebuggingTactics.print("Generalized C2 induction step"),
-                         cutAt(Box(plant2, Box(Compose(in2, cp2), c2inv)))(1, 1 :: 1 :: 1 :: Nil),
-                         BranchTactic(
-                           SeqTactic(
-                             useAt(Ax.composeb, PosInExpr(1 :: Nil))(1, 1 :: 1 :: 1 :: Nil),
-                             useAt(Ax.composeb, PosInExpr(1 :: Nil))(1, 1 :: 1 :: Nil),
-                             useAt(Ax.composeb, PosInExpr(1 :: Nil))(1, 1 :: Nil),
-                             useAt(Ax.composeb, PosInExpr(1 :: Nil))(1),
-                             DebuggingTactics.print("Close by C2 step lemma"),
-                             useLemma(c2step, Some(prop)),
-                             DebuggingTactics.done("Close by C2 induction step"),
-                           ),
-                           SeqTactic(
-                             DebuggingTactics.print("Proving C2 diff. refine"),
-                             cohideR(1),
-                             CMon(1, 1 :: 1 :: 1 :: 1 :: Nil),
-                             useAt(Ax.DR, PosInExpr(1 :: Nil))(1),
-                             dW(1),
-                             prop,
-                             DebuggingTactics.done("Proving C2 diff. refine"),
-                           ),
-                         ),
-                       ),
-                       SeqTactic(
-                         DebuggingTactics.print("Close by C2 use case lemma"),
-                         useLemma(c2use, Some(prop)),
-                         DebuggingTactics.done("Close by C2 use case"),
-                       ),
-                     ),
-                   ),
-                   SeqTactic(
-                     DebuggingTactics.print("Close by communication guarantee liveness"),
-                     implyR(1),
-                     (abstractionb(1) & SaturateTactic(allR(1))) * 4,
-                     // @todo use communication guarantees of internal ports
-                     composed(1),
-                     testd(1, 1 :: Nil),
-                     useAt(Ax.trueAnd)(1, 1 :: Nil),
-                     DebuggingTactics.print("Close by Communication Guarantee Liveness lemma"),
-                     useLemma(comGuaranteeLiveness, Some(prop)),
-                     DebuggingTactics.done("Close by communication guarantee liveness"),
-                   ),
-                 ),
-               ),
-               // show
-               SeqTactic(
-                 DebuggingTactics.print("Show InCp"),
-                 cohideR(1),
-                 CMon(1, 1 :: 1 :: 1 :: 1 :: 1 :: 1 :: Nil),
-                 implyR(1),
-                 useAt(Ax.diamond, PosInExpr(1 :: Nil))(-1),
-                 notL(-1),
-                 abstractionb(2),
-                 prop,
-                 DebuggingTactics.done("Show InCp"),
-               ),
-             ),
-           )),
+          (
+            if (foutSafety == True) SeqTactic(
+              implyR(1),
+              abstractionb(1, 1 :: 1 :: 1 :: Nil),
+              abstractionb(1, 1 :: 1 :: Nil),
+              abstractionb(1, 1 :: Nil),
+              abstractionb(1),
+              closeT,
+            )
+            else SeqTactic(
+              dropPlant(keepPlantVars)(1, 1 :: 1 :: 1 :: 1 :: Nil),
+              DebuggingTactics.print("Dropped plant1"),
+              composeb(1, 1 :: 1 :: Nil),
+              dropControl(1, 1 :: 1 :: Nil),
+              DebuggingTactics.print("Dropped ctrl1"),
+              composeb(1, 1 :: Nil),
+              dropControl(1, 1 :: Nil),
+              DebuggingTactics.print("Dropped delta1"),
+              cutAt(Diamond(Compose(in2, cp2), foutSafety))(1, 1 :: 1 :: 1 :: 1 :: 1 :: Nil),
+              BranchTactic(
+                // use
+                SeqTactic(
+                  useAt(Ax.boxDiamondSubstPropagation, PosInExpr(1 :: 1 :: Nil))(1, 1 :: 1 :: 1 :: 1 :: 1 :: Nil),
+                  BranchTactic(
+                    SeqTactic(
+                      DebuggingTactics.print("Strengthen"), /* todo: hide all non-const factcs */
+                      hideL(-1) /* End todo */,
+                      HybridProgramCalculus.generalize(c2inv)(1, 1 :: 1 :: 1 :: 1 :: 1 :: Nil),
+                      BranchTactic(
+                        SeqTactic(
+                          DebuggingTactics.print("Close by C2 induction step"),
+                          boxAnd(1, 1 :: 1 :: 1 :: 1 :: Nil),
+                          abstractionb(1, 1 :: 1 :: 1 :: 1 :: 0 :: Nil),
+                          boxAnd(1, 1 :: 1 :: 1 :: Nil),
+                          abstractionb(1, 1 :: 1 :: 1 :: 0 :: Nil),
+                          boxAnd(1, 1 :: 1 :: Nil),
+                          abstractionb(1, 1 :: 1 :: 0 :: Nil),
+                          boxAnd(1, 1 :: Nil),
+                          abstractionb(1, 1 :: 0 :: Nil),
+                          implyR(1),
+                          andR(1),
+                          BranchTactic(prop, nil),
+                          DebuggingTactics.print("Generalized C2 induction step"),
+                          cutAt(Box(plant2, Box(Compose(in2, cp2), c2inv)))(1, 1 :: 1 :: 1 :: Nil),
+                          BranchTactic(
+                            SeqTactic(
+                              useAt(Ax.composeb, PosInExpr(1 :: Nil))(1, 1 :: 1 :: 1 :: Nil),
+                              useAt(Ax.composeb, PosInExpr(1 :: Nil))(1, 1 :: 1 :: Nil),
+                              useAt(Ax.composeb, PosInExpr(1 :: Nil))(1, 1 :: Nil),
+                              useAt(Ax.composeb, PosInExpr(1 :: Nil))(1),
+                              DebuggingTactics.print("Close by C2 step lemma"),
+                              useLemma(c2step, Some(prop)),
+                              DebuggingTactics.done("Close by C2 induction step"),
+                            ),
+                            SeqTactic(
+                              DebuggingTactics.print("Proving C2 diff. refine"),
+                              cohideR(1),
+                              CMon(1, 1 :: 1 :: 1 :: 1 :: Nil),
+                              useAt(Ax.DR, PosInExpr(1 :: Nil))(1),
+                              dW(1),
+                              prop,
+                              DebuggingTactics.done("Proving C2 diff. refine"),
+                            ),
+                          ),
+                        ),
+                        SeqTactic(
+                          DebuggingTactics.print("Close by C2 use case lemma"),
+                          useLemma(c2use, Some(prop)),
+                          DebuggingTactics.done("Close by C2 use case"),
+                        ),
+                      ),
+                    ),
+                    SeqTactic(
+                      DebuggingTactics.print("Close by communication guarantee liveness"),
+                      implyR(1),
+                      (abstractionb(1) & SaturateTactic(allR(1))) * 4,
+                      // @todo use communication guarantees of internal ports
+                      composed(1),
+                      testd(1, 1 :: Nil),
+                      useAt(Ax.trueAnd)(1, 1 :: Nil),
+                      DebuggingTactics.print("Close by Communication Guarantee Liveness lemma"),
+                      useLemma(comGuaranteeLiveness, Some(prop)),
+                      DebuggingTactics.done("Close by communication guarantee liveness"),
+                    ),
+                  ),
+                ),
+                // show
+                SeqTactic(
+                  DebuggingTactics.print("Show InCp"),
+                  cohideR(1),
+                  CMon(1, 1 :: 1 :: 1 :: 1 :: 1 :: 1 :: Nil),
+                  implyR(1),
+                  useAt(Ax.diamond, PosInExpr(1 :: Nil))(-1),
+                  notL(-1),
+                  abstractionb(2),
+                  prop,
+                  DebuggingTactics.done("Show InCp"),
+                ),
+              ),
+            )
+          ),
           DebuggingTactics.done("Justify Fout"),
         )
       case Some(e) =>
@@ -982,29 +992,30 @@ object ComponentSystem {
     }
   )
 
-  private val shapeMsg = s""""Expected a formula of the shape
-                            |
-                            |   t=t0 & Om & A1 & A2
-                            |   ->
-                            |   [{ {portmemory1;portmemory2};
-                            |      {ctrl1;ctrl2};
-                            |      to:=t;
-                            |      {t'=1,plant1,plant2};
-                            |      {in1open;in2open};
-                            |      {cp1;cp2;con};
-                            |    }*]((G1&P1) & (G2&P2))
-                            |
-                            |  where Om:    global facts about constant system parameters
-                            |        A1,A2: assumptions of components
-                            |        G1,G2: safety guarantees of components
-                            |        P1,P2: output port guarantees of components
-                            |        portmemory: remembers the value of input port x in portmemory x0 by x0:=x;
-                            |        ctrl:       discrete component dynamics
-                            |        plant:      continuous component dynamics
-                            |        inXopen:    input ports that remain open in the system
-                            |        cp:         internal connections of subcomponents
-                            |        con:        connections between the composed components
-                            |""".stripMargin
+  private val shapeMsg =
+    s""""Expected a formula of the shape
+       |
+       |   t=t0 & Om & A1 & A2
+       |   ->
+       |   [{ {portmemory1;portmemory2};
+       |      {ctrl1;ctrl2};
+       |      to:=t;
+       |      {t'=1,plant1,plant2};
+       |      {in1open;in2open};
+       |      {cp1;cp2;con};
+       |    }*]((G1&P1) & (G2&P2))
+       |
+       |  where Om:    global facts about constant system parameters
+       |        A1,A2: assumptions of components
+       |        G1,G2: safety guarantees of components
+       |        P1,P2: output port guarantees of components
+       |        portmemory: remembers the value of input port x in portmemory x0 by x0:=x;
+       |        ctrl:       discrete component dynamics
+       |        plant:      continuous component dynamics
+       |        inXopen:    input ports that remain open in the system
+       |        cp:         internal connections of subcomponents
+       |        con:        connections between the composed components
+       |""".stripMargin
 
   /** Proves system safety from isolated component and compatibility proofs. */
   def proveSystem(
@@ -1104,7 +1115,8 @@ object ComponentSystem {
   @Derivation
   val proveSystemInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
     name = "proveComponentSystem",
-    displayPremises = """
+    displayPremises =
+      """
       |- C1 Base: Om & A1 -> I1;;
       |- Om & I1 -> G1 & P1;;
       |- C1 Step: Om & I1 -> [mem1; ctrl1; t0=t; {t\'=1,plant1}; in1; cp1;]I1;;
@@ -1185,8 +1197,9 @@ object ComponentSystem {
     if (
       StaticSemantics
         .freeVars(
-          (FormulaTools.conjuncts(invuse).toSet -- FormulaTools
-            .conjuncts(invbase)).reduceOption(And.apply).getOrElse(True)
+          (FormulaTools.conjuncts(invuse).toSet -- FormulaTools.conjuncts(invbase))
+            .reduceOption(And.apply)
+            .getOrElse(True)
         )
         .toSet
         .exists(_.isInstanceOf[Variable])
@@ -1194,8 +1207,9 @@ object ComponentSystem {
     if (
       StaticSemantics
         .freeVars(
-          (FormulaTools.conjuncts(invstepa).toSet -- FormulaTools
-            .conjuncts(invbase)).reduceOption(And.apply).getOrElse(True)
+          (FormulaTools.conjuncts(invstepa).toSet -- FormulaTools.conjuncts(invbase))
+            .reduceOption(And.apply)
+            .getOrElse(True)
         )
         .toSet
         .exists(_.isInstanceOf[Variable])

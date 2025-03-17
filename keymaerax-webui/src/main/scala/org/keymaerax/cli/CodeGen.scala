@@ -44,14 +44,10 @@ object CodeGen extends Logging {
   /**
    * Code generator.
    *
-   * @param in
-   *   Input archive file, can be of the form file.kyx#entry
-   * @param out
-   *   Output file (default: input file name with .c suffix)
-   * @param quantitative
-   *   Generate a quantitative instead of a boolean monitor
-   * @param interval
-   *   Use interval arithmetic instead of floating point arithmetic
+   * @param in Input archive file, can be of the form file.kyx#entry
+   * @param out Output file (default: input file name with .c suffix)
+   * @param quantitative Generate a quantitative instead of a boolean monitor
+   * @param interval Use interval arithmetic instead of floating point arithmetic
    */
   def codegen(
       in: String,
@@ -112,8 +108,9 @@ object CodeGen extends Logging {
 
     val inputFormula = entry.model.asInstanceOf[Formula]
     if (!inputFormula.isFOL) {
-      logger
-        .error("Input is not an arithmetic formula; please use option '-modelplex' first to obtain a monitor formula")
+      logger.error(
+        "Input is not an arithmetic formula; please use option '-modelplex' first to obtain a monitor formula"
+      )
       KeymaeraxCore.exit(-1)
     }
 
@@ -149,8 +146,9 @@ object CodeGen extends Logging {
     val monitorFml = entry.model.asInstanceOf[Formula]
 
     if (!monitorFml.isFOL) {
-      logger
-        .error("Input is not an arithmetic formula; please use option '--modelplex' first to obtain a monitor formula")
+      logger.error(
+        "Input is not an arithmetic formula; please use option '--modelplex' first to obtain a monitor formula"
+      )
       KeymaeraxCore.exit(-1)
     }
 
@@ -166,8 +164,8 @@ object CodeGen extends Logging {
       reassociation.isProved,
       "Reassociated formula incorrectly: failed to prove\n" + reassociation.conclusion.prettyString,
     )
-    val monitorProgProof = TactixLibrary
-      .proveBy(reassociatedMonitorFml, ModelPlex.chaseToTests(combineTests = false)(1) * 2)
+    val monitorProgProof =
+      TactixLibrary.proveBy(reassociatedMonitorFml, ModelPlex.chaseToTests(combineTests = false)(1) * 2)
     assert(
       monitorProgProof.subgoals.size == 1,
       "Converted to tests incorrectly: expected a single goal but got\n" + monitorProgProof.prettyString,

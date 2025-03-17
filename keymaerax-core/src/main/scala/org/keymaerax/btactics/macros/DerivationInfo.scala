@@ -33,16 +33,11 @@ case class AxiomNotFoundException(axiomName: String)
  * Everything consisting of a Provable is a [[ProvableInfo]], namely [[AxiomInfo]] and [[AxiomaticRuleInfo]] and
  * [[DerivedRuleInfo]].
  *
- * @see
- *   [[CoreAxiomInfo]]
- * @see
- *   [[DerivedAxiomInfo]]
- * @see
- *   [[AxiomaticRuleInfo]]
- * @see
- *   [[DerivedRuleInfo]]
- * @see
- *   [[TacticInfo]]
+ * @see [[CoreAxiomInfo]]
+ * @see [[DerivedAxiomInfo]]
+ * @see [[AxiomaticRuleInfo]]
+ * @see [[DerivedRuleInfo]]
+ * @see [[TacticInfo]]
  */
 object DerivationInfo {
 
@@ -81,13 +76,15 @@ object DerivationInfo {
     _initStatus match {
       case InitInProgress => ()
       case InitNotStarted => throw new Exception(
-          s"Tried to register ${di.codeName}, but can only register new @Tactic, @Axiom, etc. during AxiomInfo init process, but init has not started. This error usually means you forgot to initialize DerivationInfo, e.g. using withMathematica in a test suite"
+          s"Tried to register ${di
+              .codeName}, but can only register new @Tactic, @Axiom, etc. during AxiomInfo init process, but init has not started. This error usually means you forgot to initialize DerivationInfo, e.g. using withMathematica in a test suite"
         )
       case InitComplete =>
         // Allow anonymous tactic creation any time, and allow idempotent re-registration of existing tactic.
         if (di.codeName.startsWith("_") || _allInfo.contains(di.codeName)) ()
         else throw new Exception(
-          s"Tried to register ${di.codeName}, but can only register new @Tactic, @Axiom, etc. during AxiomInfo init process, but init has finished. This error usually means you forgot to add a class to the list in DerivationInfoRegistry"
+          s"Tried to register ${di
+              .codeName}, but can only register new @Tactic, @Axiom, etc. during AxiomInfo init process, but init has finished. This error usually means you forgot to add a class to the list in DerivationInfoRegistry"
         )
     }
   }
@@ -127,9 +124,8 @@ object DerivationInfo {
     _allInfo.get(info.codeName) match {
       case None => addInfo(info)
       case Some(knownInfo) if knownInfo == info => // Nothing to do here
-      case Some(knownInfo) => throw new IllegalArgumentException(
-          s"Duplicate name registration attempt: ${info.codeName} already registered as $knownInfo of ${knownInfo.getClass.getSimpleName}"
-        )
+      case Some(knownInfo) => throw new IllegalArgumentException(s"Duplicate name registration attempt: ${info
+            .codeName} already registered as $knownInfo of ${knownInfo.getClass.getSimpleName}")
     }
   }
 
@@ -173,8 +169,9 @@ object DerivationInfo {
 
     byCodeName.getOrElse(
       codeName,
-      ofBuiltinName(codeName)
-        .getOrElse(throw new IllegalArgumentException("No such DerivationInfo of identifier " + codeName)),
+      ofBuiltinName(codeName).getOrElse(
+        throw new IllegalArgumentException("No such DerivationInfo of identifier " + codeName)
+      ),
     )
   }
 
@@ -191,8 +188,8 @@ object DerivationInfo {
   }
 
   /** Retrieve meta-information on an inference by the given canonical name `axiomName` */
-  def apply(axiomName: String): DerivationInfo = byCanonicalName
-    .getOrElse(axiomName, ofBuiltinName(axiomName).getOrElse(throw AxiomNotFoundException(axiomName)))
+  def apply(axiomName: String): DerivationInfo =
+    byCanonicalName.getOrElse(axiomName, ofBuiltinName(axiomName).getOrElse(throw AxiomNotFoundException(axiomName)))
 
 }
 
@@ -243,12 +240,9 @@ sealed trait DerivationInfo {
 
 /**
  * Meta-Information for a (derived) axiom or (derived) axiomatic rule
- * @see
- *   [[AxiomInfo]]
- * @see
- *   [[AxiomaticRuleInfo]]
- * @see
- *   [[DerivedRuleInfo]]
+ * @see [[AxiomInfo]]
+ * @see [[AxiomaticRuleInfo]]
+ * @see [[DerivedRuleInfo]]
  */
 sealed trait ProvableInfo extends DerivationInfo {
 
@@ -265,32 +259,27 @@ sealed trait ProvableInfo extends DerivationInfo {
   /**
    * Which unifier to use. For completeness, this declaration must be consistent with the default key from
    * [[AxiomIndex.axiomFor()]].
-   * @see
-   *   [[LinearMatcher]]
+   * @see [[LinearMatcher]]
    */
   def unifier: Unifier
 
   /**
    * The key at which this formula will be unified against an input formula.
-   * @see
-   *   [[org.keymaerax.btactics.UnifyUSCalculus]]
+   * @see [[org.keymaerax.btactics.UnifyUSCalculus]]
    */
   val theKey: ExprPos = 0 :: Nil
 
   /**
    * The list of recursors which to look for later after using this axiom in a chase.
-   * @see
-   *   [[org.keymaerax.btactics.UnifyUSCalculus.chase]]
+   * @see [[org.keymaerax.btactics.UnifyUSCalculus.chase]]
    */
   val theRecursor: List[ExprPos] = Nil
 }
 
 /**
  * Storable derivation info (e.g., as lemmas).
- * @see
- *   [[DerivedAxiomInfo]]
- * @see
- *   [[DerivedRuleInfo]]
+ * @see [[DerivedAxiomInfo]]
+ * @see [[DerivedRuleInfo]]
  */
 sealed trait StorableInfo extends DerivationInfo {
   val storedName: String = codeName.toLowerCase(Locale.ROOT)
@@ -307,17 +296,14 @@ sealed trait StorableInfo extends DerivationInfo {
 
 /**
  * Meta-Information for an axiom or derived axiom, as declared by an @[[Axiom]] annotation.
- * @see
- *   [[org.keymaerax.btactics.AxIndex]]
- * @see
- *   [[Axiom]]
+ * @see [[org.keymaerax.btactics.AxIndex]]
+ * @see [[Axiom]]
  */
 sealed trait AxiomInfo extends ProvableInfo
 
 /**
  * Meta-Information for an axiom from the prover core
- * @see
- *   [[org.keymaerax.core.AxiomBase]]
+ * @see [[org.keymaerax.core.AxiomBase]]
  */
 case class CoreAxiomInfo(
     override val canonicalName: String,
@@ -363,10 +349,8 @@ object CoreAxiomInfo {
 
 /**
  * Information for a derived axiom proved from the core.
- * @see
- *   [[org.keymaerax.btactics.DerivedAxioms]]
- * @see
- *   [[CoreAxiomInfo]]
+ * @see [[org.keymaerax.btactics.DerivedAxioms]]
+ * @see [[CoreAxiomInfo]]
  */
 case class DerivedAxiomInfo(
     override val canonicalName: String,
@@ -420,10 +404,8 @@ object DerivedAxiomInfo {
 
 /**
  * Information for an axiomatic proof rule
- * @see
- *   [[org.keymaerax.core.AxiomBase]]
- * @see
- *   [[DerivedRuleInfo]]
+ * @see [[org.keymaerax.core.AxiomBase]]
+ * @see [[DerivedRuleInfo]]
  */
 case class AxiomaticRuleInfo(
     override val canonicalName: String,
@@ -469,10 +451,8 @@ object AxiomaticRuleInfo {
 
 /**
  * Information for a derived rule proved from the core
- * @see
- *   [[org.keymaerax.btactics.DerivedAxioms]]
- * @see
- *   [[AxiomaticRuleInfo]]
+ * @see [[org.keymaerax.btactics.DerivedAxioms]]
+ * @see [[AxiomaticRuleInfo]]
  */
 case class DerivedRuleInfo(
     override val canonicalName: String,

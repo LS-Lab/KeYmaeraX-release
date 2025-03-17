@@ -13,14 +13,15 @@ import org.scalatest.matchers.should.Matchers
 /** Created by nfulton on 6/12/15. */
 class KeYmaeraXAxiomParserTests extends AnyFlatSpec with Matchers {
   "Axiom parser" should "parse a formula inside an axiom box" in {
-    val input = """
-                  |Axiom "This is an axiom"
-                  | 1 = 1
-                  |End.
-                  |
-                  |Axiom "This is another = axiom"
-                  | x=x
-                  |End.
+    val input =
+      """
+        |Axiom "This is an axiom"
+        | 1 = 1
+        |End.
+        |
+        |Axiom "This is another = axiom"
+        | x=x
+        |End.
       """.stripMargin
     val axioms = KeYmaeraXAxiomParser(input)
     axioms.head._1 should be("This is an axiom")
@@ -36,9 +37,10 @@ class KeYmaeraXAxiomParserTests extends AnyFlatSpec with Matchers {
   private val t = FuncOf(Function("t", None, Unit, Real), Nothing)
 
   it should "parse all instantiate (found failure case)" in {
-    val input = """Axiom /*\\foralli */ "all instantiate"
-                  |  (\forall x p(x)) -> p(t())
-                  |End.""".stripMargin
+    val input =
+      """Axiom /*\\foralli */ "all instantiate"
+        |  (\forall x p(x)) -> p(t())
+        |End.""".stripMargin
     val axioms = KeYmaeraXAxiomParser(input)
     axioms.length shouldBe 1
     axioms.head._1 shouldBe "all instantiate"

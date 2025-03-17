@@ -10,10 +10,8 @@ import scala.annotation.tailrec
 /**
  * Stack with top on the right. For example the stack `Bottom :+ a3 :+ a2 +: a1` has element a1 on the top, then a2 as
  * the top of the tail.
- * @author
- *   nfulton
- * @author
- *   Andre Platzer
+ * @author nfulton
+ * @author Andre Platzer
  */
 sealed trait Stack[+A] {
 
@@ -63,8 +61,7 @@ sealed trait Stack[+A] {
 
   /**
    * Splits the stack at first occurrence of an element next s.t. p(next) = true; p is placed in the later stack.
-   * @example
-   *   (A B C D E).split(C) = ( (A,B), (C, D, E) )
+   * @example (A B C D E).split(C) = ( (A,B), (C, D, E) )
    */
   def split[B >: A](p: B => Boolean) = fold[(Stack[B], Stack[B])]((Bottom, Bottom))((stacks, next) => {
     if (!stacks._2.isEmpty || p(next))

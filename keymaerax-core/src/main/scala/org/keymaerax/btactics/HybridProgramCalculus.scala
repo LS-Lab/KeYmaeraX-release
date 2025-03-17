@@ -17,34 +17,22 @@ import org.keymaerax.infrastruct.Position
  *
  * Provides the elementary derived proof rules for hybrid programs from Figure 7.4 and Figure 12.9 in
  * [[org.keymaerax.Bibliography.Platzer18 Logical Foundations of Cyber-Physical Systems]].
- * @author
- *   Andre Platzer
- * @author
- *   Stefan Mitsch
- * @see
- *   [[org.keymaerax.Bibliography.Platzer18 Logical Foundations of Cyber-Physical Systems]]
+ * @author Andre Platzer
+ * @author Stefan Mitsch
+ * @see [[org.keymaerax.Bibliography.Platzer18 Logical Foundations of Cyber-Physical Systems]]
  * @see
  *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
- * @see
- *   [[org.keymaerax.Bibliography.LicsPlatzer12a Logics of dynamical systems]]
- * @see
- *   [[org.keymaerax.Bibliography.LicsPlatzer12b The complete proof theory of hybrid systems]]
- * @see
- *   [[org.keymaerax.core.AxiomBase]]
- * @see
- *   [[org.keymaerax.btactics.Ax]]
- * @see
- *   [[HilbertCalculus]]
- * @see
- *   [[TactixLibrary]]
- * @Tactic
- *   complete
+ * @see [[org.keymaerax.Bibliography.LicsPlatzer12a Logics of dynamical systems]]
+ * @see [[org.keymaerax.Bibliography.LicsPlatzer12b The complete proof theory of hybrid systems]]
+ * @see [[org.keymaerax.core.AxiomBase]]
+ * @see [[org.keymaerax.btactics.Ax]]
+ * @see [[HilbertCalculus]]
+ * @see [[TactixLibrary]]
+ * @Tactic complete
  */
 object HybridProgramCalculus {
 
-  /**
-   * ***************************************************************** Hybrid Program Proof Rules
-   */
+  /** ***************************************************************** Hybrid Program Proof Rules */
 
   // hybrid program elementary derived proof rules
 
@@ -74,8 +62,8 @@ object HybridProgramCalculus {
    *   }}}
    */
   // @todo code name on cheat sheet is generalize
-  def generalize(C: Formula): DependentPositionWithAppliedInputTactic = "MR"
-    .byWithInputs(List(C), { (pos: Position) => DLBySubst.generalize(C)(pos) })
+  def generalize(C: Formula): DependentPositionWithAppliedInputTactic =
+    "MR".byWithInputs(List(C), { (pos: Position) => DLBySubst.generalize(C)(pos) })
 
   @Derivation
   val generalizeInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
@@ -121,16 +109,13 @@ object HybridProgramCalculus {
    *   -----------------------------------------------------------------------------I("x>0&y>0".asFormula)(1)
    *   x>1, y=1 |- [{x:=0; -- x:=x+y;}*]x>0
    *   }}}
-   * @param invariant
-   *   The loop invariant `I`.
-   * @note
-   *   Currently uses I induction axiom, which is unsound for hybrid games and will, thus, throw an exception on hybrid
-   *   games.
-   * @note
-   *   Beware that, unlike for hybrid systems, the order of premises for hybrid games is Post, Step, Init.
+   * @param invariant The loop invariant `I`.
+   * @note Currently uses I induction axiom, which is unsound for hybrid games and will, thus, throw an exception on
+   *   hybrid games.
+   * @note Beware that, unlike for hybrid systems, the order of premises for hybrid games is Post, Step, Init.
    */
-  def loop(invariant: Formula): DependentPositionWithAppliedInputTactic = "loop"
-    .byWithInputs(List(invariant), { (pos: Position) => DLBySubst.loop(invariant)(pos) })
+  def loop(invariant: Formula): DependentPositionWithAppliedInputTactic =
+    "loop".byWithInputs(List(invariant), { (pos: Position) => DLBySubst.loop(invariant)(pos) })
 
   @Derivation
   val loopInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
@@ -169,11 +154,10 @@ object HybridProgramCalculus {
    *   <{x:=0;--x:=x+1;}*>x<=0 |- x<1
    *   }}}
    *
-   * @param fixpoint
-   *   A formula `J` that is a prefixpoint of `⟨a⟩` that also follows from `P`.
+   * @param fixpoint A formula `J` that is a prefixpoint of `⟨a⟩` that also follows from `P`.
    */
-  def fp(fixpoint: Formula): DependentPositionWithAppliedInputTactic = "fp"
-    .byWithInputs(List(fixpoint), { (pos: Position) => DLBySubst.fpRule(fixpoint)(pos) })
+  def fp(fixpoint: Formula): DependentPositionWithAppliedInputTactic =
+    "fp".byWithInputs(List(fixpoint), { (pos: Position) => DLBySubst.fpRule(fixpoint)(pos) })
 
   @Derivation
   val fpInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
@@ -207,14 +191,12 @@ object HybridProgramCalculus {
    *   ---------------------discreteGhost("0".asTerm, Some("y".asVariable))(1, 1::Nil)
    *   |- [z:=2;]x>0
    *   }}}
-   * @param t
-   *   The ghost's initial value.
-   * @param ghost
-   *   The new ghost variable. If `None`, the tactic chooses a name by inspecting t (must be a variable then). For
-   *   robustness you are advised to choose a name.
+   * @param t The ghost's initial value.
+   * @param ghost The new ghost variable. If `None`, the tactic chooses a name by inspecting t (must be a variable
+   *   then). For robustness you are advised to choose a name.
    * @incontext
    */
-  def discreteGhost(t: Term, ghost: Option[Variable] = None): DependentPositionTactic = DLBySubst
-    .discreteGhost(t, ghost)
+  def discreteGhost(t: Term, ghost: Option[Variable] = None): DependentPositionTactic =
+    DLBySubst.discreteGhost(t, ghost)
 
 }

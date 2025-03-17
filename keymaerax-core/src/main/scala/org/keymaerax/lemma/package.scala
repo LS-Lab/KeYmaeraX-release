@@ -36,7 +36,6 @@ package org.keymaerax
  *   val lemmaDB = LemmaDBFactory.lemmaDB
  *   }}}
  *
- * @author
- *   Stefan Mitsch
+ * @author Stefan Mitsch
  */
 package object lemma {}

@@ -30,10 +30,8 @@ import scala.annotation.nowarn
  * Implementation: [[ProofRuleTactics]] contains tactical implementations of the propositional sequent calculus and
  * other proof rules that are implemented by KeYmaera X.
  *
- * @author
- *   Nathan Fulton
- * @see
- *   [[SequentCalculus]]
+ * @author Nathan Fulton
+ * @see [[SequentCalculus]]
  */
 private object ProofRuleTactics extends Logging {
 
@@ -70,18 +68,15 @@ private object ProofRuleTactics extends Logging {
   /**
    * Uniform renaming `what~>repl` and vice versa.
    *
-   * @param what
-   *   What variable to replace (along with its associated DifferentialSymbol).
-   * @param repl
-   *   The target variable to replace what with.
+   * @param what What variable to replace (along with its associated DifferentialSymbol).
+   * @param repl The target variable to replace what with.
    * @return
-   * @throws RenamingClashException
-   *   if uniform renaming what~>repl is not admissible for s (because a semantic symbol occurs).
-   * @see
-   *   [[org.keymaerax.core.UniformRenaming]]
+   * @throws RenamingClashException if uniform renaming what~>repl is not admissible for s (because a semantic symbol
+   *   occurs).
+   * @see [[org.keymaerax.core.UniformRenaming]]
    */
-  def uniformRename(what: Variable, repl: Variable): InputTactic = "uniformRename"
-    .byWithInputs(List(what, repl), uniformRenameFw(what, repl))
+  def uniformRename(what: Variable, repl: Variable): InputTactic =
+    "uniformRename".byWithInputs(List(what, repl), uniformRenameFw(what, repl))
 
   @Derivation
   val uniformRenameInfo: InputTacticInfo = InputTacticInfo.create(
@@ -89,8 +84,9 @@ private object ProofRuleTactics extends Logging {
     displayName = Some("UR"),
     displayPremises = "P(y) |- Q(y)",
     displayConclusion = "P(x) |- Q(x)",
-    constructor = TacticConstructor2
-      .create(VariableArg("x"), VariableArg("y"))((what: Variable, repl: Variable) => uniformRename(what, repl)),
+    constructor = TacticConstructor2.create(VariableArg("x"), VariableArg("y"))((what: Variable, repl: Variable) =>
+      uniformRename(what, repl)
+    ),
   )
 
   /** Builtin forward implementation of uniformRename. */
@@ -103,23 +99,18 @@ private object ProofRuleTactics extends Logging {
   /**
    * Bound renaming `what~>repl` renames the bound variable `what` bound at the indicated position to `what`.
    *
-   * @param what
-   *   the variable bound at the position where this tactic will be used.
-   * @param repl
-   *   the new, fresh variable to be used for this bound variable instead.
-   * @author
-   *   Andre Platzer
+   * @param what the variable bound at the position where this tactic will be used.
+   * @param repl the new, fresh variable to be used for this bound variable instead.
+   * @author Andre Platzer
    * @incontext
-   * @see
-   *   [[org.keymaerax.core.BoundRenaming]]
-   * @see
-   *   [[UnifyUSCalculus.boundRename()]]
-   * @throws RenamingClashException
-   *   if this bound renaming is not admissible for s at the indicated position because repl,repl',what' already
-   *   occurred, or because a semantic symbol occurs, or because the formula at `pos` has the wrong shape.
+   * @see [[org.keymaerax.core.BoundRenaming]]
+   * @see [[UnifyUSCalculus.boundRename()]]
+   * @throws RenamingClashException if this bound renaming is not admissible for s at the indicated position because
+   *   repl,repl',what' already occurred, or because a semantic symbol occurs, or because the formula at `pos` has the
+   *   wrong shape.
    */
-  def boundRename(what: Variable, repl: Variable): DependentPositionWithAppliedInputTactic = "boundRename"
-    .byWithInputs(List(what, repl), { (pos: Position) => boundRenameFw(what, repl)(pos) })
+  def boundRename(what: Variable, repl: Variable): DependentPositionWithAppliedInputTactic =
+    "boundRename".byWithInputs(List(what, repl), { (pos: Position) => boundRenameFw(what, repl)(pos) })
 
   @Derivation
   val boundRenameInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
@@ -127,8 +118,9 @@ private object ProofRuleTactics extends Logging {
     displayName = Some("BR"),
     displayPremises = "Γ |- ∀y Q(y), Δ",
     displayConclusion = "Γ |- ∀x Q(x), Δ",
-    constructor = TacticConstructor2
-      .create(VariableArg("x"), VariableArg("y"))((what: Variable, repl: Variable) => boundRename(what, repl)),
+    constructor = TacticConstructor2.create(VariableArg("x"), VariableArg("y"))((what: Variable, repl: Variable) =>
+      boundRename(what, repl)
+    ),
   )
 
   def boundRenameFw(what: Variable, repl: Variable): BuiltInPositionTactic = anon { (pr: ProvableSig, pos: Position) =>
@@ -192,25 +184,22 @@ private object ProofRuleTactics extends Logging {
     constructor = TacticConstructor1.create(VariableArg("y"))((repl: Variable) => boundRenameAt(repl)),
   )
 
-  private def topBoundRenaming(what: Variable, repl: Variable): PositionalTactic =
-    anon { (provable: ProvableSig, pos: Position) =>
+  private def topBoundRenaming(what: Variable, repl: Variable): PositionalTactic = anon {
+    (provable: ProvableSig, pos: Position) =>
       {
         requireOneSubgoal(provable, "BoundRenaming(" + what + "~~>" + repl + ")")
         require(pos.isTopLevel, "bound renaming rule only at top-level")
         provable(core.BoundRenaming(what, repl, pos.top), 0)
       }
-    }
+  }
 
   /**
    * contextualize(t) lifts (standard) top-level tactic `t` to also work on subpositions in any formula context C{_}.
    *
-   * @param tactic
-   *   the tactic to be lifted, which is required to work on top-level left and right and only leave a single goal with
-   *   one single formula changed.
-   * @author
-   *   Andre Platzer
-   * @note
-   *   Implementation analogous to [[ProofRuleTactics.boundRename()]]
+   * @param tactic the tactic to be lifted, which is required to work on top-level left and right and only leave a
+   *   single goal with one single formula changed.
+   * @author Andre Platzer
+   * @note Implementation analogous to [[ProofRuleTactics.boundRename()]]
    */
   def contextualize[T <: BelleExpr](tactic: AtPosition[T], predictor: Formula => Formula): DependentPositionTactic =
     anon((pos: Position, sequent: Sequent) =>
@@ -255,9 +244,8 @@ private object ProofRuleTactics extends Logging {
   )
 
   /**
-   * @throws SkolemClashException
-   *   if the quantified variable that is to be Skolemized already occurs free in the sequent. Use [[BoundRenaming]] to
-   *   resolve.
+   * @throws SkolemClashException if the quantified variable that is to be Skolemized already occurs free in the
+   *   sequent. Use [[BoundRenaming]] to resolve.
    */
   val skolemizeR: BuiltInRightTactic = "skolem".by { (provable: ProvableSig, pos: SuccPosition) =>
     require(pos.isTopLevel, "Skolemization only at top-level")
@@ -279,8 +267,8 @@ private object ProofRuleTactics extends Logging {
   }
 
   @Derivation @nowarn("cat=deprecation&origin=org.keymaerax.btactics.ProofRuleTactics.closeTrue")
-  private[btactics] val closeTrueInfo: PositionTacticInfo = PositionTacticInfo
-    .create(name = "closeTrue", constructor = TacticConstructor0.create()(() => closeTrue))
+  private[btactics] val closeTrueInfo: PositionTacticInfo =
+    PositionTacticInfo.create(name = "closeTrue", constructor = TacticConstructor0.create()(() => closeTrue))
 
   @deprecated("Use SequentCalculus.closeF instead")
   private[btactics] val closeFalse: BuiltInLeftTactic = "closeFalse".by { (provable: ProvableSig, pos: AntePosition) =>
@@ -289,6 +277,6 @@ private object ProofRuleTactics extends Logging {
   }
 
   @Derivation @nowarn("cat=deprecation&origin=org.keymaerax.btactics.ProofRuleTactics.closeFalse")
-  private[btactics] val closeFalseInfo: PositionTacticInfo = PositionTacticInfo
-    .create(name = "closeFalse", constructor = TacticConstructor0.create()((() => closeFalse)))
+  private[btactics] val closeFalseInfo: PositionTacticInfo =
+    PositionTacticInfo.create(name = "closeFalse", constructor = TacticConstructor0.create()((() => closeFalse)))
 }

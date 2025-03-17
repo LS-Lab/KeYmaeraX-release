@@ -16,8 +16,7 @@ import org.keymaerax.pt.{AxiomTerm, ElidingProvable, NoProof, ProvableSig, RuleT
  * implementations. Most lemma DBs can (and should) be implemented by extending this class and implementing the abstract
  * methods for basic storage operations.
  *
- * @author
- *   Brandon Bohrer
+ * @author Brandon Bohrer
  */
 abstract class LemmaDBBase extends LemmaDB {
 
@@ -31,27 +30,25 @@ abstract class LemmaDBBase extends LemmaDB {
   protected def createLemma(): LemmaID
 
   /** @inheritdoc */
-  final override def get(ids: List[LemmaID]): Option[List[Lemma]] = {
+  override final def get(ids: List[LemmaID]): Option[List[Lemma]] = {
     readLemmas(ids)
       .map(_.map(Lemma.fromString))
-      .map(
-        _.map(lemma =>
-          if (ProvableSig.PROOF_TERMS_ENABLED) {
-            val term = lemma.name match {
-              case Some(n) => DerivedAxiomInfo.allInfoByStoredName.get(n) match {
-                  case Some(info) => AxiomTerm(info.canonicalName)
-                  case None => if (DerivedRuleInfo.allInfo.contains(n)) RuleTerm(n) else NoProof
-                }
-              case None => NoProof
-            }
-            Lemma(
-              TermProvable(ElidingProvable(lemma.fact.underlyingProvable, lemma.fact.defs), term, lemma.fact.defs),
-              lemma.evidence,
-              lemma.name,
-            )
-          } else { lemma }
-        )
-      )
+      .map(_.map(lemma =>
+        if (ProvableSig.PROOF_TERMS_ENABLED) {
+          val term = lemma.name match {
+            case Some(n) => DerivedAxiomInfo.allInfoByStoredName.get(n) match {
+                case Some(info) => AxiomTerm(info.canonicalName)
+                case None => if (DerivedRuleInfo.allInfo.contains(n)) RuleTerm(n) else NoProof
+              }
+            case None => NoProof
+          }
+          Lemma(
+            TermProvable(ElidingProvable(lemma.fact.underlyingProvable, lemma.fact.defs), term, lemma.fact.defs),
+            lemma.evidence,
+            lemma.name,
+          )
+        } else { lemma }
+      ))
   } ensures
     (r =>
       r match {

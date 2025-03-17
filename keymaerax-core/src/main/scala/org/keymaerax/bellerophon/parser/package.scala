@@ -38,13 +38,9 @@ package org.keymaerax.bellerophon
  *   - `t('R)` applied at the first applicable position in the [[org.keymaerax.core.Sequent.succ succedent]] (right side
  *     of the sequent).
  *
- * @author
- *   Nathan Fulton
- * @author
- *   Stefan Mitsch
- * @see
- *   [[org.keymaerax.Bibliography.ItpFultonMBP17 Bellerophon: Tactical theorem proving for hybrid systems]]
- * @see
- *   [[org.keymaerax.bellerophon.parser.BelleParser]]
+ * @author Nathan Fulton
+ * @author Stefan Mitsch
+ * @see [[org.keymaerax.Bibliography.ItpFultonMBP17 Bellerophon: Tactical theorem proving for hybrid systems]]
+ * @see [[org.keymaerax.bellerophon.parser.BelleParser]]
  */
 package object parser {}

@@ -6,8 +6,7 @@
 package org.keymaerax.btactics.cexsearch
 
 /**
- * @TODO
- *   Bounded-depth search, Iterative-deepening, A*, IDA*
+ * @TODO Bounded-depth search, Iterative-deepening, A*, IDA*
  *
  * Created by bbohrer on 4/24/16.
  */

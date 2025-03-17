@@ -14,8 +14,7 @@ import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 
 /**
  * Created by ran on 3/23/15.
- * @author
- *   Ran Ji
+ * @author Ran Ji
  */
 class SMTConversionTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
 

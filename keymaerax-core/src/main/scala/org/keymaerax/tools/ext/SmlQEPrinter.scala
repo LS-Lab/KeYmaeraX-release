@@ -11,8 +11,9 @@ import scala.annotation.nowarn
 
 /** Prints SML QE problems with Real64 rounding. */
 object SmlQEReal64Printer extends (Formula => String) {
-  def apply(f: Formula): String = new SmlQEPrinter(_.toString + ".0", _.toString)
-    .print(f)(StaticSemantics.freeVars(f).toSet.toList.zipWithIndex.toMap)
+  def apply(f: Formula): String = new SmlQEPrinter(_.toString + ".0", _.toString).print(f)(
+    StaticSemantics.freeVars(f).toSet.toList.zipWithIndex.toMap
+  )
 }
 
 /** Prints SML QE problems with RatReal, avoiding rounding. */

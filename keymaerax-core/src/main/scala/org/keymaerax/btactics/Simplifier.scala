@@ -63,50 +63,38 @@ object Simplifier {
 
   val plusZeroRight: Simplification = {
     case Plus(t: Term, n: Number) =>
-      if (n.value == 0) { Some((t, useAt(Ax.plusZero)(Position(1, 0 :: Nil)) & byUS(Ax.equalReflexive))) }
-      else None
+      if (n.value == 0) { Some((t, useAt(Ax.plusZero)(Position(1, 0 :: Nil)) & byUS(Ax.equalReflexive))) } else None
     case _ => None
   }
 
   val plusZeroLeft: Simplification = {
     case Plus(n: Number, t: Term) =>
-      if (n.value == 0) { Some((t, useAt(Ax.zeroPlus)(Position(1, 0 :: Nil)) & byUS(Ax.equalReflexive))) }
-      else None
+      if (n.value == 0) { Some((t, useAt(Ax.zeroPlus)(Position(1, 0 :: Nil)) & byUS(Ax.equalReflexive))) } else None
     case _ => None
   }
 
   val powZero: Simplification = {
-    case Power(t: Term, n: Number) =>
-      if (n.value == 0) { Some(Number(1), QE & done) }
-      else None
+    case Power(t: Term, n: Number) => if (n.value == 0) { Some(Number(1), QE & done) } else None
     case _ => None
   }
 
   val powOne: Simplification = {
-    case Power(t: Term, n: Number) =>
-      if (n.value == 1) { Some(t, QE & done) }
-      else None
+    case Power(t: Term, n: Number) => if (n.value == 1) { Some(t, QE & done) } else None
     case _ => None
   }
 
   val divOne: Simplification = {
-    case Divide(t: Term, n: Number) =>
-      if (n.value == 1) { Some(t, QE & done) }
-      else None
+    case Divide(t: Term, n: Number) => if (n.value == 1) { Some(t, QE & done) } else None
     case _ => None
   }
 
   val divCancel: Simplification = {
-    case Divide(t1: Term, t2: Term) =>
-      if (t1 == t2) { Some(Number(1), QE & done) }
-      else None
+    case Divide(t1: Term, t2: Term) => if (t1 == t2) { Some(Number(1), QE & done) } else None
     case _ => None
   }
 
   val minusCancel: Simplification = {
-    case Minus(t1: Term, t2: Term) =>
-      if (t1 == t2) { Some((Number(0), QE & done)) }
-      else None
+    case Minus(t1: Term, t2: Term) => if (t1 == t2) { Some((Number(0), QE & done)) } else None
     case _ => None
   }
 
@@ -153,29 +141,25 @@ object Simplifier {
 
   val pushConstPlus: Simplification = {
     case Plus(Plus(t1: Term, t2: Term), n: Number) =>
-      if (!t2.isInstanceOf[Number] && !t2.isInstanceOf[Plus]) { Some(Plus(Plus(t1, n), t2), QE & done) }
-      else None
+      if (!t2.isInstanceOf[Number] && !t2.isInstanceOf[Plus]) { Some(Plus(Plus(t1, n), t2), QE & done) } else None
     case _ => None
   }
 
   val flipConstPlus: Simplification = {
     case Plus(t1: Term, n: Number) =>
-      if (!t1.isInstanceOf[Number] && !t1.isInstanceOf[Plus]) { Some(Plus(n, t1), QE & done) }
-      else None
+      if (!t1.isInstanceOf[Number] && !t1.isInstanceOf[Plus]) { Some(Plus(n, t1), QE & done) } else None
     case _ => None
   }
 
   val flipConstTimes: Simplification = {
     case Times(t1: Term, n: Number) =>
-      if (!t1.isInstanceOf[Number] && !t1.isInstanceOf[Times]) { Some(Times(n, t1), QE & done) }
-      else None
+      if (!t1.isInstanceOf[Number] && !t1.isInstanceOf[Times]) { Some(Times(n, t1), QE & done) } else None
     case _ => None
   }
 
   val pushConstTimes: Simplification = {
     case Times(Times(t1: Term, t2: Term), n: Number) =>
-      if (!t2.isInstanceOf[Number] && !t2.isInstanceOf[Times]) { Some(Times(Times(t1, n), t2), QE & done) }
-      else None
+      if (!t2.isInstanceOf[Number] && !t2.isInstanceOf[Times]) { Some(Times(Times(t1, n), t2), QE & done) } else None
     case _ => None
   }
 

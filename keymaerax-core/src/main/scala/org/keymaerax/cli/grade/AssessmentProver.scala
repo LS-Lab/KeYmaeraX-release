@@ -375,8 +375,8 @@ object AssessmentProver {
           }
       }
 
-    private def run(p: => () => ProvableSig): Either[ProvableSig, String] = AssessmentProver
-      .run(p, args.get(Options.FAIL_HINT))
+    private def run(p: => () => ProvableSig): Either[ProvableSig, String] =
+      AssessmentProver.run(p, args.get(Options.FAIL_HINT))
 
     private def errorMsg(expected: Artifact, haveMsg: String) = expected match {
       case e: ExpressionArtifact => e.expr match {
@@ -701,8 +701,8 @@ object AssessmentProver {
                     expected,
                   ).check(have) match {
                     case Left(_) => Left(prove(
-                        s"==> ${Modes.CHECK_MODELPLEX_MONITOR}&partialimplies <-> ${Modes.CHECK_MODELPLEX_MONITOR}&partialimplies"
-                          .asSequent,
+                        s"==> ${Modes.CHECK_MODELPLEX_MONITOR}&partialimplies <-> ${Modes
+                            .CHECK_MODELPLEX_MONITOR}&partialimplies".asSequent,
                         byUS(Ax.equivReflexive),
                       ))
                     case r @ Right("INSPECT") => (expected, have) match {
@@ -712,8 +712,8 @@ object AssessmentProver {
                                 .filter(_.isInstanceOf[Variable])
                                 .map(_.asInstanceOf[Variable])
                               if (fvDiff.nonEmpty) {
-                                val existsExpected = fvDiff
-                                  .foldLeft[Formula](ef)({ case (p, v) => Exists(v :: Nil, p) })
+                                val existsExpected =
+                                  fvDiff.foldLeft[Formula](ef)({ case (p, v) => Exists(v :: Nil, p) })
                                 AskGrader(
                                   Some(Modes.QE),
                                   args ++ Map(
@@ -728,7 +728,8 @@ object AssessmentProver {
                                     // @todo measure "importance" of variables, e.g., occurs in how many of the FormulaTools.atomicFormulas(ef)
                                     val expectedCount = StaticSemantics.symbols(e.expr).count(_.isInstanceOf[Variable])
                                     Left(prove(
-                                      s"==> ${Modes.CHECK_MODELPLEX_MONITOR}&partialexists($v,${fvDiff.size},$expectedCount) <-> ${Modes
+                                      s"==> ${Modes.CHECK_MODELPLEX_MONITOR}&partialexists($v,${fvDiff
+                                          .size},$expectedCount) <-> ${Modes
                                           .CHECK_MODELPLEX_MONITOR}&partialexists($v,${fvDiff.size},$expectedCount)"
                                         .asSequent,
                                       byUS(Ax.equivReflexive),
@@ -883,8 +884,7 @@ object AssessmentProver {
           require(expected.map(_.kind).toSet.nonEmpty)
           if (expected.map(_.kind).toSet.size > 1) {
             if (expected.zip(have).exists({ case (ee, he) => ee.kind != he.kind })) Right(errorMsg(e, h)) else Left(h)
-          } else if (have.exists(_.kind != expected.head.kind)) { Right(errorMsg(e, h)) }
-          else Left(h)
+          } else if (have.exists(_.kind != expected.head.kind)) { Right(errorMsg(e, h)) } else Left(h)
         case (h, e) => if (!e.getClass.isAssignableFrom(h.getClass)) Right(errorMsg(e, h)) else Left(have)
         case _ => Left(have)
       }
@@ -992,9 +992,9 @@ object AssessmentProver {
         val hf = if (h) True else False
         run(
           () =>
-            KeYmaeraXProofChecker(1000.seconds, Declaration(Map.empty))(useAt(Ax.equivReflexive)(1))(
-              Sequent(IndexedSeq.empty, IndexedSeq(Equiv(hf, ef)))
-            ),
+            KeYmaeraXProofChecker(1000.seconds, Declaration(Map.empty))(
+              useAt(Ax.equivReflexive)(1)
+            )(Sequent(IndexedSeq.empty, IndexedSeq(Equiv(hf, ef)))),
           None,
         )
     }
@@ -1073,9 +1073,9 @@ object AssessmentProver {
       )
       val encodeda = encodeFunctions(expa, funca.map({ case (fn, (v, _)) => fn -> v }))
       val encodedb = encodeFunctions(expb, funcb.map({ case (fn, (v, _)) => fn -> v }))
-      KeYmaeraXProofChecker(60.seconds, Declaration(Map.empty))(PolynomialArithV2.equate(1))(
-        Sequent(IndexedSeq.empty, IndexedSeq(Equal(encodeda, encodedb)))
-      )
+      KeYmaeraXProofChecker(60.seconds, Declaration(Map.empty))(
+        PolynomialArithV2.equate(1)
+      )(Sequent(IndexedSeq.empty, IndexedSeq(Equal(encodeda, encodedb))))
   }
 
   private def nameOf(t: Term): String = StaticSemantics
@@ -1152,8 +1152,7 @@ object AssessmentProver {
     if (
       FormulaTools.atomicFormulas(a).forall(_.isInstanceOf[Equal]) &&
       FormulaTools.atomicFormulas(b).forall(_.isInstanceOf[Equal])
-    ) { groebnerBasisEquality(a, b, normalize) }
-    else generalPolynomialEquality(a, b, normalize)
+    ) { groebnerBasisEquality(a, b, normalize) } else generalPolynomialEquality(a, b, normalize)
   }
 
   /** Polynomial equality by Groebner basis comparison for formulas whose atoms are all equalities. */
@@ -1185,8 +1184,7 @@ object AssessmentProver {
     val terms = ListBuffer.empty[(PosInExpr, Equal)]
     val doNormalize = new ExpressionTraversalFunction() {
       override def preF(p: PosInExpr, e: Formula): Either[Option[ExpressionTraversal.StopTraversal], Formula] = {
-        if (e.isFOL) { Right(SimplifierV3.semiAlgNormalize(e)._1) }
-        else Left(None)
+        if (e.isFOL) { Right(SimplifierV3.semiAlgNormalize(e)._1) } else Left(None)
       }
     }
     val na = if (normalize) ExpressionTraversal.traverse(doNormalize, a).get else a
@@ -1358,9 +1356,9 @@ object AssessmentProver {
         .isEmpty,
       "Invariant " + inv.prettyString + " does not mention free variables",
     )
-    KeYmaeraXProofChecker(60.seconds, Declaration(Map.empty))(DifferentialEquationCalculus.dI(auto = Symbol("cex"))(1))(
-      Sequent(IndexedSeq(inv), IndexedSeq(Box(ode, inv)))
-    )
+    KeYmaeraXProofChecker(60.seconds, Declaration(Map.empty))(
+      DifferentialEquationCalculus.dI(auto = Symbol("cex"))(1)
+    )(Sequent(IndexedSeq(inv), IndexedSeq(Box(ode, inv))))
   }
 
   /** Checks that formula `h` is equivalent differential invariant to formula `e`, i.e. (e<->h) & (e' -> h') */
@@ -1512,9 +1510,8 @@ object AssessmentProver {
         problem
           .prompts
           .foreach({ prompt =>
-            val out = new PrintWriter(new BufferedWriter(new FileWriter(
-              s"$outDir${File.separator}${problem.number}${prompt.number}.txt"
-            )))
+            val out = new PrintWriter(new BufferedWriter(new FileWriter(s"$outDir${File.separator}${problem
+                .number}${prompt.number}.txt")))
             prompt
               .answers
               .foreach({
@@ -1530,14 +1527,10 @@ object AssessmentProver {
   /**
    * Grades a submission.
    *
-   * @param in
-   *   The file to grade
-   * @param out
-   *   Output directory for answer files
-   * @param exportAnswers
-   *   Export answers to text files instead of grading
-   * @param skipGradingOnParseError
-   *   Skip grading on parse errors
+   * @param in The file to grade
+   * @param out Output directory for answer files
+   * @param exportAnswers Export answers to text files instead of grading
+   * @param skipGradingOnParseError Skip grading on parse errors
    */
   def grade(
       in: String,
@@ -1548,9 +1541,7 @@ object AssessmentProver {
       resultOut: OutputStream,
   ): Unit = {
     val src = Source.fromFile(in, "UTF-8")
-    val input =
-      try { src.mkString.parseJson }
-      finally { src.close() }
+    val input = try { src.mkString.parseJson } finally { src.close() }
     val chapter = {
       import Submission.SubmissionJsonFormat._
       input.convertTo[Submission.Chapter]
@@ -1570,10 +1561,8 @@ object AssessmentProver {
     val parsedProblems = chapter
       .problems
       .map({ case problem @ Submission.Problem(_, _, _, _, _, _, prompts) =>
-        val parsedAnswers = prompts.map(p =>
-          try { Left(p -> toAnswerArtifact(p)) }
-          catch { case ex: Throwable => Right(p -> ex) }
-        )
+        val parsedAnswers =
+          prompts.map(p => try { Left(p -> toAnswerArtifact(p)) } catch { case ex: Throwable => Right(p -> ex) })
         (
           problem,
           parsedAnswers.partition(_.isLeft) match {
@@ -1595,8 +1584,9 @@ object AssessmentProver {
         .map({ case (p, (gradablePrompts, unparseablePrompts)) =>
           msgStream.println(p.number + " " + p.title)
 
-          val allPromptArtifacts = (gradablePrompts ++ unparseablePrompts.map({ case (p, _) => (p, None) }))
-            .sortBy(_._1.id)
+          val allPromptArtifacts = (gradablePrompts ++ unparseablePrompts.map({ case (p, _) => (p, None) })).sortBy(
+            _._1.id
+          )
           val graders = extractGraders(p, allPromptArtifacts)
           val errors = unparseablePrompts.map({ case (prompt, ex: Throwable) => (prompt, Right(ex)) })
           val all = (graders ++ errors).sortBy({ case (p, _) => p.id })
@@ -1622,8 +1612,9 @@ object AssessmentProver {
             else 1
           msgStream.println(f"${p.number} ) Sum $percentage%2.1f%%")
           feedback match {
-            case Some(s) => if (percentage <= 75) msgStream
-                .println(s"If you had difficulty with this question you would likely benefit from a review of $s")
+            case Some(s) => if (percentage <= 75) msgStream.println(
+                s"If you had difficulty with this question you would likely benefit from a review of $s"
+              )
             case None => // no feedback annotated
           }
           (p, feedback, grades)
@@ -1937,8 +1928,9 @@ object AssessmentProver {
         })
         msgStream.println((passed ++ failed).sortBy({ case (p, _) => p.id }).map(_._2).mkString("\n"))
       } else {
-        msgStream
-          .println(prompts.map({ case (p, _) => questionIdentifier(problem, p) + "..." + Messages.OK }).mkString("\n"))
+        msgStream.println(
+          prompts.map({ case (p, _) => questionIdentifier(problem, p) + "..." + Messages.OK }).mkString("\n")
+        )
       }
     })
     msgStream.println("------------")

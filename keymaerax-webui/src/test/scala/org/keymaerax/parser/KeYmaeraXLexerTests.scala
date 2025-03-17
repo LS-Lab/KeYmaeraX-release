@@ -33,15 +33,17 @@ class KeYmaeraXLexerTests extends AnyFlatSpec with Matchers {
   // @todo Nathan
   // @todo do more location tests with newlines. And also with comments!
   it should "Handle newlines correctly" in {
-    val input = """
-                  |   (""".stripMargin
+    val input =
+      """
+        |   (""".stripMargin
     KeYmaeraXLexer(input).head.loc shouldBe Region(2, 4, 2, 4)
     KeYmaeraXLexer(input).head shouldBe Token(LPAREN, Region(2, 4, 2, 4))
   }
 
   it should "Handle newlines in strings correctly" in {
-    val input = """cut("x>=0
-                  |    &y>=0")""".stripMargin
+    val input =
+      """cut("x>=0
+        |    &y>=0")""".stripMargin
     val lexed = KeYmaeraXLexer.inMode(input, ProblemFileMode)
     lexed(0) shouldBe Token(IDENT("cut"), Region(1, 1, 1, 3))
     lexed(1) shouldBe Token(LPAREN, Region(1, 4, 1, 4))
@@ -97,11 +99,12 @@ class KeYmaeraXLexerTests extends AnyFlatSpec with Matchers {
   }
 
   it should "parse a multi-line comment" in {
-    val n = """
-              |/*
-              | * This is a comment.
-              | */
-              | x
+    val n =
+      """
+        |/*
+        | * This is a comment.
+        | */
+        | x
       """.stripMargin
     KeYmaeraXLexer(n).head.tok shouldBe (IDENT("x"))
   }
@@ -119,8 +122,7 @@ class KeYmaeraXLexerTests extends AnyFlatSpec with Matchers {
   }
 
   it should "lex f(??) as f(!!)" in {
-    println("start");
-    val lex = KeYmaeraXLexer("f(??)")
+    println("start"); val lex = KeYmaeraXLexer("f(??)")
     lex.length shouldBe 4
     lex(1).tok shouldBe LBANANA
     lex(2).tok shouldBe RBANANA

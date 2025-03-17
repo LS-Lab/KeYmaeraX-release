@@ -13,10 +13,7 @@ import java.net.URI
 import java.time.Duration
 import scala.io.{Codec, Source}
 
-/**
- * @author
- *   Nathan Fulton
- */
+/** @author Nathan Fulton */
 object UpdateChecker extends Logging {
 
   /**
@@ -38,8 +35,7 @@ object UpdateChecker extends Logging {
    * fetched the latest release, we might not get the latest version number. Because of this, more than one release is
    * queried and the highest version number found is returned.
    *
-   * @return
-   *   Version number of the latest release, or [[None]] if anything went wrong.
+   * @return Version number of the latest release, or [[None]] if anything went wrong.
    */
   private def fetchLatestVersion(): Option[VersionNumber] =
     try {

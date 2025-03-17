@@ -23,16 +23,11 @@ class ProofCheckException(message: String) extends Exception(message)
  * compiles the proof term into subsequent proof rule and axiom applications in the [[org.keymaerax.core prover core]].
  * Created by nfulton on 10/15/15.
  *
- * @author
- *   Nathan Fulton
- * @author
- *   Brandon Bohrer
- * @see
- *   [[ProofTerm]]
- * @see
- *   [[ProvableSig]]
- * @todo
- *   Currently not operational: fixme
+ * @author Nathan Fulton
+ * @author Brandon Bohrer
+ * @see [[ProofTerm]]
+ * @see [[ProvableSig]]
+ * @todo Currently not operational: fixme
  */
 object ProofChecker {
 
@@ -43,8 +38,7 @@ object ProofChecker {
   /**
    * Converts proof term e for goal phi into a Provable iff e indeed justifies phi.
    *
-   * @todo
-   *   could remove phi except no more contract then
+   * @todo could remove phi except no more contract then
    */
   def apply(e: ProofTerm, phi: Option[Formula] = None): ProvableSig = {
     val result: ProvableSig = e match {

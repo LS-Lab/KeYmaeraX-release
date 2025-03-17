@@ -17,10 +17,10 @@ class GetMathematicaConfigSuggestionRequest(db: DBAbstraction) extends Localhost
     val paths = ToolPathFinder.findMathematicaInstallDir().flatMap(ToolPathFinder.findMathematicaPaths)
 
     val suggestionFound = paths.isDefined
-    val suggestion = paths.getOrElse(
-      ToolPathFinder
-        .MathematicaPaths(mathKernel = Paths.get("path/to/MathKernel"), jlinkLib = Paths.get("path/to/jlinkLib"))
-    )
+    val suggestion = paths.getOrElse(ToolPathFinder.MathematicaPaths(
+      mathKernel = Paths.get("path/to/MathKernel"),
+      jlinkLib = Paths.get("path/to/jlinkLib"),
+    ))
 
     new MathematicaConfigSuggestionResponse(Os.Name, suggestionFound, suggestion)
   }

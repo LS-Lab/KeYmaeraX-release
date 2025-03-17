@@ -13,10 +13,8 @@ import scala.annotation.nowarn
 
 /**
  * Conversion of names.
- * @author
- *   Stefan Mitsch
- * @author
- *   Ran Ji
+ * @author Stefan Mitsch
+ * @author Ran Ji
  */
 object CFormulaTermGenerator {
 
@@ -58,10 +56,8 @@ object CFormulaTermGenerator {
 /**
  * Generates formula and term evaluation C code. `termContainer` configures the location where primitive terms are
  * looked up (e.g., structs).
- * @author
- *   Stefan Mitsch
- * @author
- *   Ran Ji
+ * @author Stefan Mitsch
+ * @author Ran Ji
  */
 class CFormulaTermGenerator(termContainer: Expression => String, defs: Declaration)
     extends FormulaTermGenerator(termContainer, defs) {

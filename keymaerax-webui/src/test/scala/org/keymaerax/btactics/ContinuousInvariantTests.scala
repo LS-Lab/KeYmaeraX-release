@@ -192,8 +192,8 @@ class ContinuousInvariantTests extends TacticTestBase {
   }
 
   it should "refute parametric ODEs" in withMathematica { tool =>
-    val cex = tool
-      .refuteODE("{x'=v,v'=A()}".asProgram.asInstanceOf[ODESystem], "A()=1 & x=1".asFormula :: Nil, "x=1".asFormula)
+    val cex =
+      tool.refuteODE("{x'=v,v'=A()}".asProgram.asInstanceOf[ODESystem], "A()=1 & x=1".asFormula :: Nil, "x=1".asFormula)
     val aFunc = "A()".asTerm.asInstanceOf[FuncOf]
 
     cex shouldBe
@@ -255,8 +255,8 @@ class ContinuousInvariantTests extends TacticTestBase {
   }
 
   it should "generate necessary formulas" in withMathematica { tool =>
-    val (invnec, seqnec) = tool
-      .genODECond("{x'=1}".asProgram.asInstanceOf[ODESystem], "x=1".asFormula :: Nil, "x=1".asFormula)
+    val (invnec, seqnec) =
+      tool.genODECond("{x'=1}".asProgram.asInstanceOf[ODESystem], "x=1".asFormula :: Nil, "x=1".asFormula)
 
     invnec shouldBe List(
       "x=1->(1+(-1)*x < 0|1+(-1)*x=0)&(-1)+x < 0".asFormula,
