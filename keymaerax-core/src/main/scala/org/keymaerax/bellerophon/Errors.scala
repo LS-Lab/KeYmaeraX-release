@@ -25,7 +25,7 @@ import org.apache.commons.lang3.StringUtils
  * Some advanced proof search tactics may "convert" between these exception types or swallow more of them when they
  * deliberately try steps they know may fail spectacularly but have a backup plan.
  */
-abstract class BelleThrowable(message: => String, cause: Throwable = null) extends ProverException("", cause) {
+abstract class BelleThrowable(msg: => String, cause: Throwable = null) extends ProverException("", cause) {
   /* @note message not passed to super (constructing Bellerophon messages tends to be expensive, so construct on demand only) */
 
   /* @note mutable state for gathering the logical context that led to this exception */
@@ -39,7 +39,7 @@ abstract class BelleThrowable(message: => String, cause: Throwable = null) exten
   }
 
   /** Read the message describing what went wrong. */
-  override def getMessage: String = message
+  override def getMessage: String = msg
 
   override def toString: String = getMessage() + "\n" + super.toString + "\nin " +
     StringUtils.abbreviate(tacticContext.toString, 1000)
@@ -52,16 +52,16 @@ abstract class BelleThrowable(message: => String, cause: Throwable = null) exten
  * example, forgetting to provide an expected position or applying a left tactic on the right. BelleInterpreter will
  * raise the error to the user's attention but it needs an internal fix to KeYmaera X.
  */
-abstract class BelleCriticalException(message: => String, cause: Throwable = null)
-    extends BelleThrowable(message, cause)
+abstract class BelleCriticalException(msg: => String, cause: Throwable = null)
+    extends BelleThrowable(msg, cause)
 
 /**
  * User feedback: Indicates that the user has provided an unsuitable input problem or made a correctable error in a
  * proof step. They will be reported back to the user along with a legible message describing what needs to be changed
  * in the problem or proof.
  */
-abstract class BelleUserCorrectableException(message: => String, cause: Throwable = null)
-    extends BelleThrowable(message, cause)
+abstract class BelleUserCorrectableException(msg: => String, cause: Throwable = null)
+    extends BelleThrowable(msg, cause)
 
 /**
  * Search control: Silently raises issues to control proof search, indicating that one proof attempt did not succeed so
@@ -74,8 +74,8 @@ abstract class BelleUserCorrectableException(message: => String, cause: Throwabl
  * @see
  *   [[TacticInapplicableFailure]]
  */
-abstract class BelleProofSearchControl(message: => String, cause: Throwable = null)
-    extends BelleThrowable(message, cause)
+abstract class BelleProofSearchControl(msg: => String, cause: Throwable = null)
+    extends BelleThrowable(msg, cause)
 
 //</editor-fold>
 
@@ -86,16 +86,16 @@ abstract class BelleProofSearchControl(message: => String, cause: Throwable = nu
  * formula was expected. Or applying a tactic at -1 that can only applied in the succedent or vice versa. This indicates
  * a catastrophic logical error in the whole tactic implementation.
  */
-class IllFormedTacticApplicationException(message: => String, cause: Throwable = null)
-    extends BelleCriticalException(message, cause)
+class IllFormedTacticApplicationException(msg: => String, cause: Throwable = null)
+    extends BelleCriticalException(msg, cause)
 
 /** Incorrect prover setup, such as insufficient stack size or missing tools. */
-class ProverSetupException(message: => String, cause: Throwable = null) extends BelleCriticalException(message, cause)
+class ProverSetupException(msg: => String, cause: Throwable = null) extends BelleCriticalException(msg, cause)
 
 /** Signals an unexpected proof state (e.g., an open goal that should have been closed). */
-class BelleUnexpectedProofStateError(message: => String, val proofState: Provable, cause: Throwable = null)
-    extends BelleCriticalException(message, cause) {
-  override def toString: String = message + "\n" + proofState.prettyString
+class BelleUnexpectedProofStateError(msg: => String, val proofState: Provable, cause: Throwable = null)
+    extends BelleCriticalException(msg, cause) {
+  override def toString: String = msg + "\n" + proofState.prettyString
 }
 
 /**
@@ -126,13 +126,13 @@ class SubstUnificationException(val shape: Subst, val input: Subst, info: String
     ) {}
 
 /** Tactic requirements that failed and indicate a critical logical error in using it. */
-class TacticRequirementError(message: => String) extends BelleCriticalException(message)
+class TacticRequirementError(msg: => String) extends BelleCriticalException(msg)
 
 /** Tactic assertions. */
-class TacticAssertionError(message: => String) extends BelleCriticalException(message)
+class TacticAssertionError(msg: => String) extends BelleCriticalException(msg)
 
 /** Error indicates that a (critical) infinite tactic loop is detected indicating an implementation error. */
-class InfiniteTacticLoopError(message: => String) extends BelleCriticalException(message)
+class InfiniteTacticLoopError(msg: => String) extends BelleCriticalException(msg)
 
 /**
  * A Bellerophon critical exception that consists of two reasons why it is being raised, for example, if two things went
@@ -151,21 +151,21 @@ class CompoundCriticalException(val left: BelleThrowable, val right: BelleThrowa
 //<editor-fold desc="User-correctable exceptions">
 
 /** Signals that an annotated invariant is not provable and needs fixing. */
-class UnprovableAnnotatedInvariant(message: => String, cause: Throwable = null)
-    extends BelleUserCorrectableException(message, cause)
+class UnprovableAnnotatedInvariant(msg: => String, cause: Throwable = null)
+    extends BelleUserCorrectableException(msg, cause)
 
-class UnexpandedDefinitionsFailure(message: => String, cause: Throwable = null)
-    extends BelleUserCorrectableException(message, cause)
+class UnexpandedDefinitionsFailure(msg: => String, cause: Throwable = null)
+    extends BelleUserCorrectableException(msg, cause)
 
-class MissingLyapunovFunction(message: => String, cause: Throwable = null)
-    extends BelleUserCorrectableException(message, cause)
+class MissingLyapunovFunction(msg: => String, cause: Throwable = null)
+    extends BelleUserCorrectableException(msg, cause)
 
 /**
  * Signaling that a tactic was not applicable or did not work at the current goal. BelleTacticFailures will be consumed
  * by the BelleInterpreter which will try something else instead.
  */
-abstract class BelleTacticFailure(message: => String, cause: Throwable = null)
-    extends BelleProofSearchControl(message, cause)
+abstract class BelleTacticFailure(msg: => String, cause: Throwable = null)
+    extends BelleProofSearchControl(msg, cause)
 
 /**
  * Tactic happens to not be applicable as indicated in the present sequent. For example, InapplicableTactic can be
@@ -173,30 +173,30 @@ abstract class BelleTacticFailure(message: => String, cause: Throwable = null)
  * the right-hand side where it turns out there is an Or formula not an And formula. This does not indicate a
  * catastrophic failure in the tactic implementation, merely a promising but unsuccessful attempt of applying a tactic.
  */
-class TacticInapplicableFailure(message: => String, cause: Throwable = null) extends BelleTacticFailure(message, cause)
+class TacticInapplicableFailure(msg: => String, cause: Throwable = null) extends BelleTacticFailure(msg, cause)
 
 /**
  * Tactic was unable to unify with the given key and is, thus, inapplicable as indicated in the present sequent. Besides
  * indicating genuine unifiable situations, this may indicate that the wrong key was chosen for the (derived) axiom in
  * its [[org.keymaerax.btactics.macros.AxiomInfo]].
  */
-class InapplicableUnificationKeyFailure(message: => String, cause: Throwable = null)
-    extends BelleTacticFailure(message, cause)
+class InapplicableUnificationKeyFailure(msg: => String, cause: Throwable = null)
+    extends BelleTacticFailure(msg, cause)
 
 /**
  * Signaling that a tactic's implementation was incomplete and did not work out as planned, so tactic execution might
  * continue, but it is indicating a potential problem in the tactic's implementation.
  */
-class UnsupportedTacticFeature(message: => String, cause: Throwable = null) extends BelleTacticFailure(message, cause)
+class UnsupportedTacticFeature(msg: => String, cause: Throwable = null) extends BelleTacticFailure(msg, cause)
 
 /** Signaling that a tactic input was not as expected. */
-class InputFormatFailure(message: => String, cause: Throwable = null) extends BelleTacticFailure(message, cause)
+class InputFormatFailure(msg: => String, cause: Throwable = null) extends BelleTacticFailure(msg, cause)
 
 /**
  * Signals a proof search failure. Also thrown by calls that are not "tactics" per se but might, e.g., be called
  * internally by a tactic May be caught internally by tactics to direct searches.
  */
-class ProofSearchFailure(message: => String, cause: Throwable = null) extends BelleTacticFailure(message, cause)
+class ProofSearchFailure(msg: => String, cause: Throwable = null) extends BelleTacticFailure(msg, cause)
 
 //</editor-fold>
 
@@ -207,26 +207,26 @@ class ProofSearchFailure(message: => String, cause: Throwable = null) extends Be
  * stop
  * @param status
  *   signaling the status of the goal such as Counterexample, Valid
- * @param message
+ * @param msg
  *   readable description of the issue
  */
-class BelleAbort(status: => String, message: => String, cause: Throwable = null)
-    extends BelleProofSearchControl(message, cause)
+class BelleAbort(status: => String, msg: => String, cause: Throwable = null)
+    extends BelleProofSearchControl(msg, cause)
 
 /** Raised when a tactic wants to indicate that it is/was not able to make progress on the goal. */
-class BelleNoProgress(message: => String, cause: Throwable = null) extends BelleProofSearchControl(message, cause)
+class BelleNoProgress(msg: => String, cause: Throwable = null) extends BelleProofSearchControl(msg, cause)
 
 /** Raised when provable `p` is not yet proved. */
-case class BelleUnfinished(message: String, p: Provable)
+case class BelleUnfinished(msg: String, p: Provable)
     extends BelleProofSearchControl(
       if (p.subgoals.size == 1 && p.subgoals.head.ante.isEmpty && p.subgoals.head.succ == False :: Nil)
-        message + { if (message.nonEmpty) ": " else "" } + "expected to have proved, but got false"
-      else message + { if (message.nonEmpty) ": " else "" } + "expected to have proved, but got open goals"
+        msg + { if (msg.nonEmpty) ": " else "" } + "expected to have proved, but got false"
+      else msg + { if (msg.nonEmpty) ": " else "" } + "expected to have proved, but got open goals"
     )
 
 /** Raised when counterexamples are found in sequent `s`; `cex` contains counterexample values per named symbol. */
-case class BelleCEX(message: String, cex: Map[NamedSymbol, Expression], s: Sequent)
-    extends BelleProofSearchControl(message)
+case class BelleCEX(msg: String, cex: Map[NamedSymbol, Expression], s: Sequent)
+    extends BelleProofSearchControl(msg)
 
 /**
  * A Bellerophon proof search exception that consists of two reasons why it is being raised, for example, if two things
