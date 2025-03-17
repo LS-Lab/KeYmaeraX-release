@@ -256,7 +256,7 @@ class USubstTests extends TacticTestBase {
 //      pr => pr(USubst(SubstitutionPair(UnitPredicational("q", AnyArg), "x=0".asFormula) :: Nil)),
 //      pr
 //    )
-      theDeductionOf {
+      theDeductionOf[SubstitutionClashException] {
         pr(USubst(SubstitutionPair(UnitPredicational("q", AnyArg), "x=0".asFormula) :: Nil))
       } should throwOrNoop[SubstitutionClashException](p =>
         p.conclusion.ante.isEmpty &&
@@ -281,7 +281,7 @@ class USubstTests extends TacticTestBase {
       pr shouldBe Symbol("proved")
       pr.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("f(y)=0 -> [x:=5;]f(y)=0".asFormula))
       // this should not prove x=0->[x:=5;]x=0
-      theDeductionOf {
+      theDeductionOf[SubstitutionClashException] {
         pr(USubst(SubstitutionPair(UnitFunctional("f", AnyArg, Real), "x".asTerm) :: Nil))
       } should throwOrNoop[SubstitutionClashException](p =>
         p.conclusion.ante.isEmpty &&

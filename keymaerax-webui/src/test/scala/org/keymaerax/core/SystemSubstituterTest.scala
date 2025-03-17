@@ -115,7 +115,7 @@ class SystemSubstituterTest extends TacticTestBase {
       ))
     }
     // @todo should throw or leave f,p,q untouched since they have different types
-    theDeductionOf(pr(USubst(
+    theDeductionOf[CoreException](pr(USubst(
       SubstitutionPair(
         DifferentialProgramConst("c", AnyArg),
         AtomicODE(DifferentialSymbol(Variable("x_")), Number(3)),
@@ -125,7 +125,7 @@ class SystemSubstituterTest extends TacticTestBase {
         SubstitutionPair(PredOf(Function("p", None, Real, Bool), DotTerm()), "y_=9".asFormula) :: Nil
     ))) should throwOrNoop[CoreException](inverseDGconsideredHarmless)
     // @note this is a mistyped substitution so near no-op would be acceptable
-    theDeductionOf {
+    theDeductionOf[CoreException] {
       pr(USubst(
         SubstitutionPair(
           DifferentialProgramConst("c", Except(y :: Nil)),
@@ -155,7 +155,7 @@ class SystemSubstituterTest extends TacticTestBase {
       ))
     }
     // @todo should throw or leave f,g,p,q untouched since they have subtly different spaces
-    theDeductionOf(pr(USubst(
+    theDeductionOf[CoreException](pr(USubst(
       SubstitutionPair(
         DifferentialProgramConst("c", AnyArg),
         AtomicODE(DifferentialSymbol(Variable("x_")), Number(0)),
@@ -173,7 +173,7 @@ class SystemSubstituterTest extends TacticTestBase {
       val pr = ProvableSig.axioms("DG inverse differential ghost")
       pr shouldBe Symbol("proved")
       // @todo should throw or leave f,g,p,q untouched since they have subtly different spaces
-      theDeductionOf(pr(USubst(
+      theDeductionOf[CoreException](pr(USubst(
         SubstitutionPair(
           DifferentialProgramConst("c", AnyArg),
           AtomicODE(DifferentialSymbol(Variable("x_")), Number(3)),
@@ -192,7 +192,7 @@ class SystemSubstituterTest extends TacticTestBase {
       val pr = ProvableSig.axioms("DG inverse differential ghost")
       pr shouldBe Symbol("proved")
       // @todo should throw or leave f,g,p,q untouched since they have subtly different spaces
-      theDeductionOf(pr(USubst(
+      theDeductionOf[CoreException](pr(USubst(
         SubstitutionPair(
           DifferentialProgramConst("c", AnyArg),
           AtomicODE(DifferentialSymbol(Variable("x_")), "-b()".asTerm),
@@ -256,7 +256,7 @@ class SystemSubstituterTest extends TacticTestBase {
           ) :: SubstitutionPair(UnitPredicational("p", Except(y :: Nil)), "x<=10".asFormula) :: Nil
       ))
     }
-    theDeductionOf(pr(USubst(
+    theDeductionOf[CoreException](pr(USubst(
       SubstitutionPair(FuncOf(Function("a", None, Unit, Real), Nothing), Number(0)) ::
         SubstitutionPair(FuncOf(Function("b", None, Unit, Real), Nothing), Number(-1)) ::
         SubstitutionPair(UnitPredicational("q", AnyArg), True) :: SubstitutionPair(
@@ -310,7 +310,7 @@ class SystemSubstituterTest extends TacticTestBase {
           ) :: SubstitutionPair(UnitPredicational("p", Except(y :: Nil)), "x<=10".asFormula) :: Nil
       ))
     }
-    theDeductionOf(pr(USubst(
+    theDeductionOf[CoreException](pr(USubst(
       SubstitutionPair(FuncOf(Function("b", None, Unit, Real), Nothing), Number(-1)) ::
         SubstitutionPair(UnitPredicational("q", AnyArg), True) :: SubstitutionPair(
           DifferentialProgramConst("c", AnyArg),
@@ -337,7 +337,7 @@ class SystemSubstituterTest extends TacticTestBase {
             SubstitutionPair(UnitPredicational("p", Except(y :: Nil)), ".>=0".asFormula) :: Nil
         ))
       }
-      theDeductionOf(pr(USubst(
+      theDeductionOf[CoreException](pr(USubst(
         SubstitutionPair(
           DifferentialProgramConst("c", Except(y :: Nil)),
           AtomicODE(DifferentialSymbol(Variable("x_")), Variable("y_", None, Real)),
@@ -347,7 +347,7 @@ class SystemSubstituterTest extends TacticTestBase {
           SubstitutionPair(PredOf(Function("p", None, Real, Bool), DotTerm()), ".>=0".asFormula) :: Nil
       ))) should throwOrNoop[CoreException](inverseDGconsideredHarmless)
       // @note this is a mistyped substitution so near no-op would be acceptable
-      theDeductionOf(pr(USubst(
+      theDeductionOf[CoreException](pr(USubst(
         SubstitutionPair(
           DifferentialProgramConst("c", Except(y :: Nil)),
           AtomicODE(DifferentialSymbol(Variable("x_")), Variable("y_", None, Real)),
@@ -378,7 +378,7 @@ class SystemSubstituterTest extends TacticTestBase {
             ) :: SubstitutionPair(UnitPredicational("p", Except(y :: Nil)), "x_>=0".asFormula) :: Nil
         ))
       }
-      theDeductionOf(pr(USubst(
+      theDeductionOf[CoreException](pr(USubst(
         SubstitutionPair(
           DifferentialProgramConst("c", Except(y :: Nil)),
           AtomicODE(DifferentialSymbol(Variable("x_")), Variable("y_", None, Real)),
