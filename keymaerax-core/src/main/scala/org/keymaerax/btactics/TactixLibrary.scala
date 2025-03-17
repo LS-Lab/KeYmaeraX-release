@@ -537,13 +537,14 @@ object TactixLibrary extends Logging {
               logger.info("Explore uses loop with annotated invariant")
               // @note bypass all other invariant generators except the annotated invariants, pass on to loop
               ChooseSome(
-                () =>
+                { () =>
                   try { gen.generate(seq, pos, defs).iterator.map(_.formula) }
                   catch {
                     case err: Exception =>
                       logger.warn("ChooseSome: error listing options", err)
                       List[Formula]().iterator
-                  },
+                  }
+                },
                 (inv: Formula) => HybridProgramCalculus.loop(inv)(pos) & onAll(explore(gen)),
               )
             case (_, Some(Box(Loop(_), _))) =>
