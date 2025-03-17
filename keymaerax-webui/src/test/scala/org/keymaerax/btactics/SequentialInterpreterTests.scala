@@ -285,12 +285,14 @@ class SequentialInterpreterTests extends TacticTestBase {
     proveByS(
       "==> 0<=x&x<=2, 3<=y&y<=4".asSequent,
       prop,
-      (labels: Option[List[BelleLabel]]) =>
+      { (labels: Option[List[BelleLabel]]) =>
         labels match {
           case Some(l) => l should contain theSameElementsAs BelleLabel
               .fromString("0<=x//3<=y::0<=x//y<=4::x<=2//3<=y::x<=2//y<=4")
           case None => fail("Labels expected, but got None")
-        },
+        }
+        ()
+      },
     )
   }
 
@@ -298,11 +300,13 @@ class SequentialInterpreterTests extends TacticTestBase {
     proveByS(
       "x<=0|0<=x&x<=2|2<=x ==>".asSequent,
       prop,
-      (labels: Option[List[BelleLabel]]) =>
+      { (labels: Option[List[BelleLabel]]) =>
         labels match {
           case Some(l) => l should contain theSameElementsAs BelleLabel.fromString("x<=0::0<=x&x<=2::2<=x")
           case None => fail("Labels expected, but got None")
-        },
+        }
+        ()
+      },
     )
   }
 
@@ -451,6 +455,7 @@ class SequentialInterpreterTests extends TacticTestBase {
             BelleLabels.indStep.append("[x:=x+1;]x>=0".asLabel).append("1".asLabel) ::
             BelleLabels.indStep.append("[x:=x+2;]x>=0".asLabel) :: Nil
         )
+        ()
       },
     )
   }
@@ -1101,14 +1106,16 @@ class SequentialInterpreterTests extends TacticTestBase {
     proveByS(
       "y<=0 -> x=2, 0<=y&y<=1 -> x=3, 1<=y -> x=4, y<=0 | 0<=y&y<=1 | 1<=y ==> 2<=x & x<=4".asSequent,
       Using(List("y<=0 | 0<=y&y<=1 | 1<=y".asFormula), prop),
-      (labels: Option[List[BelleLabel]]) =>
+      { (labels: Option[List[BelleLabel]]) =>
         labels match {
           case Some(l) => l should contain theSameElementsAs
               // @todo simplify labels
               BelleLabel.fromString("y<=0") ++ BelleLabel.fromString("0<=y&y<=1|1<=y//0<=y&y<=1") ++ BelleLabel
                 .fromString("0<=y&y<=1|1<=y//1<=y")
           case None => fail("Expected labels, but got None")
-        },
+        }
+        ()
+      },
     ).subgoals should contain theSameElementsAs List(
       "y<=0 -> x=2, 0<=y&y<=1 -> x=3, 1<=y -> x=4, y<=0 ==> 2<=x & x<=4".asSequent,
       "y<=0 -> x=2, 0<=y&y<=1 -> x=3, 1<=y -> x=4, 0<=y, y<=1 ==> 2<=x & x<=4".asSequent,
@@ -1127,7 +1134,7 @@ class SequentialInterpreterTests extends TacticTestBase {
     proveByS(
       s,
       t,
-      (labels: Option[List[BelleLabel]]) =>
+      { (labels: Option[List[BelleLabel]]) =>
         labels match {
           case Some(l) => l should contain theSameElementsAs
               BelleLabel.fromString(
@@ -1149,7 +1156,9 @@ class SequentialInterpreterTests extends TacticTestBase {
                 "w*dhf < 0->(case5(w,dhf,dhd,r,rv)->bounds5(w,dhd,r,rv,h))&(case6(w,dhf,dhd,r,rv)->bounds6(w,dhf,dhd,r,rv,h))//case6(w,dhf,dhd,r,rv)->bounds6(w,dhf,dhd,r,rv,h)"
               )
           case None => fail("Expected labels, but got None")
-        },
+        }
+        ()
+      },
     )
   }
 

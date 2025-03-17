@@ -153,11 +153,13 @@ class JLinkMathematicaLinkTests extends TacticTestBase with PrivateMethodTester 
     val result = proveBy(
       "5<3".asFormula,
       TactixLibrary.QE,
-      (s: Option[List[BelleLabel]]) =>
+      { (s: Option[List[BelleLabel]]) =>
         s match {
           case Some(labels) => labels.loneElement shouldBe BelleLabels.QECEX
           case None => fail("Expected QE CEX label")
-        },
+        }
+        ()
+      },
     )
     result.subgoals.loneElement shouldBe "==> false".asSequent
   }
@@ -180,7 +182,10 @@ class JLinkMathematicaLinkTests extends TacticTestBase with PrivateMethodTester 
       )
       commandRunner.run(expr, MathematicaToKeYmaera)._2
     }
-    new Thread(() => theLink.run(request, executor)).start()
+    new Thread({ () =>
+      theLink.run(request, executor)
+      ()
+    }).start()
     (System.currentTimeMillis() - start) should be <= 200L
     Thread.sleep(1000)
     executor.availableWorkers() shouldBe (workers - 1)
