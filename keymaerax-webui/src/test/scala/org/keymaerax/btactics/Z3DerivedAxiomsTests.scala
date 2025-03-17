@@ -19,7 +19,6 @@ import org.keymaerax.tags.{CheckinTest, IgnoreInBuildTest, SummaryTest, UsualTes
 
 import java.lang.reflect.InvocationTargetException
 import scala.collection.immutable
-import scala.reflect.runtime.{universe => ru}
 
 /**
  * Tests [[org.keymaerax.btactics.Ax]]
@@ -53,6 +52,7 @@ class Z3DerivedAxiomsTests extends TacticTestBase(registerAxTactics = None) {
     }
   }
 
+  /*
   "Derived axioms and rules" should "prove one-by-one on a fresh lemma database" ignore withZ3 { _ =>
     withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
       getDerivedAxiomsMirrors.foreach({ case (name, fm) =>
@@ -79,6 +79,7 @@ class Z3DerivedAxiomsTests extends TacticTestBase(registerAxTactics = None) {
       })
     }
   }
+  */
 
   "Derived Axioms" should "prove <-> reflexive" in { check(equivReflexive) }
   it should "prove !!" in { check(doubleNegation) }
@@ -270,6 +271,8 @@ class Z3DerivedAxiomsTests extends TacticTestBase(registerAxTactics = None) {
   }
 
   /** Returns the reflection mirrors to access the lazy vals in DerivedAxioms. */
+  // TODO Reenable or delete
+  /*
   private def getDerivedAxiomsMirrors = {
     val lemmas = Ax.getClass.getDeclaredFields.filter(f => classOf[Lemma].isAssignableFrom(f.getType))
     val fns = lemmas.map(_.getName)
@@ -283,4 +286,5 @@ class Z3DerivedAxiomsTests extends TacticTestBase(registerAxTactics = None) {
     val fields = fns.map(fn => fn -> ru.typeOf[Ax.type].member(ru.TermName(fn)).asMethod.getter.asMethod)
     fields.map(f => f._2.toString -> im.reflectMethod(f._2))
   }
+  */
 }

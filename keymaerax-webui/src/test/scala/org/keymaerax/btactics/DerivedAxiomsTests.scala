@@ -19,7 +19,6 @@ import org.keymaerax.tags.{CheckinTest, IgnoreInBuildTest, SummaryTest, UsualTes
 
 import java.lang.reflect.InvocationTargetException
 import scala.collection.immutable
-import scala.reflect.runtime.{universe => ru}
 
 /**
  * Tests [[org.keymaerax.btactics.Ax]]
@@ -50,6 +49,8 @@ class DerivedAxiomsTests extends TacticTestBase(registerAxTactics = None) {
     }
   }
 
+  // TODO Reenable or delete
+  /*
   "Derived axioms and rules" should "prove one-by-one on a fresh lemma database" ignore
     withMathematica(
       initLibrary = false,
@@ -72,6 +73,7 @@ class DerivedAxiomsTests extends TacticTestBase(registerAxTactics = None) {
         }
       },
     )
+   */
 
   // @todo derived rules do not need Mathematica
 
@@ -499,6 +501,8 @@ class DerivedAxiomsTests extends TacticTestBase(registerAxTactics = None) {
   it should "prove < antisym" in withMathematica(initLibrary = false, testcode = { _ => check { lessNotSym } })
 
   /** Returns the reflection mirrors to access the lazy vals in DerivedAxioms. */
+  // TODO Reenable or delete
+  /*
   private def getDerivedAxiomsMirrors = {
     val lemmas = Ax.getClass.getDeclaredFields.filter(f => classOf[StorableInfo].isAssignableFrom(f.getType))
     val fns = lemmas.map(_.getName)
@@ -512,4 +516,5 @@ class DerivedAxiomsTests extends TacticTestBase(registerAxTactics = None) {
     val fields = fns.map(fn => fn -> ru.typeOf[Ax.type].member(ru.TermName(fn)).asMethod.getter.asMethod)
     fields.map(f => f._2.toString -> im.reflectMethod(f._2))
   }
+  */
 }
