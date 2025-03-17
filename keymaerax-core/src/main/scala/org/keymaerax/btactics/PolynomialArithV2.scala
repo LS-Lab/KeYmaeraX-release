@@ -1018,8 +1018,7 @@ case class TwoThreeTreePolynomialRing(
   lazy val equalReflexive = Ax.equalReflexive.provable
 
   @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
-  sealed trait TreePolynomial extends Polynomial {
-    val prv: ProvableSig
+  sealed trait TreePolynomial(val prv: ProvableSig) extends Polynomial {
     override def representation: ProvableSig = prv
     def forgetPrv: TreePolynomial
     override def resetTerm: Polynomial = forgetPrv
@@ -1797,9 +1796,7 @@ case class TwoThreeTreePolynomialRing(
 
   lazy val One: TreePolynomial = Const(1)
 
-  case class Empty(prvO: Option[ProvableSig]) extends TreePolynomial {
-    val defaultPrv = zez
-    val prv = prvO.getOrElse(defaultPrv)
+  case class Empty(prvO: Option[ProvableSig]) extends TreePolynomial(prv=prvO.getOrElse(zez)) {
     override def forgetPrv: Empty = Empty(None)
     override def treeSketch: String = "."
     override def degree(include: Term => Boolean) = 0
@@ -1809,11 +1806,10 @@ case class TwoThreeTreePolynomialRing(
     }
   }
   case class Branch2(left: TreePolynomial, value: Monomial, right: TreePolynomial, prvO: Option[ProvableSig])
-      extends TreePolynomial {
-    lazy val defaultPrv = equalReflex(Seq(left.rhs, value.rhs, right.rhs).reduceLeft(Plus.apply))
-    // @note detour for "dependent" default argument
-    val prv = prvO.getOrElse(defaultPrv)
-
+    extends TreePolynomial(
+      // @note detour for "dependent" default argument
+      prv = prvO.getOrElse(equalReflex(Seq(left.rhs, value.rhs, right.rhs).reduceLeft(Plus.apply)))
+  ) {
     override def forgetPrv: TreePolynomial = Branch2(left, value, right, None)
     override def treeSketch: String = "[" + left.treeSketch + ", " + value.powersString + ", " + right.treeSketch + "]"
     override def degree(include: Term => Boolean): Int = left.degree(include) max value.degree(include) max
@@ -1830,11 +1826,10 @@ case class TwoThreeTreePolynomialRing(
       value2: Monomial,
       right: TreePolynomial,
       prvO: Option[ProvableSig],
-  ) extends TreePolynomial {
-    lazy val defaultPrv = equalReflex(Seq(left.rhs, value1.rhs, mid.rhs, value2.rhs, right.rhs).reduceLeft(Plus.apply))
+  ) extends TreePolynomial(
     // @note detour for "dependent" default argument
-    val prv = prvO.getOrElse(defaultPrv)
-
+    prv = prvO.getOrElse(equalReflex(Seq(left.rhs, value1.rhs, mid.rhs, value2.rhs, right.rhs).reduceLeft(Plus.apply)))
+  ) {
     override def forgetPrv: TreePolynomial = Branch3(left, value1, mid, value2, right, None)
     override def treeSketch: String = "{" + left.treeSketch + ", " + value1.powersString + ", " + mid.treeSketch +
       ", " + value2.powersString + ", " + right.treeSketch + "}"
