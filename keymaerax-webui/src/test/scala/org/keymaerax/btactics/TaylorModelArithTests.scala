@@ -34,16 +34,15 @@ class TaylorModelArithTests extends TacticTestBase {
     def remainderEstimation(i: Integer) = (0.0001, 0.0001)
   }
 
-  import PolynomialArithV2._
-  val x0 = ofTerm("x0()".asTerm)
-  val y0 = ofTerm("y0()".asTerm)
-  val tm1 = TaylorModelArith.TM("x".asTerm, x0 + y0, "-0.01".asTerm, "0.02".asTerm, context3, QE)
-  val tm2 = TaylorModelArith
-    .TM("y".asTerm, Const(BigDecimal("0.5")) * x0 - y0, "0".asTerm, "0.1".asTerm, context3, QE)
-  val third = TaylorModelArith.Exact(ofTerm("1/3".asTerm), context3)
-  val tm3 = third *! tm1
-  val tm100000 = TaylorModelArith.Exact(ofTerm("0.000001".asTerm), context3) *! tm1
-  val tm1234 = TaylorModelArith.Exact(ofTerm("12.34".asTerm), context3) *! tm2
+  lazy val x0 = PolynomialArithV2.ofTerm("x0()".asTerm)
+  lazy val y0 = PolynomialArithV2.ofTerm("y0()".asTerm)
+  lazy val tm1 = TaylorModelArith.TM("x".asTerm, x0 + y0, "-0.01".asTerm, "0.02".asTerm, context3, QE)
+  lazy val tm2 = TaylorModelArith
+    .TM("y".asTerm, PolynomialArithV2.Const(BigDecimal("0.5")) * x0 - y0, "0".asTerm, "0.1".asTerm, context3, QE)
+  lazy val third = TaylorModelArith.Exact(PolynomialArithV2.ofTerm("1/3".asTerm), context3)
+  lazy val tm3 = third *! tm1
+  lazy val tm100000 = TaylorModelArith.Exact(PolynomialArithV2.ofTerm("0.000001".asTerm), context3) *! tm1
+  lazy val tm1234 = TaylorModelArith.Exact(PolynomialArithV2.ofTerm("12.34".asTerm), context3) *! tm2
 
   behavior of "Taylor models"
 
