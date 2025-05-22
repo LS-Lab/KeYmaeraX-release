@@ -10,13 +10,14 @@ import org.keymaerax.bellerophon.{
   BuiltInTactic,
   DependentPositionTactic,
   DependentPositionWithAppliedInputTactic,
+  OnAll,
   TacticAssertionError,
   TacticInapplicableFailure,
 }
 import org.keymaerax.btactics.Ax.*
 import org.keymaerax.btactics.AxiomaticODESolver.ofAtoms
 import org.keymaerax.btactics.HilbertCalculus.{diamondd, DW}
-import org.keymaerax.btactics.SequentCalculus.{andL, andR, commuteEquivR, equivifyR, id, implyR}
+import org.keymaerax.btactics.SequentCalculus.{andL, andR, commuteEquivR, equivifyR, id, implyR, orR}
 import org.keymaerax.btactics.TacticFactory.{anon, TacticForNameFactory}
 import org.keymaerax.btactics.TactixLibrary.prop
 import org.keymaerax.btactics.UnifyUSCalculus.useAt
@@ -515,6 +516,44 @@ object RefinementCalculus {
     "a{|^@|}; <= b{|^@|}; -> (<a{|^@|};>p(||) -> <b{|^@|};>p(||))".asFormula,
     diamondd(1, 1 :: 0 :: Nil) & diamondd(1, 1 :: 1 :: Nil) & useAt(converseImply, PosInExpr(1 :: Nil))(1, 1 :: Nil) &
       useAt(refBox)(1, 1 :: Nil) & prop,
+  )
+
+  @Derivation
+  val testSeq: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(
+      name = "testSeq",
+      canonicalName = "test sequence",
+      displayName = Some("Test Sequence"),
+      displayLevel = DisplayLevel.Menu,
+      key = "0",
+      unifier = Unifier.SurjectiveLinear,
+    ),
+    "?p();?q(); == ?p()&q();".asFormula,
+    useAt(refAntiSym)(1) & andR(1) & Idioms.<(
+      useAt(refSeqIdL, PosInExpr(1 :: Nil))(Position(1, 1 :: Nil)) & useAt(refSeq)(1) &
+        useAt(refTest)(Position(1, 0 :: Nil)) & useAt(refTest)(Position(1, 1 :: 1 :: Nil)) &
+        useAt(testb)(Position(1, 1 :: Nil)) & prop,
+      useAt(refSeqIdR, PosInExpr(1 :: Nil))(Position(1, 0 :: Nil)) & useAt(refSeq)(1) &
+        useAt(refTest)(Position(1, 0 :: Nil)) & useAt(refTest)(Position(1, 1 :: 1 :: Nil)) &
+        useAt(testb)(Position(1, 1 :: Nil)) & prop,
+    ),
+  )
+
+  @Derivation
+  val testChoice: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(
+      name = "testChoice",
+      canonicalName = "test choice",
+      displayName = Some("Test Choice"),
+      displayLevel = DisplayLevel.Menu,
+      key = "0",
+      unifier = Unifier.SurjectiveLinear,
+    ),
+    "?p();++?q(); == ?p()|q();".asFormula,
+    useAt(refAntiSym)(1) & andR(1) & Idioms.<(
+      useAt(refChoiceL)(1) & andR(1) & OnAll(useAt(refTest)(1) & prop),
+      useAt(refChoiceR)(1) & orR(1) & useAt(refTest)(1) & useAt(refTest)(2) & prop,
+    ),
   )
 
   @Derivation
