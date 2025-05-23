@@ -17,11 +17,12 @@ import org.keymaerax.bellerophon.{
 }
 import org.keymaerax.btactics.Ax.*
 import org.keymaerax.btactics.AxiomaticODESolver.ofAtoms
+import org.keymaerax.btactics.DLBySubst.discreteGhost
 import org.keymaerax.btactics.HilbertCalculus.{diamondd, DW}
 import org.keymaerax.btactics.SequentCalculus.{andL, andR, commuteEquivR, equivifyR, id, implyR, orR}
 import org.keymaerax.btactics.TacticFactory.{anon, TacticForNameFactory}
 import org.keymaerax.btactics.TactixLibrary.prop
-import org.keymaerax.btactics.UnifyUSCalculus.useAt
+import org.keymaerax.btactics.UnifyUSCalculus.{useAt, CMon}
 import org.keymaerax.btactics.helpers.DifferentialHelper.atomicOdes
 import org.keymaerax.btactics.macros.DerivationInfoAugmentors.ProvableInfoAugmentor
 import org.keymaerax.btactics.macros.{
@@ -822,6 +823,25 @@ object RefinementCalculus {
         case fml => throw new TacticInapplicableFailure("Expected implication, but got " + fml)
       }
     }
+
+  @Derivation
+  val skipRandom: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(
+      name = "skipRandom",
+      canonicalName = "skip random",
+      displayName = Some("Skip Random"),
+      displayConclusion = "?⊤ <= __x:=*__",
+      displayLevel = DisplayLevel.Menu,
+      key = "1",
+      unifier = Unifier.SurjectiveLinear,
+    ),
+    "?true; <= x:=*;".asFormula,
+    refTrans("x:=x;".asProgram)(Position(1)) & andR(1) & Idioms.<(
+      useAt(refStutter)(Position(1, 1 :: Nil)) & useAt(refRefl)(Position(1)),
+      discreteGhost(Variable("x"), None)(Position(1)) & useAt(refAssign)(Position(1, 0 :: Nil)) &
+        useAt(refSeqIdR, PosInExpr(1 :: Nil))(Position(1, 1 :: Nil)) & CMon(Position(1, 0 :: 1 :: 0 :: Nil)) & prop,
+    ),
+  )
 
   /**
    * focus(pos) pushes a *top-level* refinement down to the indicated position
