@@ -7,6 +7,7 @@ package org.keymaerax.btactics
 
 import org.keymaerax.bellerophon.{
   BelleExpr,
+  BuiltInRightTactic,
   BuiltInTactic,
   DependentPositionTactic,
   DependentPositionWithAppliedInputTactic,
@@ -34,12 +35,13 @@ import org.keymaerax.btactics.macros.{
   TacticConstructor1,
   Unifier,
 }
+import org.keymaerax.core.StaticSemantics.symbols
 import org.keymaerax.core.*
 import org.keymaerax.core.btactics.annotations.Derivation
-import org.keymaerax.infrastruct.Augmentors.{FormulaAugmentor, SequentAugmentor}
+import org.keymaerax.infrastruct.Augmentors.{FormulaAugmentor, ProgramAugmentor, SequentAugmentor}
 import org.keymaerax.infrastruct.FormulaTools.dualFree
 import org.keymaerax.infrastruct.PosInExpr.HereP
-import org.keymaerax.infrastruct.{PosInExpr, Position}
+import org.keymaerax.infrastruct.{Context, PosInExpr, Position, SuccPosition}
 import org.keymaerax.parser.StringConverter.StringToStringConverter
 import org.keymaerax.pt.ProvableSig
 
@@ -821,5 +823,81 @@ object RefinementCalculus {
       }
     }
 
+  /**
+   * focus(pos) pushes a *top-level* refinement down to the indicated position
+   *
+   * {{{
+   *   G |- C'{a; <= b;}, D
+   *   ----------------------
+   *   G |- C{a;} <= C{b;}, D
+   * }}}
+   *
+   * The context `C` can represent an arbitrary program. The resulting context `C'` is computed from `C` and mostly of
+   * the form `[a_1][a_2]...[a_n] _`
+   *
+   * @note
+   *   `pos` can refer to the position of either `a` or `b` in the sequent.
+   */
+  def focus: BuiltInRightTactic = "focus".by { (provable: ProvableSig, pos: SuccPosition) =>
+    require(provable.subgoals.size == 1, "Sole subgoal expected, but got " + provable.prettyString)
+    val sequent = provable.subgoals.head
+    val inEqPos = pos.inExpr.child
+    sequent(pos.top) match {
+      case Refinement(a, b) =>
+        val (ctxA, e) = a.at(inEqPos)
+        val (ctxB, _) = b.at(inEqPos)
+        val dot = e match {
+          case _: Formula => DotFormula
+          case _: Program => DotProgram
+          case _ => throw new TacticInapplicableFailure("Expected formula or program, but got " + e)
+        }
+        require(ctxA == ctxB, "Same context expected, but got " + ctxA + " and " + ctxB)
+        Predef.assert(ctxA.ctx == ctxB.ctx, "Same context formula expected, but got " + ctxA.ctx + " and " + ctxB.ctx)
+        provable(focusFW(ctxA, pos.topLevel, dot), 0)
+      case f => throw new TacticInapplicableFailure("Expected refinement, but got " + f)
+    }
+  }
 
+  @Derivation
+  def focusInfo: PositionTacticInfo = PositionTacticInfo.create(
+    name = "focus",
+    displayPremises = "C'(a<=b)",
+    displayConclusion = "C{a}<=C{b}",
+    constructor = TacticConstructor0.create()(() => focus),
+  )
+
+  private[btactics] def focusFW(ctx: Context[Program], pos: Position, dot: NamedSymbol): BuiltInTactic =
+    anon { (provable: ProvableSig) =>
+      ctx.ctx match {
+        case DotProgram => provable
+        case Test(_) => provable(useAt(refTest)(pos), 0)
+        case Choice(c, a) if !symbols(a).contains(dot) =>
+          provable(useAt(congrChoiceL, PosInExpr(1 :: Nil))(pos), 0)(focusFW(Context(c), pos, dot), 0)
+        case Choice(a, c) if !symbols(a).contains(dot) =>
+          provable(useAt(congrChoiceR, PosInExpr(1 :: Nil))(pos), 0)(focusFW(Context(c), pos, dot), 0)
+        case Compose(c, a) if !symbols(a).contains(dot) =>
+          provable(useAt(congrSeqL, PosInExpr(1 :: Nil))(pos), 0)(focusFW(Context(c), pos, dot), 0)
+        case Compose(a, c) if !symbols(a).contains(dot) =>
+          provable(useAt(congrSeqR, PosInExpr(1 :: Nil))(pos), 0)(
+            focusFW(Context(c), pos ++ PosInExpr(1 :: Nil), dot),
+            0,
+          )
+        case Loop(c) => provable(useAt(refUnloop, PosInExpr(1 :: Nil))(pos), 0)(
+            focusFW(Context(c), pos ++ PosInExpr(1 :: Nil), dot),
+            0,
+          )
+        case ODESystem(ode, _) if !symbols(ode).contains(dot) =>
+          provable(useAt(congrODEDom, PosInExpr(1 :: Nil))(pos), 0)
+
+        case Dual(_) => throw new TacticInapplicableFailure("Not implemented for games")
+        case Assign(_, _) | ODESystem(_, _) =>
+          throw new TacticInapplicableFailure("Focus down to Terms not implemented.")
+        case Choice(_, _) | Compose(_, _) => throw new TacticAssertionError(
+            s"Context should contain only one ${dot.getClass.getSimpleName}, but is ${ctx}"
+          )
+        case AssignAny(_) | ProgramConst(_, _) | SystemConst(_, _) =>
+          throw new TacticAssertionError(s"Proper contexts have dots somewhere ${ctx}")
+        case _: DifferentialProgram => throw new TacticAssertionError("Expected non-differential program context")
+      }
+    }
 }
