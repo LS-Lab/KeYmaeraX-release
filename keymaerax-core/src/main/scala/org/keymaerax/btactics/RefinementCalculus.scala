@@ -562,12 +562,10 @@ object RefinementCalculus {
     ),
     "?p();?q(); == ?p()&q();".asFormula,
     useAt(refAntiSym)(1) & andR(1) & Idioms.<(
-      useAt(refSeqIdL, PosInExpr(1 :: Nil))(Position(1, 1 :: Nil)) & useAt(refSeq)(1) &
-        useAt(refTest)(Position(1, 0 :: Nil)) & useAt(refTest)(Position(1, 1 :: 1 :: Nil)) &
-        useAt(testb)(Position(1, 1 :: Nil)) & prop,
-      useAt(refSeqIdR, PosInExpr(1 :: Nil))(Position(1, 0 :: Nil)) & useAt(refSeq)(1) &
-        useAt(refTest)(Position(1, 0 :: Nil)) & useAt(refTest)(Position(1, 1 :: 1 :: Nil)) &
-        useAt(testb)(Position(1, 1 :: Nil)) & prop,
+      useAt(refSeqIdL, PosInExpr(1 :: Nil))(1, 1 :: Nil) & useAt(refSeq)(1) & useAt(refTest)(1, 0 :: Nil) &
+        useAt(refTest)(1, 1 :: 1 :: Nil) & useAt(testb)(1, 1 :: Nil) & prop,
+      useAt(refSeqIdR, PosInExpr(1 :: Nil))(1, 0 :: Nil) & useAt(refSeq)(1) & useAt(refTest)(1, 0 :: Nil) &
+        useAt(refTest)(1, 1 :: 1 :: Nil) & useAt(testb)(1, 1 :: Nil) & prop,
     ),
   )
 
@@ -836,10 +834,10 @@ object RefinementCalculus {
       unifier = Unifier.SurjectiveLinear,
     ),
     "?true; <= x:=*;".asFormula,
-    refTrans("x:=x;".asProgram)(Position(1)) & andR(1) & Idioms.<(
-      useAt(refStutter)(Position(1, 1 :: Nil)) & useAt(refRefl)(Position(1)),
-      discreteGhost(Variable("x"), None)(Position(1)) & useAt(refAssign)(Position(1, 0 :: Nil)) &
-        useAt(refSeqIdR, PosInExpr(1 :: Nil))(Position(1, 1 :: Nil)) & CMon(Position(1, 0 :: 1 :: 0 :: Nil)) & prop,
+    refTrans("x:=x;".asProgram)(1) & andR(1) & Idioms.<(
+      useAt(refStutter)(1, 1 :: Nil) & useAt(refRefl)(1),
+      discreteGhost(Variable("x"), None)(1) & useAt(refAssign)(1, 0 :: Nil) &
+        useAt(refSeqIdR, PosInExpr(1 :: Nil))(1, 1 :: Nil) & CMon(1, 0 :: 1 :: 0 :: Nil) & prop,
     ),
   )
 

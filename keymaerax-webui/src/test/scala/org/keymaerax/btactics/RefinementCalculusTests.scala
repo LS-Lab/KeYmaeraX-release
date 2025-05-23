@@ -64,121 +64,110 @@ class RefinementCalculusTests extends TacticTestBase {
   "useAt" should "transform formulas within discrete programs" in {
     val pr = TactixLibrary.proveBy(
       "[{y:=0;++x:=*;{?(true -> x!=0);++?x=0;};x:=*;}*]y>0".asFormula,
-      useAt(timesInverse)(Position(1, List(0, 0, 1, 1, 0, 0, 0, 1))),
+      useAt(timesInverse)(1, List(0, 0, 1, 1, 0, 0, 0, 1)),
     )
     pr.subgoals.head shouldBe " ==> [{y:=0;++x:=*;{?(true -> x*(x^(-1)) = 1);++?x=0;};x:=*;}*]y>0".asSequent
 
     val pr2 = TactixLibrary.proveBy(
       "<{y:=0;++x:=*;{?(true -> x*(x^(-1)) = 1);++?x=0;};x:=*;}*>y>0".asFormula,
-      useAt(timesInverse, PosInExpr(1 :: Nil))(Position(1, List(0, 0, 1, 1, 0, 0, 0, 1))),
+      useAt(timesInverse, PosInExpr(1 :: Nil))(1, List(0, 0, 1, 1, 0, 0, 0, 1)),
     )
     pr2.subgoals.head shouldBe " ==> <{y:=0;++x:=*;{?(true -> x!= 0);++?x=0;};x:=*;}*>y>0".asSequent
 
     val pr3 = TactixLibrary.proveBy(
       "[{y:=0;++x:=*;{?(x*(x^(-1)) = 1 -> true);++?x=0;};x:=*;}*]y>0".asFormula,
-      useAt(timesInverse, PosInExpr(1 :: Nil))(Position(1, List(0, 0, 1, 1, 0, 0, 0, 0))),
+      useAt(timesInverse, PosInExpr(1 :: Nil))(1, List(0, 0, 1, 1, 0, 0, 0, 0)),
     )
     pr3.subgoals.head shouldBe " ==> [{y:=0;++x:=*;{?(x!=0 -> true);++?x=0;};x:=*;}*]y>0".asSequent
 
     val pr4 = TactixLibrary.proveBy(
       "<{y:=0;++x:=*;{?(x!=0 -> true);++?x=0;};x:=*;}*>y>0".asFormula,
-      useAt(timesInverse)(Position(1, List(0, 0, 1, 1, 0, 0, 0, 0))),
+      useAt(timesInverse)(1, List(0, 0, 1, 1, 0, 0, 0, 0)),
     )
     pr4.subgoals.head shouldBe " ==> <{y:=0;++x:=*;{?(x*(x^(-1)) = 1 -> true);++?x=0;};x:=*;}*>y>0".asSequent
 
   }
 
   it should "transform formulas in domain" in {
-    val pr = TactixLibrary
-      .proveBy("[{x' = y^2 & true -> x!=0}]y>0".asFormula, useAt(timesInverse)(Position(1, List(0, 1, 1))))
+    val pr = TactixLibrary.proveBy("[{x' = y^2 & true -> x!=0}]y>0".asFormula, useAt(timesInverse)(1, List(0, 1, 1)))
     pr.subgoals.head shouldBe " ==> [{x' = y^2 & true -> x*(x^(-1)) = 1}]y>0".asSequent
 
-    val pr2 = TactixLibrary
-      .proveBy("[{y' = y^2 & true -> y!=0}]y>0".asFormula, useAt(timesInverse)(Position(1, List(0, 1, 1))))
+    val pr2 = TactixLibrary.proveBy("[{y' = y^2 & true -> y!=0}]y>0".asFormula, useAt(timesInverse)(1, List(0, 1, 1)))
     pr2.subgoals.head shouldBe " ==> [{y' = y^2 & true -> y*(y^(-1)) = 1}]y>0".asSequent
 
     val pr3 = TactixLibrary.proveBy(
       "<{x' = y^2 & true -> x*(x^(-1)) = 1}>y>0".asFormula,
-      useAt(timesInverse, PosInExpr(1 :: Nil))(Position(1, List(0, 1, 1))),
+      useAt(timesInverse, PosInExpr(1 :: Nil))(1, List(0, 1, 1)),
     )
     pr3.subgoals.head shouldBe " ==> <{x' = y^2 & true -> x!= 0}>y>0".asSequent
 
     val prs = TactixLibrary
-      .proveBy("[{x' = y^2, y' = 1 & true -> x!=0}]y>0".asFormula, useAt(timesInverse)(Position(1, List(0, 1, 1))))
+      .proveBy("[{x' = y^2, y' = 1 & true -> x!=0}]y>0".asFormula, useAt(timesInverse)(1, List(0, 1, 1)))
     prs.subgoals.head shouldBe " ==> [{x' = y^2, y' = 1 & true -> x*(x^(-1)) = 1}]y>0".asSequent
 
     val pr2s = TactixLibrary
-      .proveBy("[{z' = y^2, y' = 1 & true -> z!=0}]y>0".asFormula, useAt(timesInverse)(Position(1, List(0, 1, 1))))
+      .proveBy("[{z' = y^2, y' = 1 & true -> z!=0}]y>0".asFormula, useAt(timesInverse)(1, List(0, 1, 1)))
     pr2s.subgoals.head shouldBe " ==> [{z' = y^2, y' = 1 & true -> z*(z^(-1)) = 1}]y>0".asSequent
 
     val pr3s = TactixLibrary.proveBy(
       "<{x' = y^2, y' = 1 & true -> x*(x^(-1)) = 1}>y>0".asFormula,
-      useAt(timesInverse, PosInExpr(1 :: Nil))(Position(1, List(0, 1, 1))),
+      useAt(timesInverse, PosInExpr(1 :: Nil))(1, List(0, 1, 1)),
     )
     pr3s.subgoals.head shouldBe " ==> <{x' = y^2, y' = 1 & true -> x!= 0}>y>0".asSequent
   }
 
   it should "transform formulas in refinements" in {
-    val pr = TactixLibrary.proveBy(
-      "?x=0; <= x:=0;?x*(x^(-1)) = 1;".asFormula,
-      useAt(timesInverse, PosInExpr(1 :: Nil))(Position(1, List(1, 1, 0))),
-    )
+    val pr = TactixLibrary
+      .proveBy("?x=0; <= x:=0;?x*(x^(-1)) = 1;".asFormula, useAt(timesInverse, PosInExpr(1 :: Nil))(1, List(1, 1, 0)))
     pr.subgoals.head shouldBe " ==> ?x=0; <= x:=0;?x!=0;".asSequent
 
-    val pr2 = TactixLibrary.proveBy("x:=0;?x!=0; <= ?x=0;".asFormula, useAt(timesInverse)(Position(1, List(0, 1, 0))))
+    val pr2 = TactixLibrary.proveBy("x:=0;?x!=0; <= ?x=0;".asFormula, useAt(timesInverse)(1, List(0, 1, 0)))
     pr2.subgoals.head shouldBe " ==> x:=0;?x*(x^(-1)) = 1; <= ?x=0;".asSequent
   }
 
   it should "transform equivalent formulas in refinements" in {
-    val pr = TactixLibrary.proveBy(
-      "?x=0; <= x:=0;?x < 1;".asFormula,
-      useAt(notGreaterEqual, PosInExpr(1 :: Nil))(Position(1, List(1, 1, 0))),
-    )
+    val pr = TactixLibrary
+      .proveBy("?x=0; <= x:=0;?x < 1;".asFormula, useAt(notGreaterEqual, PosInExpr(1 :: Nil))(1, List(1, 1, 0)))
     pr.subgoals.head shouldBe " ==> ?x=0; <= x:=0;?!(x>= 1);".asSequent
-    val pr2 = TactixLibrary
-      .proveBy("x:=0;?!(x>= 1); <= ?x=0;".asFormula, useAt(notGreaterEqual)(Position(1, List(0, 1, 0))))
+    val pr2 = TactixLibrary.proveBy("x:=0;?!(x>= 1); <= ?x=0;".asFormula, useAt(notGreaterEqual)(1, List(0, 1, 0)))
     pr2.subgoals.head shouldBe " ==> x:=0;?x < 1; <= ?x=0;".asSequent
   }
 
   it should "transform programs in modality" in {
-    val pr = TactixLibrary
-      .proveBy("[x':=2;?(x>=0);]x > 0".asFormula, useAt(refDX, PosInExpr(0 :: Nil))(Position(1, 0 :: Nil)))
+    val pr = TactixLibrary.proveBy("[x':=2;?(x>=0);]x > 0".asFormula, useAt(refDX, PosInExpr(0 :: Nil))(1, 0 :: Nil))
     pr.subgoals.head shouldBe " ==> [{x'=2 & x>=0}] x > 0".asSequent
 
-    val pr2 = TactixLibrary.proveBy("<x:=*;++y:=*;>x > 0".asFormula, useAt(hideChoiceL)(Position(1, 0 :: Nil)))
+    val pr2 = TactixLibrary.proveBy("<x:=*;++y:=*;>x > 0".asFormula, useAt(hideChoiceL)(1, 0 :: Nil))
     pr2.subgoals.head shouldBe " ==> <y:=*;> x > 0".asSequent
 
-    val pr3 = TactixLibrary
-      .proveBy("[x:=*;++y:=*;]x > 0 ==> false".asSequent, useAt(hideChoiceL)(Position(-1, 0 :: Nil)))
+    val pr3 = TactixLibrary.proveBy("[x:=*;++y:=*;]x > 0 ==> false".asSequent, useAt(hideChoiceL)(-1, 0 :: Nil))
     pr3.subgoals.head shouldBe "[y:=*;]x > 0 ==> false".asSequent
   }
 
   it should "transform equivalent programs in modality" in {
-    val pr = TactixLibrary
-      .proveBy("[x:=2;?true;]x > 0".asFormula, useAt(refSeqIdR, PosInExpr(0 :: Nil))(Position(1, 0 :: Nil)))
+    val pr = TactixLibrary.proveBy("[x:=2;?true;]x > 0".asFormula, useAt(refSeqIdR, PosInExpr(0 :: Nil))(1, 0 :: Nil))
     pr.subgoals.head shouldBe " ==> [x:=2;] x > 0".asSequent
 
-    val pr2 = TactixLibrary
-      .proveBy("[x:=2;]x > 0".asFormula, useAt(refSeqIdR, PosInExpr(1 :: Nil))(Position(1, 0 :: Nil)))
+    val pr2 = TactixLibrary.proveBy("[x:=2;]x > 0".asFormula, useAt(refSeqIdR, PosInExpr(1 :: Nil))(1, 0 :: Nil))
     pr2.subgoals.head shouldBe " ==> [x:=2;?true;] x > 0".asSequent
   }
 
   it should "transform programs in refinement" in {
     val pr = TactixLibrary
-      .proveBy("x':=2;?(x>=0); <= x:=*;++y:=*;".asFormula, useAt(refDX, PosInExpr(0 :: Nil))(Position(1, 0 :: Nil)))
+      .proveBy("x':=2;?(x>=0); <= x:=*;++y:=*;".asFormula, useAt(refDX, PosInExpr(0 :: Nil))(1, 0 :: Nil))
     pr.subgoals.head shouldBe " ==> {x'=2 & x>=0} <= x:=*;++y:=*;".asSequent
 
-    val pr2 = TactixLibrary.proveBy("x:=2; <= x:=*;++y:=*;".asFormula, useAt(hideChoiceL)(Position(1, 1 :: Nil)))
+    val pr2 = TactixLibrary.proveBy("x:=2; <= x:=*;++y:=*;".asFormula, useAt(hideChoiceL)(1, 1 :: Nil))
     pr2.subgoals.head shouldBe " ==> x:=2; <= y:=*;".asSequent
   }
 
   it should "transform equivalent programs in refinement" in {
     val pr = TactixLibrary
-      .proveBy("x:=2;?true; <= x:=*;++y:=*;".asFormula, useAt(refSeqIdR, PosInExpr(0 :: Nil))(Position(1, 0 :: Nil)))
+      .proveBy("x:=2;?true; <= x:=*;++y:=*;".asFormula, useAt(refSeqIdR, PosInExpr(0 :: Nil))(1, 0 :: Nil))
     pr.subgoals.head shouldBe " ==> x:=2; <= x:=*;++y:=*;".asSequent
 
     val pr2 = TactixLibrary
-      .proveBy("x:=2; <= x:=*;++y:=*;".asFormula, useAt(refSeqIdR, PosInExpr(1 :: Nil))(Position(1, 0 :: Nil)))
+      .proveBy("x:=2; <= x:=*;++y:=*;".asFormula, useAt(refSeqIdR, PosInExpr(1 :: Nil))(1, 0 :: Nil))
     pr2.subgoals.head shouldBe " ==> x:=2;?true; <= x:=*;++y:=*;".asSequent
   }
 
@@ -193,16 +182,14 @@ class RefinementCalculusTests extends TacticTestBase {
   }
 
   it should "add modalities to preserve assumptions" in {
-    val pr = TactixLibrary.proveBy(
-      "x > 0 ==> {y:=1;x:=2; ++ z:=3;}* <= {y:=1;x:=*; ++ z:=3;}*".asSequent,
-      focus(1, 0 :: 0 :: 0 :: 1 :: Nil),
-    )
+    val pr = TactixLibrary
+      .proveBy("x > 0 ==> {y:=1;x:=2; ++ z:=3;}* <= {y:=1;x:=*; ++ z:=3;}*".asSequent, focus(1, List(0, 0, 0, 1)))
     pr.subgoals.head shouldBe "x > 0 ==> [{y:=1;x:=2; ++ z:=3;}*][y:=1;]x:=2; <= x:=*;".asSequent
   }
 
   it should "simplify down to formula implication in test" in {
     val pr = TactixLibrary
-      .proveBy("x > 0 ==> ?(true);y:=1; ++ z:=3; <= ?(x=2);y:=1; ++ z:=3;".asSequent, focus(1, 0 :: 0 :: 0 :: 0 :: Nil))
+      .proveBy("x > 0 ==> ?(true);y:=1; ++ z:=3; <= ?(x=2);y:=1; ++ z:=3;".asSequent, focus(1, List(0, 0, 0, 0)))
     pr.subgoals.head shouldBe "x > 0 ==> true -> x=2".asSequent
   }
 
