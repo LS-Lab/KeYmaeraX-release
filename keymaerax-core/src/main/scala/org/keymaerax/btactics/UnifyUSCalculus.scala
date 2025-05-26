@@ -1998,7 +1998,7 @@ object UnifyUSCalculus {
    *   `CE(fact, Context("x>0&⎵".asFormula))(p)` is equivalent to `CE(fact)(p+PosInExpr(1::Nil))`. Except that the
    *   former has the shape `x>0&⎵` for the context starting from position `p`.
    */
-  @nowarn("msg=match may not be exhaustive") @nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
+  @nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
   def CEat(fact: ProvableSig, C: Context[Formula]): DependentPositionTactic =
     new DependentPositionTactic("CE(Provable,Context)") {
       require(

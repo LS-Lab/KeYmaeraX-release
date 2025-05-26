@@ -226,7 +226,7 @@ object Position {
 
 /** A position guaranteed to identify a top-level position */
 //@todo not sure if this trait is sticky meaning all returned guys will be like that. Especially with weird navigation cases.
-trait TopPosition extends Position {
+sealed trait TopPosition extends Position {
   final override def isTopLevel: Boolean = true
 }
 
@@ -237,7 +237,7 @@ trait TopPosition extends Position {
  * @see
  *   [[Sequent]]
  */
-trait AntePosition extends Position {
+sealed trait AntePosition extends Position {
   final override def isAnte: Boolean = true
   override def top: AntePos
   final override def checkAnte: AntePosition = this
@@ -261,7 +261,7 @@ trait AntePosition extends Position {
  * @see
  *   [[Sequent]]
  */
-trait SuccPosition extends Position {
+sealed trait SuccPosition extends Position {
   final override def isAnte: Boolean = false
   override def top: SuccPos
   final override def checkAnte: AntePosition =
@@ -279,12 +279,12 @@ trait SuccPosition extends Position {
 }
 
 /** A top-level antecedent position */
-trait TopAntePosition extends AntePosition with TopPosition {
+sealed trait TopAntePosition extends AntePosition with TopPosition {
   final override def checkTop: AntePos = top
 }
 
 /** A top-level succedent position */
-trait TopSuccPosition extends SuccPosition with TopPosition {
+sealed trait TopSuccPosition extends SuccPosition with TopPosition {
   final override def checkTop: SuccPos = top
 }
 
