@@ -177,27 +177,24 @@ class USubstTests extends TacticTestBase {
     s(prem.conclusion) shouldBe Sequent(IndexedSeq(), IndexedSeq(conc))
   }
 
-  it should "clash when using vacuous all quantifier forall x for a postcondition x>=0 with a free occurrence of the bound variable" in withQE {
-    _ =>
-      val x = Variable("x_", None, Real)
-      val fml = GreaterEqual(x, Number(0))
-      val prem = Ax.allV.provable
-      val s = USubst(Seq(SubstitutionPair(p0, fml)))
-      // a [SubstitutionClashException] should be thrownBy
-      val e = intercept[ProverException] { prem(s) }
-      (e.isInstanceOf[SubstitutionClashException] || e.isInstanceOf[InapplicableRuleException]) shouldBe true
+  it should "clash when using vacuous all quantifier forall x for a postcondition x>=0 with a free occurrence of the bound variable" in {
+    val x = Variable("x_", None, Real)
+    val fml = GreaterEqual(x, Number(0))
+    val prem = Ax.allV.provable
+    val s = USubst(Seq(SubstitutionPair(p0, fml)))
+    // a [SubstitutionClashException] should be thrownBy
+    val e = intercept[ProverException] { prem(s) }
+    (e.isInstanceOf[SubstitutionClashException] || e.isInstanceOf[InapplicableRuleException]) shouldBe true
   }
 
   it should "clash when using V on x:=x-1 for a postcondition x>=0 with a free occurrence of a bound variable" in {
-    withMathematica { _ => // for AxiomInfo
-      val x = Variable("x_", None, Real)
-      val fml = GreaterEqual(x, Number(0))
-      val prem = ProvableInfo("V vacuous").provable
-      val prog = Assign(x, Minus(x, Number(1)))
-      val s = USubst(Seq(SubstitutionPair(p0, fml), SubstitutionPair(ap, prog)))
-      a[SubstitutionClashException] should be thrownBy prem(s)
-      a[SubstitutionClashException] should be thrownBy s(prem.conclusion)
-    }
+    val x = Variable("x_", None, Real)
+    val fml = GreaterEqual(x, Number(0))
+    val prem = Ax.V.provable
+    val prog = Assign(x, Minus(x, Number(1)))
+    val s = USubst(Seq(SubstitutionPair(p0, fml), SubstitutionPair(ap, prog)))
+    a[SubstitutionClashException] should be thrownBy prem(s)
+    a[SubstitutionClashException] should be thrownBy s(prem.conclusion)
   }
 
   it should "clash when using \"c()' derive constant fn\" for a substitution with free occurrences" in {
@@ -219,36 +216,35 @@ class USubstTests extends TacticTestBase {
   }
 
   it should "not allow bound variables to occur free in V with assignment" taggedAs AdvocatusTest in {
-    withMathematica { _ => // for AxiomInfo
-      a[SubstitutionClashException] shouldBe thrownBy {
-        ProvableInfo("V vacuous").provable(USubst(
+    a[SubstitutionClashException] shouldBe thrownBy {
+      Ax.V
+        .provable(USubst(
           SubstitutionPair(PredOf(Function("p", None, Unit, Bool), Nothing), "x=2".asFormula) ::
             SubstitutionPair(SystemConst("a"), "x:=5;".asProgram) :: Nil
         ))
-      }
     }
   }
 
   it should "not allow bound variables to occur free in V with ODE" taggedAs AdvocatusTest in {
-    withMathematica { _ => // for AxiomInfo
-      a[SubstitutionClashException] shouldBe thrownBy {
-        ProvableInfo("V vacuous").provable(USubst(
+    a[SubstitutionClashException] shouldBe thrownBy {
+      Ax.V
+        .provable(USubst(
           SubstitutionPair(PredOf(Function("p", None, Unit, Bool), Nothing), "x=2".asFormula) ::
             SubstitutionPair(SystemConst("a"), "{x'=2}".asProgram) :: Nil
         ))
-      }
     }
   }
 
   it should "not allow Anything-escalated substitutions on predicates of something" taggedAs AdvocatusTest in {
-    withMathematica { _ => // for AxiomInfo
-      val pr = ProvableInfo("V vacuous").provable(USubst(
+    val pr = Ax
+      .V
+      .provable(USubst(
         SubstitutionPair(PredOf(Function("p", None, Unit, Bool), Nothing), "q(y)".asFormula) ::
           SubstitutionPair(SystemConst("a"), "x:=5;".asProgram) :: Nil
       ))
-      pr shouldBe Symbol("proved")
-      pr.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("q(y) -> [x:=5;]q(y)".asFormula))
-      // this should not prove x=0->[x:=5;]x=0
+    pr shouldBe Symbol("proved")
+    pr.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("q(y) -> [x:=5;]q(y)".asFormula))
+    // this should not prove x=0->[x:=5;]x=0
 //    a [SubstitutionClashException] should be thrownBy {
 //      pr(USubst(SubstitutionPair(UnitPredicational("q", AnyArg), "x=0".asFormula) :: Nil))
 //    }
@@ -256,43 +252,40 @@ class USubstTests extends TacticTestBase {
 //      pr => pr(USubst(SubstitutionPair(UnitPredicational("q", AnyArg), "x=0".asFormula) :: Nil)),
 //      pr
 //    )
-      theDeductionOf {
-        pr(USubst(SubstitutionPair(UnitPredicational("q", AnyArg), "x=0".asFormula) :: Nil))
-      } should throwOrNoop[SubstitutionClashException](p =>
-        p.conclusion.ante.isEmpty &&
-          p.conclusion.succ.size == 1 &&
-          (p.conclusion.succ.head match {
-            case Imply(_, Box(prg, q)) => StaticSemantics.boundVars(prg).intersect(StaticSemantics.freeVars(q)).isEmpty
-          })
-      )
-      // more specific phrasing (current behavior)
-      // should throwOrNoop(_.conclusion == Sequent(IndexedSeq(), IndexedSeq("q(x) -> [x:=5;]q(x)".asFormula)))
-    }
+    theDeductionOf {
+      pr(USubst(SubstitutionPair(UnitPredicational("q", AnyArg), "x=0".asFormula) :: Nil))
+    } should throwOrNoop[SubstitutionClashException](p =>
+      p.conclusion.ante.isEmpty &&
+        p.conclusion.succ.size == 1 &&
+        (p.conclusion.succ.head match {
+          case Imply(_, Box(prg, q)) => StaticSemantics.boundVars(prg).intersect(StaticSemantics.freeVars(q)).isEmpty
+        })
+    )
+    // more specific phrasing (current behavior)
+    // should throwOrNoop(_.conclusion == Sequent(IndexedSeq(), IndexedSeq("q(x) -> [x:=5;]q(x)".asFormula)))
   }
 
   it should "not allow Anything-escalated substitutions on functions of something" taggedAs AdvocatusTest in {
-    withMathematica { _ => // for AxiomInfo
-      val pr = Ax
-        .V
-        .provable(USubst(
-          SubstitutionPair(PredOf(Function("p", None, Unit, Bool), Nothing), "f(y)=0".asFormula) ::
-            SubstitutionPair(SystemConst("a"), "x:=5;".asProgram) :: Nil
-        ))
-      pr shouldBe Symbol("proved")
-      pr.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("f(y)=0 -> [x:=5;]f(y)=0".asFormula))
-      // this should not prove x=0->[x:=5;]x=0
-      theDeductionOf {
-        pr(USubst(SubstitutionPair(UnitFunctional("f", AnyArg, Real), "x".asTerm) :: Nil))
-      } should throwOrNoop[SubstitutionClashException](p =>
-        p.conclusion.ante.isEmpty &&
-          p.conclusion.succ.size == 1 &&
-          (p.conclusion.succ.head match {
-            case Imply(_, Box(prg, q)) => StaticSemantics.boundVars(prg).intersect(StaticSemantics.freeVars(q)).isEmpty
-          })
-      )
-      // more specific phrasing (current behavior)
-      // should throwOrNoop(_.conclusion == Sequent(IndexedSeq(), IndexedSeq("f(x)=0 -> [x:=5;]f(x)=0".asFormula)))
-    }
+    val pr = Ax
+      .V
+      .provable(USubst(
+        SubstitutionPair(PredOf(Function("p", None, Unit, Bool), Nothing), "f(y)=0".asFormula) ::
+          SubstitutionPair(SystemConst("a"), "x:=5;".asProgram) :: Nil
+      ))
+    pr shouldBe Symbol("proved")
+    pr.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("f(y)=0 -> [x:=5;]f(y)=0".asFormula))
+    // this should not prove x=0->[x:=5;]x=0
+    theDeductionOf {
+      pr(USubst(SubstitutionPair(UnitFunctional("f", AnyArg, Real), "x".asTerm) :: Nil))
+    } should throwOrNoop[SubstitutionClashException](p =>
+      p.conclusion.ante.isEmpty &&
+        p.conclusion.succ.size == 1 &&
+        (p.conclusion.succ.head match {
+          case Imply(_, Box(prg, q)) => StaticSemantics.boundVars(prg).intersect(StaticSemantics.freeVars(q)).isEmpty
+        })
+    )
+    // more specific phrasing (current behavior)
+    // should throwOrNoop(_.conclusion == Sequent(IndexedSeq(), IndexedSeq("f(x)=0 -> [x:=5;]f(x)=0".asFormula)))
   }
 
   it should "refuse to accept ill-kinded substitutions outright" in {
@@ -400,7 +393,7 @@ class USubstTests extends TacticTestBase {
   "Uniform substitution of SpaceDependents" should "put old vars into DG constant" in {
     // [{c{|y_|}&q(|y_|)}]p(|y_|) <-> \exists y_ [{c{|y_|},y_'=b(|y_|)&q(|y_|)}]p(|y_|)
     val y = Variable("y_", None, Real)
-    val pr = AxiomInfo("DG differential ghost constant").provable
+    val pr = Ax.DGC.provable
     val expected = "[{z'=z^5&z>=4}]z>=9 <-> \\exists y_ [{z'=z^5,y_'=z^3&z>=4}]z>=9".asFormula
     val s = USubst(
       SubstitutionPair(
@@ -419,7 +412,7 @@ class USubstTests extends TacticTestBase {
   it should "put old vars into DG" in {
     // [{c{|y_|}&q(|y_|)}]p(|y_|) <-> \exists y_ [{c{|y_|},y_'=b(|y_|)&q(|y_|)}]p(|y_|)
     val y = Variable("y_", None, Real)
-    val pr = AxiomInfo("DG differential ghost").provable
+    val pr = Ax.DGa.provable
     val expected = "[{z'=z^5&z>=4}]z>=9 <-> \\exists y_ [{z'=z^5,y_'=(z^3)*y_+z^2&z>=4}]z>=9".asFormula
     val s = USubst(
       SubstitutionPair(
@@ -439,7 +432,7 @@ class USubstTests extends TacticTestBase {
   it should "clash on new vars into DG's linear factor" in {
     // [{c{|y_|}&q(|y_|)}]p(|y_|) <-> \exists y_ [{c{|y_|},y_'=b(|y_|)&q(|y_|)}]p(|y_|)
     val y = Variable("y_", None, Real)
-    val pr = AxiomInfo("DG differential ghost").provable
+    val pr = Ax.DGa.provable
     // val expected = "[{z'=z^5&z>=4}]z>=9 <-> \\exists y_ [{z'=z^5,y_'=(z^3*y_)*y_+z^2&z>=4}]z>=9".asFormula
     a[CoreException] should be thrownBy {
       val s = USubst(
@@ -459,7 +452,7 @@ class USubstTests extends TacticTestBase {
   it should "clash on new vars into DG's constant term" in {
     // [{c{|y_|}&q(|y_|)}]p(|y_|) <-> \exists y_ [{c{|y_|},y_'=b(|y_|)&q(|y_|)}]p(|y_|)
     val y = Variable("y_", None, Real)
-    val pr = AxiomInfo("DG differential ghost").provable
+    val pr = Ax.DGa.provable
     // val expected = "[{z'=z^5&z>=4}]z>=9 <-> \\exists y_ [{z'=z^5,y_'=(z^3)*y_+(z^2*y_^2)&z>=4}]z>=9".asFormula
     a[CoreException] should be thrownBy {
       val s = USubst(
@@ -482,7 +475,7 @@ class USubstTests extends TacticTestBase {
   it should "clash on new vars freely into DG's domain constraint" in {
     // [{c{|y_|}&q(|y_|)}]p(|y_|) <-> \exists y_ [{c{|y_|},y_'=b(|y_|)&q(|y_|)}]p(|y_|)
     val y = Variable("y_", None, Real)
-    val pr = AxiomInfo("DG differential ghost").provable
+    val pr = Ax.DGa.provable
     // val expected = "[{z'=z^5&z>=y_}]z>=5 <-> \\exists y_ [{z'=z^5,y_'=(z^3)*y_+z^2&z>=y_}]z>=5".asFormula
     a[CoreException] should be thrownBy {
       val s = USubst(
@@ -502,7 +495,7 @@ class USubstTests extends TacticTestBase {
   it should "clash on new vars freely into DG's postcondition" in {
     // [{c{|y_|}&q(|y_|)}]p(|y_|) <-> \exists y_ [{c{|y_|},y_'=b(|y_|)&q(|y_|)}]p(|y_|)
     val y = Variable("y_", None, Real)
-    val pr = AxiomInfo("DG differential ghost").provable
+    val pr = Ax.DGa.provable
     // val expected = "[{z'=z^5&z>=4}]z>=y_ <-> \\exists y_ [{z'=z^5,y_'=(z^3)*y_+z^2&z>=4}]z>=y_".asFormula
     a[CoreException] should be thrownBy {
       val s = USubst(
@@ -522,7 +515,7 @@ class USubstTests extends TacticTestBase {
   it should "possibly accept new vars if only bound in DG's postcondition as quantifiers" in {
     // [{c{|y_|}&q(|y_|)}]p(|y_|) <-> \exists y_ [{c{|y_|},y_'=b(|y_|)&q(|y_|)}]p(|y_|)
     val y = Variable("y_", None, Real)
-    val pr = AxiomInfo("DG differential ghost").provable
+    val pr = Ax.DGa.provable
     val expected =
       "[{z'=z^5&z>=4}]\\forall y_ z<=y_^2 <-> \\exists y_ [{z'=z^5,y_'=(z^3)*y_+z^2&z>=4}] \\forall y_ z<=y_^2"
         .asFormula
@@ -547,7 +540,7 @@ class USubstTests extends TacticTestBase {
   it should "possibly accept new vars if only bound in DG's postcondition assigned" in {
     // [{c{|y_|}&q(|y_|)}]p(|y_|) <-> \exists y_ [{c{|y_|},y_'=b(|y_|)&q(|y_|)}]p(|y_|)
     val y = Variable("y_", None, Real)
-    val pr = AxiomInfo("DG differential ghost").provable
+    val pr = Ax.DGa.provable
     val expected =
       "[{z'=z^5&z>=4}][y_:=z;]z<=y_^2 <-> \\exists y_ [{z'=z^5,y_'=(z^3)*y_+z^2&z>=4}][y_:=z;]z<=y_^2".asFormula
     val s = USubst(
@@ -571,7 +564,7 @@ class USubstTests extends TacticTestBase {
   it should "clash on new vars freely as extra ODEs into DG's postcondition" in {
     // [{c{|y_|}&q(|y_|)}]p(|y_|) <-> \exists y_ [{c{|y_|},y_'=b(|y_|)&q(|y_|)}]p(|y_|)
     val y = Variable("y_", None, Real)
-    val pr = AxiomInfo("DG differential ghost").provable
+    val pr = Ax.DGa.provable
     // val expected = "[{z'=z^5&z>=4}][{y_'=z}]z<=y_^2 <-> \\exists y_ [{z'=z^5,y_'=(z^3)*y_+z^2&z>=4}][{y_'=z}]z<=y_^2".asFormula
     a[CoreException] should be thrownBy {
       val s = USubst(
@@ -852,29 +845,27 @@ class USubstTests extends TacticTestBase {
   }
 
   it should "instantiate random programs in <> monotone" in {
-    withMathematica { _ => // for AxiomInfo
-      for (i <- 1 to randomTrials) {
-        val prem1 = "(-z1)^2>=z4".asFormula
-        val prem2 = "z4<=z1^2".asFormula
-        val prog = rand.nextProgram(randomComplexity)
-        val concLhs = Diamond(prog, prem1)
-        val concRhs = Diamond(prog, prem2)
-        val randClue = "Program produced in\n\t " + i + "th run of " + randomTrials +
-          " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
+    for (i <- 1 to randomTrials) {
+      val prem1 = "(-z1)^2>=z4".asFormula
+      val prem2 = "z4<=z1^2".asFormula
+      val prog = rand.nextProgram(randomComplexity)
+      val concLhs = Diamond(prog, prem1)
+      val concRhs = Diamond(prog, prem2)
+      val randClue = "Program produced in\n\t " + i + "th run of " + randomTrials +
+        " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
 
-        val prgString =
-          withSafeClue("Error printing random program\n\n" + randClue) { KeYmaeraXPrettyPrinter.stringify(prog) }
+      val prgString =
+        withSafeClue("Error printing random program\n\n" + randClue) { KeYmaeraXPrettyPrinter.stringify(prog) }
 
-        withSafeClue("Random precontext " + prgString + "\n\n" + randClue) {
-          val s = USubst(Seq(
-            SubstitutionPair(ap_, prog),
-            SubstitutionPair(UnitPredicational("p_", AnyArg), prem1),
-            SubstitutionPair(UnitPredicational("q_", AnyArg), prem2),
-          ))
-          val pr = ProvableSig.rules("<> monotone")(s)
-          pr.conclusion shouldBe Sequent(IndexedSeq(concLhs), IndexedSeq(concRhs))
-          pr.subgoals should contain only Sequent(IndexedSeq(prem1), IndexedSeq(prem2))
-        }
+      withSafeClue("Random precontext " + prgString + "\n\n" + randClue) {
+        val s = USubst(Seq(
+          SubstitutionPair(ap_, prog),
+          SubstitutionPair(UnitPredicational("p_", AnyArg), prem1),
+          SubstitutionPair(UnitPredicational("q_", AnyArg), prem2),
+        ))
+        val pr = ProvableSig.rules("<> monotone")(s)
+        pr.conclusion shouldBe Sequent(IndexedSeq(concLhs), IndexedSeq(concRhs))
+        pr.subgoals should contain only Sequent(IndexedSeq(prem1), IndexedSeq(prem2))
       }
     }
   }
