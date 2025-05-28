@@ -709,6 +709,8 @@ class USubstTests extends TacticTestBase {
   /**
    * Program produced in 12th run of 50 random trials, generated with 20 random complexity from seed
    * -3583806640264782477L
+   * @note
+   *   Program does not parse
    */
   it should "instantiate crazy program in [] monotone" ignore {
     val prem1 = "(-z1)^2>=z4".asFormula
@@ -818,7 +820,7 @@ class USubstTests extends TacticTestBase {
    * Program produced in 38th run of 50 random trials, generated with 20 random complexity from seed
    * -3583806640264782477L
    */
-  it should "instantiate crazy program in <> congruence" ignore {
+  it should "instantiate crazy program in <> congruence" in {
     val prem1 = "(-z1)^2>=z4".asFormula
     val prem2 = "z4<=z1^2".asFormula
     val prem = Equiv(prem1, prem2)
@@ -905,6 +907,7 @@ class USubstTests extends TacticTestBase {
     pr.subgoals should be(List(Sequent(IndexedSeq(), IndexedSeq(fml))))
   }
 
+  // USR expects no free variable in the substitution. Fails because of c(.) ~> x^3*.
   it should "instantiate CT from y+z=z+y in more context" ignore {
     val term1 = "y+z".asTerm
     val term2 = "z+y".asTerm
@@ -914,7 +917,7 @@ class USubstTests extends TacticTestBase {
         SubstitutionPair(UnitFunctional("g_", AnyArg, Real), term2) ::
         SubstitutionPair(FuncOf(ctxt, DotTerm()), Times(Power(x, Number(3)), DotTerm())) :: Nil
     )
-    val pr = ProvableSig.rules("CT term congruence")(s)
+    val pr = Ax.CTtermCongruence.provable(s)
     pr.conclusion shouldBe Sequent(
       IndexedSeq(),
       IndexedSeq(Equal(Times(Power(x, Number(3)), term1), Times(Power(x, Number(3)), term2))),
@@ -922,6 +925,7 @@ class USubstTests extends TacticTestBase {
     pr.subgoals should be(List(Sequent(IndexedSeq(), IndexedSeq(fml))))
   }
 
+  // USR expects no free variable in the substitution. Fails most likely because c(.) ~> context introduces some.
   it should "instantiate CT from y+z=z+y in random context" ignore {
     for (i <- 1 to randomTrials) {
       val term1 = "y+z".asTerm
@@ -940,7 +944,7 @@ class USubstTests extends TacticTestBase {
             SubstitutionPair(UnitFunctional("g_", AnyArg, Real), term2) ::
             SubstitutionPair(FuncOf(ctxt, DotTerm()), context) :: Nil
         )
-        val pr = ProvableSig.rules("CT term congruence")(s)
+        val pr = Ax.CTtermCongruence.provable(s)
         pr.conclusion shouldBe
           Sequent(IndexedSeq(), IndexedSeq(Equal(contextapp(context, term1), contextapp(context, term2))))
         pr.subgoals should be(List(Sequent(IndexedSeq(), IndexedSeq(fml))))
@@ -948,6 +952,7 @@ class USubstTests extends TacticTestBase {
     }
   }
 
+  // USR expects no free variable in the substitution. Fails most likely because c(.) ~> context introduces some.
   it should "instantiate CT from z1+z3*z2=z2*z3+z1 in random context" ignore {
     for (i <- 1 to randomTrials) {
       val term1 = "z1+z3*z2".asTerm
@@ -966,7 +971,7 @@ class USubstTests extends TacticTestBase {
             SubstitutionPair(UnitFunctional("g_", AnyArg, Real), term2) ::
             SubstitutionPair(FuncOf(ctxt, DotTerm()), context) :: Nil
         )
-        val pr = ProvableSig.rules("CT term congruence")(s)
+        val pr = Ax.CTtermCongruence.provable(s)
         pr.conclusion shouldBe
           Sequent(IndexedSeq(), IndexedSeq(Equal(contextapp(context, term1), contextapp(context, term2))))
         pr.subgoals should be(List(Sequent(IndexedSeq(), IndexedSeq(fml))))
@@ -974,6 +979,7 @@ class USubstTests extends TacticTestBase {
     }
   }
 
+  // USR expects no free variable in the substitution. Fails most likely because c(.) ~> context introduces some.
   it should "instantiate CT from z1*z3-z2=z2-z4/z1 in random context" ignore {
     for (i <- 1 to randomTrials) {
       val term1 = "z1*z3-z2".asTerm
@@ -992,7 +998,7 @@ class USubstTests extends TacticTestBase {
             SubstitutionPair(UnitFunctional("g_", AnyArg, Real), term2) ::
             SubstitutionPair(FuncOf(ctxt, DotTerm()), context) :: Nil
         )
-        val pr = ProvableSig.rules("CT term congruence")(s)
+        val pr = Ax.CTtermCongruence.provable(s)
         pr.conclusion shouldBe
           Sequent(IndexedSeq(), IndexedSeq(Equal(contextapp(context, term1), contextapp(context, term2))))
         pr.subgoals should be(List(Sequent(IndexedSeq(), IndexedSeq(fml))))
@@ -1098,6 +1104,7 @@ class USubstTests extends TacticTestBase {
     pr.subgoals should be(List(Sequent(IndexedSeq(), IndexedSeq(fml))))
   }
 
+  // USR expects no free variable in the substitution. Fails because of c(.) ~> x^3*.
   it should "instantiate CT from z^2*y=-(-z)^2*-y+0" ignore {
     val term1 = "z^2*y".asTerm
     val term2 = "-(-z)^2*-y+0".asTerm
