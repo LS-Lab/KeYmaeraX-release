@@ -153,6 +153,13 @@ final case class MultiRename(rens: immutable.Seq[(Variable, Variable)], semantic
     case n: Number => n
     case FuncOf(f: Function, theta) => FuncOf(f, rename(theta))
     case Nothing | DotTerm(_, _) => term
+    case d: DotAllTerm =>
+      if (semantic) d
+      else throw RenamingClashException(
+        "Cannot replace semantic dependencies syntactically: DotAllTerm " + term,
+        this.toString,
+        term.toString,
+      )
     case UnitFunctional(f, sp, s) =>
       if (semantic) UnitFunctional(f, renSpace(sp), s)
       else throw RenamingClashException(

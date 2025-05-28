@@ -181,8 +181,8 @@ final case class SubstitutionPair(what: Expression, repl: Expression) {
         // DotFormula is a nullary Predicational
         // program constants are always admissible, since their meaning doesn't depend on state
         // DifferentialProgramConst are handled in analogy to program constants, since space-compatibility already checked
-        case UnitFunctional(_, _, _) | UnitPredicational(_, _) | PredicationalOf(_, DotFormula) |
-            PredicationalOf(_, DotProgram) | PredicationalOf(_, _: DotTerm) | DotFormula | ProgramConst(_, _) |
+        case UnitFunctional(_, _, _) | _: DotAllTerm | UnitPredicational(_, _) | PredicationalOf(_, DotFormula) |
+            PredicationalOf(_, DotProgram) | PredicationalOf(_, _: DotAllTerm) | DotFormula | ProgramConst(_, _) |
             SystemConst(_, _) | DifferentialProgramConst(_, _) | DotProgram | DotDiffProgram => bottom
         case PredicationalOf(_, _) => throw SubstitutionClashException(
             toString,
@@ -222,7 +222,7 @@ final case class SubstitutionPair(what: Expression, repl: Expression) {
         case PredOf(_, d: DotTerm) => StaticSemantics.signature(repl) - d
         case PredicationalOf(_, DotFormula) => StaticSemantics.signature(repl) - DotFormula
         case PredicationalOf(_, DotProgram) => StaticSemantics.signature(repl) - DotProgram
-        case PredicationalOf(_, d: DotTerm) => StaticSemantics.signature(repl) - d
+        case PredicationalOf(_, d: DotAllTerm) => StaticSemantics.signature(repl) - d
         case _ => StaticSemantics.signature(repl)
       }
     case _ => StaticSemantics.signature(repl)
@@ -246,8 +246,9 @@ final case class SubstitutionPair(what: Expression, repl: Expression) {
     // redundant `!p.interpreted` by PredicationalOf insist
     case PredicationalOf(p: Function, DotFormula) if !p.interpreted => p
     case PredicationalOf(p: Function, DotProgram) if !p.interpreted => p
-    case PredicationalOf(p: Function, _: DotTerm) if !p.interpreted => p
+    case PredicationalOf(p: Function, _: DotAllTerm) if !p.interpreted => p
     case d: DotTerm => d
+    case d: DotAllTerm => d
     case DotFormula => DotFormula
     case DotProgram => DotProgram
     case DotDiffProgram => DotDiffProgram

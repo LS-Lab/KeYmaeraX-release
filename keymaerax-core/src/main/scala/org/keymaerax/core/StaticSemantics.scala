@@ -127,6 +127,7 @@ object StaticSemantics {
     case Pair(l, r) => freeVars(l) ++ freeVars(r)
     case Nothing => bottom
     case f: UnitFunctional => spaceVars(f.space)
+    case _: DotAllTerm => allVars
   }
 
   /**
@@ -340,6 +341,7 @@ object StaticSemantics {
     // special
     case Nothing => Set.empty
     case f: UnitFunctional => Set(f)
+    case d: DotAllTerm => Set(d)
   }
 
   /**

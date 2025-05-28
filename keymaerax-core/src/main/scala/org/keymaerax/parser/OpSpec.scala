@@ -239,6 +239,7 @@ object OpSpec {
   private val unterm = TermKind
   private val binterm = (TermKind, TermKind)
   val sDotTerm = UnitOpSpec(none, 0, _ => DotTerm())
+  val sDotAllTerm = UnitOpSpec(PLACE, 0, DotAllTerm())
   val sNothing = UnitOpSpec(NOTHING, 0, Nothing)
   val sVariable = UnitOpSpec(none, 0, name => Variable(name, None, Real))
   val sNumber = UnitOpSpec(none, 0, number => Number(BigDecimal(number)))
@@ -453,6 +454,7 @@ object OpSpec {
     case t: Plus => sPlus
     case t: Minus => sMinus
     case t: UnitFunctional => sUnitFunctional
+    case t: DotAllTerm => sDotAllTerm
 
     // formulas
     case DotFormula => sDotFormula

@@ -362,6 +362,7 @@ sealed trait SpaceDependent extends StateDependent {
  *     - `x` variable as [[Variable]], including differential symbol `x'` as [[DifferentialSymbol]]
  *     - `5` number literals as [[Number]]
  *     - `F` nullary functional as [[UnitFunctional]] written `F(||)` in internal syntax.
+ *     - `_` dot as reserved nullary functional [[DotAllTerm]] for term argument placeholders
  *     - `.` dot as reserved nullary function symbol [[DotTerm]] for term argument placeholders
  *     - Nothing for empty arguments [[Nothing]] for nullary functions
  *   - [[ApplicationOf]] terms that are function applications
@@ -515,6 +516,8 @@ final case class Function(
 /**
  * `•`: Placeholder for terms in uniform substitutions of given sort. Reserved nullary function symbols `\\cdot` for
  * uniform substitutions are unlike ordinary function symbols by convention.
+ * @see
+ *   [[DotAllTerm]] for the reserved *functional* symbol
  */
 final case class DotTerm(s: Sort = Real, idx: Option[Int] = None) extends Expression with NamedSymbol with AtomicTerm {
   val sort: Sort = s
@@ -552,6 +555,18 @@ final case class UnitFunctional(name: String, space: Space, sort: Sort)
     extends AtomicTerm with SpaceDependent with NamedSymbol {
   override def asString: String = super.asString + "(" + space + ")"
   insistNamingConvention()
+}
+
+/**
+ * ⎵: Placeholder for terms. Reserved nullary term functional _ for substitutions are unlike ordinary functional symbol
+ * by convention.
+ * @see
+ *   [[DotTerm]] for the reserved *function* symbol
+ */
+final case class DotAllTerm(s: Sort = Real) extends NamedSymbol with AtomicTerm with StateDependent {
+  val sort: Sort = s
+  val name: String = "\\_"
+  val index: Option[Int] = None
 }
 
 /** Composite terms that are composed of subterms. */

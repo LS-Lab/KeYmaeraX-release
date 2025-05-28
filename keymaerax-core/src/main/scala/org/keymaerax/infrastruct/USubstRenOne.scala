@@ -49,9 +49,9 @@ final case class URenSubstitutionPair(what: Expression, repl: Expression) {
         // unit predicationals are nullary Predicationals
         // program constants are always admissible, since their meaning doesn't depend on state
         // DifferentialProgramConst are handled in analogy to program constants, since space-compatibility already checked
-        case UnitFunctional(_, _, _) | UnitPredicational(_, _) | PredicationalOf(_, DotFormula) | DotFormula |
-            ProgramConst(_, _) | SystemConst(_, _) | DotProgram | DifferentialProgramConst(_, _) | DotDiffProgram =>
-          bottom
+        case UnitFunctional(_, _, _) | _: DotAllTerm | UnitPredicational(_, _) | PredicationalOf(_, DotFormula) |
+            PredicationalOf(_, DotProgram) | PredicationalOf(_, _: DotAllTerm) | DotFormula | ProgramConst(_, _) |
+            SystemConst(_, _) | DotProgram | DifferentialProgramConst(_, _) | DotDiffProgram => bottom
         case PredicationalOf(_, _) => throw SubstitutionClashException(
             toString,
             "<none>",
@@ -273,6 +273,7 @@ final case class USubstRenOne(private[infrastruct] val subsDefsInput: immutable.
         }
       case Nothing => Nothing
       case d: DotTerm => subsDefs.getOrElse(d, URenSubstitutionPair(d, d)).repl.asInstanceOf[Term]
+      case d: DotAllTerm => subsDefs.getOrElse(d, URenSubstitutionPair(d, d)).repl.asInstanceOf[Term]
       case n: Number => n
       // @note except for Differential, the following cases are equivalent to f.reapply but are left explicit to enforce revisiting this case when data structure changes.
       // case f:BinaryCompositeTerm => f.reapply(usubst(f.left), usubst(f.right))

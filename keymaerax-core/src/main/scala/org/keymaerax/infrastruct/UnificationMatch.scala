@@ -478,7 +478,7 @@ abstract class SchematicUnificationMatch extends BaseMatcher {
         case _ => unifyApplicationOf(FuncOf.apply, f, t, e2)
       }
     case Nothing => if (e1 == e2) id else ununifiable(e1, e2)
-    case _: DotTerm => unifier(e1, e2)
+    case _: DotTerm | _: DotAllTerm => unifier(e1, e2)
     // @note case o1:UnaryCompositeTerm  => e2 match {case o2:UnaryCompositeTerm  if o1.reapply==o2.reapply => unify(o1.child,o2.child) case _ => ununifiable(e1,e2)}
     // @note case o1:BinaryCompositeTerm => e2 match {case o2:BinaryCompositeTerm if o1.reapply==o2.reapply => unify(o1.left,o2.left) ++ unify(o1.right,o2.right) case _ => ununifiable(e1,e2)}
     // homomorphic cases

@@ -157,6 +157,13 @@ final case class URename(what: Variable, repl: Variable, semantic: Boolean = fal
     case Differential(e) => Differential(rename(e))
     // unofficial
     case Pair(l, r) => Pair(rename(l), rename(r))
+    case d: DotAllTerm =>
+      if (semantic) d
+      else throw RenamingClashException(
+        "Cannot replace semantic dependencies syntactically: DotAllTerm " + term,
+        this.toString,
+        term.toString,
+      )
     case UnitFunctional(f, sp, s) =>
       if (semantic) UnitFunctional(f, renSpace(sp), s)
       else throw RenamingClashException(

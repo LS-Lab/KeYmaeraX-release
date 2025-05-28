@@ -171,6 +171,11 @@ object FullPrettyPrinter extends BasePrettyPrinter {
           case Tuple(_, _) => sort.toString
           case _ => ""
         }) // @note will parse as Pair(Variable("Real"), ...), which has Sort sort
+    case DotAllTerm(sort) => op(term).opcode +
+        (sort match {
+          case Tuple(_, _) => sort.toString
+          case _ => ""
+        })
     case DifferentialSymbol(x) => pp(x) + op(term).opcode
     case x: Variable => x.asString
     case Differential(t) => "(" + pp(t) + ")" + op(term).opcode
@@ -334,6 +339,11 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
             case Tuple(_, _) => sort.toString
             case _ => ""
           }) // @note will parse as Pair(Variable("Real"), ...), which has Sort sort
+      case DotAllTerm(sort) => ppOp(term) +
+          (sort match {
+            case Tuple(_, _) => sort.toString
+            case _ => ""
+          })
       case DifferentialSymbol(x) => x.asString + ppOp(term)
       case x: Variable => x.asString
       // disambiguate (-2)' versus (-(2))' versus ((-2))'

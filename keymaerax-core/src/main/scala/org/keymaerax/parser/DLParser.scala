@@ -454,7 +454,8 @@ class DLParser extends Parser {
 
   def baseTerm[$: P](doAmbigCuts: Boolean): P[Term] = number(doAmbigCuts) | dot./ | function(doAmbigCuts)
     .flatMapX[Term](diff) | unitFunctional(doAmbigCuts).flatMapX[Term](diff) | variable | termList(doAmbigCuts)
-    .flatMapX[Term](diff) | "__________".!.map(_ => UnitFunctional("exerciseF_", AnyArg, Real))
+    .flatMapX[Term](diff) | "__________".!.map(_ => UnitFunctional("exerciseF_", AnyArg, Real)) |
+    (if (doAmbigCuts) "⎵".!./ else "⎵".!).map(_ => DotAllTerm())
 
   def function[$: P](doAmbigCuts: Boolean): P[FuncOf] = P(
     // Note interpretations can only appear on functions (not predicates)
@@ -586,7 +587,7 @@ class DLParser extends Parser {
         | ("(" ~ formula ~ ")" ~ "'".!.?).map({
           case (form, None) => form
           case (form, Some("'")) => DifferentialFormula(form)
-        })
+        }) | "⎵".!.map(_ => DotFormula)
     )
 
   @nowarn("msg=match may not be exhaustive")
@@ -601,7 +602,7 @@ class DLParser extends Parser {
       } | ((("[".! ~/ program ~ "]".!) | ("<".! ~/ program ~ ">".!)) ~/ baseF).map {
         case ("[", p, "]", f) => Box(p, f)
         case ("<", p, ">", f) => Diamond(p, f)
-      } | ("!" ~/ baseF).map(Not.apply) | predicational | "⎵".!.map(_ => DotFormula) |
+      } | ("!" ~/ baseF).map(Not.apply) | predicational |
       /* Exercise */
       "__________".!.map(_ => UnitPredicational("exerciseP_", AnyArg))
 

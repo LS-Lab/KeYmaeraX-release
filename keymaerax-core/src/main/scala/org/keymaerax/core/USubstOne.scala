@@ -247,6 +247,10 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
             subs.repl.asInstanceOf[Term]
           case None => d
         }
+      case d: DotAllTerm => subsDefs.find(_.what == d) match {
+          case Some(subs) => subs.repl.asInstanceOf[Term]
+          case None => d
+        }
       case n: Number => n
       // @note except for Differential, the following cases are equivalent to f.reapply but are left explicit to enforce revisiting this case when data structure changes.
       // case f:BinaryCompositeTerm => f.reapply(usubst(f.left), usubst(f.right))
