@@ -197,12 +197,12 @@ class UnifyUSCalculusTest extends TacticTestBase {
     ) shouldBe Symbol("proved")
   }
 
-  it should "prove [?x>0;x:=x+1; ++ ?x=0;x:=1;]x>0 by chase" in withMathematica { qeTool =>
+  it should "prove [?x>0;x:=x+1; ++ ?x=0;x:=1;]x>0 by chase" in withQE { _ =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("[?x>0;x:=x+1; ++ ?x=0;x:=1;]x>0".asFormula)), chase(1, Nil) & QE) shouldBe
       Symbol("proved")
   }
 
-  it should "prove [?x>0;x:=x+1; ++ ?x=0;x:=1;]x>=1 by chase" in withMathematica { qeTool =>
+  it should "prove [?x>0;x:=x+1; ++ ?x=0;x:=1;]x>=1 by chase" in withQE { _ =>
     proveBy(
       Sequent(IndexedSeq(), IndexedSeq("[?x>0;x:=x+1; ++ ?x=0;x:=1;]x>=1".asFormula)),
       chase(1, Nil) & QE,
@@ -210,7 +210,7 @@ class UnifyUSCalculusTest extends TacticTestBase {
   }
 
   it should "prove [?x>0;x:=x+1; ++ ?x=0;x:=1; ++ x:=99; ++ ?x>=0;{{x:=x+1;++x:=x+2;};{y:=0;++y:=1;}}]x>=1 by chase" in
-    withMathematica { qeTool =>
+    withQE { _ =>
       proveBy(
         Sequent(
           IndexedSeq(),
@@ -222,21 +222,21 @@ class UnifyUSCalculusTest extends TacticTestBase {
       ) shouldBe Symbol("proved")
     }
 
-  it should "prove [?x>0;x:=x+1;?x!=2; ++ ?x=0;x:=1;]x>=1 by chase" in withMathematica { qeTool =>
+  it should "prove [?x>0;x:=x+1;?x!=2; ++ ?x=0;x:=1;]x>=1 by chase" in withQE { _ =>
     proveBy(
       Sequent(IndexedSeq(), IndexedSeq("[?x>0;x:=x+1;?x!=2; ++ ?x=0;x:=1;]x>=1".asFormula)),
       chase(1, Nil) & QE,
     ) shouldBe Symbol("proved")
   }
 
-  it should "prove [?x>0;x:=x+1;x:=2*x; ++ ?x=0;x:=1;]x>=1 by chase" in withMathematica { qeTool =>
+  it should "prove [?x>0;x:=x+1;x:=2*x; ++ ?x=0;x:=1;]x>=1 by chase" in withQE { _ =>
     proveBy(
       Sequent(IndexedSeq(), IndexedSeq("[?x>0;x:=x+1;x:=2*x; ++ ?x=0;x:=1;]x>=1".asFormula)),
       chase(1, Nil) & QE,
     ) shouldBe Symbol("proved")
   }
 
-  it should "chase [?x>0;x:=x+1; ++ ?x=0;x:=1; ++ x:=0;x:=x+1; ++ x:=1;?x>=2;]x>=1" in withMathematica { qeTool =>
+  it should "chase [?x>0;x:=x+1; ++ ?x=0;x:=1; ++ x:=0;x:=x+1; ++ x:=1;?x>=2;]x>=1" in withQE { _ =>
     proveBy(
       Sequent(IndexedSeq(), IndexedSeq("[?x>0;x:=x+1; ++ ?x=0;x:=1; ++ x:=0;x:=x+1; ++ x:=1;?x>=2;]x>=1".asFormula)),
       // chaseWide(3) works like an update calculus
@@ -272,7 +272,7 @@ class UnifyUSCalculusTest extends TacticTestBase {
       Sequent(IndexedSeq("x<99 -> y<2 & x>5".asFormula), IndexedSeq("x<99 -> y<2 & x>2".asFormula))
   }
 
-  it should "prove x<99 -> y<2 & x>5 |- x<99 -> y<2 & x>2 from provable x>5 |- x>2" in withMathematica { qeTool =>
+  it should "prove x<99 -> y<2 & x>5 |- x<99 -> y<2 & x>2 from provable x>5 |- x>2" in withQE { _ =>
     val done = CMon(Context("x<99 -> y<2 & ⎵".asFormula))(basicImpl)
     done shouldBe Symbol("proved")
     done.conclusion shouldBe
@@ -297,115 +297,100 @@ class UnifyUSCalculusTest extends TacticTestBase {
       Sequent(IndexedSeq(ctx(basic.conclusion.succ.head)), IndexedSeq(ctx(basic.conclusion.ante.head)))
   }
 
-  it should "prove y<2 & x>5 |- y<2 & x>2 from x>5 |- x>2" in withMathematica { qeTool =>
-    shouldCMon(Context("y<2 & ⎵".asFormula))
-  }
-  it should "prove x>5 & y<2 |- x>2 & y<2 from x>5 |- x>2" in withMathematica { qeTool =>
-    shouldCMon(Context("⎵ & y<2".asFormula))
-  }
-  it should "prove x<99 -> x>5 |- x<99 -> x>2 from x>5 |- x>2" in withMathematica { qeTool =>
+  it should "prove y<2 & x>5 |- y<2 & x>2 from x>5 |- x>2" in withQE { _ => shouldCMon(Context("y<2 & ⎵".asFormula)) }
+  it should "prove x>5 & y<2 |- x>2 & y<2 from x>5 |- x>2" in withQE { _ => shouldCMon(Context("⎵ & y<2".asFormula)) }
+  it should "prove x<99 -> x>5 |- x<99 -> x>2 from x>5 |- x>2" in withQE { _ =>
     shouldCMon(Context("x<99 -> ⎵".asFormula))
   }
-  it should "prove x<99 | x>5 |- x<99 | x>2 from x>5 |- x>2" in withMathematica { qeTool =>
+  it should "prove x<99 | x>5 |- x<99 | x>2 from x>5 |- x>2" in withQE { _ =>
     shouldCMon(Context("x<99 | ⎵".asFormula))
   }
-  it should "prove in monotone context x<99 | _ & y<2" in withMathematica { qeTool =>
+  it should "prove in monotone context x<99 | _ & y<2" in withQE { _ =>
     shouldCMon(Context("x<99 | ⎵ & y<2".asFormula))
   }
-  it should "prove in monotone context (x<99 | _) & y<2" in withMathematica { qeTool =>
+  it should "prove in monotone context (x<99 | _) & y<2" in withQE { _ =>
     shouldCMon(Context("(x<99 | ⎵) & y<2".asFormula))
   }
-  it should "prove in monotone context x<7 -> (x<99 | _) & y<2" in withMathematica { qeTool =>
+  it should "prove in monotone context x<7 -> (x<99 | _) & y<2" in withQE { _ =>
     shouldCMon(Context("x<7 -> (x<99 | ⎵) & y<2".asFormula))
   }
-  it should "prove in monotone context x<y -> x<7 -> (x<99 | x<10 -> (_ & z=2 | x=5 & y=3)) & y<2" in withMathematica {
-    qeTool => shouldCMon(Context("x<y -> x<7 -> (x<99 | x<10 -> (⎵ & z=2 | x=5 & y=3)) & y<2".asFormula))
+  it should "prove in monotone context x<y -> x<7 -> (x<99 | x<10 -> (_ & z=2 | x=5 & y=3)) & y<2" in withQE { _ =>
+    shouldCMon(Context("x<y -> x<7 -> (x<99 | x<10 -> (⎵ & z=2 | x=5 & y=3)) & y<2".asFormula))
   }
-  it should "prove in monotone context \\forall y _" in withMathematica { qeTool =>
-    shouldCMon(Context("\\forall y ⎵".asFormula))
-  }
-  it should "prove in monotone context \\forall x _" in withMathematica { qeTool =>
-    shouldCMon(Context("\\forall x ⎵".asFormula))
-  }
-  it should "prove in monotone context \\exists y _" in withMathematica { qeTool =>
-    shouldCMon(Context("\\exists y ⎵".asFormula))
-  }
-  it should "prove in monotone context \\exists x _" in withMathematica { qeTool =>
-    shouldCMon(Context("\\exists x ⎵".asFormula))
-  }
-  it should "prove in monotone context !!\\exists x _" in withMathematica { qeTool =>
+  it should "prove in monotone context \\forall y _" in withQE { _ => shouldCMon(Context("\\forall y ⎵".asFormula)) }
+  it should "prove in monotone context \\forall x _" in withQE { _ => shouldCMon(Context("\\forall x ⎵".asFormula)) }
+  it should "prove in monotone context \\exists y _" in withQE { _ => shouldCMon(Context("\\exists y ⎵".asFormula)) }
+  it should "prove in monotone context \\exists x _" in withQE { _ => shouldCMon(Context("\\exists x ⎵".asFormula)) }
+  it should "prove in monotone context !!\\exists x _" in withQE { _ =>
     shouldCMon(Context("!!\\exists x ⎵".asFormula))
   }
-  it should "prove in monotone context ![a:=2;]!\\exists x _" in withMathematica { qeTool =>
+  it should "prove in monotone context ![a:=2;]!\\exists x _" in withQE { _ =>
     shouldCMon(Context("![a:=2;]!\\exists x ⎵".asFormula))
   }
-  it should "prove in monotone context \\forall y (_ | x<y)" in withMathematica { qeTool =>
+  it should "prove in monotone context \\forall y (_ | x<y)" in withQE { _ =>
     shouldCMon(Context("\\forall y (⎵ | x<y)".asFormula))
   }
-  it should "prove in monotone context \\forall x (_ | x<y)" in withMathematica { qeTool =>
+  it should "prove in monotone context \\forall x (_ | x<y)" in withQE { _ =>
     shouldCMon(Context("\\forall x (⎵ | x<y)".asFormula))
   }
-  it should "prove in monotone context \\exists y (_ | x<y)" in withMathematica { qeTool =>
+  it should "prove in monotone context \\exists y (_ | x<y)" in withQE { _ =>
     shouldCMon(Context("\\exists y (⎵ | x<y)".asFormula))
   }
-  it should "prove in monotone context \\exists x (_ | x<y)" in withMathematica { qeTool =>
+  it should "prove in monotone context \\exists x (_ | x<y)" in withQE { _ =>
     shouldCMon(Context("\\exists x (⎵ | x<y)".asFormula))
   }
-  it should "prove in antimonotone context _ -> y<2" in withMathematica { qeTool =>
-    shouldCMonA(Context("⎵ -> y<2".asFormula))
-  }
-  it should "prove in antimonotone context _ -> y<2 & x<10" in withMathematica { qeTool =>
+  it should "prove in antimonotone context _ -> y<2" in withQE { _ => shouldCMonA(Context("⎵ -> y<2".asFormula)) }
+  it should "prove in antimonotone context _ -> y<2 & x<10" in withQE { _ =>
     shouldCMonA(Context("⎵ -> y<2 & x<10".asFormula))
   }
-  it should "prove in antimonotone context (_ -> y<2) & x<10" in withMathematica { qeTool =>
+  it should "prove in antimonotone context (_ -> y<2) & x<10" in withQE { _ =>
     shouldCMonA(Context("(⎵ -> y<2) & x<10".asFormula))
   }
-  it should "prove in antimonotone context (_ -> y<2) & x<10 | x=7" in withMathematica { qeTool =>
+  it should "prove in antimonotone context (_ -> y<2) & x<10 | x=7" in withQE { _ =>
     shouldCMonA(Context("(⎵ -> y<2) & x<10 | x=7".asFormula))
   }
-  it should "prove in antimonotone context (<x:=5;>_ -> y<2) & x<10 | x=7" in withMathematica { qeTool =>
+  it should "prove in antimonotone context (<x:=5;>_ -> y<2) & x<10 | x=7" in withQE { _ =>
     shouldCMonA(Context("(<x:=5;>⎵ -> y<2) & x<10 | x=7".asFormula))
   }
-  it should "prove in antimonotone context (a=3|<x:=5;>_ -> y<2) & x<10 | x=7" in withMathematica { qeTool =>
+  it should "prove in antimonotone context (a=3|<x:=5;>_ -> y<2) & x<10 | x=7" in withQE { _ =>
     shouldCMonA(Context("(a=3|<x:=5;>⎵ -> y<2) & x<10 | x=7".asFormula))
   }
-  it should "prove in antimonotone context (<x:=5;>_&a=3 -> y<2) & x<10 | x=7" in withMathematica { qeTool =>
+  it should "prove in antimonotone context (<x:=5;>_&a=3 -> y<2) & x<10 | x=7" in withQE { _ =>
     shouldCMonA(Context("(<x:=5;>⎵&a=3 -> y<2) & x<10 | x=7".asFormula))
   }
-  it should "prove in antiantimonotone context ((_ -> y<2) -> z=0) & x<10 | x=7" in withMathematica { qeTool =>
+  it should "prove in antiantimonotone context ((_ -> y<2) -> z=0) & x<10 | x=7" in withQE { _ =>
     shouldCMon(Context("((⎵ -> y<2) -> z=0) & x<10 | x=7".asFormula))
   }
 
   lazy val basicImpl = TactixLibrary
     .proveBy(Sequent(IndexedSeq("x>5".asFormula), IndexedSeq("x>2".asFormula)), TactixLibrary.QE)
 
-  it should "prove C{x>5} |- C{x>2} from provable x>5 |- x>2 in most random positive contexts" in withMathematica {
-    qeTool =>
-      for (i <- 1 to randomTrials) {
-        val ctx = rand.nextFormulaContext(randomComplexity)
-        if (ctx.isFormulaContext) {
-          try {
-            // @todo discard ctx unless positive
-            if (
-              FormulaTools.polarityAt(
-                ctx.ctx,
-                FormulaTools.posOf(ctx.ctx, DotFormula).getOrElse(throw new InterruptedException("skip")),
-              ) > 0
-            ) {
-              // @todo discard ctx if DotFormula within a program
-              // @todo discard ctx if DotFormula somewhere underneath an Equiv
-              val done = CMon(ctx)(basicImpl)
-              done shouldBe Symbol("proved")
-              done.conclusion shouldBe Sequent(IndexedSeq(ctx("x>5".asFormula)), IndexedSeq(ctx("x>2".asFormula)))
-            }
-          } catch {
-            case e: ProverException =>
-              if (e.toString.startsWith("No monotone context")) println("context discarded") else throw e
-            // case e: IllegalArgumentException if e.getMessage.startsWith("requirement failed:") => println("Requirement not met: " + e)
-            case e: InterruptedException =>
+  it should "prove C{x>5} |- C{x>2} from provable x>5 |- x>2 in most random positive contexts" in withQE { _ =>
+    for (i <- 1 to randomTrials) {
+      val ctx = rand.nextFormulaContext(randomComplexity)
+      if (ctx.isFormulaContext) {
+        try {
+          // @todo discard ctx unless positive
+          if (
+            FormulaTools.polarityAt(
+              ctx.ctx,
+              FormulaTools.posOf(ctx.ctx, DotFormula).getOrElse(throw new InterruptedException("skip")),
+            ) > 0
+          ) {
+            // @todo discard ctx if DotFormula within a program
+            // @todo discard ctx if DotFormula somewhere underneath an Equiv
+            val done = CMon(ctx)(basicImpl)
+            done shouldBe Symbol("proved")
+            done.conclusion shouldBe Sequent(IndexedSeq(ctx("x>5".asFormula)), IndexedSeq(ctx("x>2".asFormula)))
           }
+        } catch {
+          case e: ProverException =>
+            if (e.toString.startsWith("No monotone context")) println("context discarded") else throw e
+          // case e: IllegalArgumentException if e.getMessage.startsWith("requirement failed:") => println("Requirement not met: " + e)
+          case e: InterruptedException =>
         }
       }
+    }
   }
 
   lazy val basicEq = TactixLibrary.proveBy("1=0*x+1".asFormula, TactixLibrary.QE)
@@ -430,19 +415,19 @@ class UnifyUSCalculusTest extends TacticTestBase {
   ): Unit = proveBy(input, CEat(fact, C)(pos, inExpr.pos)).subgoals should contain only
     new Sequent(IndexedSeq(), IndexedSeq(result))
 
-  "CE(Provable) equation magic" should "reduce 0*x+1<=3 to 1<=3" in withMathematica { qeTool =>
+  "CE(Provable) equation magic" should "reduce 0*x+1<=3 to 1<=3" in withQE { _ =>
     shouldReduceTo("0*x+1<=3".asFormula, 1, PosInExpr(0 :: Nil), "1<=3".asFormula)
   }
 
-  it should "reduce x<5 & 0*x+1<=3 | x>=2 to x<5 & 1<=3 | x>=2" in withMathematica { qeTool =>
+  it should "reduce x<5 & 0*x+1<=3 | x>=2 to x<5 & 1<=3 | x>=2" in withQE { _ =>
     shouldReduceTo("x<5 & 0*x+1<=3 | x>=2".asFormula, 1, PosInExpr(0 :: 1 :: 0 :: Nil), "x<5 & 1<=3 | x>=2".asFormula)
   }
 
-  it should "reduce \\forall x 0*x+1<=3 to \\forall x 1<=3" in withMathematica { qeTool =>
+  it should "reduce \\forall x 0*x+1<=3 to \\forall x 1<=3" in withQE { _ =>
     shouldReduceTo("\\forall x 0*x+1<=3".asFormula, 1, PosInExpr(0 :: 0 :: Nil), "\\forall x 1<=3".asFormula)
   }
 
-  it should "reduce x<5 & \\forall x 0*x+1<=3 | x>=2 to x<5 & \\forall x 1<=3 | x>=2" in withMathematica { qeTool =>
+  it should "reduce x<5 & \\forall x 0*x+1<=3 | x>=2 to x<5 & \\forall x 1<=3 | x>=2" in withQE { _ =>
     shouldReduceTo(
       "x<5 & \\forall x 0*x+1<=3 | x>=2".asFormula,
       1,
@@ -451,11 +436,11 @@ class UnifyUSCalculusTest extends TacticTestBase {
     )
   }
 
-  it should "reduce [x:=7;]0*x+1<=3 to [x:=7;]1<=3" in withMathematica { qeTool =>
+  it should "reduce [x:=7;]0*x+1<=3 to [x:=7;]1<=3" in withQE { _ =>
     shouldReduceTo("[x:=7;]0*x+1<=3".asFormula, 1, PosInExpr(1 :: 0 :: Nil), "[x:=7;]1<=3".asFormula)
   }
 
-  it should "reduce [x:=7;?0*x+1<=3;]x<9 to [x:=7;?1<=3;]x<9" in withMathematica { qeTool =>
+  it should "reduce [x:=7;?0*x+1<=3;]x<9 to [x:=7;?1<=3;]x<9" in withQE { _ =>
     shouldReduceTo(
       "[x:=7;?0*x+1<=3;]x<9".asFormula,
       1,
@@ -464,15 +449,15 @@ class UnifyUSCalculusTest extends TacticTestBase {
     )
   }
 
-  it should "reduce [x:=0*x+1;]x<9 to [x:=1;]x<9" in withMathematica { qeTool =>
+  it should "reduce [x:=0*x+1;]x<9 to [x:=1;]x<9" in withQE { _ =>
     shouldReduceTo("[x:=0*x+1;]x<9".asFormula, 1, PosInExpr(0 :: 1 :: Nil), "[x:=1;]x<9".asFormula)
   }
 
-  ignore should "reduce [x:=7;x:=0*x+1;]x<9 to [x:=7;x:=1;]x<9" in withMathematica { qeTool =>
+  it should "reduce [x:=7;x:=0*x+1;]x<9 to [x:=7;x:=1;]x<9" in withQE { _ =>
     shouldReduceTo("[x:=7;x:=0*x+1;]x<9".asFormula, 1, PosInExpr(0 :: 1 :: 1 :: Nil), "[x:=7;x:=1;]x<9".asFormula)
   }
 
-  it should "reduce [{x' = 7 & 0*x+1<2}]x>=2 to [{x' = 7 & 1<2}]x>=2" in withMathematica { qeTool =>
+  it should "reduce [{x' = 7 & 0*x+1<2}]x>=2 to [{x' = 7 & 1<2}]x>=2" in withQE { _ =>
     shouldReduceTo(
       "[{x' = 7 & 0*x+1<2}]x>=2".asFormula,
       1,
@@ -481,7 +466,7 @@ class UnifyUSCalculusTest extends TacticTestBase {
     )
   }
 
-  ignore should "reduce [{x' = 0*x+1 & 5=5}]x>=2 to [{x' = 1 & 5=5}]x>=2" in withMathematica { qeTool =>
+  it should "reduce [{x' = 0*x+1 & 5=5}]x>=2 to [{x' = 1 & 5=5}]x>=2" in withQE { _ =>
     shouldReduceTo(
       "[{x' = 0*x+1 & 5=5}]x>=2".asFormula,
       1,
@@ -490,15 +475,15 @@ class UnifyUSCalculusTest extends TacticTestBase {
     )
   }
 
-  "CE(Provable) equivalence magic" should "reduce x^2<4 to -2<x&x<2" in withMathematica { qeTool =>
+  "CE(Provable) equivalence magic" should "reduce x^2<4 to -2<x&x<2" in withQE { _ =>
     shouldReduceTo("x^2<4".asFormula, 1, PosInExpr(Nil), "-2<x&x<2".asFormula, basicEquiv)
   }
 
-  it should "reduce !(x^2<4) to !(-2<x&x<2)" in withMathematica { qeTool =>
+  it should "reduce !(x^2<4) to !(-2<x&x<2)" in withQE { _ =>
     shouldReduceTo("!x^2<4".asFormula, 1, PosInExpr(0 :: Nil), "!(-2<x&x<2)".asFormula, basicEquiv)
   }
 
-  it should "reduce x<5 & x^2<4 | x>=2 to x<5 & (-2<x&x<2) | x>=2" in withMathematica { qeTool =>
+  it should "reduce x<5 & x^2<4 | x>=2 to x<5 & (-2<x&x<2) | x>=2" in withQE { _ =>
     shouldReduceTo(
       "x<5 & x^2<4| x>=2".asFormula,
       1,
@@ -508,7 +493,7 @@ class UnifyUSCalculusTest extends TacticTestBase {
     )
   }
 
-  it should "reduce x<5 & \\forall x x^2<4 | x>=2 to x<5 & \\forall x (-2<x&x<2) | x>=2" in withMathematica { qeTool =>
+  it should "reduce x<5 & \\forall x x^2<4 | x>=2 to x<5 & \\forall x (-2<x&x<2) | x>=2" in withQE { _ =>
     shouldReduceTo(
       "x<5 & \\forall x x^2<4| x>=2".asFormula,
       1,
@@ -518,7 +503,7 @@ class UnifyUSCalculusTest extends TacticTestBase {
     )
   }
 
-  it should "reduce [{x' = 5*x & x^2<4}]x>=1 to [{x' = 5*x & -2<x&x<2}]x>=1" in withMathematica { qeTool =>
+  it should "reduce [{x' = 5*x & x^2<4}]x>=1 to [{x' = 5*x & -2<x&x<2}]x>=1" in withQE { _ =>
     shouldReduceTo(
       "[{x' = 5*x & x^2<4}]x>=1".asFormula,
       1,
@@ -530,7 +515,7 @@ class UnifyUSCalculusTest extends TacticTestBase {
 
   it should
     "reduce x<5 & x^2<4 -> [{x' = 5*x & x^2<4}](x^2<4 & x>=1) to x<5 & (-2<x&x<2) -> [{x' = 5*x & -2<x&x<2}]((-2<x&x<2) & x>=1)" in
-    withMathematica { qeTool =>
+    withQE { _ =>
       val C = Context("x<5 & ⎵ -> [{x' = 5*x & ⎵}](⎵ & x>=1)".asFormula)
       shouldReduceTo(
         "x<5 & x^2<4 -> [{x' = 5*x & x^2<4}](x^2<4 & x>=1)".asFormula,
