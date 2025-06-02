@@ -140,14 +140,16 @@ private[core] object AxiomBase extends Logging {
        * {{{
        * Rule "CQ equation congruence".
        * Premise f_(||) = g_(||)
-       * Conclusion ctxP_(f_(||)) <-> ctxP_(g_(||))
+       * Conclusion ctxT_(f_(||)) <-> ctxT_(g_(||))
        * End.
        * }}}
        * {{{
        *      f(x)   =  g(x)
        *   --------------------- CQ
-       *    c(f(x)) <-> c(g(x))
+       *    C{f(x)} <-> C{g(x)}
        * }}}
+       * @note
+       *   Theory (weaker version): p(f(x)) <-> p(g(x))
        * @see
        *   Figure 2 of Andre Platzer.
        *   [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]].
@@ -157,7 +159,10 @@ private[core] object AxiomBase extends Logging {
         "CQ equation congruence",
         (
           immutable.IndexedSeq(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(Equal(fany, gany)))),
-          Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(PredOf(ctxf, fany), PredOf(ctxf, gany)))),
+          Sequent(
+            immutable.IndexedSeq(),
+            immutable.IndexedSeq(Equiv(PredicationalOf(contextTrm, fany), PredicationalOf(contextTrm, gany))),
+          ),
         ),
       ),
       /**
@@ -184,31 +189,6 @@ private[core] object AxiomBase extends Logging {
           Sequent(
             immutable.IndexedSeq(),
             immutable.IndexedSeq(Equiv(PredicationalOf(context, pany), PredicationalOf(context, qany))),
-          ),
-        ),
-      ),
-      /**
-       * {{{
-       * Rule "CTrmE congruence".
-       * Premise f_(||) = g_(||)
-       * Conclusion ctxT_(f_(||)) <-> ctxT_(g_(||))
-       * End.
-       * }}}
-       * {{{
-       *        f(x) = g(x)
-       *   --------------------- CTrmE
-       *    C{f(x)} <-> C{g(x)}
-       * }}}
-       * @note
-       *   Stronger than CQ
-       */
-      (
-        "CTrmE congruence",
-        (
-          immutable.IndexedSeq(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(Equal(fany, gany)))),
-          Sequent(
-            immutable.IndexedSeq(),
-            immutable.IndexedSeq(Equiv(PredicationalOf(contextTrm, fany), PredicationalOf(contextTrm, gany))),
           ),
         ),
       ),

@@ -43,6 +43,7 @@ class USubstTests extends TacticTestBase {
   private val ctx = Function("ctx_", None, Bool, Bool)
   private val ctxt = Function("ctx_", None, Real, Real)
   private val ctxf = Function("ctx_", None, Real, Bool)
+  private val ctxfb = Function("ctxT_", None, Real, Bool)
 
   "Uniform substitution" should "substitute simple formula p(x) <-> ! ! p(- - x)" in {
     val p = Function("p", None, Real, Bool)
@@ -1014,7 +1015,10 @@ class USubstTests extends TacticTestBase {
     val s = USubst(
       SubstitutionPair(UnitFunctional("f_", AnyArg, Real), term1) ::
         SubstitutionPair(UnitFunctional("g_", AnyArg, Real), term2) ::
-        SubstitutionPair(PredOf(ctxf, DotTerm()), And(Greater(y, Number(1)), LessEqual(DotTerm(), Number(5)))) :: Nil
+        SubstitutionPair(
+          PredicationalOf(ctxfb, DotAllTerm()),
+          And(Greater(y, Number(1)), LessEqual(DotAllTerm(), Number(5))),
+        ) :: Nil
     )
     val pr = ProvableSig.rules("CQ equation congruence")(s)
     pr.conclusion shouldBe
@@ -1036,7 +1040,10 @@ class USubstTests extends TacticTestBase {
     val s = USubst(
       SubstitutionPair(UnitFunctional("f_", AnyArg, Real), term1) ::
         SubstitutionPair(UnitFunctional("g_", AnyArg, Real), term2) ::
-        SubstitutionPair(PredOf(ctxf, DotTerm()), Forall(Seq(y), LessEqual(DotTerm(), Number(5)))) :: Nil
+        SubstitutionPair(
+          PredicationalOf(ctxfb, DotAllTerm()),
+          Forall(Seq(y), LessEqual(DotAllTerm(), Number(5))),
+        ) :: Nil
     )
     val pr = ProvableSig.rules("CQ equation congruence")(s)
     pr.conclusion shouldBe
@@ -1047,7 +1054,7 @@ class USubstTests extends TacticTestBase {
     pr.subgoals should be(List(Sequent(IndexedSeq(), IndexedSeq(fml))))
   }
 
-  it should "?instantiate CQ from y+z=z+y in context \\forall y .<=5" taggedAs OptimisticTest ignore {
+  it should "instantiate CQ from y+z=z+y in context \\forall y .<=5" in {
     val term1 = "y+z".asTerm
     val term2 = "z+y".asTerm
     val fml = Equal(term1, term2)
@@ -1055,7 +1062,10 @@ class USubstTests extends TacticTestBase {
     val s = USubst(
       SubstitutionPair(UnitFunctional("f_", AnyArg, Real), term1) ::
         SubstitutionPair(UnitFunctional("g_", AnyArg, Real), term2) ::
-        SubstitutionPair(PredOf(ctxf, DotTerm()), Forall(Seq(y), LessEqual(DotTerm(), Number(5)))) :: Nil
+        SubstitutionPair(
+          PredicationalOf(ctxfb, DotAllTerm()),
+          Forall(Seq(y), LessEqual(DotAllTerm(), Number(5))),
+        ) :: Nil
     )
     val pr = ProvableSig.rules("CQ equation congruence")(s)
     pr.conclusion shouldBe
@@ -1074,7 +1084,7 @@ class USubstTests extends TacticTestBase {
     val s = USubst(
       SubstitutionPair(UnitFunctional("f_", AnyArg, Real), term1) ::
         SubstitutionPair(UnitFunctional("g_", AnyArg, Real), term2) ::
-        SubstitutionPair(PredOf(ctxf, DotTerm()), Box(prog, GreaterEqual(DotTerm(), Number(0)))) :: Nil
+        SubstitutionPair(PredicationalOf(ctxfb, DotAllTerm()), Box(prog, GreaterEqual(DotAllTerm(), Number(0)))) :: Nil
     )
     val pr = ProvableSig.rules("CQ equation congruence")(s)
     pr.conclusion shouldBe
@@ -1085,7 +1095,7 @@ class USubstTests extends TacticTestBase {
     pr.subgoals should be(List(Sequent(IndexedSeq(), IndexedSeq(fml))))
   }
 
-  it should "?instantiate CQ from y+z=z+y in context [y:=y-1]" taggedAs OptimisticTest ignore {
+  it should "instantiate CQ from y+z=z+y in context [y:=y-1]" in {
     val term1 = "y+z".asTerm
     val term2 = "z+y".asTerm
     val fml = Equal(term1, term2)
@@ -1093,7 +1103,7 @@ class USubstTests extends TacticTestBase {
     val s = USubst(
       SubstitutionPair(UnitFunctional("f_", AnyArg, Real), term1) ::
         SubstitutionPair(UnitFunctional("g_", AnyArg, Real), term2) ::
-        SubstitutionPair(PredOf(ctxf, DotTerm()), Box(prog, GreaterEqual(DotTerm(), Number(0)))) :: Nil
+        SubstitutionPair(PredicationalOf(ctxfb, DotAllTerm()), Box(prog, GreaterEqual(DotAllTerm(), Number(0)))) :: Nil
     )
     val pr = ProvableSig.rules("CQ equation congruence")(s)
     pr.conclusion shouldBe
@@ -1114,13 +1124,13 @@ class USubstTests extends TacticTestBase {
         SubstitutionPair(UnitFunctional("g_", AnyArg, Real), term2) ::
         SubstitutionPair(FuncOf(ctxt, DotTerm()), Times(Power(x, Number(3)), DotTerm())) :: Nil
     )
-    val pr = ProvableSig.rules("CT term congruence")(s)
+    val pr = Ax.CTtermCongruence.provable(s)
     pr.conclusion shouldBe
       Sequent(IndexedSeq(), IndexedSeq(Equal(Times(Power(x, Number(3)), term1), Times(Power(x, Number(3)), term2))))
     pr.subgoals should be(List(Sequent(IndexedSeq(), IndexedSeq(fml))))
   }
 
-  it should "?instantiate CQ from z^2*y=-(-z)^2*-y+0 in context \\forall y" taggedAs OptimisticTest ignore {
+  it should "instantiate CQ from z^2*y=-(-z)^2*-y+0 in context \\forall y" in {
     val term1 = "z^2*y".asTerm
     val term2 = "-(-z)^2*-y+0".asTerm
     val fml = Equal(term1, term2)
@@ -1128,7 +1138,10 @@ class USubstTests extends TacticTestBase {
     val s = USubst(
       SubstitutionPair(UnitFunctional("f_", AnyArg, Real), term1) ::
         SubstitutionPair(UnitFunctional("g_", AnyArg, Real), term2) ::
-        SubstitutionPair(PredOf(ctxf, DotTerm()), Forall(Seq(y), GreaterEqual(DotTerm(), Number(0)))) :: Nil
+        SubstitutionPair(
+          PredicationalOf(ctxfb, DotAllTerm()),
+          Forall(Seq(y), GreaterEqual(DotAllTerm(), Number(0))),
+        ) :: Nil
     )
     val pr = ProvableSig.rules("CQ equation congruence")(s)
     pr.conclusion shouldBe
@@ -1141,7 +1154,7 @@ class USubstTests extends TacticTestBase {
     pr.subgoals should be(List(Sequent(IndexedSeq(), IndexedSeq(fml))))
   }
 
-  it should "?instantiate CQ from z^2*y=-(-z)^2*-y+0 in context [y:=y-1]" taggedAs OptimisticTest ignore {
+  it should "instantiate CQ from z^2*y=-(-z)^2*-y+0 in context [y:=y-1]" in {
     val term1 = "z^2*y".asTerm
     val term2 = "-(-z)^2*-y+0".asTerm
     val fml = Equal(term1, term2)
@@ -1149,7 +1162,7 @@ class USubstTests extends TacticTestBase {
     val s = USubst(
       SubstitutionPair(UnitFunctional("f_", AnyArg, Real), term1) ::
         SubstitutionPair(UnitFunctional("g_", AnyArg, Real), term2) ::
-        SubstitutionPair(PredOf(ctxf, DotTerm()), Box(prog, GreaterEqual(DotTerm(), Number(0)))) :: Nil
+        SubstitutionPair(PredicationalOf(ctxfb, DotAllTerm()), Box(prog, GreaterEqual(DotAllTerm(), Number(0)))) :: Nil
     )
     val pr = ProvableSig.rules("CQ equation congruence")(s)
     pr.conclusion shouldBe
@@ -1226,16 +1239,19 @@ class USubstTests extends TacticTestBase {
     pr.subgoals should be(List(Sequent(IndexedSeq(), IndexedSeq(fml))))
   }
 
-  it should "?instantiate CQ from z^2*y=-(-z)^2*-y+0 in complex contexts" taggedAs OptimisticTest ignore {
+  it should "instantiate CQ from z^2*y=-(-z)^2*-y+0 in complex contexts" in {
     val term1 = "z^2*y".asTerm
     val term2 = "-(-z)^2*-y+0".asTerm
     val fml = Equal(term1, term2)
-    val prog = "y:=y-1;{z:=-z+2++z:=0}".asProgram
+    val prog = "y:=y-1;{z:=-z+2;++z:=0;}".asProgram
     val u = Variable("u", None, Real)
     val s = USubst(
       SubstitutionPair(UnitFunctional("f_", AnyArg, Real), term1) ::
         SubstitutionPair(UnitFunctional("g_", AnyArg, Real), term2) ::
-        SubstitutionPair(PredOf(ctxf, DotTerm()), Forall(Seq(u), Box(prog, GreaterEqual(DotTerm(), u)))) :: Nil
+        SubstitutionPair(
+          PredicationalOf(ctxfb, DotAllTerm()),
+          Forall(Seq(u), Box(prog, GreaterEqual(DotAllTerm(), u))),
+        ) :: Nil
     )
     val pr = ProvableSig.rules("CQ equation congruence")(s)
     pr.conclusion shouldBe
@@ -1264,11 +1280,17 @@ class USubstTests extends TacticTestBase {
         val s = USubst(
           SubstitutionPair(UnitFunctional("f_", AnyArg, Real), term1) ::
             SubstitutionPair(UnitFunctional("g_", AnyArg, Real), term2) ::
-            SubstitutionPair(PredOf(ctxf, DotTerm()), context) :: Nil
+            SubstitutionPair(PredicationalOf(ctxfb, DotAllTerm()), context) :: Nil
         )
         val pr = ProvableSig.rules("CQ equation congruence")(s)
         pr.conclusion shouldBe
-          Sequent(IndexedSeq(), IndexedSeq(Equiv(contextapp(context, term1), contextapp(context, term2))))
+          Sequent(
+            IndexedSeq(),
+            IndexedSeq(Equiv(
+              contextapp(context, term1, allowConflicts = true),
+              contextapp(context, term2, allowConflicts = true),
+            )),
+          )
         pr.subgoals should be(List(Sequent(IndexedSeq(), IndexedSeq(fml))))
       }
     }
@@ -1400,7 +1422,10 @@ class USubstTests extends TacticTestBase {
   // apply given context to the given argument
   def contextapp(context: Term, arg: Term): Term = USubst(SubstitutionPair(DotTerm(), arg) :: Nil)(context)
 
-  def contextapp(context: Formula, arg: Term): Formula = USubst(SubstitutionPair(DotTerm(), arg) :: Nil)(context)
+  def contextapp(context: Formula, arg: Term, allowConflicts: Boolean = false): Formula = {
+    if (allowConflicts) USubst(SubstitutionPair(DotAllTerm(), arg) :: Nil)(context)
+    else USubst(SubstitutionPair(DotTerm(), arg) :: Nil)(context)
+  }
 
   def contextapp(context: Formula, arg: Formula): Formula = {
     val mycontext =

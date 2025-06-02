@@ -1505,9 +1505,9 @@ object Ax extends Logging {
       displayNameAscii = Some("CQimplyCongruence"),
       displayNameLong = Some("CQimplyCongruence"),
       displayPremises = "|- f_(||) = g_(||)",
-      displayConclusion = "|- ctx_(f_(||)) -> ctx_(g_(||))",
+      displayConclusion = "|- ctx_{f_(||)} -> ctx_{g_(||)}",
     ),
-    Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("ctx_(f_(||)) -> ctx_(g_(||))".asFormula)),
+    Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("ctxT_[f_(||)] -> ctxT_[g_(||)]".asFormula)),
     SequentCalculus.equivifyR(1) & by(CQrule),
   )
 
@@ -1528,9 +1528,9 @@ object Ax extends Logging {
       displayNameAscii = Some("CQrevimplyCongruence"),
       displayNameLong = Some("CQrevimplyCongruence"),
       displayPremises = "|- g_(||) = f_(||)",
-      displayConclusion = "|- ctx_(f_(||)) -> ctx_(g_(||))",
+      displayConclusion = "|- ctx_{f_(||)} -> ctx_{g_(||)}",
     ),
-    Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("ctx_(f_(||)) -> ctx_(g_(||))".asFormula)),
+    Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("ctxT_[f_(||)] -> ctxT_[g_(||)]".asFormula)),
     SequentCalculus.equivifyR(1) & by(CQrule) & SequentCalculus.commuteEqual(1),
   )
 

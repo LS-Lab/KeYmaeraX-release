@@ -1305,7 +1305,7 @@ object UnifyUSCalculus {
    * {{{
    *        f(x) = g(x)
    *   --------------------- CQ
-   *    c(f(x)) <-> c(g(x))
+   *    C{f(x)} <-> C{g(x)}
    * }}}
    *
    * @param inEqPos
@@ -1329,7 +1329,7 @@ object UnifyUSCalculus {
   private[btactics] def CQFw(inEqPos: PosInExpr): BuiltInTactic = anon { (provable: ProvableSig) =>
     val f_ = UnitFunctional("f_", AnyArg, Real)
     val g_ = UnitFunctional("g_", AnyArg, Real)
-    val c_ = PredOf(Function("ctx_", None, Real, Bool), DotTerm())
+    val c_ = PredicationalOf(Function("ctxT_", None, Real, Bool), DotAllTerm())
     require(provable.subgoals.size == 1, "Sole subgoal expected, but got " + provable.prettyString)
 
     val sequent = provable.subgoals.head
@@ -1344,33 +1344,10 @@ object UnifyUSCalculus {
         require(ctxF == ctxG, "Same context expected, but got contexts " + ctxF + " and " + ctxG)
         Predef.assert(ctxF.ctx == ctxG.ctx, "Same context formulas expected, but got " + ctxF.ctx + " and " + ctxG.ctx)
         Predef.assert(ctxF.isTermContext, "Formula context expected for CQ")
-        if (logger.isDebugEnabled) logger.debug(
-          "CQ: boundAt(" + ctxF
-            .ctx + "," + inEqPos + ")=" + boundAt(ctxF.ctx, inEqPos) + " intersecting FV(" + f + ")=" + freeVars(
-            f
-          ) + "\\/FV(" + g + ")=" + freeVars(g) + " i.e. " + (freeVars(f) ++ freeVars(g)) + "\nIntersect: " + boundAt(
-            ctxF.ctx,
-            inEqPos,
-          ).intersect(freeVars(f) ++ freeVars(g))
-        )
-        if (boundAt(ctxF.ctx, inEqPos).intersect(freeVars(f) ++ freeVars(g)).isEmpty) {
-          val subst =
-            USubst(SubstitutionPair(c_, ctxF.ctx) :: SubstitutionPair(f_, f) :: SubstitutionPair(g_, g) :: Nil)
-          provable(Ax.CQrule.provable(subst), 0)
-        } else {
-          if (logger.isDebugEnabled) logger.debug("CQ: Split " + p + " around " + inEqPos)
-          val (fmlPos, termPos): (PosInExpr, PosInExpr) = Context.splitPos(p, inEqPos)
-          if (logger.isDebugEnabled) logger.debug(
-            "CQ: Split " + p + " around " + inEqPos + "\ninto " + fmlPos + " and " + termPos + "\n  as " + p
-              .at(fmlPos)
-              ._1 + " and " + Context.at(p.at(fmlPos)._2, termPos)._1
-          )
-          if (p.at(fmlPos)._2.isInstanceOf[Modal]) logger.warn(">>CE TACTIC MAY PRODUCE INFINITE LOOP<<")
-          if (fmlPos == HereP)
-            throw new InfiniteTacticLoopError("CQ split void, would cause infinite loop unless stopped")
-          // @todo could optimize to build directly since ctx already known
-          (provable(CEFw(fmlPos).result _, 0)(CQFw(termPos).result _, 0))
-        }
+
+        val subst = USubst(SubstitutionPair(c_, ctxF.ctx) :: SubstitutionPair(f_, f) :: SubstitutionPair(g_, g) :: Nil)
+        provable(Ax.CQrule.provable(subst), 0)
+
       case fml => throw new TacticInapplicableFailure("Expected equivalence, but got " + fml)
     }
   }
@@ -1381,7 +1358,7 @@ object UnifyUSCalculus {
    * {{{
    *        f(x) = g(x)
    *   --------------------- CQ
-   *    c(f(x)) -> c(g(x))
+   *    C{f(x)} -> C{g(x)}
    * }}}
    *
    * @param inEqPos
@@ -1405,7 +1382,7 @@ object UnifyUSCalculus {
   private[btactics] def CQimpFw(inEqPos: PosInExpr): BuiltInTactic = anon { (provable: ProvableSig) =>
     val f_ = UnitFunctional("f_", AnyArg, Real)
     val g_ = UnitFunctional("g_", AnyArg, Real)
-    val c_ = PredOf(Function("ctx_", None, Real, Bool), DotTerm())
+    val c_ = PredicationalOf(Function("ctxT_", None, Real, Bool), DotAllTerm())
     require(provable.subgoals.size == 1, "Sole subgoal expected, but got " + provable.prettyString)
 
     val sequent = provable.subgoals.head
@@ -1420,33 +1397,10 @@ object UnifyUSCalculus {
         require(ctxF == ctxG, "Same context expected, but got contexts " + ctxF + " and " + ctxG)
         Predef.assert(ctxF.ctx == ctxG.ctx, "Same context formulas expected, but got " + ctxF.ctx + " and " + ctxG.ctx)
         Predef.assert(ctxF.isTermContext, "Formula context expected for CQ")
-        if (logger.isDebugEnabled) logger.debug(
-          "CQ: boundAt(" + ctxF
-            .ctx + "," + inEqPos + ")=" + boundAt(ctxF.ctx, inEqPos) + " intersecting FV(" + f + ")=" + freeVars(
-            f
-          ) + "\\/FV(" + g + ")=" + freeVars(g) + " i.e. " + (freeVars(f) ++ freeVars(g)) + "\nIntersect: " + boundAt(
-            ctxF.ctx,
-            inEqPos,
-          ).intersect(freeVars(f) ++ freeVars(g))
-        )
-        // @todo this would be too permissive due to lack of special permission for CQimplyCongruence: if (boundAt(ctxF.ctx, inEqPos).intersect(freeVars(f)++freeVars(g)).isEmpty)
-        if (StaticSemantics.vars(ctxF.ctx).isEmpty) {
-          val subst =
-            USubst(SubstitutionPair(c_, ctxF.ctx) :: SubstitutionPair(f_, f) :: SubstitutionPair(g_, g) :: Nil)
-          provable(Ax.CQimplyCongruence.provable(subst), 0)
-        } else {
-          if (logger.isDebugEnabled) logger.debug("CQ: Split " + p + " around " + inEqPos)
-          val (fmlPos, termPos): (PosInExpr, PosInExpr) = Context.splitPos(p, inEqPos)
-          if (logger.isDebugEnabled) logger.debug(
-            "CQ: Split " + p + " around " + inEqPos + "\ninto " + fmlPos + " and " + termPos + "\n  as " + p
-              .at(fmlPos)
-              ._1 + " and " + Context.at(p.at(fmlPos)._2, termPos)._1
-          )
-          // if (p.at(fmlPos)._2.isInstanceOf[Modal]) logger.warn(">>CE TACTIC MAY PRODUCE INFINITE LOOP<<")
-          // if (fmlPos == HereP) throw new InfiniteTacticLoopError("CQ split void, would cause infinite loop unless stopped")
-          // @todo could optimize to build directly since ctx already known
-          (provable(CEimpFw(fmlPos).result _, 0)(CQFw(termPos).result _, 0))
-        }
+
+        val subst = USubst(SubstitutionPair(c_, ctxF.ctx) :: SubstitutionPair(f_, f) :: SubstitutionPair(g_, g) :: Nil)
+        provable(Ax.CQimplyCongruence.provable(subst), 0)
+
       case fml => throw new TacticInapplicableFailure("Expected equivalence, but got " + fml)
     }
   }
@@ -1457,7 +1411,7 @@ object UnifyUSCalculus {
    * {{{
    *        g(x) = f(x)
    *   --------------------- CQ
-   *    c(f(x)) -> c(g(x))
+   *    C{f(x)} -> C{g(x)}
    * }}}
    *
    * @param inEqPos
@@ -1481,7 +1435,7 @@ object UnifyUSCalculus {
   private[btactics] def CQrevimpFw(inEqPos: PosInExpr): BuiltInTactic = anon { (provable: ProvableSig) =>
     val f_ = UnitFunctional("f_", AnyArg, Real)
     val g_ = UnitFunctional("g_", AnyArg, Real)
-    val c_ = PredOf(Function("ctx_", None, Real, Bool), DotTerm())
+    val c_ = PredicationalOf(Function("ctxT_", None, Real, Bool), DotAllTerm())
     require(provable.subgoals.size == 1, "Sole subgoal expected, but got " + provable.prettyString)
 
     val sequent = provable.subgoals.head
@@ -1497,33 +1451,10 @@ object UnifyUSCalculus {
         require(ctxF == ctxG, "Same context expected, but got contexts " + ctxF + " and " + ctxG)
         Predef.assert(ctxF.ctx == ctxG.ctx, "Same context formulas expected, but got " + ctxF.ctx + " and " + ctxG.ctx)
         Predef.assert(ctxF.isTermContext, "Formula context expected for CQ")
-        if (logger.isDebugEnabled) logger.debug(
-          "CQ: boundAt(" + ctxF
-            .ctx + "," + inEqPos + ")=" + boundAt(ctxF.ctx, inEqPos) + " intersecting FV(" + f + ")=" + freeVars(
-            f
-          ) + "\\/FV(" + g + ")=" + freeVars(g) + " i.e. " + (freeVars(f) ++ freeVars(g)) + "\nIntersect: " + boundAt(
-            ctxF.ctx,
-            inEqPos,
-          ).intersect(freeVars(f) ++ freeVars(g))
-        )
-        // @todo this would be too permissive due to lack of special permission for CQimplyCongruence: if (boundAt(ctxF.ctx, inEqPos).intersect(freeVars(f)++freeVars(g)).isEmpty)
-        if (StaticSemantics.vars(ctxF.ctx).isEmpty) {
-          val subst =
-            USubst(SubstitutionPair(c_, ctxF.ctx) :: SubstitutionPair(f_, f) :: SubstitutionPair(g_, g) :: Nil)
-          provable(Ax.CQrevimplyCongruence.provable(subst), 0)
-        } else {
-          if (logger.isDebugEnabled) logger.debug("CQ: Split " + p + " around " + inEqPos)
-          val (fmlPos, termPos): (PosInExpr, PosInExpr) = Context.splitPos(p, inEqPos)
-          if (logger.isDebugEnabled) logger.debug(
-            "CQ: Split " + p + " around " + inEqPos + "\ninto " + fmlPos + " and " + termPos + "\n  as " + p
-              .at(fmlPos)
-              ._1 + " and " + Context.at(p.at(fmlPos)._2, termPos)._1
-          )
-          // if (p.at(fmlPos)._2.isInstanceOf[Modal]) logger.warn(">>CE TACTIC MAY PRODUCE INFINITE LOOP<<")
-          // if (fmlPos == HereP) throw new InfiniteTacticLoopError("CQ split void, would cause infinite loop unless stopped")
-          // @todo could optimize to build directly since ctx already known
-          (provable(CErevimpFw(fmlPos).result _, 0)(CQFw(termPos).result _, 0))
-        }
+
+        val subst = USubst(SubstitutionPair(c_, ctxF.ctx) :: SubstitutionPair(f_, f) :: SubstitutionPair(g_, g) :: Nil)
+        provable(Ax.CQrevimplyCongruence.provable(subst), 0)
+
       case fml => throw new TacticInapplicableFailure("Expected equivalence, but got " + fml)
     }
   }
@@ -2198,8 +2129,8 @@ object UnifyUSCalculus {
    * }}}
    * {{{
    *       f(x) = g(x)
-   *   --------------------- CQ+CE
-   *    c(f(x)) <-> c(g(x))
+   *   --------------------- CQ
+   *    C{f(x)} <-> C{g(x)}
    * }}}
    *
    * @see
@@ -2228,7 +2159,7 @@ object UnifyUSCalculus {
       case Equal(left, right) =>
         require(C.isTermContext, "Term context expected to make use of equalities with CE " + C)
         equiv(ProvableSig.rules("CQ equation congruence")(USubst(
-          SubstitutionPair(PredOf(Function("ctx_", None, Real, Bool), DotTerm()), C.ctx) ::
+          SubstitutionPair(PredicationalOf(Function("ctxT_", None, Real, Bool), DotAllTerm()), C.ctx) ::
             SubstitutionPair(UnitFunctional("f_", AnyArg, Real), left) ::
             SubstitutionPair(UnitFunctional("g_", AnyArg, Real), right) ::
             Nil
