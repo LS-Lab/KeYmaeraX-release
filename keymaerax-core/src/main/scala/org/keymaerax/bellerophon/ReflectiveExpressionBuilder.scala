@@ -29,7 +29,11 @@ object ReflectiveExpressionBuilder extends Logging {
 
   private def castArg(info: ArgInfo, arg: Seq[Any]): Any = {
     (info, arg) match {
-      case (_: GeneratorArg, Seq(value: GeneratorArg)) => value
+      // The previous code did not implement casting of GeneratorArgs,
+      // but I don't see a good reason why not, so it is allowed here.
+      // If something breaks because of this, it should be safe to remove.
+      case (_: GeneratorArg, Seq(value: InvariantGenerator)) => value
+
       case (_: FormulaArg, Seq(value: Formula)) => value
       case (_: StringArg, Seq(value: String)) => value
       case (_: NumberArg, Seq(value: Number)) => value
