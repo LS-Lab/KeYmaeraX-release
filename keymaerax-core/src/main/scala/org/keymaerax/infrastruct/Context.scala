@@ -244,7 +244,7 @@ object Context {
 
   /** @see [[StaticSemanticsTools.boundAt()]] for same positions */
   private def context(term: Term, pos: PosInExpr): (Term, Expression) =
-    if (pos == HereP) (DotTerm(term.sort), term)
+    if (pos == HereP) (DotAllTerm(term.sort), term)
     else
       {
         term match {
@@ -571,7 +571,7 @@ object Context {
     case _: Function => ???
   }
   private def split(term: Term, pos: PosInExpr): (Term, Expression) =
-    if (pos == HereP) (DotTerm(term.sort), term)
+    if (pos == HereP) (DotAllTerm(term.sort), term)
     else
       {
         term match {
@@ -750,8 +750,8 @@ sealed trait Context[+T <: Expression] extends (Expression => T) {
   /** True if this context has a DotFormula so expects a formula as argument */
   def isFormulaContext = signature(ctx).contains(DotFormula)
 
-  /** True if this context has a DotTerm so expects a term as argument */
-  def isTermContext = signature(ctx).exists(_.isInstanceOf[DotTerm])
+  /** True if this context has a DotAllTerm so expects a term as argument */
+  def isTermContext = signature(ctx).exists(_.isInstanceOf[DotAllTerm])
 
   /** True if this context has a DotProgram so expects a program as argument */
   def isProgramContext = signature(ctx).contains(DotProgram)
@@ -783,7 +783,7 @@ sealed trait Context[+T <: Expression] extends (Expression => T) {
 private class ReplacementContext[+T <: Expression](replicate: T, dot: PosInExpr) extends Context[T] {
   private lazy val dotty =
     if (isFormulaContext) DotFormula
-    else if (isTermContext) DotTerm()
+    else if (isTermContext) DotAllTerm(replacee.sort)
     else if (isProgramContext) DotProgram
     else DotDiffProgram
   def ctx: T = apply(dotty)
@@ -827,8 +827,8 @@ private class ReplacementContext[+T <: Expression](replicate: T, dot: PosInExpr)
 private case class GuardedContext[+T <: Expression](ctx: T) extends Context[T] {
   // either a term or a formula context, not both
   require(
-    !(signature(ctx).contains(DotFormula) && signature(ctx).exists(_.isInstanceOf[DotTerm])),
-    "Contexts are either DotFormula or DotTerm contexts, not both at once: " + ctx,
+    !(signature(ctx).contains(DotFormula) && signature(ctx).exists(_.isInstanceOf[DotAllTerm])),
+    "Contexts are either DotFormula or DotAllTerm contexts, not both at once: " + ctx,
   )
 
   /**
@@ -866,7 +866,7 @@ private case class GuardedContext[+T <: Expression](ctx: T) extends Context[T] {
    */
   private def instantiate(withT: Term): T = {
     assert(!isFormulaContext, "can only instantiate terms within a term context " + this)
-    USubst(SubstitutionPair(DotTerm(Real), withT) :: Nil)(ctx).asInstanceOf[T]
+    USubst(SubstitutionPair(DotAllTerm(withT.sort), withT) :: Nil)(ctx).asInstanceOf[T]
   }
 
   /**

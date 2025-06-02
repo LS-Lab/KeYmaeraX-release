@@ -5,10 +5,9 @@
 
 package org.keymaerax.infrastruct
 
-import org.keymaerax.core.{Choice, DotFormula, DotProgram, DotTerm, PrettyPrinter, Test, True}
+import org.keymaerax.core.{Choice, DotAllTerm, DotFormula, DotProgram, PrettyPrinter, Test, True}
 import org.keymaerax.parser.KeYmaeraXPrettyPrinter
 import org.keymaerax.parser.StringConverter.StringToStringConverter
-import org.keymaerax.tagobjects.TodoTest
 import org.keymaerax.{Configuration, FileConfiguration}
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.flatspec.AnyFlatSpec
@@ -60,7 +59,7 @@ class ContextTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   "Context(dot)" should "behave as the identity" in {
-    val ctx = Context(DotTerm())
+    val ctx = Context(DotAllTerm())
     val t = "0".asTerm
     val aux = ctx(t)
     aux shouldBe t
@@ -89,15 +88,15 @@ class ContextTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   "Non Context[Formula]" should "not fail when applied (without bounding variables)" in {
-    Context("x + .".asTerm)("0".asTerm) shouldBe "x + 0".asTerm
+    Context("x + ⎵".asTerm)("0".asTerm) shouldBe "x + 0".asTerm
     Context(Choice(Test(True), DotProgram))("x:=2;".asProgram) shouldBe "?true;++x:=2;".asProgram
   }
 
-  "TermContexts" should "FEATURE_REQUEST: not fail because of admissibility issue" taggedAs TodoTest in {
+  "TermContexts" should "not fail because of admissibility issue" in {
     val f = "[x:=2;]x = 0".asFormula
     val (ctx1, e) = Context.at(f, PosInExpr(1 :: 0 :: Nil))
-    val ctx2 = Context("[x:=2;].=0".asFormula)
+    val ctx2 = Context("[x:=2;]⎵=0".asFormula)
     ctx1(e) shouldBe f
-    ctx2(e) shouldBe f // Currently fails
+    ctx2(e) shouldBe f
   }
 }

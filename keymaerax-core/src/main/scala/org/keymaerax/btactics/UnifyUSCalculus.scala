@@ -955,9 +955,8 @@ object UnifyUSCalculus {
           "correctly split at position " + p
             .inExpr + "\ngiving context " + C + "\nsubexpression " + c + "\nreassembling to the same " + C(c),
         )
-        // @todo generalization of DotTerm to other types should be acceptable, too
         require(
-          List((C, DotFormula), (C, DotTerm()), (C, DotProgram)).contains(C.ctx.at(p.inExpr)),
+          List((C, DotFormula), (C, DotAllTerm(c.sort)), (C, DotProgram)).contains(C.ctx.at(p.inExpr)),
           "correctly split at position " + p
             .inExpr + "\ngiving context " + C + "\nsubexpression " + c + "\nreassembling to the same " + C(
             c
@@ -1024,9 +1023,9 @@ object UnifyUSCalculus {
 
           case Equiv(other, DotFormula) => equivStep(leftKey = false, other, fact)
 
-          case Equal(DotTerm(_, _), other) => equivStep(leftKey = true, other, fact)
+          case Equal(_: DotAllTerm, other) => equivStep(leftKey = true, other, fact)
 
-          case Equal(other, DotTerm(_, _)) => equivStep(leftKey = false, other, fact)
+          case Equal(other, _: DotAllTerm) => equivStep(leftKey = false, other, fact)
 
           case Imply(other, DotFormula) => implyStep(other)
 
@@ -1049,8 +1048,8 @@ object UnifyUSCalculus {
 
             val rewrite = remainder match {
               case _: Equiv => Some((pos: AntePos) => equivRewriting(pos, p))
-              case Equal(_: DotTerm, _) => Some((pos: AntePos) => EqualityTactics.eqL2R(pos.checkAnte)(p))
-              case Equal(_, _: DotTerm) => Some((pos: AntePos) => EqualityTactics.eqR2L(pos.checkAnte)(p))
+              case Equal(_: DotAllTerm, _) => Some((pos: AntePos) => EqualityTactics.eqL2R(pos.checkAnte)(p))
+              case Equal(_, _: DotAllTerm) => Some((pos: AntePos) => EqualityTactics.eqR2L(pos.checkAnte)(p))
               case _ => None
             }
 
@@ -3079,8 +3078,10 @@ object UnifyUSCalculus {
           Predef.assert(fact.conclusion.succ.head == K(k), "correctly matched key in fact")
           Predef.assert(proof.conclusion(p.top) == C(c), "correctly matched occurrence in input proof")
           Predef.assert(C(c).at(p.inExpr) == (C, c), "correctly split at position p")
-          Predef
-            .assert(List((C, DotFormula), (C, DotTerm())).contains(C.ctx.at(p.inExpr)), "correctly split at position p")
+          Predef.assert(
+            List((C, DotFormula), (C, DotAllTerm(c.sort)), (C, DotProgram)).contains(C.ctx.at(p.inExpr)),
+            "correctly split at position p",
+          )
 
           /**
            * Forward equivalence rewriting step to replace occurrence of instance of key `k` by instance of other `o` in
@@ -3169,13 +3170,13 @@ object UnifyUSCalculus {
 
           // in which context of the fact does the key occur
           K.ctx match {
-            case Equal(DotTerm(_, _), o) => fact.conclusion.succ.head match {
+            case Equal(_: DotAllTerm, o) => fact.conclusion.succ.head match {
                 case Equal(l, r) =>
                   if (l == r) proof // @note shortcut for stutter/recursor axioms
                   else equivStep(o)
               }
 
-            case Equal(o, DotTerm(_, _)) => fact.conclusion.succ.head match {
+            case Equal(o, _: DotAllTerm) => fact.conclusion.succ.head match {
                 case Equal(l, r) =>
                   if (l == r) proof // @note shortcut for stutter/recursor axioms
                   else equivStep(o)
@@ -3342,10 +3343,13 @@ object UnifyUSCalculus {
               else proved(proof, 0)
 
             case Imply(prereq, remainder) =>
-              if (StaticSemantics.signature(prereq).intersect(Set(DotFormula, DotTerm())).nonEmpty)
-                throw new UnsupportedTacticFeature(
-                  "Unimplemented case which works at a negative polarity position: " + K.ctx
-                )
+              if (
+                StaticSemantics.signature(prereq).contains(DotFormula) || StaticSemantics
+                  .signature(prereq)
+                  .exists(_.isInstanceOf[DotAllTerm])
+              ) throw new UnsupportedTacticFeature(
+                "Unimplemented case which works at a negative polarity position: " + K.ctx
+              )
               // try to prove prereq globally
               // @todo if that fails preserve context and fall back to CMon and C{prereq} -> ...
               /* {{{
