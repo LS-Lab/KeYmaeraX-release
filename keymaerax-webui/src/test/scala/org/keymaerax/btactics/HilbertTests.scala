@@ -736,7 +736,7 @@ class HilbertTests extends TacticTestBase {
     shouldReduceTo("[x:=0*x+1;]x<9".asFormula, 1, PosInExpr(0 :: 1 :: Nil), "[x:=1;]x<9".asFormula)
   }
 
-  it should "FEATURE_REQUEST: reduce [x:=7;x:=0*x+1;]x<9 to [x:=7;x:=1;]x<9" taggedAs TodoTest in withMathematica { _ =>
+  it should "reduce [x:=7;x:=0*x+1;]x<9 to [x:=7;x:=1;]x<9" in withMathematica { _ =>
     shouldReduceTo("[x:=7;x:=0*x+1;]x<9".asFormula, 1, PosInExpr(0 :: 1 :: 1 :: Nil), "[x:=7;x:=1;]x<9".asFormula)
   }
 
@@ -749,14 +749,13 @@ class HilbertTests extends TacticTestBase {
     )
   }
 
-  it should "FEATURE_REQUEST: reduce [{x' = 0*x+1 & 5=5}]x>=2 to [{x' = 1 & 5=5}]x>=2" taggedAs TodoTest in withMathematica {
-    _ =>
-      shouldReduceTo(
-        "[{x' = 0*x+1 & 5=5}]x>=2".asFormula,
-        1,
-        PosInExpr(0 :: 0 :: 1 :: Nil),
-        "[{x' = 1 & 5=5}]x>=2".asFormula,
-      )
+  it should "reduce [{x' = 0*x+1 & 5=5}]x>=2 to [{x' = 1 & 5=5}]x>=2" in withMathematica { _ =>
+    shouldReduceTo(
+      "[{x' = 0*x+1 & 5=5}]x>=2".asFormula,
+      1,
+      PosInExpr(0 :: 0 :: 1 :: Nil),
+      "[{x' = 1 & 5=5}]x>=2".asFormula,
+    )
   }
 
   "CE(Provable) equivalence magic" should "reduce x^2<4 to -2<x&x<2" in withMathematica { _ =>
