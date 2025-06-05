@@ -91,8 +91,8 @@ class MoreParserTests2 extends AnyFlatSpec with Matchers with BeforeAndAfterEach
           |Expected: IDENT""".stripMargin or have message
         """1:12 Error parsing formula at 1:1
           |Found:    ", (x>y)" at 1:12
-          |Expected: ([a-zA-Z0-9] | "_" | "'" | "," ~ variable | "true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | predicational | "⎵" | "__________" | comparison | programComparison | ident | "(")
-          |Hint: Try ([a-zA-Z0-9] | "_" | "'" | "true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | [a-zA-Z] | "⎵" | "__________" | "(" | [0-9] | "." | "•" | "-" | "?" | "if" | "{")"""
+          |Expected: ([a-zA-Z0-9] | "_" | "'" | "," ~ variable | "true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | predicational | "__________" | comparison | programComparison | ident | "(" | "⎵")
+          |Hint: Try ([a-zA-Z0-9] | "_" | "'" | "true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | [a-zA-Z] | "__________" | "(" | [0-9] | "." | "•" | "⎵" | "-" | "?" | "if" | "{")"""
           .stripMargin)
     the[ParseException] thrownBy parser("\\forall x,y, x>y") should
       (have message
@@ -102,8 +102,8 @@ class MoreParserTests2 extends AnyFlatSpec with Matchers with BeforeAndAfterEach
           |      or: <BeginningOfFormula>""".stripMargin or have message
         """1:12 Error parsing formula at 1:1
           |Found:    ", x>y" at 1:12
-          |Expected: ([a-zA-Z0-9] | "_" | "'" | "," ~ variable | "true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | predicational | "⎵" | "__________" | comparison | programComparison | ident | "(")
-          |Hint: Try ([a-zA-Z0-9] | "_" | "'" | "true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | [a-zA-Z] | "⎵" | "__________" | "(" | [0-9] | "." | "•" | "-" | "?" | "if" | "{")"""
+          |Expected: ([a-zA-Z0-9] | "_" | "'" | "," ~ variable | "true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | predicational | "__________" | comparison | programComparison | ident | "(" | "⎵")
+          |Hint: Try ([a-zA-Z0-9] | "_" | "'" | "true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | [a-zA-Z] | "__________" | "(" | [0-9] | "." | "•" | "⎵" | "-" | "?" | "if" | "{")"""
           .stripMargin)
   }
 
@@ -263,8 +263,8 @@ class MoreParserTests2 extends AnyFlatSpec with Matchers with BeforeAndAfterEach
           |Expected: ,""".stripMargin or have message
         """1:8 Error parsing term at 1:6
           |Found:    "+v'=2}]x=0" at 1:8
-          |Expected: (number | dot | function | unitFunctional | variable | termList | "__________" | "-")
-          |Hint: Try ("(" | [0-9] | "." | "•" | [a-zA-Z] | "__________" | "-")""".stripMargin)
+          |Expected: (number | dot | function | unitFunctional | variable | termList | "__________" | "⎵" | "-")
+          |Hint: Try ("(" | [0-9] | "." | "•" | [a-zA-Z] | "__________" | "⎵" | "-")""".stripMargin)
   }
 
   it should "refuse ODE 1 without {} in modalities" in {

@@ -168,8 +168,8 @@ class DLParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach wi
     the[ParseException] thrownBy parser("x//y") should have message
       """1:3 Error parsing term at 1:1
         |Found:    "/y" at 1:3
-        |Expected: (number | dot | function | unitFunctional | variable | termList | "__________" | "-")
-        |Hint: Try ("(" | [0-9] | "." | "•" | [a-zA-Z] | "__________" | "-")""".stripMargin
+        |Expected: (number | dot | function | unitFunctional | variable | termList | "__________" | "⎵" | "-")
+        |Hint: Try ("(" | [0-9] | "." | "•" | [a-zA-Z] | "__________" | "⎵" | "-")""".stripMargin
   }
 
   it should "parse dual game symbol notation" in { parser("game;^@;") shouldBe Dual(ProgramConst("game")) }

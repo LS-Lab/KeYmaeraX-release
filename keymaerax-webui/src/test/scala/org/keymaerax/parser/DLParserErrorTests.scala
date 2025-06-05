@@ -35,7 +35,8 @@ class DLParserErrorTests
     val ex = the[ParseException] thrownBy GlobalState.parser.termParser(input)
     ex.msg shouldBe "Error parsing term at 1:4"
     ex.found shouldBe "\"#\""
-    ex.expect shouldBe "(number | dot | function | unitFunctional | variable | termList | \"__________\" | \"-\")"
+    ex.expect shouldBe
+      "(number | dot | function | unitFunctional | variable | termList | \"__________\" | \"⎵\" | \"-\")"
   }
 
   it should "report expected term on rhs FROM FORMULA" in {
@@ -43,7 +44,8 @@ class DLParserErrorTests
     val ex = the[ParseException] thrownBy GlobalState.parser.formulaParser(input)
     ex.msg shouldBe "Error parsing term at 1:4"
     ex.found shouldBe "\"#\""
-    ex.expect shouldBe "(number | dot | function | unitFunctional | variable | termList | \"__________\" | \"-\")"
+    ex.expect shouldBe
+      "(number | dot | function | unitFunctional | variable | termList | \"__________\" | \"⎵\" | \"-\")"
   }
 
   "dL archive parser" should "report missing problem" in {
@@ -85,10 +87,10 @@ class DLParserErrorTests
     }
 
     val e = the[ParseException] thrownBy ArchiveParser.parse(input)
-    // @todo shared definitions not yet part of the error message, should be similar to below
-    e.expect shouldBe "(sharedDefinitions | \"ArchiveEntry\" | \"Lemma\" | \"Theorem\" | \"Exercise\")"
+    // @todo definitions not yet part of the error message, should be similar to below
+    e.expect shouldBe "(\"package\" | \"Definitions\" | \"ArchiveEntry\" | \"Lemma\" | \"Theorem\" | \"Exercise\")"
     e.found shouldBe "\"BadEntry\""
-    e.hint shouldBe "Try (\"SharedDefinitions\" | \"ArchiveEntry\" | \"Lemma\" | \"Theorem\" | \"Exercise\")"
+    e.hint shouldBe "Try (\"package\" | \"Definitions\" | \"ArchiveEntry\" | \"Lemma\" | \"Theorem\" | \"Exercise\")"
   }
 
   // TODO is this still a required feature?
@@ -135,11 +137,11 @@ class DLParserErrorTests
     }
     val e = the[ParseException] thrownBy ArchiveParser.parse(input)
     e.expect shouldBe
-      """("true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | predicational | "⎵" | "__________" | comparison | programComparison | ident | "(")"""
+      """("true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | predicational | "__________" | comparison | programComparison | ident | "(" | "⎵")"""
     e.found shouldBe "\"}]x>=0\""
     // todo: maybe provide verbose suggestions here somehow??
     e.hint shouldBe
-      """Try ("true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | [a-zA-Z] | "⎵" | "__________" | "(" | [0-9] | "." | "•" | "-" | "?" | "if" | "{")"""
+      """Try ("true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | [a-zA-Z] | "__________" | "(" | [0-9] | "." | "•" | "⎵" | "-" | "?" | "if" | "{")"""
   }
 
   it should "give correct error location for disallowed identifier" in {
@@ -152,9 +154,9 @@ class DLParserErrorTests
         |""".stripMargin
     }
     val e = the[ParseException] thrownBy ArchiveParser.parse(input)
-    e.expect shouldBe """(number | dot | function | unitFunctional | variable | termList | "__________" | "-")"""
+    e.expect shouldBe """(number | dot | function | unitFunctional | variable | termList | "__________" | "⎵" | "-")"""
     e.found shouldBe "\"ax__\""
-    e.hint shouldBe """Try ("(" | [0-9] | "." | "•" | "__________" | "-")"""
+    e.hint shouldBe """Try ("(" | [0-9] | "." | "•" | "__________" | "⎵" | "-")"""
   }
 
   it should "give correct error location for invalid formula extension" in {

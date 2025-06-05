@@ -97,7 +97,7 @@ class DLArchiveParser(val tacticParser: DLTacticParser) extends ArchiveParser {
   def problemOrFormula[$: P]: P[Formula] = P(Start ~ (problem.map(_._1) | formula) ~ End)
 
   /** Parses a package name. */
-  def packageDecl[$: P]: P[String] = P(("package" ~ packageIdent ~~ ("." ~~ packageIdent).repX).?.!)
+  def packageDecl[$: P]: P[Option[String]] = P(("package" ~~/ blank ~ (packageIdent ~~ ("." ~~ packageIdent).repX).!).?)
 
   /** Parse a list of archive entries */
   def archiveEntries[$: P]: P[List[ParsedArchiveEntry]] =
@@ -205,7 +205,7 @@ class DLArchiveParser(val tacticParser: DLTacticParser) extends ArchiveParser {
   }
 
   /** `SharedDefinitions declOrDef End.` parsed. */
-  def packageDefinitions[$: P](pkg: String): P[Declaration] = P(
+  def packageDefinitions[$: P](pkg: Option[String]): P[Declaration] = P(
     // @todo add package name to identifier names
     "Definitions" ~~/ blank ~
       DLParserUtils.repFold(Declaration(Map.empty))(curDecls => declOrDef(curDecls).flatMap(uniqueDecls(curDecls, _))) ~
