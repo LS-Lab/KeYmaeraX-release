@@ -490,9 +490,9 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
 
   def nextT(vars: IndexedSeq[Variable], n: Int, dots: Boolean, diffs: Boolean, funcs: Boolean): Term = {
     require(n >= 0)
-    if (n == 0 || rand.nextFloat() <= shortProbability)
-      return if (dots && rand.nextInt(100) >= 50) { assert(dots); DotTerm() }
-      else Number(BigDecimal(1))
+    if (n == 0 || rand.nextFloat() <= shortProbability) return if (dots && rand.nextInt(100) >= 50) {
+      assert(dots); if (rand.nextInt(15) >= 5) DotTerm() else DotAllTerm()
+    } else Number(BigDecimal(1))
     val r = rand.nextInt(if (dots) 110 else 95 /*+1*/ )
     r match {
       case 0 => Number(BigDecimal(0))
@@ -538,7 +538,8 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
         )
       case it if (88 until 95 contains it) && funcs =>
         UnitFunctional(funcNames(rand.nextInt(funcNames.length)).toUpperCase, AnyArg, Real)
-      case it if 95 until 200 contains it => assert(dots); DotTerm()
+      case it if 95 until 100 contains it => assert(dots); DotAllTerm()
+      case it if 100 until 200 contains it => assert(dots); DotTerm()
       // cleanup case without diffs and funcs emphasizes nonzero constants and variables to make for more interesting polynomials etc.
       case it if (60 until 200 contains it) && (!diffs || !funcs) =>
         if (r % 2 == 0) vars(rand.nextInt(vars.length)) else Number(BigDecimal(1 + rand.nextInt(100)))
