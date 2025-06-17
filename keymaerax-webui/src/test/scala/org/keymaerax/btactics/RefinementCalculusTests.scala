@@ -29,6 +29,8 @@ class RefinementCalculusTests extends TacticTestBase {
       testSeq.provable,
       testChoice.provable,
       skipRandom.provable,
+      doubleLoop.provable,
+      refUnloopWeak.provable,
     )
     axioms.map(axiom => axiom.isProved shouldBe true)
   }

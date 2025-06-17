@@ -19,7 +19,7 @@ import org.keymaerax.btactics.Ax.*
 import org.keymaerax.btactics.AxiomaticODESolver.ofAtoms
 import org.keymaerax.btactics.DLBySubst.discreteGhost
 import org.keymaerax.btactics.HilbertCalculus.{diamondd, DW}
-import org.keymaerax.btactics.SequentCalculus.{andL, andR, commuteEquivR, equivifyR, id, implyR, orR}
+import org.keymaerax.btactics.SequentCalculus.{andL, andR, cohide, commuteEquivR, equivifyR, id, implyR, orR}
 import org.keymaerax.btactics.TacticFactory.{anon, TacticForNameFactory}
 import org.keymaerax.btactics.TactixLibrary.prop
 import org.keymaerax.btactics.UnifyUSCalculus.{useAt, CMon}
@@ -200,6 +200,8 @@ object RefinementCalculus {
     key = "0",
     unifier = Unifier.Full,
   )
+
+  /** For the weaker version, see [[refUnloopWeak]] */
   @Derivation
   val refUnloop: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "refUnloop",
@@ -838,6 +840,49 @@ object RefinementCalculus {
       useAt(refStutter)(1, 1 :: Nil) & useAt(refRefl)(1),
       discreteGhost(Variable("x"), None)(1) & useAt(refAssign)(1, 0 :: Nil) &
         useAt(refSeqIdR, PosInExpr(1 :: Nil))(1, 1 :: Nil) & CMon(1, 0 :: 1 :: 0 :: Nil) & prop,
+    ),
+  )
+
+  @Derivation
+  val doubleLoop: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(
+      name = "doubleLoop",
+      canonicalName = "double loop",
+      displayName = Some("Double Loop"),
+      displayConclusion = "__a**__ <= a*",
+      displayLevel = DisplayLevel.Menu,
+      key = "0",
+      unifier = Unifier.SurjectiveLinear,
+    ),
+    "{{a{|^@|};}*}* <= {a{|^@|};}*".asFormula,
+    useAt(refUnfoldL, PosInExpr(1 :: Nil))(1, 0 :: Nil) & useAt(refChoiceL)(1) & andR(1) & Idioms.<(
+      useAt(refUnfoldL, PosInExpr(1 :: Nil))(1, 1 :: Nil) & useAt(hideChoiceR)(1, 1 :: Nil) & useAt(refRefl)(1),
+      useAt(refLoopR)(1) & useAt(refLoopR)(1) & useAt(refUnfoldR, PosInExpr(1 :: Nil))(1, 1 :: Nil) &
+        useAt(hideChoiceL)(1, 1 :: Nil) & useAt(refRefl)(1),
+    ),
+  )
+
+  /**
+   * Similar to [[refUnloop]] but uses the "bigger" program for the modalities Generally simpler to use if we know more
+   * about the "bigger" program, e.g. event-/time-triggered refinements
+   */
+  @Derivation
+  val refUnloopWeak: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(
+      name = "refUnloopWeak",
+      canonicalName = "refinement unloop weak",
+      displayName = Some("Refinement unloop weak"),
+      displayConclusion = "__a* <= b*__ <- [b*](a <= b)",
+      displayLevel = DisplayLevel.Menu,
+      key = "1",
+      unifier = Unifier.SurjectiveLinear,
+    ),
+    "[{b{|^@|};}*]a{|^@|}; <= b{|^@|}; -> {{a{|^@|};}*} <= {{b{|^@|};}*}".asFormula,
+    implyR(1) & refTrans("{b{|^@|};}*{a{|^@|};}*".asProgram)(1) & andR(1) & Idioms.<(
+      useAt(refUnfoldL, PosInExpr(1 :: Nil))(1, 1 :: 0 :: Nil) & useAt(hideChoiceR)(1, 1 :: 0 :: Nil) &
+        useAt(refSeqIdL)(1, 1 :: Nil) & cohide(1) & useAt(refRefl)(1),
+      useAt(refLoopR)(1) & useAt(refUnfoldR, PosInExpr(1 :: Nil))(1, 1 :: Nil) & useAt(hideChoiceL)(1, 1 :: Nil) &
+        useAt(refSeq)(1) & useAt(refRefl)(1, 0 :: Nil) & prop,
     ),
   )
 
