@@ -1770,10 +1770,12 @@ object UnifyUSCalculus {
             CMon(ctxP)(ProvableSig.startProof(Sequent(IndexedSeq(q), IndexedSeq(p)), provable.defs)),
             0,
           )(inverseImplyR(ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq(Imply(q, p))), provable.defs)), 0)
-          else implyR(SuccPos(0)).computeResult(provable)(
-            CMon(ctxP)(ProvableSig.startProof(Sequent(IndexedSeq(p), IndexedSeq(q)), provable.defs)),
-            0,
-          )(inverseImplyR(ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq(Imply(p, q))), provable.defs)), 0)
+          else if (FormulaTools.polarityAt(l, inEqPos) > 0) {
+            implyR(SuccPos(0)).computeResult(provable)(
+              CMon(ctxP)(ProvableSig.startProof(Sequent(IndexedSeq(p), IndexedSeq(q)), provable.defs)),
+              0,
+            )(inverseImplyR(ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq(Imply(p, q))), provable.defs)), 0)
+          } else { throw new TacticAssertionError(s"Context ${ctxP} is not monotone in ${provable}") }
         }
     }
   }
@@ -2200,6 +2202,8 @@ object UnifyUSCalculus {
    *
    * @note
    *   The direction in the conclusion switches for negative polarity C{⎵}
+   * @note
+   *   If there is no polarity, it will try to pick one, leading to a different C{⎵}
    * @author
    *   Andre Platzer
    * @author
@@ -2452,20 +2456,13 @@ object UnifyUSCalculus {
                         (
                           sp.what,
                           sp.repl match {
-                            case t: Term => vars.head match {
-                                case _: BaseVariable => t.replaceFree(vars.head, Variable("x_"))
-                                case _: DifferentialSymbol =>
-                                  t.replaceFree(vars.head, DifferentialSymbol(Variable("x_")))
-                                case _ =>
-                                  throw new ProverException("Only variables/differential symbols in block quantifier")
-                              }
                             case f: Formula => vars.head match {
-                                case _: BaseVariable => f.replaceAll(vars.head, Variable("x_"))
-                                case _: DifferentialSymbol =>
-                                  f.replaceAll(vars.head, DifferentialSymbol(Variable("x_")))
-                                case _ =>
-                                  throw new ProverException("Only variables/differential symbols in block quantifier")
+                                case x: BaseVariable => f.replaceAll(x, Variable("x_"))
+                                case x: DifferentialSymbol => f.replaceAll(x, DifferentialSymbol(Variable("x_")))
                               }
+                            case _ => throw new ProverException(
+                                s"Axiom \"all eliminate\" may only be substituted with Formulas, not ${sp.repl}"
+                              )
                           },
                         )
                       )
@@ -2479,29 +2476,21 @@ object UnifyUSCalculus {
                         (
                           sp.what,
                           sp.repl match {
-                            case t: Term => vars.head match {
-                                case _: BaseVariable => t.replaceFree(vars.head, Variable("x_"))
-                                case _: DifferentialSymbol =>
-                                  t.replaceFree(vars.head, DifferentialSymbol(Variable("x_")))
-                                case _ =>
-                                  throw new ProverException("Only variables/differential symbols in block quantifier")
-                              }
                             case f: Formula => vars.head match {
-                                case _: BaseVariable => f.replaceAll(vars.head, Variable("x_"))
-                                case _: DifferentialSymbol =>
-                                  f.replaceAll(vars.head, DifferentialSymbol(Variable("x_")))
-                                case _ =>
-                                  throw new ProverException("Only variables/differential symbols in block quantifier")
+                                case x: BaseVariable => f.replaceAll(x, Variable("x_"))
+                                case x: DifferentialSymbol => f.replaceAll(x, DifferentialSymbol(Variable("x_")))
                               }
+                            case _ => throw new ProverException(
+                                s"Axiom \"all eliminate\" may only be substituted with Formulas, not ${sp.repl}"
+                              )
                           },
                         )
                       )
                   )
                 case _ => us
               }) ++ RenUSubst(vars.head match {
-                case _: BaseVariable => Seq((Variable("x_"), vars.head))
+                case x: BaseVariable => Seq((Variable("x_"), x))
                 case DifferentialSymbol(v) => Seq((Variable("x_"), v))
-                case _ => throw new ProverException("Only variables/differential symbols in block quantifier")
               })
             // NB: all eliminate axiom not implemented
             if (
@@ -2541,8 +2530,10 @@ object UnifyUSCalculus {
                         (
                           sp.what,
                           sp.repl match {
-                            case t: Term => t.replaceFree(vars.head, Variable("x_"))
                             case f: Formula => f.replaceAll(vars.head, Variable("x_"))
+                            case _ => throw new ProverException(
+                                s"Axiom \"exists eliminate\" may only be substituted with Formulas, not ${sp.repl}"
+                              )
                           },
                         )
                       )
@@ -2556,8 +2547,10 @@ object UnifyUSCalculus {
                         (
                           sp.what,
                           sp.repl match {
-                            case t: Term => t.replaceFree(vars.head, Variable("x_"))
                             case f: Formula => f.replaceAll(vars.head, Variable("x_"))
+                            case _ => throw new ProverException(
+                                s"Axiom \"exists eliminate\" may only be substituted with Formulas, not ${sp.repl}"
+                              )
                           },
                         )
                       )
