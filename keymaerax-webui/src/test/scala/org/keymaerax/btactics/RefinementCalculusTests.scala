@@ -8,7 +8,7 @@ package org.keymaerax.btactics
 import org.keymaerax.bellerophon.TacticInapplicableFailure
 import org.keymaerax.btactics.Ax.{notGreaterEqual, timesInverse}
 import org.keymaerax.btactics.RefinementCalculus.*
-import org.keymaerax.btactics.UnifyUSCalculus.useAt
+import org.keymaerax.btactics.UnifyUSCalculus.{useAt, CMon}
 import org.keymaerax.btactics.macros.DerivationInfoAugmentors.ProvableInfoAugmentor
 import org.keymaerax.infrastruct.PosInExpr
 import org.keymaerax.parser.StringConverter.StringToStringConverter
@@ -171,6 +171,40 @@ class RefinementCalculusTests extends TacticTestBase {
     val pr2 = TactixLibrary
       .proveBy("x:=2; <= x:=*;++y:=*;".asFormula, useAt(refSeqIdR, PosInExpr(1 :: Nil))(1, 0 :: Nil))
     pr2.subgoals.head shouldBe " ==> x:=2;?true; <= x:=*;++y:=*;".asSequent
+  }
+
+  "CMon" should "allow contextual refinement in positive context" in {
+    val pr = TactixLibrary
+      .proveBy("x:=10;{x'=-x & x > 5}; <= x:=10;{x'=-x & x > 2};".asFormula, CMon(PosInExpr(1 :: 1 :: Nil)))
+    pr.subgoals.head shouldBe " ==> x > 5 -> x > 2".asSequent
+  }
+
+  it should "allow contextual refinement in negative context" in {
+    val pr = TactixLibrary
+      .proveBy("x:=-10;{x'=x & !(x > 2)}; <= x:=-10;{x'=x & !(x > 5)};".asFormula, CMon(PosInExpr(1 :: 1 :: 0 :: Nil)))
+    pr.subgoals.head shouldBe " ==> x > 5 -> x > 2".asSequent
+  }
+
+  it should "allow argument refinement in positive context" in {
+    val pr = TactixLibrary.proveBy(
+      "<x:=10;{x'=-x & x > 5};> x = 6 -> <x:=10;{x'=-x & x > 2};> x = 6".asFormula,
+      CMon(PosInExpr(0 :: 1 :: Nil)),
+    )
+    pr.subgoals.head shouldBe " ==> {x'=-x & x > 5}; <= {x'=-x & x > 2};".asSequent
+  }
+
+  it should "allow argument refinement in negative context" in {
+    val pr = TactixLibrary.proveBy(
+      "[x:=10;{x'=-x & x > 2};] x > 0 -> [x:=10;{x'=-x & x > 5};] x > 0".asFormula,
+      CMon(PosInExpr(0 :: 1 :: Nil)),
+    )
+    pr.subgoals.head shouldBe " ==> {x'=-x & x > 5}; <= {x'=-x & x > 2};".asSequent
+  }
+
+  it should "allow both contextual and argument refinement in positive context" in {
+    val pr = TactixLibrary
+      .proveBy("x:=10;{x'=-x & x > 5}; <= x:=10;{x'=-x & x > 2};".asFormula, CMon(PosInExpr(1 :: Nil)))
+    pr.subgoals.head shouldBe " ==> {x'=-x & x > 5}; <= {x'=-x & x > 2};".asSequent
   }
 
   "focus" should "simplify programs refinement" in {

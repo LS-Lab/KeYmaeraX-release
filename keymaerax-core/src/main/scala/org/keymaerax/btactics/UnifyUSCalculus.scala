@@ -1654,8 +1654,9 @@ object UnifyUSCalculus {
      *******************************************************************/
 
   /**
-   * CMon(pos) at the indicated position within an implication reduces contextual implication `C{o}->C{k}` to argument
-   * implication `o->k` for positive C. Contextual monotonicity proof rule.
+   * CMon(pos) at the indicated position within an implication reduces contextual implication `C{o}->C{k}` or contextual
+   * refinement `C{o} <= C{k}` to argument implication `o->k` or argument refinement `o <= k` for positive C. Contextual
+   * monotonicity proof rule.
    * {{{
    *   |- o -> k
    *   ------------------------- for positive C{.}
@@ -1667,16 +1668,21 @@ object UnifyUSCalculus {
    *   |- C{o} -> C{k}
    * }}}
    *
-   * If o and k are programs, it reduces it to argument refinement instead.
+   * Other combinations if o,k and/or C{o},C{k} are programs:
    * {{{
    *   |- o <= k
    *   ------------------------- for positive C{.}
    *   |- C{o} -> C{k}
    * }}}
    * {{{
-   *   |- k <= o
-   *   ------------------------- for negative C{.}
-   *   |- C{o} -> C{k}
+   *   |- o -> k
+   *   ------------------------- for positive C{.}
+   *   |- C{o} <= C{k}
+   * }}}
+   * {{{
+   *   |- o <= k
+   *   ------------------------- for positive C{.}
+   *   |- C{o} <= C{k}
    * }}}
    *
    * @param inEqPos
@@ -1687,6 +1693,8 @@ object UnifyUSCalculus {
    *   [[UnifyUSCalculus.CE(PosInExpr)]]
    * @see
    *   [[UnifyUSCalculus.CMon(Context)]]
+   * @see
+   *   [[UnifyUSCalculus.CMonPrg(Context)]]
    * @see
    *   [[UnifyUSCalculus.CEat())]]
    * @see
@@ -1712,43 +1720,42 @@ object UnifyUSCalculus {
       sequent.ante.isEmpty && sequent.succ.length == 1,
       "Expected empty antecedent and single succedent formula, but got " + sequent,
     )
-    sequent.succ.head match {
-      case Imply(l, r) =>
-        if (inEqPos == HereP) provable
-        else {
+    if (inEqPos == HereP) provable
+    else {
+      // Prepare the provable for CMon, and extract data for computing the final premise (p, q, polarity)
+      val (processedProvable, p, q, polarity, tacCMon) = sequent.succ.head match {
+        case Imply(l, r) =>
           val (ctxP, p) = l.at(inEqPos)
           val (ctxQ, q) = r.at(inEqPos)
           require(ctxP == ctxQ, "Contexts must be equal, but " + ctxP + " != " + ctxQ)
-          (p, q) match {
-            case (p: Formula, q: Formula) =>
-              if (FormulaTools.polarityAt(l, inEqPos) < 0) implyR(SuccPos(0)).computeResult(provable)(
-                CMon(ctxP)(ProvableSig.startProof(Sequent(IndexedSeq(q), IndexedSeq(p)), provable.defs)),
-                0,
-              )(inverseImplyR(ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq(Imply(q, p))), provable.defs)), 0)
-              else if (FormulaTools.polarityAt(l, inEqPos) > 0) {
-                implyR(SuccPos(0)).computeResult(provable)(
-                  CMon(ctxP)(ProvableSig.startProof(Sequent(IndexedSeq(p), IndexedSeq(q)), provable.defs)),
-                  0,
-                )(
-                  inverseImplyR(ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq(Imply(p, q))), provable.defs)),
-                  0,
-                )
-              } else { throw new TacticAssertionError(s"Context ${ctxP} is not monotone in ${provable}") }
-            case (p: Program, q: Program) =>
-              if (FormulaTools.polarityAt(l, inEqPos) < 0) implyR(SuccPos(0)).computeResult(provable)(
-                UnifyUSCalculus.CMon(ctxP)(ProvableSig.startProof(Refinement(q, p), provable.defs)),
-                0,
-              )
-              else if (FormulaTools.polarityAt(l, inEqPos) > 0) {
-                implyR(SuccPos(0)).computeResult(provable)(
-                  UnifyUSCalculus.CMon(ctxP)(ProvableSig.startProof(Refinement(p, q), provable.defs)),
-                  0,
-                )
-              } else { throw new TacticAssertionError(s"Context ${ctxP} is not monotone in ${provable}") }
-            case _ => throw new TacticRequirementError(s"Expected Formula/Program context, but got ${ctxP}")
-          }
+          (implyR(SuccPos(0)).computeResult(provable), p, q, FormulaTools.polarityAt(l, inEqPos), CMon(ctxP))
+        case Refinement(l, r) =>
+          val (ctxP, p) = l.at(inEqPos)
+          val (ctxQ, q) = r.at(inEqPos)
+          require(ctxP == ctxQ, "Contexts must be equal, but " + ctxP + " != " + ctxQ)
+          (provable, p, q, FormulaTools.polarityAt(l, inEqPos), CMonPrg(ctxP))
+        case _ => throw new TacticRequirementError(s"Expected implication or refinement, but got ${sequent.succ.head}")
+      }
+      // Reorder p and q according to polarity
+      val (lowExpr, highExpr) =
+        if (polarity < 0) (q, p)
+        else if (polarity > 0) (p, q)
+        else {
+          val ctxP = sequent.succ.head.at(PosInExpr(List(0)) ++ inEqPos)._1
+          throw new TacticAssertionError(s"Context ${ctxP} is not monotone in ${provable}")
         }
-      case _ => throw new TacticRequirementError(s"Expected implication, but got ${sequent.succ.head}")
+      // Construct final premise and apply tacCMon
+      (lowExpr, highExpr) match {
+        case (p: Formula, q: Formula) => processedProvable(
+            tacCMon(ProvableSig.startProof(Sequent(IndexedSeq(p), IndexedSeq(q)), provable.defs)),
+            0,
+          )(inverseImplyR(ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq(Imply(p, q))), provable.defs)), 0)
+        case (p: Program, q: Program) =>
+          processedProvable(tacCMon(ProvableSig.startProof(Refinement(p, q), provable.defs)), 0)
+        case _ =>
+          val ctxP = sequent.succ.head.at(PosInExpr(List(0)) ++ inEqPos)._1
+          throw new TacticRequirementError(s"Expected Formula/Program context, but got ${ctxP}")
+      }
     }
   }
 
