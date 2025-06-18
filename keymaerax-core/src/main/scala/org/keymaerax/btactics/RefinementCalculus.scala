@@ -6,10 +6,15 @@
 package org.keymaerax.btactics
 
 import org.keymaerax.bellerophon.{DependentPositionWithAppliedInputTactic, TacticInapplicableFailure}
+import org.keymaerax.btactics.Ax.*
+import org.keymaerax.btactics.HilbertCalculus.diamondd
 import org.keymaerax.btactics.TacticFactory.TacticForNameFactory
+import org.keymaerax.btactics.TactixLibrary.prop
 import org.keymaerax.btactics.UnifyUSCalculus.useAt
+import org.keymaerax.btactics.macros.DerivationInfoAugmentors.ProvableInfoAugmentor
 import org.keymaerax.btactics.macros.{
   CoreAxiomInfo,
+  DerivedAxiomInfo,
   DisplayLevel,
   ExpressionArg,
   InputPositionTacticInfo,
@@ -21,17 +26,20 @@ import org.keymaerax.core.btactics.annotations.Derivation
 import org.keymaerax.infrastruct.Augmentors.SequentAugmentor
 import org.keymaerax.infrastruct.FormulaTools.dualFree
 import org.keymaerax.infrastruct.{PosInExpr, Position}
+import org.keymaerax.parser.StringConverter.StringToStringConverter
 import org.keymaerax.pt.ProvableSig
 
 object RefinementCalculus {
 
   /** Refinement axioms */
+  /** see [[refTrans]] */
   @Derivation
   val refTransAx: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "refTransAx",
     canonicalName = "refinement transitive",
     displayName = Some("Refinement Transitive Ax"),
-    displayLevel = DisplayLevel.Internal,
+    displayConclusion = "__a <= b ∧ b <= c__ -> a <= c",
+    displayLevel = DisplayLevel.Menu,
     key = "0",
     unifier = Unifier.Surjective,
   )
@@ -419,6 +427,77 @@ object RefinementCalculus {
     unifier = Unifier.Full,
   )
 
+  val refEq: ProvableSig = TactixLibrary
+    .proveBy("a{|^@|};<= b{|^@|}; <- a{|^@|};== b{|^@|};".asFormula, useAt(refAntiSym)(1, 0 :: Nil) & prop)
+
+  val prgEqSym: ProvableSig = TactixLibrary.proveBy(
+    "b{|^@|};== a{|^@|}; <- a{|^@|};== b{|^@|};".asFormula,
+    useAt(refAntiSym)(1, 0 :: Nil) & useAt(refAntiSym)(1, 1 :: Nil) & prop,
+  )
+
+  /** derived axioms */
+  // needed in CMon for monotonicity within diamond modalities, but this case does not appear in the proof, so no cycle
+  @Derivation
+  val refDiamond: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(
+      name = "refDiamond",
+      canonicalName = "refinement diamond",
+      displayName = Some("Ref Diamond"),
+      displayConclusion = "a <= b -> __&langle;a&rangle;P -> &langle;b&rangle;P__",
+      displayLevel = DisplayLevel.Menu,
+      key = "1",
+      unifier = Unifier.Surjective,
+    ),
+    "a{|^@|}; <= b{|^@|}; -> (<a{|^@|};>p(||) -> <b{|^@|};>p(||))".asFormula,
+    diamondd(1, 1 :: 0 :: Nil) & diamondd(1, 1 :: 1 :: Nil) & useAt(converseImply, PosInExpr(1 :: Nil))(1, 1 :: Nil) &
+      useAt(refBox)(1, 1 :: Nil) & prop,
+  )
+
+  @Derivation
+  val hideChoiceL: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(
+      name = "hideChoiceL",
+      canonicalName = "hide choice left",
+      displayLevel = DisplayLevel.Menu,
+      key = "1",
+      unifier = Unifier.SurjectiveLinear,
+    ),
+    "b{|^@|}; <= a{|^@|};++b{|^@|};".asFormula,
+    useAt(refChoiceR)(1, Nil) & useAt(refRefl)(1, 1 :: Nil) & prop,
+  )
+
+  @Derivation
+  val hideChoiceR: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(
+      name = "hideChoiceR",
+      canonicalName = "hide choice right",
+      displayLevel = DisplayLevel.Menu,
+      key = "1",
+      unifier = Unifier.SurjectiveLinear,
+    ),
+    "a{|^@|}; <= a{|^@|};++b{|^@|};".asFormula,
+    useAt(refChoiceR)(1, Nil) & useAt(refRefl)(1, 0 :: Nil) & prop,
+  )
+
+  /** see [[prgEqTrans]] */
+  @Derivation
+  val prgEqTransAx: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(
+      name = "prgEqTransAx",
+      canonicalName = "program equivalence transitive",
+      displayName = Some("Program Equivalence Transitive Ax"),
+      displayConclusion = "__a == b ∧ b == c__ -> a == c",
+      displayLevel = DisplayLevel.Menu,
+      key = "0",
+      unifier = Unifier.Surjective,
+    ),
+    "a{|^@|}; == c{|^@|}; & c{|^@|}; == b{|^@|}; -> a{|^@|}; == b{|^@|};".asFormula,
+    useAt(refAntiSym)(1, 1 :: Nil) & useAt(refAntiSym)(1, 0 :: 0 :: Nil) & useAt(refAntiSym)(1, 0 :: 1 :: Nil) &
+      refTrans("c{|^@|};".asProgram)(1, 1 :: 0 :: Nil) & refTrans("c{|^@|};".asProgram)(1, 1 :: 1 :: Nil) & prop,
+  )
+
+  /** Tactics generalising axioms (if schematic or if need additional inputs) */
+
   def refTrans(c: Expression): DependentPositionWithAppliedInputTactic = "refTrans".byWithInputs(
     List(c),
     (pos: Position, s: Sequent) =>
@@ -449,4 +528,36 @@ object RefinementCalculus {
     displayLevel = DisplayLevel.Menu,
     constructor = TacticConstructor1.create(ExpressionArg("c"))(refTrans),
   )
+
+  def prgEqTrans(c: Expression): DependentPositionWithAppliedInputTactic = "prgEqTrans".byWithInputs(
+    List(c),
+    (pos: Position, s: Sequent) =>
+      c match {
+        case c: Program =>
+          assert(dualFree(c), "Refinement for games is not supported")
+          val (a, b) = s.at(pos) match {
+            case (_, ProgramEquivalence(a, b)) => (a, b)
+            case (_, f) => throw new TacticInapplicableFailure(f.toString + " should be a program equivalence")
+          }
+          useAt(
+            prgEqTransAx.provable(USubst(
+              SubstitutionPair(SystemConst("a"), a) :: SubstitutionPair(SystemConst("b"), b) ::
+                SubstitutionPair(SystemConst("c"), c) :: Nil
+            )),
+            PosInExpr(1 :: Nil),
+          )(pos)
+        case _ => throw new TacticInapplicableFailure(c.toString + " should be a program")
+      },
+  )
+
+  @Derivation
+  val prgEqTransInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
+    name = "prgEqTrans",
+    displayNameLong = Some("Program Equivalence Transitivity"),
+    displayPremises = "Γ |- C(a == c), Δ ;; Γ |- C(c == b), Δ",
+    displayConclusion = "Γ |- C(a == b), Δ",
+    displayLevel = DisplayLevel.Menu,
+    constructor = TacticConstructor1.create(ExpressionArg("c"))(prgEqTrans),
+  )
+
 }
