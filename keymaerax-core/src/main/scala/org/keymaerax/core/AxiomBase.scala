@@ -590,17 +590,29 @@ private[core] object AxiomBase extends Logging {
       "refinement unloop",
     )
     insist(
+      axs("refinement domain") ==
+        Equiv(Refinement(ODESystem(ode, pany), ODESystem(ode, qany)), Box(ODESystem(ode, pany), qany)),
+      "refinement domain",
+    )
+    insist(
       axs("refinement ode") == Equiv(
-        Refinement(
+        ProgramEquivalence(
           ODESystem(AtomicODE(DifferentialSymbol(x), FuncOf(f, x)), PredOf(p, x)),
-          ODESystem(AtomicODE(DifferentialSymbol(x), FuncOf(g, x)), PredOf(q, x)),
+          ODESystem(AtomicODE(DifferentialSymbol(x), FuncOf(g, x)), PredOf(p, x)),
         ),
-        Box(
-          ODESystem(AtomicODE(DifferentialSymbol(x), FuncOf(f, x)), PredOf(p, x)),
-          And(Equal(FuncOf(f, x), FuncOf(g, x)), PredOf(q, x)),
-        ),
+        Box(ODESystem(AtomicODE(DifferentialSymbol(x), FuncOf(f, x)), PredOf(p, x)), Equal(FuncOf(f, x), FuncOf(g, x))),
       ),
       "refinement ode",
+    )
+    insist(
+      axs("refinement ode (system)") == Equiv(
+        ProgramEquivalence(
+          ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(x), fany), ode), pany),
+          ODESystem(DifferentialProduct(ode, AtomicODE(DifferentialSymbol(x), gany)), pany),
+        ),
+        Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(x), fany), ode), pany), Equal(fany, gany)),
+      ),
+      "refinement ode (system)",
     )
     insist(
       axs("ode idempotent") ==
@@ -1083,8 +1095,18 @@ Axiom "refinement unloop"
   {a{|^@|};}* <= {b{|^@|};}* <- [{a{|^@|};}*](a{|^@|}; <= b{|^@|};)
 End.
 
+Axiom "refinement domain"
+  /* @todo Soundness if p(||)/q(||) have differentials? AtomicODE requires explicit-form so they cannot anyway */
+  {c & p(||)} <= {c & q(||)} <-> [{c & p(||)}]q(||)
+End.
+
 Axiom "refinement ode"
-  {x_' = f(x_) & p(x_)} <= {x_' = g(x_) & q(x_)} <-> [{x_' = f(x_) & p(x_)}](f(x_) = g(x_) & q(x_))
+  {x_' = f(x_) & p(x_)} == {x_' = g(x_) & p(x_)} <-> [{x_' = f(x_) & p(x_)}](f(x_) = g(x_))
+End.
+
+Axiom "refinement ode (system)"
+  /* @todo Soundness if f(||)/g(||)/p(||) have differentials? AtomicODE requires explicit-form so they cannot anyway */
+  {x_' = f(||), c & p(||)} == {c, x_' = g(||) & p(||)} <-> [{x_' = f(||), c & p(||)}](f(||) = g(||))
 End.
 
 Axiom "ode idempotent"

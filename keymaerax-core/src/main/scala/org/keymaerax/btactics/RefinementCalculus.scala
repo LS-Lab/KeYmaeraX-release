@@ -5,12 +5,21 @@
 
 package org.keymaerax.btactics
 
-import org.keymaerax.bellerophon.{DependentPositionWithAppliedInputTactic, TacticInapplicableFailure}
+import org.keymaerax.bellerophon.{
+  BelleExpr,
+  DependentPositionTactic,
+  DependentPositionWithAppliedInputTactic,
+  TacticAssertionError,
+  TacticInapplicableFailure,
+}
 import org.keymaerax.btactics.Ax.*
-import org.keymaerax.btactics.HilbertCalculus.diamondd
+import org.keymaerax.btactics.AxiomaticODESolver.ofAtoms
+import org.keymaerax.btactics.HilbertCalculus.{diamondd, DW}
+import org.keymaerax.btactics.SequentCalculus.{andL, andR, id, implyR}
 import org.keymaerax.btactics.TacticFactory.TacticForNameFactory
 import org.keymaerax.btactics.TactixLibrary.prop
 import org.keymaerax.btactics.UnifyUSCalculus.useAt
+import org.keymaerax.btactics.helpers.DifferentialHelper.atomicOdes
 import org.keymaerax.btactics.macros.DerivationInfoAugmentors.ProvableInfoAugmentor
 import org.keymaerax.btactics.macros.{
   CoreAxiomInfo,
@@ -18,6 +27,8 @@ import org.keymaerax.btactics.macros.{
   DisplayLevel,
   ExpressionArg,
   InputPositionTacticInfo,
+  PositionTacticInfo,
+  TacticConstructor0,
   TacticConstructor1,
   Unifier,
 }
@@ -182,11 +193,30 @@ object RefinementCalculus {
 
   /* ODE refinement axioms */
   @Derivation
-  val refOde: CoreAxiomInfo = CoreAxiomInfo.create(
-    name = "refOde",
+  val refDomainAx: CoreAxiomInfo = CoreAxiomInfo.create(
+    name = "refDomainAx",
+    canonicalName = "refinement domain",
+    displayLevel = DisplayLevel.Internal,
+    key = "0",
+    unifier = Unifier.Surjective,
+  )
+
+  /** see generalisation: [[refOde]] */
+  @Derivation
+  val refOdeAx: CoreAxiomInfo = CoreAxiomInfo.create(
+    name = "refOdeAx",
     canonicalName = "refinement ode",
-    displayName = Some("Refinement ODE"),
-    displayLevel = DisplayLevel.Menu,
+    displayLevel = DisplayLevel.Internal,
+    key = "0",
+    unifier = Unifier.Surjective,
+  )
+
+  /** see generalisation: [[refOde]] */
+  @Derivation
+  val refOdesAx: CoreAxiomInfo = CoreAxiomInfo.create(
+    name = "refOdesAx",
+    canonicalName = "refinement ode (system)",
+    displayLevel = DisplayLevel.Internal,
     key = "0",
     // Technically not surjective as ODE invariant prevents US to substitute differentials in ODE
     unifier = Unifier.Surjective,
@@ -560,4 +590,100 @@ object RefinementCalculus {
     constructor = TacticConstructor1.create(ExpressionArg("c"))(prgEqTrans),
   )
 
+  private lazy val refOdeIndStepAux = TactixLibrary.proveBy(
+    "b{|^@|};==a{|^@|}; & [b{|^@|};]p(||) -> b{|^@|};==a{|^@|}; & [a{|^@|};]p(||)".asFormula,
+    implyR(1) & andR(1) &
+      Idioms.<(prop, andL(-1) & useAt(prgEqSym)(-1) & useAt(refEq)(-1) & useAt(refBox, PosInExpr(0 :: Nil))(-1) & prop),
+  )
+
+  def refOde: DependentPositionTactic = "refOde".by { (pos: Position, s: Sequent) =>
+    s.at(pos) match {
+      case (_, prgEq @ ProgramEquivalence(ODESystem(c, p), ODESystem(d, q))) =>
+        if (p != q) { throw new TacticInapplicableFailure(s"Expected identical domain, but got: $p and $q") }
+
+        def odesToFml(dp: DifferentialProgram, dp2: DifferentialProgram): (Formula, Boolean) = {
+          (dp, dp2) match {
+            case (AtomicODE(xp, t), AtomicODE(xp2, t2)) if xp == xp2 => (Equal(t, t2), true)
+            case (DifferentialProduct(c1, d1), DifferentialProduct(c2, d2)) =>
+              (And(odesToFml(c1, c2)._1, odesToFml(d1, d2)._1), false)
+            case (_: DifferentialProgramConst, _) | (_, _: DifferentialProgramConst) =>
+              throw new TacticInapplicableFailure(s"Expected explicit ODEs, but got: $c and $d")
+            case (_: DifferentialProduct, _) | (_, _: DifferentialProduct) =>
+              throw new TacticInapplicableFailure(s"ODEs do not have compatible shape: $c and $d")
+            case (AtomicODE(xp, _), AtomicODE(xp2, _)) =>
+              throw new TacticInapplicableFailure(s"ODEs do not have compatible variables: $xp and $xp2")
+          }
+        }
+        val (postCond, uniDim) = odesToFml(c, d)
+
+        if (uniDim) {
+          // Recover bound variable to rename before unifier (unifier misses that domains are bound by odes)
+          val x = StaticSemantics.boundVars(c).symbols.filter(_.isInstanceOf[BaseVariable]).head
+          // Unidimensional ODE is just the axiom
+          useAt(refOdeAx.provable.apply(URename("x_".asVariable, x, semantic = true)))(pos)
+        } else {
+          val listC = atomicOdes(c)
+          val listD = atomicOdes(d)
+          // List of intermediate dp: one step is going from (drpg._1,drpg._2) to (drpg._2, drpg._3)
+          val dprgs = (listC ++ listD)
+            .sliding(listC.length + 1)
+            .map(odes => (odes.head, ofAtoms(odes.tail.init), odes.last))
+            .toList
+
+          def refOdesRec(dprgs: List[(AtomicODE, DifferentialProgram, AtomicODE)], pos: Position): BelleExpr = {
+            dprgs match {
+              case (AtomicODE(DifferentialSymbol(x), t), dp, AtomicODE(_, t2)) :: Nil =>
+                // Matching can fail due to reassociativity, so specify substitution manually
+                useAt(
+                  refOdesAx
+                    .provable
+                    .apply(URename("x_".asVariable, x, semantic = true))
+                    .apply(USubst(List(
+                      SubstitutionPair("f(||)".asTerm, t),
+                      SubstitutionPair("g(||)".asTerm, t2),
+                      SubstitutionPair("p(||)".asFormula, p),
+                      SubstitutionPair("c".asDifferentialProgram, dp),
+                    )))
+                )(pos)
+              case (AtomicODE(DifferentialSymbol(x), t), dp, atomRight @ AtomicODE(_, t2)) :: tail =>
+                prgEqTrans(ODESystem(DifferentialProduct(dp, atomRight), p))(pos) &
+                  refOdesRec(tail, pos ++ PosInExpr(1 :: Nil)) & useAt(refOdeIndStepAux, PosInExpr(1 :: Nil))(pos) &
+                  // Matching can fail due to reassociativity, so specify substitution manually
+                  useAt(
+                    refOdesAx
+                      .provable
+                      .apply(URename("x_".asVariable, x, semantic = true))
+                      .apply(USubst(List(
+                        SubstitutionPair("f(||)".asTerm, t),
+                        SubstitutionPair("g(||)".asTerm, t2),
+                        SubstitutionPair("p(||)".asFormula, p),
+                        SubstitutionPair("c".asDifferentialProgram, dp),
+                      )))
+                  )(pos ++ PosInExpr(0 :: Nil)) & useAt(boxAnd, PosInExpr(1 :: Nil))(pos)
+              case Nil => throw new TacticAssertionError(
+                  "No intermediate odes where found. I should have been caught in odesToFml."
+                )
+            }
+          }
+          // Proving schematic `[x'=f(x) & p(x)](f(x) = g(x)) -> {x'=f(x) & p(x)} == {x'=g(x) & p(x)}`
+          val pr = TactixLibrary.proveBy(
+            Imply(Box(ODESystem(c, p), postCond), prgEq),
+            { refOdesRec(dprgs, Position(1, 1 :: Nil)) & implyR(1) & id },
+          )
+          assert(pr.isProved, s"refOde failed to prove the specialised instance: ${pr.conclusion}")
+
+          useAt(pr, PosInExpr(1 :: Nil))(pos)
+        }
+      case (_, f) => throw new TacticInapplicableFailure(s"Expected equivalence of ODE, but got: $f")
+    }
+  }
+
+  @Derivation
+  def refOdeInfo: PositionTacticInfo = PositionTacticInfo.create(
+    name = "refOde",
+    displayNameLong = Some("Refinement ODE"),
+    displayPremises = "Γ |- [x'=f(x) & p(x)](f(x) = g(x)), Δ",
+    displayConclusion = "Γ |- {x'=f(x) & p(x)} == {x'=g(x) & p(x)}, Δ",
+    constructor = TacticConstructor0.create()(() => refOde),
+  )
 }
