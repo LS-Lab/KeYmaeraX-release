@@ -394,19 +394,10 @@ private[core] object AxiomBase extends Logging {
     /* @note Generalized postcondition compared to theory as in DE differential effect (system) */
     insist(
       axs("DE differential effect") == Equiv(
+        Box(ODESystem(AtomicODE(DifferentialSymbol(x), FuncOf(f, x)), PredOf(q, x)), pany),
         Box(
-          ODESystem(
-            AtomicODE(DifferentialSymbol(x), FuncOf(Function("f", None, Real, Real), x)),
-            PredOf(Function("q", None, Real, Bool), x),
-          ),
-          pany,
-        ),
-        Box(
-          ODESystem(
-            AtomicODE(DifferentialSymbol(x), FuncOf(Function("f", None, Real, Real), x)),
-            PredOf(Function("q", None, Real, Bool), x),
-          ),
-          Box(Assign(DifferentialSymbol(x), FuncOf(Function("f", None, Real, Real), x)), pany),
+          ODESystem(AtomicODE(DifferentialSymbol(x), FuncOf(f, x)), PredOf(q, x)),
+          Box(Assign(DifferentialSymbol(x), FuncOf(f, x)), pany),
         ),
       ),
       "DE differential effect",
