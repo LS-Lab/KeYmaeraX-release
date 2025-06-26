@@ -1,5 +1,7 @@
 # KeYmaera X Theorem Prover for Hybrid Systems
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.13379612.svg)](https://doi.org/10.5281/zenodo.13379612)
+
 Self-driving cars, autonomous robots, modern airplanes, or robotic surgery:
 we increasingly entrust our lives to computers and therefore should strive
 for nothing but the highest safety standards - mathematical correctness proof.
@@ -26,14 +28,14 @@ KeYmaera X also supports the verification of _hybrid games_ in _differential gam
 
 ## Installation
 
-1. Install Java Runtime Environment version 11 or later, for example from [OpenJDK](https://openjdk.org/)
+1. Install Java Runtime Environment version 17 or later, for example from [OpenJDK](https://openjdk.org/)
 
 2. Optionally, install and set up
   [Wolfram Mathematica](https://www.wolfram.com/mathematica/) (version 10 or later)
   or [Wolfram Engine](http://www.wolfram.com/engine/).
   See below for more details on the different arithmetic solvers.
 
-3. Download the file [keymaerax.jar](https://keymaeraX.org/keymaerax.jar)
+3. Download the file [keymaerax.jar](https://keymaerax.org/keymaerax.jar)
 
 4. Configure KeYmaera X according to the **Configuration** section below.
 
@@ -87,7 +89,7 @@ KeYmaera X implements the uniform substitution calculus for differential dynamic
 in order to enable soundness assurance by way of a small trusted LCF-style kernel
 while still being amenable to automatic theorem proving.
 
-https://www.ls.cs.cmu.edu/publications.html
+https://lfcps.org/pub/index.html
 
 1. André Platzer.
   [A complete uniform substitution calculus for differential dynamic logic](https://doi.org/10.1007/s10817-016-9385-1).
@@ -204,7 +206,7 @@ A comparison of KeYmaera X with its predecessor provers is described in:
 
 ## Copyright and Licenses
 
-Copyright (C) 2014-2024 Carnegie Mellon University, Karlsruhe Institute of Technology
+Copyright (C) 2014-2025 Carnegie Mellon University, Karlsruhe Institute of Technology
 
 Developed by Andre Platzer, Stefan Mitsch, Nathan Fulton, Brandon Bohrer,
 Yong Kiam Tan, Andrew Sogokon, Fabian Immler, Katherine Cordwell,
