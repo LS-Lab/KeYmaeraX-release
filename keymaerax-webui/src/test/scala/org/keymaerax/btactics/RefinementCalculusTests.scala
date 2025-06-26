@@ -233,4 +233,20 @@ class RefinementCalculusTests extends TacticTestBase {
     val pr = TactixLibrary.proveBy("x > 0 ==> {x'= x & x < 5} <= {x'= x & x < 10}".asSequent, focus(1, 0 :: 1 :: Nil))
     pr.subgoals.head shouldBe "x > 0 ==> [{x'= x & x < 5}](x < 5 -> x < 10)".asSequent
   }
+
+  "refDE" should "apply to one-dimensional odes" in {
+    val pr = TactixLibrary.proveBy("[{x'=y & x>=0}](y = y+0)".asFormula, refDE(1, 0 :: Nil))
+    pr.subgoals.head shouldBe " ==> [{x'=y & x>=0};x':=y;](y = y+0)".asSequent
+  }
+
+  it should "extend to two-dimensional odes" in {
+    val pr = TactixLibrary.proveBy("[{x'=y, y'=-x & x>=0}](y = y+0 & -x = -1*x)".asFormula, refDE(1, 0 :: Nil))
+    pr.subgoals.head shouldBe " ==> [{x'=y, y'=-x & x>=0};y':=-x;x':=y;](y = y+0 & -x = -1*x)".asSequent
+  }
+
+  it should "extend to three-dimensional odes" in {
+    val pr = TactixLibrary.proveBy("[{x'=y, y'=-x, t'=1 & x>=0}](y = y+0 & -x = -1*x)".asFormula, refDE(1, 0 :: Nil))
+    pr.subgoals.head shouldBe " ==> [{x'=y, y'=-x, t'=1 & x>=0};t':=1;y':=-x;x':=y;](y = y+0 & -x = -1*x)".asSequent
+  }
+
 }

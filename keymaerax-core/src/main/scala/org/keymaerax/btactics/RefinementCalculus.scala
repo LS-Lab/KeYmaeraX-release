@@ -255,17 +255,28 @@ object RefinementCalculus {
     // Technically not surjective as ODE invariant prevents US to substitute differentials in ODE
     unifier = Unifier.Surjective,
   )
+
+  /** see generalisation: [[refDE]] */
   @Derivation
-  val refDE: CoreAxiomInfo = CoreAxiomInfo.create(
-    name = "refDE",
+  val refDEAx: CoreAxiomInfo = CoreAxiomInfo.create(
+    name = "refDEAx",
     canonicalName = "refinement DE",
-    displayName = Some("Refinement DE"),
-    displayConclusion = "__{x' = F,c & P}__ == {x' = F,c & P};x':=F",
-    displayLevel = DisplayLevel.Menu,
+    displayLevel = DisplayLevel.Internal,
     key = "0",
     // Technically not surjective as ODE invariant prevents US to substitute differentials in ODE
     unifier = Unifier.Surjective,
   )
+
+  /** see generalisation: [[refDE]] */
+  val refDEsAx: CoreAxiomInfo = CoreAxiomInfo.create(
+    name = "refDEsAx",
+    canonicalName = "refinement DE (system)",
+    displayLevel = DisplayLevel.Internal,
+    key = "0",
+    // Technically not surjective as ODE invariant prevents US to substitute differentials in ODE
+    unifier = Unifier.SurjectiveLinear,
+  )
+
   @Derivation
   val refDW: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "refDW",
@@ -794,6 +805,27 @@ object RefinementCalculus {
     displayPremises = "Γ |- [x'=f(x) & p(x)](f(x) = g(x)), Δ",
     displayConclusion = "Γ |- {x'=f(x) & p(x)} == {x'=g(x) & p(x)}, Δ",
     constructor = TacticConstructor0.create()(() => refOde),
+  )
+
+  def refDE: DependentPositionTactic = "refDE".by { (pos: Position, s: Sequent) =>
+    s.at(pos) match {
+      case (_, ODESystem(AtomicODE(DifferentialSymbol(x), _), _)) =>
+        // Manually rename: unifier misses that domains are bound by odes
+        useAt(refDEAx.provable.apply(URename("x_".asVariable, x, semantic = true)))(pos)
+      case (_, ODESystem(c, _)) =>
+        val odeDim = StaticSemantics.boundVars(c).symbols.count(_.isInstanceOf[DifferentialSymbol])
+        useAt(refDEsAx)(pos) & (useAt(refDEsAx)(pos ++ PosInExpr(0 :: Nil)) & useAt(refSeqAssoc)(pos)) * (odeDim - 1)
+
+      case (_, f) => throw new TacticInapplicableFailure(s"Expected equivalence of ODE, but got: $f")
+    }
+  }
+
+  @Derivation
+  def refDEinfo: PositionTacticInfo = PositionTacticInfo.create(
+    name = "refDE",
+    displayNameLong = Some("Refinement DE"),
+    displayConclusion = "__{x' = f(x) & p(x)}__ == {x' = f(x) & p(x)};x':=f(x)",
+    constructor = TacticConstructor0.create()(() => refDE),
   )
 
   private[btactics] def CPrgEimpFw(inEqPos: PosInExpr, reverse: Boolean): BuiltInTactic =

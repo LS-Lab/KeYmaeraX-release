@@ -646,13 +646,23 @@ private[core] object AxiomBase extends Logging {
     )
     insist(
       axs("refinement DE") == ProgramEquivalence(
-        ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(x), fany), ode), pany),
+        ODESystem(AtomicODE(DifferentialSymbol(x), FuncOf(f, x)), PredOf(p, x)),
         Compose(
-          ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(x), fany), ode), pany),
-          Assign(DifferentialSymbol(x), fany),
+          ODESystem(AtomicODE(DifferentialSymbol(x), FuncOf(f, x)), PredOf(p, x)),
+          Assign(DifferentialSymbol(x), FuncOf(f, x)),
         ),
       ),
       "refinement DE",
+    )
+    insist(
+      axs("refinement DE (system)") == ProgramEquivalence(
+        ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(x), fany), ode), pany),
+        Compose(
+          ODESystem(DifferentialProduct(ode, AtomicODE(DifferentialSymbol(x), fany)), pany),
+          Assign(DifferentialSymbol(x), fany),
+        ),
+      ),
+      "refinement DE (system)",
     )
     insist(
       axs("refinement DW") ==
@@ -1139,7 +1149,12 @@ Axiom "ode idempotent"
 End.
 
 Axiom "refinement DE"
-  {x_' = f(||),c & p(||)} == {x_' = f(||),c & p(||)};x_':=f(||);
+  {x_' = f(x_) & p(x_)} == {x_' = f(x_) & p(x_)};x_':=f(x_);
+End.
+
+Axiom "refinement DE (system)"
+  /* @todo Soundness if f(||)/p(||) have differentials? AtomicODE requires explicit-form so they cannot anyway */
+  {x_' = f(||),c & p(||)} == {c, x_' = f(||) & p(||)};x_':=f(||);
 End.
 
 Axiom "refinement DW"
