@@ -28,7 +28,7 @@ KeYmaera X also supports the verification of _hybrid games_ in _differential gam
 
 ## Installation
 
-1. Install Java Runtime Environment version 11 or later, for example from [OpenJDK](https://openjdk.org/)
+1. Install Java Runtime Environment version 17 or later, for example from [OpenJDK](https://openjdk.org/)
 
 2. Optionally, install and set up
   [Wolfram Mathematica](https://www.wolfram.com/mathematica/) (version 10 or later)
@@ -206,7 +206,7 @@ A comparison of KeYmaera X with its predecessor provers is described in:
 
 ## Copyright and Licenses
 
-Copyright (C) 2014-2024 Carnegie Mellon University, Karlsruhe Institute of Technology
+Copyright (C) 2014-2025 Carnegie Mellon University, Karlsruhe Institute of Technology
 
 Developed by Andre Platzer, Stefan Mitsch, Nathan Fulton, Brandon Bohrer,
 Yong Kiam Tan, Andrew Sogokon, Fabian Immler, Katherine Cordwell,
