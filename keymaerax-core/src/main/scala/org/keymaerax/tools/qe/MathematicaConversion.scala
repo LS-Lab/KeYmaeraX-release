@@ -75,7 +75,7 @@ object MathematicaConversion {
 trait M2KConverter[T] extends (MExpr => T) {
 
   /** Convert mathematica expression `e` to `T` with rountrip contracts. */
-  def apply(e: MExpr): T = convert(e) ensures
+  def apply(e: MExpr): T = convert(e) `ensures`
     (
       r => k2m.convert(r) === e,
       "Roundtrip conversion is identity." + "\nMathematica expression:   " + e.toString + "\t@[" +
@@ -102,7 +102,7 @@ trait M2KConverter[T] extends (MExpr => T) {
 trait K2MConverter[T] extends (T => MExpr) {
 
   /** Convert expression `e` to Mathematica with rountrip contracts. */
-  def apply(e: T): MExpr = convert(e) ensures
+  def apply(e: T): MExpr = convert(e) `ensures`
     (
       r => m2k.convert(r) === e,
       "Roundtrip conversion is identity." + "\nKeYmaera X expression    " + e + "\t@" + e.getClass.getSimpleName +

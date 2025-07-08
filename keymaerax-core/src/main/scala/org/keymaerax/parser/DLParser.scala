@@ -92,7 +92,7 @@ object DLParser {
     ).inInput(inputString, None)
   }
 
-  private[keymaerax] def runParser[A](parser: P[_] => P[A])(input: String): A = {
+  private[keymaerax] def runParser[A](parser: P[?] => P[A])(input: String): A = {
     val cleanedInput = ParserHelper.checkUnicode(ParserHelper.removeBOM(input))
     fastparse.parse(cleanedInput, parser) match {
       case Parsed.Success(value, _) => value
@@ -189,7 +189,7 @@ class DLParser extends Parser {
 
   // Whitespace is the usual ' \t\n\r' but also comments /* ... */
   implicit object DLWhitespace extends Whitespace {
-    override def apply(ctx: P[_]): P[Unit] = {
+    override def apply(ctx: P[?]): P[Unit] = {
       val input = ctx.input
       val startIndex = ctx.index
 

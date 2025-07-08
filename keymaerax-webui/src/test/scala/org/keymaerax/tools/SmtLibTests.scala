@@ -57,9 +57,9 @@ class SmtLibTests extends TacticTestBase {
   }
 
   "SmtLibReader" should "read simple examples" in {
-    round trip "x>=0".asFormula
-    round trip "x+1>=0".asFormula
-    round trip "\\exists x x>=0".asFormula
-    round trip "\\forall x (x<=0|x>=0)".asFormula
+    round `trip` "x>=0".asFormula
+    round `trip` "x+1>=0".asFormula
+    round `trip` "\\exists x x>=0".asFormula
+    round `trip` "\\forall x (x<=0|x>=0)".asFormula
   }
 }

@@ -28,5 +28,5 @@ class ModelListResponse(models: List[ModelPOJO]) extends Response {
     )
   )
 
-  def getJson: JsValue = JsArray(objects: _*)
+  def getJson: JsValue = JsArray(objects*)
 }

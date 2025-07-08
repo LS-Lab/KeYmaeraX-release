@@ -149,7 +149,7 @@ class BenchmarkTester(val benchmarkName: String, val url: String, val timeout: I
   private def tableResults(results: Seq[BenchmarkResult]) = {
     Table(
       ("Benchmark name", "Entry name", "Status", "Duration", "Failure Cause"),
-      results.map(r => (benchmarkName, r.name, r.status, r.totalDuration, r.ex)): _*
+      results.map(r => (benchmarkName, r.name, r.status, r.totalDuration, r.ex))*
     )
   }
 

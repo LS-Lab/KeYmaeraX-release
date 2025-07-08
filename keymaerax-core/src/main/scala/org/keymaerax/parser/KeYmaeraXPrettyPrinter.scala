@@ -50,7 +50,7 @@ object KeYmaeraXNoContractPrettyPrinter extends KeYmaeraXPrecedencePrinter {
 trait BasePrettyPrinter extends PrettyPrinter {
 
   /** Pretty-print term to a string */
-  def apply(expr: Expression): String = stringify(expr) ensures
+  def apply(expr: Expression): String = stringify(expr) `ensures`
     (
       r => expr.kind == FunctionKind || reparse(expr, r) == expr,
       "Expect parse of print to be identity." +
@@ -620,7 +620,7 @@ object KeYmaeraXOmitInterpretationPrettyPrinter extends KeYmaeraXOmitInterpretat
 
 /** A pretty printer that omits the interpretations of interpreted functions. */
 class KeYmaeraXOmitInterpretationPrettyPrinter extends KeYmaeraXPrecedencePrinter {
-  override def apply(expr: Expression): String = stringify(expr) ensures
+  override def apply(expr: Expression): String = stringify(expr) `ensures`
     (
       // @note functions and interpreted functions are printed without parentheses/interpretations and do not reparse
       r =>

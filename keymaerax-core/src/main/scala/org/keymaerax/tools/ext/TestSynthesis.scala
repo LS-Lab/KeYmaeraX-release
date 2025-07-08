@@ -71,7 +71,7 @@ class TestSynthesis(mathematicaTool: Mathematica)
   def synthesizeSafetyMarginCheck(fml: Formula, vals: Map[Term, Term]): Number = {
     val metricExpr = k2m.convert(Left(safetyMarginTerm(fml)))
     val valsExpr = MathematicaOpSpec.list(
-      vals.map({ case (k, v) => ExtMathematicaOpSpec.set(k2m.convert(Left(k)), k2m.convert(Left(v))) }).toSeq: _*
+      vals.map({ case (k, v) => ExtMathematicaOpSpec.set(k2m.convert(Left(k)), k2m.convert(Left(v))) }).toSeq*
     )
     val cmd = MathematicaOpSpec.module(valsExpr, metricExpr)
     run(cmd) match {
@@ -85,7 +85,7 @@ class TestSynthesis(mathematicaTool: Mathematica)
   def getSafetyRange(fml: Formula): (Number, Number) = {
     val metricExpr = k2m.convert(Left(safetyMarginTerm(fml)))
     val symbols = StaticSemantics.symbols(fml)
-    val symbolsExpr = MathematicaOpSpec.list(symbols.map(s => k2m.convert(Right(s))).toSeq: _*)
+    val symbolsExpr = MathematicaOpSpec.list(symbols.map(s => k2m.convert(Right(s))).toSeq*)
     // minimize for compliant test cases
     // @todo second argument would give values for "safest" test case
     val cmd = ExtMathematicaOpSpec.first(ExtMathematicaOpSpec.nmaximize(metricExpr, symbolsExpr))
@@ -115,7 +115,7 @@ class TestSynthesis(mathematicaTool: Mathematica)
           })
           .toList
           .sorted
-          .map(s => CEXK2MConverter.convert(Right(s))): _*
+          .map(s => CEXK2MConverter.convert(Right(s)))*
       ),
       MathematicaOpSpec.reals.op,
       k2m(Left(Number(amount))),

@@ -36,7 +36,7 @@ final case class MultiRename(rens: immutable.Seq[(Variable, Variable)], semantic
   )
 
   /** including transpositions */
-  private val renaming: immutable.Map[Variable, Variable] = { rena ++ rena.map(sp => (sp._2, sp._1)) } ensures
+  private val renaming: immutable.Map[Variable, Variable] = { rena ++ rena.map(sp => (sp._2, sp._1)) } `ensures`
     (
       r => rena.forall(sp => r.get(sp._1) == Some(sp._2) && r.get(sp._2) == Some(sp._1)),
       "converse renamings are contained",
@@ -66,7 +66,7 @@ final case class MultiRename(rens: immutable.Seq[(Variable, Variable)], semantic
   def apply(t: Term): Term = {
     try rename(t)
     catch { case ex: ProverException => throw ex.inContext(t.prettyString) }
-  } ensures
+  } `ensures`
     (
       r => sameAsCore(t, r),
       "fast tactical renaming has same result as slower core renaming, if defined: " + this + " on " + t,
@@ -76,7 +76,7 @@ final case class MultiRename(rens: immutable.Seq[(Variable, Variable)], semantic
   def apply(f: Formula): Formula = {
     try rename(f)
     catch { case ex: ProverException => throw ex.inContext(f.prettyString) }
-  } ensures
+  } `ensures`
     (
       r => sameAsCore(f, r),
       "fast tactical renaming has same result as slower core renaming, if defined: " + this + " on " + f,
@@ -86,7 +86,7 @@ final case class MultiRename(rens: immutable.Seq[(Variable, Variable)], semantic
   def apply(p: DifferentialProgram): DifferentialProgram = {
     try renameODE(p)
     catch { case ex: ProverException => throw ex.inContext(p.prettyString) }
-  } ensures
+  } `ensures`
     (
       r => sameAsCore(p, r),
       "fast tactical renaming has same result as slower core renaming, if defined: " + this + " on " + p,
@@ -96,7 +96,7 @@ final case class MultiRename(rens: immutable.Seq[(Variable, Variable)], semantic
   def apply(p: Program): Program = {
     try rename(p)
     catch { case ex: ProverException => throw ex.inContext(p.prettyString) }
-  } ensures
+  } `ensures`
     (
       r => sameAsCore(p, r),
       "fast tactical renaming has same result as slower core renaming, if defined: " + this + " on " + p,

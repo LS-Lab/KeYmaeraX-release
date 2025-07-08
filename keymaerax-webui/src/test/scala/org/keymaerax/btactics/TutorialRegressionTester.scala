@@ -34,12 +34,12 @@ abstract class RegressionTesterBase(val tutorialName: String, val url: String)
   private def table(entries: List[TutorialEntry]) = {
     Table(
       ("Tutorial name", "Entry name", "Model", "Description", "Title", "Link", "Tactic", "Kind"),
-      entries.map(e => (tutorialName, e.name, e.model, e.description, e.title, e.link, e.tactic, e.kind)): _*
+      entries.map(e => (tutorialName, e.name, e.model, e.description, e.title, e.link, e.tactic, e.kind))*
     )
   }
 
   private def table(tactics: List[(String, String, Boolean)]) = {
-    Table(("Tactic name", "Tactic content"), tactics.map(t => (t._1, t._2)): _*)
+    Table(("Tactic name", "Tactic content"), tactics.map(t => (t._1, t._2))*)
   }
 
   private lazy val tutorialEntries = table({
@@ -207,7 +207,7 @@ abstract class RegressionTesterBase(val tutorialName: String, val url: String)
           )
         )
     )
-    Table(tutorialEntries.heading, result: _*)
+    Table(tutorialEntries.heading, result*)
   }
 }
 

@@ -726,6 +726,6 @@ object SOSSolve {
   def linearElim(ls: List[(Int, Term, Term, Term)]): BelleExpr = {
     val itopos = ls.map(p => (AntePosition(p._1), p._2, p._3, p._4))
 
-    itopos.foldLeft[BelleExpr](ident)((tac, p) => tac & (rewriteEquality _).tupled(p) & exhaustiveEqL2R(true)(p._1))
+    itopos.foldLeft[BelleExpr](ident)((tac, p) => tac & (rewriteEquality).tupled(p) & exhaustiveEqL2R(true)(p._1))
   }
 }

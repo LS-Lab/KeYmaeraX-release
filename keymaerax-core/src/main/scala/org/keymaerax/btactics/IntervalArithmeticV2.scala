@@ -85,7 +85,7 @@ object IntervalArithmeticV2 {
           if (0 <= la) la.bigDecimal.pow(n, downContext(prec))
           else { if (ua <= 0) ua.bigDecimal.pow(n, downContext(prec)) else 0 }
         }
-      val upper = (la.bigDecimal.pow(n, upContext(prec))) max (ua.bigDecimal.pow(n, upContext(prec)))
+      val upper = (la.bigDecimal.pow(n, upContext(prec))) `max` (ua.bigDecimal.pow(n, upContext(prec)))
       (lower, upper)
     } else {
       val (l, u) = power_endpoints(prec)(bounds)(lat, uat)(-n)

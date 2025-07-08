@@ -43,13 +43,13 @@ object KeYmaeraXStoredProvableParser extends (String => immutable.List[Sequent])
     )
     require(input.count(_.tok == QED) == 1, "Expected a single \\qed token")
     split(input.dropRight(2), (t: Token) => t.tok != FROM).map(parseSequent)
-  } ensures (r => r.size == 1 + input.count(_.tok == FROM))
+  } `ensures` (r => r.size == 1 + input.count(_.tok == FROM))
 
   /** Parses a sequent. */
   private def parseSequent(input: TokenStream): Sequent = {
     val (anteTokens, Token(TURNSTILE, _) :: succTokens) = input.span(_.tok != TURNSTILE): @unchecked
     Sequent(parseFormulas(anteTokens), parseFormulas(succTokens))
-  } ensures
+  } `ensures`
     (r => {
       val (anteTokens, Token(TURNSTILE, _) :: succTokens) =
         input.splitAt(input.indexWhere(_.tok == TURNSTILE)): @unchecked
@@ -61,7 +61,7 @@ object KeYmaeraXStoredProvableParser extends (String => immutable.List[Sequent])
   private def parseFormulas(input: TokenStream): immutable.IndexedSeq[Formula] = {
     val formulaTokens = split(input, (t: Token) => t.tok != FORMULA_SEPARATOR)
     formulaTokens.map(ts => KeYmaeraXParser.formulaTokenParser(ts :+ Token(EOF))).toIndexedSeq
-  } ensures (r => r.size == (if (input.isEmpty) 0 else 1) + input.count(_.tok == FORMULA_SEPARATOR))
+  } `ensures` (r => r.size == (if (input.isEmpty) 0 else 1) + input.count(_.tok == FORMULA_SEPARATOR))
 
   /** Splits `tokens` into sub-streams at boundaries satisfying `pred`. The boundary token is removed from the result. */
   private def split(tokens: TokenStream, pred: Token => Boolean): List[TokenStream] = {

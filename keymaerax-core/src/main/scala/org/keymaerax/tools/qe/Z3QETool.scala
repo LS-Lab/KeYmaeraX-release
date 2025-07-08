@@ -24,7 +24,7 @@ final class Z3QETool extends Tool with QETool with ToolOperationManagement {
   override val name: String = "Z3QETool"
 
   /* The solver instance */
-  private var z3: Z3Solver = _
+  private var z3: Z3Solver = scala.compiletime.uninitialized
 
   def init(config: ToolConfiguration): Unit = { z3 = new Z3Solver(config.z3Path.get, DefaultSMTConverter) }
 

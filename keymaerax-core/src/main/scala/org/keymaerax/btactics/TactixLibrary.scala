@@ -337,7 +337,7 @@ object TactixLibrary extends Logging {
    * for differential equations in the succedent. `keepQEFalse` indicates whether or not QE results "false" at the proof
    * leaves should be kept or undone.
    */
-  def autoImpl(loop: AtPosition[_ <: BelleExpr], odeR: AtPosition[_ <: BelleExpr], keepQEFalse: Boolean): BelleExpr =
+  def autoImpl(loop: AtPosition[? <: BelleExpr], odeR: AtPosition[? <: BelleExpr], keepQEFalse: Boolean): BelleExpr =
     anon {
 
       def index(isAnte: Boolean)(expr: Expression): Option[DerivationInfo] = (expr, isAnte) match {
@@ -376,7 +376,7 @@ object TactixLibrary extends Logging {
         decompose.reduceOption[BelleExpr](_ & _).getOrElse(UnifyUSCalculus.skip)
       })
 
-      def odeInContext(odeR: AtPosition[_ <: BelleExpr]): DependentPositionTactic =
+      def odeInContext(odeR: AtPosition[? <: BelleExpr]): DependentPositionTactic =
         anon((pos: Position, seq: Sequent) => {
           val solvers = Idioms.mapSubpositions(
             pos,
@@ -598,7 +598,7 @@ object TactixLibrary extends Logging {
    * @see [[abstractionb]]
    */
   @nowarn("msg=Exhaustivity analysis reached max recursion depth")
-  def withAbstraction(t: AtPosition[_ <: BelleExpr]): DependentPositionTactic =
+  def withAbstraction(t: AtPosition[? <: BelleExpr]): DependentPositionTactic =
     new DependentPositionTactic("with abstraction") {
       override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
         override def computeExpr(sequent: Sequent): BelleExpr = {
@@ -1227,12 +1227,12 @@ object TactixLibrary extends Logging {
       sequent.sub(pos) match {
         case Some(Equal(l, _)) =>
           val lvars = StaticSemantics.freeVars(l)
-          (provable(EqualityTactics.exhaustiveEqL2R(pos).computeResult _, 0)(
+          (provable(EqualityTactics.exhaustiveEqL2R(pos).computeResult, 0)(
             Idioms
               .doIfFw(
                 _.subgoals.forall(s => StaticSemantics.freeVars(s.without(pos.checkTop)).intersect(lvars).isEmpty)
               )(SequentCalculus.hideL(pos).computeResult)
-              .result _,
+              .result,
             0,
           ))
         case Some(e) => throw new TacticInapplicableFailure("Expected equality l=r, but got " + e.prettyString)
@@ -1267,12 +1267,12 @@ object TactixLibrary extends Logging {
       sequent.sub(pos) match {
         case Some(fml @ Equal(_, r)) =>
           val rvars = StaticSemantics.freeVars(r)
-          (provable(EqualityTactics.exhaustiveEqR2L(pos).computeResult _, 0)(
+          (provable(EqualityTactics.exhaustiveEqR2L(pos).computeResult, 0)(
             Idioms
               .doIfFw(
                 _.subgoals.forall(s => StaticSemantics.freeVars(s.without(pos.checkTop)).intersect(rvars).isEmpty)
               )(SequentCalculus.hideL(pos, fml).computeResult)
-              .result _,
+              .result,
             0,
           ))
         case Some(e) => throw new TacticInapplicableFailure("Expected equality l=r, but got " + e.prettyString)

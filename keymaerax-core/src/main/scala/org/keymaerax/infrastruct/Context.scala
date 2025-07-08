@@ -75,7 +75,7 @@ object Context {
 
   /** Direct unguarded replacement context split */
   private def directAt[T <: Expression](t: T, pos: PosInExpr): (Context[T], Expression) =
-    (new ReplacementContext[T](t, pos), sub(t, pos)) ensures
+    (new ReplacementContext[T](t, pos), sub(t, pos)) `ensures`
       (
         // @note redundant cross-contract consistency checks
         r =>
@@ -97,18 +97,18 @@ object Context {
     else
       {
         val sp = t match {
-          case f: Term => { context(f, pos) } ensures
+          case f: Term => { context(f, pos) } `ensures`
               (r => !REDUNDANT || r == split(f, pos), "direct and generic split have same result " + f + " at " + pos)
-          case f: Formula => { context(f, pos) } ensures
+          case f: Formula => { context(f, pos) } `ensures`
               (r => !REDUNDANT || r == split(f, pos), "direct and generic split have same result " + f + " at " + pos)
-          case f: DifferentialProgram => { context(f, pos) } ensures
+          case f: DifferentialProgram => { context(f, pos) } `ensures`
               (r => !REDUNDANT || r == split(f, pos), "direct and generic split have same result " + f + " at " + pos)
-          case f: Program => { context(f, pos) } ensures
+          case f: Program => { context(f, pos) } `ensures`
               (r => !REDUNDANT || r == split(f, pos), "direct and generic split have same result " + f + " at " + pos)
           case _ => ??? // trivial totality on possibly problematic patmats
         }
         (Context(sp._1), sp._2)
-      } ensures
+      } `ensures`
         (
           r => backsubstitution(r, t, pos),
           "Reassembling the expression at that position into the context returns the original formula: " + t + " at " +
@@ -134,10 +134,10 @@ object Context {
     if (!GUARDED) { directAt(t, pos) }
     else
       {
-        val sp = { context(t, pos) } ensures
+        val sp = { context(t, pos) } `ensures`
           (r => !REDUNDANT || r == split(t, pos), "direct and generic split have same result " + t + " at " + pos)
         (Context(sp._1), sp._2)
-      } ensures
+      } `ensures`
         (
           r => backsubstitution(r, t, pos),
           "Reassembling the expression at that position into the context returns the original formula: " + t + " at " +
@@ -153,10 +153,10 @@ object Context {
     if (!GUARDED) { directAt(f, pos) }
     else
       {
-        val sp = { context(f, pos) } ensures
+        val sp = { context(f, pos) } `ensures`
           (r => !REDUNDANT || r == split(f, pos), "direct and generic split have same result " + f + " at " + pos)
         (Context(sp._1), sp._2)
-      } ensures
+      } `ensures`
         (
           r => backsubstitution(r, f, pos),
           "Reassembling the expression at that position into the context returns the original formula: " + f + " at " +
@@ -173,10 +173,10 @@ object Context {
     if (!GUARDED) { directAt(a, pos) }
     else
       {
-        val sp = { context(a, pos) } ensures
+        val sp = { context(a, pos) } `ensures`
           (r => !REDUNDANT || r == split(a, pos), "direct and generic split have same result " + a + " at " + pos)
         (Context(sp._1), sp._2)
-      } ensures
+      } `ensures`
         (
           r => backsubstitution(r, a, pos),
           "Reassembling the expression at that position into the context returns the original formula: " + a + " at " +
@@ -199,7 +199,7 @@ object Context {
       fPos = fPos.dropRight(1)
     }
     (PosInExpr(fPos), PosInExpr(tPos))
-  } ensures (r => r._1 ++ r._2 == pos, "Concatenating split positions retains original position") ensures
+  } `ensures` (r => r._1 ++ r._2 == pos, "Concatenating split positions retains original position") `ensures`
     (
       r => at(f, r._1)._1.isFormulaContext && at(at(f, r._1)._2, r._2)._1.isTermContext,
       "Split into formula and term context",
@@ -245,7 +245,7 @@ object Context {
           case _ =>
             throw new IllegalArgumentException("split position " + pos + " of term " + term + " may not be defined")
         }
-      } ensures (r => r._1.getClass == term.getClass, "Context has identical top types " + term + " at " + pos)
+      } `ensures` (r => r._1.getClass == term.getClass, "Context has identical top types " + term + " at " + pos)
 
   private def context(formula: Formula, pos: PosInExpr): (Formula, Expression) =
     if (pos == HereP) (DotFormula, formula)
@@ -275,7 +275,7 @@ object Context {
               "split position " + pos + " of formula " + formula + " may not be defined"
             )
         }
-      } ensures (r => r._1.getClass == formula.getClass, "Context has identical top types " + formula + " at " + pos)
+      } `ensures` (r => r._1.getClass == formula.getClass, "Context has identical top types " + formula + " at " + pos)
 
   private def context(program: Program, pos: PosInExpr): (Program, Expression) =
     if (pos == HereP) (DotProgram, program)
@@ -301,7 +301,7 @@ object Context {
               "split position " + pos + " of program " + program + " may not be defined"
             )
         }
-      } ensures
+      } `ensures`
         (
           r => r._1 == noContext || r._1.getClass == program.getClass,
           "Context has identical top types " + program + " at " + pos,
@@ -322,7 +322,7 @@ object Context {
               "contextODE position " + pos + " of program " + program + " may not be defined"
             )
         }
-      } ensures
+      } `ensures`
         (
           r => r._1 == noContextD || r._1.getClass == program.getClass,
           "Context has identical top types " + program + " at " + pos,
@@ -566,7 +566,7 @@ object Context {
           case _ =>
             throw new IllegalArgumentException("split position " + pos + " of term " + term + " may not be defined")
         }
-      } ensures (r => r._1.getClass == term.getClass, "Context has identical top types " + term + " at " + pos)
+      } `ensures` (r => r._1.getClass == term.getClass, "Context has identical top types " + term + " at " + pos)
 
   private def split(formula: Formula, pos: PosInExpr): (Formula, Expression) =
     if (pos == HereP) (DotFormula, formula)
@@ -615,7 +615,7 @@ object Context {
               "split position " + pos + " of formula " + formula + " may not be defined"
             )
         }
-      } ensures (r => r._1.getClass == formula.getClass, "Context has identical top types " + formula + " at " + pos)
+      } `ensures` (r => r._1.getClass == formula.getClass, "Context has identical top types " + formula + " at " + pos)
 
   // @todo DotProgram would in a sense be the appropriate context
   private val noContext = ProgramConst("noctx")
@@ -643,7 +643,7 @@ object Context {
               "split position " + pos + " of program " + program + " may not be defined"
             )
         }
-      } ensures
+      } `ensures`
         (
           r => r._1 == noContext || r._1.getClass == program.getClass,
           "Context has identical top types " + program + " at " + pos,
@@ -665,7 +665,7 @@ object Context {
               "splitODE position " + pos + " of program " + program + " may not be defined"
             )
         }
-      } ensures
+      } `ensures`
         (
           r => r._1 == noContextD || r._1.getClass == program.getClass,
           "Context has identical top types " + program + " at " + pos,

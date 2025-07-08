@@ -35,7 +35,7 @@ object SessionManager {
   }
 
   /** Creates a token with token `key` representing `user`. */
-  private[this] def createToken(key: String, user: UserPOJO): SessionToken = {
+  private def createToken(key: String, user: UserPOJO): SessionToken = {
     // @HACK need better way of mapping user levels to tokens
     if (user.level == 0 || user.level == 1) ReadWriteToken(key, user.userName)
     else if (user.level == 3) ReadonlyToken(key, user.userName)

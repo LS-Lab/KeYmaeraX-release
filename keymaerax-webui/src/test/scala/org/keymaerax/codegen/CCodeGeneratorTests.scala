@@ -30,7 +30,7 @@ class CCodeGeneratorTests extends TacticTestBase {
 
   // @todo Unify Python and C code generator, fix all test cases
 
-  private var generator: CGenerator = _
+  private var generator: CGenerator = scala.compiletime.uninitialized
 
   override def beforeEach(): Unit = {
     super.beforeEach()

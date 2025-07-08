@@ -32,7 +32,7 @@ case class AgendaAwesomeResponse(
     )
   }
 
-  private lazy val agendaItems = JsObject(agenda.map(itemJson): _*)
+  private lazy val agendaItems = JsObject(agenda.map(itemJson)*)
 
   def getJson: JsValue = JsObject(
     "modelId" -> JsString(modelId),

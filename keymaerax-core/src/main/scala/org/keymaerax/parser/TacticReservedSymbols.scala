@@ -15,7 +15,7 @@ object TacticReservedSymbols {
   val const: Function = Function("const", None, Unit, Real, None)
 
   /** The reserved function symbols. */
-  val symbols: List[Function] = List(old, abbrv, expand, const) ensures
+  val symbols: List[Function] = List(old, abbrv, expand, const) `ensures`
     (r => r.forall(f => !f.interpreted), "reserved symbols are not interpreted")
 
   /** The reserved symbols by name. */

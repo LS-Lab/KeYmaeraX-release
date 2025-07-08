@@ -28,7 +28,7 @@ final class Z3 extends Tool with QETacticTool with SimplificationTool with ToolO
   private val z3qe: Z3QETool = new Z3QETool()
 
   /** Untrusted access to Z3 directly. */
-  private var z3: Z3Solver = _
+  private var z3: Z3Solver = scala.compiletime.uninitialized
 
   def init(config: ToolConfiguration): Unit = {
     z3 = new Z3Solver(config.z3Path.get, DefaultSMTConverter)

@@ -85,7 +85,7 @@ case class Declaration(decls: Map[Name, Signature]) {
           )
         })
     )
-    .map((declAsSubstitutionPair _).tupled)
+    .map((declAsSubstitutionPair).tupled)
 
   /** The subset of substs for implicitly defined functions (have what.name == repl.name and repl.interpreted). */
   lazy val isubsts: List[SubstitutionPair] = substs.filter({ case SubstitutionPair(what, repl) =>
@@ -385,7 +385,7 @@ object Declaration {
             case _ => Set.empty
           }
 
-          def nextDotI(dots: Set[_ <: NamedSymbol]): Int =
+          def nextDotI(dots: Set[? <: NamedSymbol]): Int =
             if (dots.nonEmpty) dots.maxBy(_.index).index.map(_ + 1).getOrElse(0) else 0
 
           val dotTerms = argNames
@@ -472,7 +472,7 @@ object Declaration {
             }
             Name(af.func.name, af.func.index) ->
               Signature(Some(af.func.domain), af.func.sort, args, Right(interp), UnknownLocation)
-          case SubstitutionPair(s: AtomicProgram with NamedSymbol, r) => Name(s.name, s.index) ->
+          case SubstitutionPair(s: (AtomicProgram & NamedSymbol), r) => Name(s.name, s.index) ->
               Signature(Some(Unit), s.sort, None, Right(Some(r)), UnknownLocation)
         })
         .toMap
@@ -923,7 +923,7 @@ object ArchiveParser extends ArchiveParser {
     }
 
     val elab = ListBuffer.empty[(Name, Signature)]
-    val remainder = scala.collection.mutable.Map(defs.decls.toSeq: _*)
+    val remainder = scala.collection.mutable.Map(defs.decls.toSeq*)
     defs.copy(decls =
       Declaration
         .topSort(defs.decls)

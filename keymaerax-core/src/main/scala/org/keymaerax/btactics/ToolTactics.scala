@@ -413,7 +413,7 @@ private object ToolTactics extends Logging {
           .flatMap(differentialsOf)
           .distinct
           .map(d =>
-            (p: ProvableSig) => p(EqualityTactics.abbrv(d, None).result _, 0)(HideLeft(AntePos(seq.ante.size)), 0)
+            (p: ProvableSig) => p(EqualityTactics.abbrv(d, None).result, 0)(HideLeft(AntePos(seq.ante.size)), 0)
           )
         abbrv.foldLeft(provable)({ case (p, t) => p(t, 0) })
       })
@@ -431,7 +431,7 @@ private object ToolTactics extends Logging {
           .flatMap(uninterpretedFuncsOf)
           .distinct
           .map(d =>
-            (p: ProvableSig) => p(EqualityTactics.abbrv(d, None).result _, 0)(HideLeft(AntePos(seq.ante.size)), 0)
+            (p: ProvableSig) => p(EqualityTactics.abbrv(d, None).result, 0)(HideLeft(AntePos(seq.ante.size)), 0)
           )
         abbrv.foldLeft(provable)({ case (p, t) => p(t, 0) })
       })

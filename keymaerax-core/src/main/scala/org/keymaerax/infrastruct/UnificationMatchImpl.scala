@@ -577,7 +577,7 @@ private final object RenUnificationMatch extends UnificationMatchBase {
   // incomplete unification cannot succeed during REVERIFY
   override private[infrastruct] val REVERIFY = Matcher.REVERIFY
   // Always skip unifiers except variables, which are handled by unifyVar
-  override protected def unifier(e1: Expression, e2: Expression): List[SubstRepl] = id ensures
+  override protected def unifier(e1: Expression, e2: Expression): List[SubstRepl] = id `ensures`
     (r => !e1.isInstanceOf[Variable])
   // Create unifiers for variables even if all others are skipped above
   override protected def unifyVar(x1: Variable, e2: Expression): List[SubstRepl] =
@@ -647,7 +647,7 @@ private class UnificationMatchURenAboveUSubst extends /*Insistent*/ Matcher with
     catch {
       case ex: ProverException => throw ex.inContext("match " + e1.prettyString + "\n   with  " + e2.prettyString)
     }
-  } ensures
+  } `ensures`
     (
       r => !REVERIFY || r(e1) == e2,
       "unifier match expected to unify or fail\nunify: " + e1.prettyString + "\nwith:  " + e2.prettyString +
@@ -660,7 +660,7 @@ private class UnificationMatchURenAboveUSubst extends /*Insistent*/ Matcher with
     catch {
       case ex: ProverException => throw ex.inContext("match " + e1.prettyString + "\n   with  " + e2.prettyString)
     }
-  } ensures
+  } `ensures`
     (
       r => !REVERIFY || r(e1) == e2,
       "unifier match expected to unify or fail\nunify: " + e1.prettyString + "\nwith:  " + e2.prettyString +
@@ -782,7 +782,7 @@ class UnificationMatchUSubstAboveURen extends /*Insistent*/ Matcher with Logging
     catch {
       case ex: ProverException => throw ex.inContext("match " + e1.prettyString + "\n   with  " + e2.prettyString)
     }
-  } ensures
+  } `ensures`
     (
       r => !REVERIFY || r(e1) == e2,
       "unifier match expected to unify or fail\nunify: " + e1.prettyString + "\nwith:  " + e2.prettyString +
@@ -795,7 +795,7 @@ class UnificationMatchUSubstAboveURen extends /*Insistent*/ Matcher with Logging
     catch {
       case ex: ProverException => throw ex.inContext("match " + e1.prettyString + "\n   with  " + e2.prettyString)
     }
-  } ensures
+  } `ensures`
     (
       r => !REVERIFY || r(e1) == e2,
       "unifier match expected to unify or fail\nunify: " + e1.prettyString + "\nwith:  " + e2.prettyString +

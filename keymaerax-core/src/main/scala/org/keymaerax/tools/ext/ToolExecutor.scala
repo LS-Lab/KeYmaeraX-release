@@ -82,7 +82,7 @@ class ToolExecutor(poolSize: Int) extends Logging {
         "Attempted to remove a tactic from scheduledTactics, but that tactic is not yet finished executing."
       )
     }
-  } ensures (!scheduledTasks.contains(h.id))
+  } `ensures` (!scheduledTasks.contains(h.id))
 
   /**
    * Waits for task completion (polling).

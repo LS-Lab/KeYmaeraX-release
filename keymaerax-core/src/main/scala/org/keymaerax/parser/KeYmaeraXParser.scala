@@ -771,7 +771,7 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
           Token(LBRACE, _) :+ Expr(t2, _) :+ Token(RBRACE, el) =>
         if ((followsProgram(la) || la == EOF) && la != ELSE) {
           assume(
-            op(st, tok1, List(t1.kind)).isInstanceOf[TernaryOpSpec[_]],
+            op(st, tok1, List(t1.kind)).isInstanceOf[TernaryOpSpec[?]],
             "expected ternary prefix operator\nin " + s,
           )
           val kinds = List(t1.kind, t2.kind, t2.kind)
@@ -796,7 +796,7 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
           Expr(t2, _) :+ Token(RBRACE, _) :+ Token(ELSE, _) :+ Token(LBRACE, _) :+ Expr(t3, _) :+ Token(RBRACE, el)
           // case r :+ (optok1@Token(tok1:OPERATOR,_)) :+ Expr(t1)  :+ (optok2@Token(tok2:OPERATOR,_)) :+ Expr(t2)  :+ (optok3@Token(tok3:OPERATOR,_)) :+ Expr(t3)
           if followsProgram(la) || la == EOF =>
-        assume(op(st, tok1, List(t1.kind)).isInstanceOf[TernaryOpSpec[_]], "expected ternary prefix operator\nin " + s)
+        assume(op(st, tok1, List(t1.kind)).isInstanceOf[TernaryOpSpec[?]], "expected ternary prefix operator\nin " + s)
         val kinds = List(t1.kind, t2.kind, t3.kind)
         val result = elaborate(st, optok1, op(st, tok1, kinds).asInstanceOf[TernaryOpSpec[Expression]], t1, t2, t3, lax)
         reduce(st, 11, result, sl.spanTo(el), r)
@@ -988,7 +988,7 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
         if (optok == OpSpec.sNoneUnfinished && la != EOF) shift(st)
         else {
           assume(
-            optok.isInstanceOf[BinaryOpSpec[_]],
+            optok.isInstanceOf[BinaryOpSpec[?]],
             "binary operator expected for " + optok + " since others should have been reduced\nin " + s,
           )
           if (la == LPAREN || !statementSemicolon && la == LBRACE) error(st, List(LPAREN, LBRACE))
@@ -1030,7 +1030,7 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
       // @todo review
       case r :+ (optok1 @ Token(tok: OPERATOR, sl)) :+ Expr(t1, el)
           if op(st, tok, List(t1.kind)).assoc == PrefixFormat =>
-        assume(op(st, tok, List(t1.kind)).isInstanceOf[UnaryOpSpec[_]], "expected unary prefix operator\nin " + s)
+        assume(op(st, tok, List(t1.kind)).isInstanceOf[UnaryOpSpec[?]], "expected unary prefix operator\nin " + s)
         val optok = op(st, tok, List(t1.kind))
         if (
           la == EOF || la == RPAREN || la == RBRACE || la == RBOX || la == RDDIA
@@ -1048,7 +1048,7 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
       case _ :+ Token(tok: OPERATOR, _) if op(st, tok, List(ExpressionKind)).assoc == PrefixFormat || tok == MINUS =>
         // @note MINUS will always have to be shifted before reduction, whether binary infix or unary prefix
         assert(
-          op(st, tok, List(ExpressionKind)).isInstanceOf[UnaryOpSpec[_]] || tok == MINUS,
+          op(st, tok, List(ExpressionKind)).isInstanceOf[UnaryOpSpec[?]] || tok == MINUS,
           "only unary operators are currently allowed to have prefix format\nin " + s,
         )
         if (firstExpression(la)) shift(st) else error(st, List(FIRSTEXPRESSION))
@@ -1058,7 +1058,7 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
           if op(st, tok, List(t1.kind)).assoc == PostfixFormat && tok != STAR =>
         // @note STAR from sLoop needs explicit braces
         assert(
-          op(st, tok, List(t1.kind)).isInstanceOf[UnaryOpSpec[_]],
+          op(st, tok, List(t1.kind)).isInstanceOf[UnaryOpSpec[?]],
           "only unary operators are currently allowed to have postfix format\nin " + s,
         )
         val result = elaborate(st, optok, op(st, tok, List(t1.kind)).asInstanceOf[UnaryOpSpec[Expression]], t1, lax)
@@ -1537,7 +1537,7 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
   private def reduce(st: ParseState, consuming: Int, reduced: Item, remainder: Stack[Item]): ParseState = {
     val ParseState(s, input) = st
     ParseState(s.drop(consuming) :+ reduced, input)
-  } ensures (
+  } `ensures` (
     r => r.stack.tail == remainder,
     "Expected remainder stack after consuming the indicated number of stack items.",
   )
@@ -1558,7 +1558,7 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
   private def reduce(st: ParseState, consuming: Int, reduced: Stack[Item], remainder: Stack[Item]): ParseState = {
     val ParseState(s, input) = st
     ParseState(s.drop(consuming) ++ reduced, input)
-  } ensures (
+  } `ensures` (
     r => r.stack.drop(reduced.length) == remainder,
     "Expected remainder stack after consuming the indicated number of stack items.",
   )
@@ -1736,7 +1736,7 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
       case sEOF.op => sEOF
       case o => throw ParseException("Unknown operator " + o, st)
     }
-  } ensures (
+  } `ensures` (
     r =>
       r.op == tok && r.opcode == tok.img || r == sNone || r == sNoneDone || tok.isInstanceOf[IDENT] || tok.isInstanceOf[
         NUMBER

@@ -132,7 +132,7 @@ final case class USubstRenOne(private[infrastruct] val subsDefsInput: immutable.
       "No replacement of a variable should be renamed in cyclic ways again: " + this,
     )
     rena ++ rena.map(sp => sp._2 -> sp._1)
-  } ensures
+  } `ensures`
     (
       r => rena.forall(sp => r.get(sp._1) == Some(sp._2) && r.get(sp._2) == Some(sp._1)),
       "converse renamings are contained for " + rena,

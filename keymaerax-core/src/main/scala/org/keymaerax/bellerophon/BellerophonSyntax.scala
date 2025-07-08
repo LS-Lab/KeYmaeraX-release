@@ -774,7 +774,7 @@ abstract case class DependentTactic(name: String) extends NamedBelleExpr {
 
   /** Creates a tactic by inspecting the `provable`. Default: forwards to [[computeExpr]](ProvableSig). */
   def computeExpr(provable: ProvableSig, labels: Option[List[BelleLabel]]): BelleExpr = computeExpr(provable)
-  def computeExpr(e: BelleValue with BelleThrowable): BelleExpr = throw e
+  def computeExpr(e: BelleValue & BelleThrowable): BelleExpr = throw e
 
   /** Generic computeExpr, forwards to [[computeExpr]](Provable) and [[computeExpr]](BelleThrowable). */
   final def computeExpr(v: BelleValue): BelleExpr = v match {
@@ -1003,7 +1003,7 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
     }
 
     /** @inheritdoc */
-    override final def computeExpr(e: BelleValue with BelleThrowable): BelleExpr = pt
+    override final def computeExpr(e: BelleValue & BelleThrowable): BelleExpr = pt
       .factory(locator.start)
       .computeExpr(e) | tryAllAfter(locator.copy(start = locator.start.advanceIndex(1)), cause)
   }

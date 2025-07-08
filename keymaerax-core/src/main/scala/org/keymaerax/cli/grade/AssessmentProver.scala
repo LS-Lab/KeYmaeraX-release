@@ -1978,9 +1978,9 @@ object AssessmentProver {
       .map({ case ((problem, _, pg), i) => problemTitle(problem, i) -> JsNumber(pg.map(_._2).sum) })
     val promptScoreFields = grades.flatMap(_._3.map({ case (prompt, score) => prompt.id.toString -> JsNumber(score) }))
     val jsonGrades = JsObject(
-      "problems" -> JsObject(problemFields: _*),
-      "scores" -> JsObject(scoreFields: _*),
-      "prompt_scores" -> JsObject(promptScoreFields: _*),
+      "problems" -> JsObject(problemFields*),
+      "scores" -> JsObject(scoreFields*),
+      "prompt_scores" -> JsObject(promptScoreFields*),
     )
     out.write(jsonGrades.compactPrint.getBytes("UTF-8"))
   }

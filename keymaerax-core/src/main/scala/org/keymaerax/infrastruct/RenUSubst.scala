@@ -312,25 +312,25 @@ final class FastUSubstAboveURen(private[infrastruct] val subsDefsInput: immutabl
   // direct application mechanism literally via [[USubstRen.apply]]
 
   // @todo could optimize empty usubst or empty rens to be just identity application right away
-  override def apply(t: Term): Term = new Ensures({ effective(t) }) ensures
+  override def apply(t: Term): Term = new Ensures({ effective(t) }) `ensures`
     (
       r => sameAsCore(t, r),
       "fast tactical renaming substitution has same result as slower core, if defined: " + this + " on " + t,
     )
 
-  override def apply(f: Formula): Formula = new Ensures({ effective(f) }) ensures
+  override def apply(f: Formula): Formula = new Ensures({ effective(f) }) `ensures`
     (
       r => sameAsCore(f, r),
       "fast tactical renaming substitution has same result as slower core, if defined: " + this + " on " + f,
     )
 
-  override def apply(p: Program): Program = new Ensures({ effective(p) }) ensures
+  override def apply(p: Program): Program = new Ensures({ effective(p) }) `ensures`
     (
       r => sameAsCore(p, r),
       "fast tactical renaming substitution has same result as slower core, if defined: " + this + " on " + p,
     )
 
-  override def apply(p: DifferentialProgram): DifferentialProgram = new Ensures({ effective(p) }) ensures
+  override def apply(p: DifferentialProgram): DifferentialProgram = new Ensures({ effective(p) }) `ensures`
     (
       r => sameAsCore(p, r),
       "fast tactical renaming substitution has same result as slower core, if defined: " + this + " on " + p,
@@ -596,25 +596,25 @@ final class DirectUSubstAboveURen(
     rens.map(sp => sp._1.prettyString + "~~>" + sp._2.prettyString).mkString(", ") + "}"
 
   // @todo could optimize empty usubst or empty rens to be just identity application right away
-  def apply(t: Term): Term = new Ensures({ effective(t) }) ensures
+  def apply(t: Term): Term = new Ensures({ effective(t) }) `ensures`
     (
       r => sameAsCore(t, r),
       "fast tactical renaming substitution has same result as slower core, if defined: " + this + " on " + t,
     )
 
-  def apply(f: Formula): Formula = new Ensures({ effective(f) }) ensures
+  def apply(f: Formula): Formula = new Ensures({ effective(f) }) `ensures`
     (
       r => sameAsCore(f, r),
       "fast tactical renaming substitution has same result as slower core, if defined: " + this + " on " + f,
     )
 
-  def apply(p: Program): Program = new Ensures({ effective(p) }) ensures
+  def apply(p: Program): Program = new Ensures({ effective(p) }) `ensures`
     (
       r => sameAsCore(p, r),
       "fast tactical renaming substitution has same result as slower core, if defined: " + this + " on " + p,
     )
 
-  def apply(p: DifferentialProgram): DifferentialProgram = new Ensures({ effective(p) }) ensures
+  def apply(p: DifferentialProgram): DifferentialProgram = new Ensures({ effective(p) }) `ensures`
     (
       r => sameAsCore(p, r),
       "fast tactical renaming substitution has same result as slower core, if defined: " + this + " on " + p,
@@ -810,25 +810,25 @@ final class FastURenAboveUSubst(private[infrastruct] val subsDefsInput: immutabl
   // direct application mechanism literally via [[USubstRen.apply]]
 
   // @todo could optimize empty subsDefsInput to be just identity application right away
-  override def apply(t: Term): Term = new Ensures({ effective(t) }) ensures
+  override def apply(t: Term): Term = new Ensures({ effective(t) }) `ensures`
     (
       r => sameAsCore(t, r),
       "fast tactical renaming substitution has same result as slower core, if defined: " + this + " on " + t,
     )
 
-  override def apply(f: Formula): Formula = new Ensures({ effective(f) }) ensures
+  override def apply(f: Formula): Formula = new Ensures({ effective(f) }) `ensures`
     (
       r => sameAsCore(f, r),
       "fast tactical renaming substitution has same result as slower core, if defined: " + this + " on " + f,
     )
 
-  override def apply(p: Program): Program = new Ensures({ effective(p) }) ensures
+  override def apply(p: Program): Program = new Ensures({ effective(p) }) `ensures`
     (
       r => sameAsCore(p, r),
       "fast tactical renaming substitution has same result as slower core, if defined: " + this + " on " + p,
     )
 
-  override def apply(p: DifferentialProgram): DifferentialProgram = new Ensures({ effective(p) }) ensures
+  override def apply(p: DifferentialProgram): DifferentialProgram = new Ensures({ effective(p) }) `ensures`
     (
       r => sameAsCore(p, r),
       "fast tactical renaming substitution has same result as slower core, if defined: " + this + " on " + p,

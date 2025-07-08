@@ -72,35 +72,35 @@ case class CErrorMargin(id: Int, v: CTerm, msg: String) extends CMargin {
     case _ => throw new IllegalArgumentException("Error margins can only be combined with other error margins")
   }
   override def or(other: CMargin): CMargin = other match {
-    case _: CErrorMargin => this and other // false or false <-> false & false (retain both error messages)
+    case _: CErrorMargin => this `and` other // false or false <-> false & false (retain both error messages)
     case _ => other
   }
 }
 case class CSafetyMargin(v: CExpression) extends CMargin {
   override def and(other: CMargin): CMargin = other match {
     case _: CSafetyMargin => CConjunctiveSafetyMargin(other, this)
-    case _ => other and this
+    case _ => other `and` this
   }
   override def or(other: CMargin): CMargin = other match {
     case _: CSafetyMargin => CDisjunctiveSafetyMargin(other, this)
-    case _ => other or this
+    case _ => other `or` this
   }
 }
 case class CConjunctiveSafetyMargin(l: CProgram, r: CProgram) extends CMargin {
   override def and(other: CMargin): CMargin = other match {
-    case _: CMeasureZeroMargin => other and this
-    case _: CIfThenElse => other and this
+    case _: CMeasureZeroMargin => other `and` this
+    case _: CIfThenElse => other `and` this
     case _ => CConjunctiveSafetyMargin(this, other)
   }
 
   override def or(other: CMargin): CMargin = other match {
-    case _: CMeasureZeroMargin => other or this
+    case _: CMeasureZeroMargin => other `or` this
     case _ => CDisjunctiveSafetyMargin(this, other)
   }
 }
 case class CDisjunctiveSafetyMargin(l: CProgram, r: CProgram) extends CMargin {
   override def and(other: CMargin): CMargin = other match {
-    case _: CMeasureZeroMargin => other and this
+    case _: CMeasureZeroMargin => other `and` this
     case _ => CConjunctiveSafetyMargin(this, other)
   }
 
@@ -116,8 +116,8 @@ case class CMeasureZeroMargin(v: CExpression) extends CMargin {
 }
 case class CIfThenElse(f: CFormula, ifP: CMargin, elseP: CMargin) extends CMargin {
   override def and(other: CMargin): CMargin = other match {
-    case CIfThenElse(q, c, d) => CIfThenElse(f, CIfThenElse(q, ifP and c, d), elseP)
-    case _ => copy(ifP = other and ifP)
+    case CIfThenElse(q, c, d) => CIfThenElse(f, CIfThenElse(q, ifP `and` c, d), elseP)
+    case _ => copy(ifP = other `and` ifP)
   }
   override def or(other: CMargin): CMargin = CDisjunctiveSafetyMargin(this, other)
 }

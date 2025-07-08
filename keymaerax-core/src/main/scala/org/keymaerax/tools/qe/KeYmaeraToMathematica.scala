@@ -155,7 +155,7 @@ class KeYmaeraToMathematica extends K2MConverter[KExpr] {
   }
 
   /** Convert function arguments, flattening pairs. */
-  private[this] def convertFunctionArgs(args: Term): Array[MExpr] = args match {
+  private def convertFunctionArgs(args: Term): Array[MExpr] = args match {
     case _: Pair =>
       // disassociating pairs since mapping from name to types is unique by assertion [[disjointNames]]
       val converted = convertTerm(args)

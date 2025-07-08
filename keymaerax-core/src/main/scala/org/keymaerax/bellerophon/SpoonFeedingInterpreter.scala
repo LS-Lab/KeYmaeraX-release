@@ -56,7 +56,7 @@ case class DbBranchPointer(parent: Int, branch: Int, predStep: Int, openBranches
         .map(s => DbBranchPointer(s, 0, predStep, Nil))
         .zipWithIndex
         .groupBy(_._1.parent)
-      val lhm = mutable.LinkedHashMap(grouped.toSeq.sortBy(_._2.head._2): _*)
+      val lhm = mutable.LinkedHashMap(grouped.toSeq.sortBy(_._2.head._2)*)
       lhm
         .view
         .mapValues(elems => elems.zipWithIndex.map({ case (e, i) => e._1.copy(branch = i) -> e._2 }))
@@ -117,7 +117,7 @@ case class SpoonFeedingInterpreter(
 ) extends Interpreter with Logging {
   var innerProofId: Option[Int] = None
 
-  private var runningInner: Interpreter = _
+  private var runningInner: Interpreter = scala.compiletime.uninitialized
 
   var isDead = false
 

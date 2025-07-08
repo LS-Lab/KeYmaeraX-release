@@ -23,8 +23,8 @@ class MoreParserTests2 extends AnyFlatSpec with Matchers with BeforeAndAfterEach
   private val z = Variable("z")
   private val v = Variable("v")
 
-  private var parser: Parser = _
-  private var pp: PrettyPrinter = _
+  private var parser: Parser = scala.compiletime.uninitialized
+  private var pp: PrettyPrinter = scala.compiletime.uninitialized
 
   override def beforeAll(): Unit = {
     Configuration.setConfiguration(FileConfiguration)

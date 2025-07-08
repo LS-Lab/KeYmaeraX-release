@@ -25,5 +25,5 @@ class ProofListResponse(proofs: List[(ProofPOJO, String)]) extends Response {
     )
   })
 
-  def getJson: JsValue = JsArray(objects: _*)
+  def getJson: JsValue = JsArray(objects*)
 }

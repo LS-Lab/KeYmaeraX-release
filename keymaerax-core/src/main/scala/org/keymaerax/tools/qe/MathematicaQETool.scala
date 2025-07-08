@@ -48,7 +48,7 @@ class MathematicaQETool(val link: MathematicaCommandRunner) extends QETool {
       if (qeOptions.nonEmpty) compoundExpr(
         MathematicaOpSpec(
           symbol("SetSystemOptions")
-        )(rule(string("InequalitySolvingOptions"), list(qeOptions: _*)) :: Nil),
+        )(rule(string("InequalitySolvingOptions"), list(qeOptions*)) :: Nil),
         qe(formula),
       )
       else qe(formula)

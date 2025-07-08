@@ -52,7 +52,7 @@ class CounterExampleResponse(
               "value" -> JsString(e._2.prettyString.replace("()", "")),
             )
           )
-          .toList: _*
+          .toList*
       ),
       "speculatedValues" -> JsArray(
         boundCex
@@ -62,7 +62,7 @@ class CounterExampleResponse(
               "value" -> JsString(e._2.prettyString.replace("()", "")),
             )
           )
-          .toList: _*
+          .toList*
       ),
     )
   }

@@ -15,9 +15,9 @@ case class NodeChildrenResponse(proofId: String, parent: ProofTreeNode, marginLe
     "proofId" -> JsString(proofId),
     "parent" -> JsObject(
       "id" -> JsString(parent.id.toString),
-      "children" -> JsArray(parent.children.map(c => JsString(c.id.toString)): _*),
+      "children" -> JsArray(parent.children.map(c => JsString(c.id.toString))*),
     ),
-    "newNodes" -> JsArray(nodesJson(parent.children, marginLeft, marginRight).map(_._2): _*),
+    "newNodes" -> JsArray(nodesJson(parent.children, marginLeft, marginRight).map(_._2)*),
     "progress" -> JsBoolean(true),
   )
 }

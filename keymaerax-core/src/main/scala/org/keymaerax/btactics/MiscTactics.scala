@@ -173,7 +173,7 @@ object DebuggingTactics extends Logging {
   ): DependentPositionWithAppliedInputTactic = {
     import TacticFactory.*
     // @todo serialize exception
-    ("assert" byWithInputs
+    ("assert" `byWithInputs`
       (
         fml :: message :: Nil,
         (pos: Position, _: Sequent) => {
@@ -290,7 +290,7 @@ object DebuggingTactics extends Logging {
   ): DependentPositionWithAppliedInputTactic = {
     import TacticFactory.*
     // @todo serialize exception
-    ("assert" byWithInputs
+    ("assert" `byWithInputs`
       (
         expected :: message :: Nil,
         (pos: Position, _: Sequent) => {
@@ -473,7 +473,7 @@ object Idioms {
         exhaustive & TactixLibrary.done | ident,
     )
   }
-  def cases(c1: (Case, BelleExpr), cs: (Case, BelleExpr)*): BelleExpr = cases()(c1, cs: _*)
+  def cases(c1: (Case, BelleExpr), cs: (Case, BelleExpr)*): BelleExpr = cases()(c1, cs*)
 
   /**
    * Proves by lemma, if lemma `lemmaName` exists, else by tactic `t` and stores the proof found by `t` as lemma
@@ -550,7 +550,7 @@ object Idioms {
 
   /** shift(shift, t) does t shifted from position p to shift(p) */
   @nowarn("cat=deprecation&origin=org.keymaerax.infrastruct.Position.navigate")
-  def shift[T <: BelleExpr](shift: PosInExpr => PosInExpr, t: AtPosition[T]): DependentPositionTactic = ANON by
+  def shift[T <: BelleExpr](shift: PosInExpr => PosInExpr, t: AtPosition[T]): DependentPositionTactic = ANON `by`
     ((pos: Position, _: Sequent) => t(pos.navigate(shift(pos.inExpr))))
 
   /** shift(child, t) does t to positions shifted by child */
@@ -592,7 +592,7 @@ object Idioms {
   }
 
   /** Search for formula `f` in the sequent and apply tactic `t` at subposition `in` of the found position. */
-  def searchApplyIn(f: Formula, t: DependentPositionTactic, in: PosInExpr): DependentTactic = ANON by
+  def searchApplyIn(f: Formula, t: DependentPositionTactic, in: PosInExpr): DependentTactic = ANON `by`
     ((seq: Sequent) => {
       // @todo Extend position locators to sub-positions, e.g., 'L.1.0.1, 'Llast.1.1
       val subPos: Position = {
@@ -635,9 +635,9 @@ object TacticFactory {
     /** Creates a named tactic */
     def by(t: BelleExpr): BelleExpr = NamedTactic(name, t)
     // Renamed version of by(BelleExpr): BelleExpr for name consistency
-    def forward(t: BelleExpr): BelleExpr = name by t
-    def forward(t: StringInputTactic): StringInputTactic = name byWithInputsS (t.inputs, ps => t.result(ps))
-    def forward(t: BuiltInTactic): BuiltInTactic = name by ((ps: ProvableSig) => t.result(ps))
+    def forward(t: BelleExpr): BelleExpr = name `by` t
+    def forward(t: StringInputTactic): StringInputTactic = name `byWithInputsS` (t.inputs, ps => t.result(ps))
+    def forward(t: BuiltInTactic): BuiltInTactic = name `by` ((ps: ProvableSig) => t.result(ps))
     def forward(t: BuiltInPositionTactic): BuiltInPositionTactic =
       by((pr: ProvableSig, pos: Position) => t.computeResult(pr, pos))
     def forward(t: BuiltInLeftTactic): BuiltInLeftTactic =
@@ -765,7 +765,7 @@ object TacticFactory {
     def byWithInputs(inputs: Seq[Any], t: => BelleExpr): InputTactic = new InputTactic(name, inputs) {
       override def computeExpr(): BelleExpr = t
     }
-    def byWithInputsNoop(inputs: Seq[Any], t: => BelleExpr): InputTactic with NoOpTactic =
+    def byWithInputsNoop(inputs: Seq[Any], t: => BelleExpr): InputTactic & NoOpTactic =
       new InputTactic(name, inputs) with NoOpTactic {
         override def computeExpr(): BelleExpr = t
       }
@@ -1002,54 +1002,54 @@ object TacticFactory {
       throw new IllFormedTacticApplicationException(name + " only at top-level, but was applied at " + pos.prettyString)
 
   // augment anonymous tactics
-  def anon(t: BelleExpr): BelleExpr = ANON by t
-  def anon(t: ProvableSig => ProvableSig): BuiltInTactic = ANON by t
+  def anon(t: BelleExpr): BelleExpr = ANON `by` t
+  def anon(t: ProvableSig => ProvableSig): BuiltInTactic = ANON `by` t
   def anonnoop(t: ProvableSig => ProvableSig): BuiltInTactic = new BuiltInTactic(ANON) with NoOpTactic {
     @inline
     override def result(provable: ProvableSig): ProvableSig = t(provable)
   }
-  def anon(t: (ProvableSig, Position) => ProvableSig): BuiltInPositionTactic = ANON by t
-  def anon(t: (ProvableSig, AntePosition) => ProvableSig): BuiltInLeftTactic = ANON by t
-  def anon(t: (ProvableSig, SuccPosition) => ProvableSig): BuiltInRightTactic = ANON by t
-  def anon(t: (ProvableSig, Position, Position) => ProvableSig): BuiltInTwoPositionTactic = ANON by t
+  def anon(t: (ProvableSig, Position) => ProvableSig): BuiltInPositionTactic = ANON `by` t
+  def anon(t: (ProvableSig, AntePosition) => ProvableSig): BuiltInLeftTactic = ANON `by` t
+  def anon(t: (ProvableSig, SuccPosition) => ProvableSig): BuiltInRightTactic = ANON `by` t
+  def anon(t: (ProvableSig, Position, Position) => ProvableSig): BuiltInTwoPositionTactic = ANON `by` t
   @nowarn("cat=deprecation&origin=org.keymaerax.bellerophon.DependentTwoPositionTactic")
-  def anon(t: (ProvableSig, Position, Position) => BelleExpr): DependentTwoPositionTactic = ANON byTactic t
-  def anon(t: (Position, Sequent) => BelleExpr): DependentPositionTactic = ANON by t
-  def anon(t: (Position, Sequent, Declaration) => BelleExpr): DependentPositionTactic = ANON by t
-  def anon(t: Position => BelleExpr): DependentPositionTactic = ANON by t
+  def anon(t: (ProvableSig, Position, Position) => BelleExpr): DependentTwoPositionTactic = ANON `byTactic` t
+  def anon(t: (Position, Sequent) => BelleExpr): DependentPositionTactic = ANON `by` t
+  def anon(t: (Position, Sequent, Declaration) => BelleExpr): DependentPositionTactic = ANON `by` t
+  def anon(t: Position => BelleExpr): DependentPositionTactic = ANON `by` t
   @nowarn("cat=deprecation&origin=org.keymaerax.bellerophon.DependentTwoPositionTactic")
-  def anonLR(t: (AntePosition, SuccPosition) => BelleExpr): DependentTwoPositionTactic = ANON byLR t
-  def anonL(t: AntePosition => BelleExpr): DependentPositionTactic = ANON byL t
-  def anonR(t: SuccPosition => BelleExpr): DependentPositionTactic = ANON byR t
-  def anon(t: Sequent => BelleExpr): DependentTactic = ANON by t
-  def anons(t: ProvableSig => BelleExpr): DependentTactic = ANON bys t
-  def coreanon(t: (ProvableSig, AntePosition) => ProvableSig): CoreLeftTactic = ANON coreby t
-  def coreanon(t: (ProvableSig, SuccPosition) => ProvableSig): CoreRightTactic = ANON coreby t
+  def anonLR(t: (AntePosition, SuccPosition) => BelleExpr): DependentTwoPositionTactic = ANON `byLR` t
+  def anonL(t: AntePosition => BelleExpr): DependentPositionTactic = ANON `byL` t
+  def anonR(t: SuccPosition => BelleExpr): DependentPositionTactic = ANON `byR` t
+  def anon(t: Sequent => BelleExpr): DependentTactic = ANON `by` t
+  def anons(t: ProvableSig => BelleExpr): DependentTactic = ANON `bys` t
+  def coreanon(t: (ProvableSig, AntePosition) => ProvableSig): CoreLeftTactic = ANON `coreby` t
+  def coreanon(t: (ProvableSig, SuccPosition) => ProvableSig): CoreRightTactic = ANON `coreby` t
   /* Function [[inputanon]]  should never be executed. Write these in @Tactic tactics and @Tactic
    * will transform them to the correct byWithInputs */
-  def inputanon(t: Sequent => BelleExpr): InputTactic = ANON byWithInputs (Nil, t)
-  def inputanonS(t: ProvableSig => ProvableSig): StringInputTactic = ANON byWithInputsS (Nil, t)
-  def inputanonP(t: ProvableSig => ProvableSig): InputTactic = ANON byWithInputsP (Nil, t)
-  def inputanon(t: Position => BelleExpr): DependentPositionWithAppliedInputTactic = ANON byWithInputs (Nil, t)
-  def inputanon(t: (Position, Sequent) => BelleExpr): DependentPositionWithAppliedInputTactic = ANON byWithInputs
+  def inputanon(t: Sequent => BelleExpr): InputTactic = ANON `byWithInputs` (Nil, t)
+  def inputanonS(t: ProvableSig => ProvableSig): StringInputTactic = ANON `byWithInputsS` (Nil, t)
+  def inputanonP(t: ProvableSig => ProvableSig): InputTactic = ANON `byWithInputsP` (Nil, t)
+  def inputanon(t: Position => BelleExpr): DependentPositionWithAppliedInputTactic = ANON `byWithInputs` (Nil, t)
+  def inputanon(t: (Position, Sequent) => BelleExpr): DependentPositionWithAppliedInputTactic = ANON `byWithInputs`
     (Nil, t)
   def inputanon(t: (Position, Sequent, Declaration) => BelleExpr): DependentPositionWithAppliedInputTactic =
-    ANON byWithInputs (Nil, t)
+    ANON `byWithInputs` (Nil, t)
   def inputanonP(t: (ProvableSig, Position) => ProvableSig): DependentPositionWithAppliedInputTactic =
-    ANON byWithInputsP (Nil: Seq[Any], t)
+    ANON `byWithInputsP` (Nil: Seq[Any], t)
   def inputanonR(t: (ProvableSig, SuccPosition) => ProvableSig): DependentPositionWithAppliedInputTactic =
-    ANON corebyWithInputsR (Nil: Seq[Any], t)
+    ANON `corebyWithInputsR` (Nil: Seq[Any], t)
   def inputanonL(t: (ProvableSig, AntePosition) => ProvableSig): DependentPositionWithAppliedInputTactic =
-    ANON corebyWithInputsL (Nil: Seq[Any], t)
-  def inputanon(t: => BelleExpr): InputTactic = ANON byWithInputs (Nil, t)
-  def inputanonnoop(t: => BelleExpr): InputTactic = ANON byWithInputsNoop (Nil, t)
+    ANON `corebyWithInputsL` (Nil: Seq[Any], t)
+  def inputanon(t: => BelleExpr): InputTactic = ANON `byWithInputs` (Nil, t)
+  def inputanonnoop(t: => BelleExpr): InputTactic = ANON `byWithInputsNoop` (Nil, t)
 
   def internal(name: String, t: Sequent => BelleExpr): DependentTactic = {
     assert(
       BelleExpr.isInternal(name),
       "Name is not an internal name, must start with " + BelleExpr.INTERNAL_NAME_PREFIX,
     )
-    name by t
+    name `by` t
   }
 
   def internal(name: String, t: ProvableSig => ProvableSig): BuiltInTactic = {
@@ -1057,6 +1057,6 @@ object TacticFactory {
       BelleExpr.isInternal(name),
       "Name is not an internal name, must start with " + BelleExpr.INTERNAL_NAME_PREFIX,
     )
-    name by t
+    name `by` t
   }
 }

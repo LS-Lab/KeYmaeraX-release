@@ -185,7 +185,7 @@ object Options {
 
     implicit val toolNameRead: scopt.Read[ToolName.Value] = scopt.Read.reads(ToolName.withName)
 
-    val headerAndSpecialOptions = Seq[OParser[_, Options]](
+    val headerAndSpecialOptions = Seq[OParser[?, Options]](
       head(
         s"""$FullNameAndVersion
            |$ShortCopyright
@@ -205,7 +205,7 @@ object Options {
         .text(wrap("Make the output more verbose. Repeat to increase verbosity further.")),
     )
 
-    val flagOptions = Seq[OParser[_, Options]](
+    val flagOptions = Seq[OParser[?, Options]](
       opt[String]("jlink")
         .action((x, o) => o.copy(jlink = Some(x)))
         .valueName("path/to/jlinkNativeLib")
@@ -270,7 +270,7 @@ object Options {
         .text(wrap("Path to Z3 executable.")),
     )
 
-    val coreCommands = Seq[OParser[_, Options]](
+    val coreCommands = Seq[OParser[?, Options]](
       note(""),
       cmd("setup")
         .action((_, o) => o.copy(command = Some(Command.Setup)))
@@ -392,7 +392,7 @@ object Options {
         ),
     )
 
-    val webuiCommands = Seq[OParser[_, Options]](
+    val webuiCommands = Seq[OParser[?, Options]](
       note(""),
       cmd("codegen")
         .action((_, o) => o.copy(command = Some(Command.Codegen())))
@@ -475,7 +475,7 @@ object Options {
       if (webui) { headerAndSpecialOptions ++ flagOptions ++ coreCommands ++ webuiCommands }
       else { headerAndSpecialOptions ++ flagOptions ++ coreCommands }
 
-    OParser.sequence(programName(name), parsers: _*)
+    OParser.sequence(programName(name), parsers*)
   }
 
   def parseArgs(args: Seq[String], name: String, webui: Boolean): Options = {

@@ -74,7 +74,7 @@ case class BooleanResponse(flag: Boolean, errorText: Option[String] = None) exte
 }
 
 class PlainResponse(data: (String, JsValue)*) extends Response {
-  override def getJson: JsValue = JsObject(data: _*)
+  override def getJson: JsValue = JsObject(data*)
 }
 
 case class CreatedIdResponse(id: String) extends Response {
@@ -186,7 +186,7 @@ object Helpers {
       "plain" -> (if (isEditable || q.pos.isEmpty) JsString(plainText) else JsNull),
       "step" -> JsString(if (hasStep) "has-step" else "no-step"),
       "editable" -> JsString(if (isEditable) "editable" else "not-editable"),
-      "children" -> JsArray(children: _*),
+      "children" -> JsArray(children*),
     )
   }
 
@@ -441,7 +441,7 @@ object Helpers {
         case Some(goal) => sequentJson(goal, marginLeft, marginRight)
       }
       else JsNull
-    val childrenIds = JsArray(node.children.map(s => JsString(s.id.toString)): _*)
+    val childrenIds = JsArray(node.children.map(s => JsString(s.id.toString))*)
     val parent = node.parent.map(n => JsString(n.id.toString)).getOrElse(JsNull)
 
     val posLocator =
@@ -466,10 +466,10 @@ object Helpers {
     )
   }
 
-  def sectionJson(section: List[String]): JsValue = { JsObject("path" -> JsArray(section.map(JsString(_)): _*)) }
+  def sectionJson(section: List[String]): JsValue = { JsObject("path" -> JsArray(section.map(JsString(_))*)) }
 
   def deductionJson(deduction: List[List[String]]): JsValue =
-    JsObject("sections" -> JsArray(deduction.map(sectionJson): _*))
+    JsObject("sections" -> JsArray(deduction.map(sectionJson)*))
 
   def itemJson(item: AgendaItem): (String, JsValue) = {
     val value = JsObject(

@@ -93,7 +93,7 @@ class BellerophonTacticExecutor(poolSize: Int) {
         )
       }
     }
-  } ensures (!scheduledTactics.contains(id))
+  } `ensures` (!scheduledTactics.contains(id))
 
   /**
    * @param id The schedule id of the tactic to remove.

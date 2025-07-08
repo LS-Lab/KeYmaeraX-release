@@ -45,9 +45,9 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
   private def invexsymbol(s: String) = symbol(INVARIANTEXTRACTOR_NAMESPACE + s)
 
   private val pegasusRelativePath = PegasusInstaller.pegasusRelativeResourcePath
-  private val joinedPath = fileNameJoin(list(
-    Configuration.sanitizedPathSegments(Configuration.KEYMAERAX_HOME_PATH, pegasusRelativePath).map(string).toSeq: _*
-  ))
+  private val joinedPath = fileNameJoin(
+    list(Configuration.sanitizedPathSegments(Configuration.KEYMAERAX_HOME_PATH, pegasusRelativePath).map(string).toSeq*)
+  )
   private val setPathsCmd = compoundExpression(setDirectory(joinedPath), appendTo(path.op, joinedPath))
 
   /** @inheritdoc */
@@ -78,8 +78,8 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
 //
 //    if (isTimeTriggered) throw new TacticInapplicableFailure("Pegasus does not yet support time-triggered systems")
 
-    val vars = list(primedVars.map(k2m): _*)
-    val vectorField = list(atomicODEs.map(o => k2m(o.e)): _*)
+    val vars = list(primedVars.map(k2m)*)
+    val vectorField = list(atomicODEs.map(o => k2m(o.e))*)
     val problem = list(
       k2m(
         assumptions.flatMap(FormulaTools.conjuncts).filter(_.isPredicateFreeFOL).reduceOption(And.apply).getOrElse(True)
@@ -190,8 +190,8 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
   override def lzzCheck(ode: ODESystem, inv: Formula): Boolean = {
     timeout = Configuration.Pegasus.invCheckTimeout(-1)
 
-    val vars = list(DifferentialHelper.getPrimedVariables(ode).map(k2m): _*)
-    val vectorField = list(DifferentialHelper.atomicOdes(ode).map(o => k2m(o.e)): _*)
+    val vars = list(DifferentialHelper.getPrimedVariables(ode).map(k2m)*)
+    val vectorField = list(DifferentialHelper.atomicOdes(ode).map(o => k2m(o.e))*)
     val command = compoundExpression(
       setPathsCmd,
       needs(string(LZZ_NAMESPACE), fileNameJoin(list(string("Primitives"), string("LZZ.m")))),
@@ -237,9 +237,9 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
         case e => e
       })
 
-    val odeVars = list(DifferentialHelper.getPrimedVariables(ode).map(k2m): _*)
-    val varsList = list(vars.map(k2m): _*)
-    val vectorField = list(rhs.map(k2m): _*)
+    val odeVars = list(DifferentialHelper.getPrimedVariables(ode).map(k2m)*)
+    val varsList = list(vars.map(k2m)*)
+    val vectorField = list(rhs.map(k2m)*)
 
     val command = compoundExpression(
       setPathsCmd,
@@ -304,8 +304,8 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
 
     timeout = Configuration.Pegasus.invCheckTimeout(-1)
 
-    val odeVars = list(DifferentialHelper.getPrimedVariables(ode).map(k2m): _*)
-    val vectorField = list(DifferentialHelper.atomicOdes(ode).map(_.e).map(k2m): _*)
+    val odeVars = list(DifferentialHelper.getPrimedVariables(ode).map(k2m)*)
+    val vectorField = list(DifferentialHelper.atomicOdes(ode).map(_.e).map(k2m)*)
     val command = compoundExpression(
       setPathsCmd,
       needs(string(REFUTE_NAMESPACE), string("Refute.m")),
@@ -351,8 +351,8 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
       "Unable to generate ODE conditions, expected FOL assumptions but got " + assumptions,
     )
 
-    val vars = list(DifferentialHelper.getPrimedVariables(ode).map(k2m): _*)
-    val vectorField = list(DifferentialHelper.atomicOdes(ode).map(_.e).map(k2m): _*)
+    val vars = list(DifferentialHelper.getPrimedVariables(ode).map(k2m)*)
+    val vectorField = list(DifferentialHelper.atomicOdes(ode).map(_.e).map(k2m)*)
     val problem = list(
       k2m(assumptions.reduceOption(And.apply).getOrElse(True)),
       list(vectorField, vars, k2m(ode.constraint)),

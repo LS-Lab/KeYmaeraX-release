@@ -86,13 +86,13 @@ class HashTests extends AnyFlatSpec with Matchers {
       .toList
     val map: Map[Expression, Int] = data.map(e => (e, e.hashCode())).toMap
     testmap(data, other, map)
-    val map2: ListMap[Expression, Int] = ListMap(data.map(e => e -> e.hashCode): _*)
+    val map2: ListMap[Expression, Int] = ListMap(data.map(e => e -> e.hashCode)*)
     testmap(data, other, map2)
-    val map3: HashMap[Expression, Int] = HashMap(data.map(e => e -> e.hashCode): _*)
+    val map3: HashMap[Expression, Int] = HashMap(data.map(e => e -> e.hashCode)*)
     testmap(data, other, map3)
-    val map5: mutable.HashMap[Expression, Int] = mutable.HashMap(data.map(e => e -> e.hashCode): _*)
+    val map5: mutable.HashMap[Expression, Int] = mutable.HashMap(data.map(e => e -> e.hashCode)*)
     testmapM(data, other, map5)
-    val map6: mutable.LinkedHashMap[Expression, Int] = mutable.LinkedHashMap(data.map(e => e -> e.hashCode): _*)
+    val map6: mutable.LinkedHashMap[Expression, Int] = mutable.LinkedHashMap(data.map(e => e -> e.hashCode)*)
     testmapM(data, other, map6)
   }
 

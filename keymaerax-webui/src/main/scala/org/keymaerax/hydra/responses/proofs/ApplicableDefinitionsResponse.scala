@@ -31,5 +31,5 @@ case class ApplicableDefinitionsResponse(defs: List[(NamedSymbol, Expression, Op
     )
   }
 
-  def getJson: JsValue = JsArray(defs.map(d => getDefJson(d._1, d._2, d._3, d._4)): _*)
+  def getJson: JsValue = JsArray(defs.map(d => getDefJson(d._1, d._2, d._3, d._4))*)
 }

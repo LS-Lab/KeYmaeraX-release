@@ -48,7 +48,7 @@ class MathematicaSOSsolveTool(override val link: MathematicaLink)
 
   private val sossolvePath = SOSsolveInstaller.sossolveRelativeResourcePath
   private val joinedPath = fileNameJoin(
-    list(Configuration.sanitizedPathSegments(Configuration.KEYMAERAX_HOME_PATH, sossolvePath).map(string).toSeq: _*)
+    list(Configuration.sanitizedPathSegments(Configuration.KEYMAERAX_HOME_PATH, sossolvePath).map(string).toSeq*)
   )
   private val setPathsCmd = compoundExpression(setDirectory(joinedPath), appendTo(path.op, joinedPath))
 
@@ -82,8 +82,8 @@ class MathematicaSOSsolveTool(override val link: MathematicaLink)
   }
 
   def sosSolve(polys: List[Term], vars: List[Term], degree: Int, timeout: Option[Int]): Result = {
-    val mPolys = list(polys.map(k2mU): _*)
-    val mVars = list(vars.map(k2mU): _*)
+    val mPolys = list(polys.map(k2mU)*)
+    val mVars = list(vars.map(k2mU)*)
     val mDegree = int(degree)
     val command = quiet(compoundExpression(
       setPathsCmd,

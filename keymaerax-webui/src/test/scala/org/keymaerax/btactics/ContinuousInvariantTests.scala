@@ -78,7 +78,7 @@ class ContinuousInvariantTests extends TacticTestBase {
         Configuration.Keys.Pegasus.Darboux.TIMEOUT -> "30",
         Configuration.Keys.Pegasus.Barrier.TIMEOUT -> "-1",
       )) {
-        forEvery(Table(("Name", "Model", "Definitions"), entries.map(e => (e.name, e.model, e.defs)): _*).filter({
+        forEvery(Table(("Name", "Model", "Definitions"), entries.map(e => (e.name, e.model, e.defs))*).filter({
           case (_, Imply(_, Box(_: ODESystem, _)), _) => true
           case _ => false
         })) { (name, model, defs) =>
@@ -117,7 +117,7 @@ class ContinuousInvariantTests extends TacticTestBase {
 
       // forEvery swallows test timeout of failAfter; failAfter signaler interrupts thread, which we pick up with whenever
       // to skip the remaining entries
-      forEvery(Table(("Name", "Model"), entries.map(e => e.name -> e.defs.exhaustiveSubst(e.model)): _*).filter({
+      forEvery(Table(("Name", "Model"), entries.map(e => e.name -> e.defs.exhaustiveSubst(e.model))*).filter({
         case (_, Imply(_, Box(_: ODESystem, _))) => true
         case _ => false
       })) { (name, model) =>
@@ -167,7 +167,7 @@ class ContinuousInvariantTests extends TacticTestBase {
       val entries = ArchiveParser.parse(
         Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/benchmarks/nonlinear.kyx")).mkString
       )
-      forEvery(Table(("Name", "Model", "Definitions"), entries.map(e => (e.name, e.model, e.defs)): _*)) {
+      forEvery(Table(("Name", "Model", "Definitions"), entries.map(e => (e.name, e.model, e.defs))*)) {
         (name, model, defs) =>
           whenever(tool.isInitialized) {
             println("\n" + name)

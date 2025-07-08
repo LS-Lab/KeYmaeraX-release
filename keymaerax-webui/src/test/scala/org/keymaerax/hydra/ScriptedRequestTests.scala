@@ -110,7 +110,7 @@ class ScriptedRequestTests extends TacticTestBase {
       val t = SessionManager.token(SessionManager.add(db.user))
       SessionManager.session(t) += proofId.toString ->
         ProofSession(proofId.toString, FixedGenerator(Nil), FixedGenerator(Nil), Declaration(Map()))
-      val tacticRunner = runTactic(db, t, proofId) _
+      val tacticRunner = runTactic(db, t, proofId)
 
       tacticRunner("()", implyR(1)) should have(
         Symbol("proofId")(proofId.toString),
@@ -142,7 +142,7 @@ class ScriptedRequestTests extends TacticTestBase {
       val t = SessionManager.token(SessionManager.add(db.user))
       SessionManager.session(t) += proofId.toString ->
         ProofSession(proofId.toString, FixedGenerator(Nil), FixedGenerator(Nil), Declaration(Map()))
-      val tacticRunner = runTactic(db, t, proofId) _
+      val tacticRunner = runTactic(db, t, proofId)
 
       tacticRunner("()", QE) should have(
         Symbol("proofId")(proofId.toString),
@@ -172,7 +172,7 @@ class ScriptedRequestTests extends TacticTestBase {
       val t = SessionManager.token(SessionManager.add(db.user))
       SessionManager.session(t) += proofId.toString ->
         ProofSession(proofId.toString, FixedGenerator(Nil), FixedGenerator(Nil), Declaration(Map()))
-      val tacticRunner = runTactic(db, t, proofId) _
+      val tacticRunner = runTactic(db, t, proofId)
 
       tacticRunner("()", implyR(1))
       inside(new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponse(t)) {
@@ -207,7 +207,7 @@ class ScriptedRequestTests extends TacticTestBase {
       val t = SessionManager.token(SessionManager.add(db.user))
       SessionManager.session(t) += proofId.toString ->
         ProofSession(proofId.toString, FixedGenerator(Nil), FixedGenerator(Nil), Declaration(Map()))
-      val tacticRunner = runTactic(db, t, proofId) _
+      val tacticRunner = runTactic(db, t, proofId)
 
       tacticRunner("()", implyR(1))
       tacticRunner("(1,0)", orR(1))
@@ -234,7 +234,7 @@ class ScriptedRequestTests extends TacticTestBase {
       val t = SessionManager.token(SessionManager.add(db.user))
       SessionManager.session(t) += proofId.toString ->
         ProofSession(proofId.toString, FixedGenerator(Nil), FixedGenerator(Nil), Declaration(Map()))
-      val tacticRunner = runTactic(db, t, proofId) _
+      val tacticRunner = runTactic(db, t, proofId)
 
       tacticRunner("()", implyR(1))
       tacticRunner("(1,0)", solve(1, 1 :: Nil))
@@ -255,7 +255,7 @@ class ScriptedRequestTests extends TacticTestBase {
       val t = SessionManager.token(SessionManager.add(db.user))
       SessionManager.session(t) += proofId.toString ->
         ProofSession(proofId.toString, FixedGenerator(Nil), FixedGenerator(Nil), Declaration(Map()))
-      val tacticRunner = runTactic(db, t, proofId) _
+      val tacticRunner = runTactic(db, t, proofId)
 
       tacticRunner("()", implyR(1))
       tacticRunner("(1,0)", HybridProgramCalculus.loop("x>=1".asFormula)(1))
@@ -311,7 +311,7 @@ class ScriptedRequestTests extends TacticTestBase {
       val t = SessionManager.token(SessionManager.add(db.user))
       SessionManager.session(t) += proofId.toString ->
         ProofSession(proofId.toString, FixedGenerator(Nil), FixedGenerator(Nil), Declaration(Map()))
-      val tacticRunner = runTactic(db, t, proofId) _
+      val tacticRunner = runTactic(db, t, proofId)
 
       tacticRunner("()", hideR(1)) should have(
         Symbol("proofId")(proofId.toString),
@@ -340,7 +340,7 @@ class ScriptedRequestTests extends TacticTestBase {
       val t = SessionManager.token(SessionManager.add(db.user))
       SessionManager.session(t) += proofId.toString ->
         ProofSession(proofId.toString, FixedGenerator(Nil), FixedGenerator(Nil), Declaration(Map()))
-      val tacticRunner = runTactic(db, t, proofId) _
+      val tacticRunner = runTactic(db, t, proofId)
 
       tacticRunner("()", andR(1)) should have(
         Symbol("proofId")(proofId.toString),
@@ -373,7 +373,7 @@ class ScriptedRequestTests extends TacticTestBase {
       val t = SessionManager.token(SessionManager.add(db.user))
       SessionManager.session(t) += proofId.toString ->
         ProofSession(proofId.toString, FixedGenerator(Nil), FixedGenerator(Nil), Declaration(Map()))
-      val tacticRunner = runTactic(db, t, proofId) _
+      val tacticRunner = runTactic(db, t, proofId)
 
       tacticRunner("()", andR(1) < (UnifyUSCalculus.skip, prop)) should have(
         Symbol("proofId")(proofId.toString),
@@ -414,7 +414,7 @@ class ScriptedRequestTests extends TacticTestBase {
       val t = SessionManager.token(SessionManager.add(db.user))
       SessionManager.session(t) += proofId.toString ->
         ProofSession(proofId.toString, FixedGenerator(Nil), FixedGenerator(Nil), Declaration(Map()))
-      val tacticRunner = runTactic(db, t, proofId) _
+      val tacticRunner = runTactic(db, t, proofId)
 
       tacticRunner("()", andR(1))
       tacticRunner("(1,1)", prop)
@@ -455,7 +455,7 @@ class ScriptedRequestTests extends TacticTestBase {
       val t = SessionManager.token(SessionManager.add(db.user))
       SessionManager.session(t) += proofId.toString ->
         ProofSession(proofId.toString, FixedGenerator(Nil), FixedGenerator(Nil), Declaration(Map()))
-      val tacticRunner = runTactic(db, t, proofId) _
+      val tacticRunner = runTactic(db, t, proofId)
 
       tacticRunner("()", UnifyUSCalculus.nil)
       tacticRunner("(1,0)", andR(1))
@@ -498,7 +498,7 @@ class ScriptedRequestTests extends TacticTestBase {
       val t = SessionManager.token(SessionManager.add(db.user))
       SessionManager.session(t) += proofId.toString ->
         ProofSession(proofId.toString, TactixLibrary.invGenerator, FixedGenerator(Nil), Declaration(Map()))
-      val tacticRunner = runTactic(db, t, proofId) _
+      val tacticRunner = runTactic(db, t, proofId)
 
       tacticRunner("()", auto(TactixLibrary.invGenerator, None)) should have(
         Symbol("proofId")(proofId.toString),
@@ -521,7 +521,7 @@ class ScriptedRequestTests extends TacticTestBase {
       val t = SessionManager.token(SessionManager.add(db.user))
       SessionManager.session(t) += proofId.toString ->
         ProofSession(proofId.toString, FixedGenerator(Nil), FixedGenerator(Nil), Declaration(Map()))
-      val tacticRunner = runTactic(db, t, proofId) _
+      val tacticRunner = runTactic(db, t, proofId)
 
       tacticRunner("()", dC("[{x'=2,y'=3}]P(x,y)".asFormula :: Nil)(1)) should have(
         Symbol("proofId")(proofId.toString),
@@ -544,7 +544,7 @@ class ScriptedRequestTests extends TacticTestBase {
       val t = SessionManager.token(SessionManager.add(db.user))
       SessionManager.session(t) += proofId.toString ->
         ProofSession(proofId.toString, FixedGenerator(Nil), FixedGenerator(Nil), Declaration(Map()))
-      val tacticRunner = runTactic(db, t, proofId) _
+      val tacticRunner = runTactic(db, t, proofId)
 
       tacticRunner("()", ArchiveParser.tacticParser("""universalClosure("x::y::nil",1)""")) should have(
         Symbol("proofId")(proofId.toString),
@@ -566,7 +566,7 @@ class ScriptedRequestTests extends TacticTestBase {
       val t = SessionManager.token(SessionManager.add(db.user))
       SessionManager.session(t) += proofId.toString ->
         ProofSession(proofId.toString, FixedGenerator(Nil), FixedGenerator(Nil), Declaration(Map()))
-      val tacticRunner = runTactic(db, t, proofId) _
+      val tacticRunner = runTactic(db, t, proofId)
 
       tacticRunner("()", ArchiveParser.tacticParser("""dC("x>=1::x>=2::nil",1)""")) should have(
         Symbol("proofId")(proofId.toString),
@@ -615,7 +615,7 @@ class ScriptedRequestTests extends TacticTestBase {
         Declaration(Map(Name("x", None) -> Signature(None, Real, None, Right(None), UnknownLocation))),
       )
       val proofSession = () => SessionManager.session(t)(proofId.toString).asInstanceOf[ProofSession]
-      val tacticRunner = runTactic(db, t, proofId) _
+      val tacticRunner = runTactic(db, t, proofId)
 
       tacticRunner("()", implyR(1) & cut("\\exists x0 x0=x".asFormula))
       // proof session should pick up new variable introduced by cut
@@ -663,7 +663,7 @@ class ScriptedRequestTests extends TacticTestBase {
         val t = SessionManager.token(SessionManager.add(db.user))
         SessionManager.session(t) += proofId.toString ->
           ProofSession(proofId.toString, FixedGenerator(Nil), FixedGenerator(Nil), Declaration(Map()))
-        val tacticRunner = runTactic(db, t, proofId) _
+        val tacticRunner = runTactic(db, t, proofId)
 
         val response = tacticRunner("()", implyR(2))
         response shouldBe a[ErrorResponse]
@@ -686,7 +686,7 @@ class ScriptedRequestTests extends TacticTestBase {
       val t = SessionManager.token(SessionManager.add(db.user))
       SessionManager.session(t) += proofId.toString ->
         ProofSession(proofId.toString, FixedGenerator(Nil), FixedGenerator(Nil), Declaration(Map()))
-      val tacticRunner = runTactic(db, t, proofId) _
+      val tacticRunner = runTactic(db, t, proofId)
 
       val response = tacticRunner("()", HilbertCalculus.choiceb(1, 1 :: Nil))
       response shouldBe a[ErrorResponse]
@@ -711,7 +711,7 @@ class ScriptedRequestTests extends TacticTestBase {
       val t = SessionManager.token(SessionManager.add(db.user))
       SessionManager.session(t) += proofId.toString ->
         ProofSession(proofId.toString, FixedGenerator(Nil), FixedGenerator(Nil), Declaration(Map()))
-      val tacticRunner = runTactic(db, t, proofId) _
+      val tacticRunner = runTactic(db, t, proofId)
 
       val response = tacticRunner("()", HilbertCalculus.choiceb(2))
       response shouldBe a[ErrorResponse]
@@ -735,7 +735,7 @@ class ScriptedRequestTests extends TacticTestBase {
         val t = SessionManager.token(SessionManager.add(db.user))
         SessionManager.session(t) += proofId.toString ->
           ProofSession(proofId.toString, FixedGenerator(Nil), FixedGenerator(Nil), Declaration(Map()))
-        val tacticRunner = runTactic(db, t, proofId) _
+        val tacticRunner = runTactic(db, t, proofId)
 
         val response = tacticRunner("()", dG("y'=0*y+2".asDifferentialProgram, None)(1, 1 :: Nil))
         response shouldBe a[ErrorResponse]
@@ -756,7 +756,7 @@ class ScriptedRequestTests extends TacticTestBase {
       val t = SessionManager.token(SessionManager.add(db.user))
       SessionManager.session(t) += proofId.toString ->
         ProofSession(proofId.toString, FixedGenerator(Nil), FixedGenerator(Nil), Declaration(Map()))
-      val tacticRunner = runTactic(db, t, proofId) _
+      val tacticRunner = runTactic(db, t, proofId)
 
       tacticRunner("()", implyR(1))
       inside(
@@ -780,7 +780,7 @@ class ScriptedRequestTests extends TacticTestBase {
       val t = SessionManager.token(SessionManager.add(db.user))
       SessionManager.session(t) += proofId.toString ->
         ProofSession(proofId.toString, FixedGenerator(Nil), FixedGenerator(Nil), Declaration(Map()))
-      val tacticRunner = runTactic(db, t, proofId) _
+      val tacticRunner = runTactic(db, t, proofId)
 
       tacticRunner("()", prop)
       inside(
@@ -805,7 +805,7 @@ class ScriptedRequestTests extends TacticTestBase {
       val t = SessionManager.token(SessionManager.add(db.user))
       SessionManager.session(t) += proofId.toString ->
         ProofSession(proofId.toString, FixedGenerator(Nil), FixedGenerator(Nil), Declaration(Map()))
-      val tacticRunner = runTactic(db, t, proofId) _
+      val tacticRunner = runTactic(db, t, proofId)
 
       tacticRunner("()", autoClose)
       inside(
@@ -836,7 +836,7 @@ class ScriptedRequestTests extends TacticTestBase {
       val t = SessionManager.token(SessionManager.add(db.user))
       SessionManager.session(t) += proofId.toString ->
         ProofSession(proofId.toString, FixedGenerator(Nil), FixedGenerator(Nil), Declaration(Map()))
-      val tacticRunner = runTactic(db, t, proofId) _
+      val tacticRunner = runTactic(db, t, proofId)
 
       tacticRunner("()", autoClose)
       inside(
@@ -1048,7 +1048,7 @@ class ScriptedRequestTests extends TacticTestBase {
       .elements
       .map(_.asJsObject.fields("url").asInstanceOf[JsString].value)
     urls should have size 9 // change when ListExamplesRequest is updated
-    val urlsTable = Table("url", urls: _*)
+    val urlsTable = Table("url", urls*)
     forEvery(urlsTable) { url =>
       val content = DatabasePopulator.loadResource(url)
       new UploadArchiveRequest(db.db, userName, content, None).getResultingResponse(t) match {
@@ -1091,7 +1091,7 @@ class ScriptedRequestTests extends TacticTestBase {
           )
         modelInfos should have size 95 // change when ListExamplesRequest is updated
 
-        val modelInfosTable = Table(("name", "id"), modelInfos: _*)
+        val modelInfosTable = Table(("name", "id"), modelInfos*)
         forEvery(modelInfosTable) { (name, id) =>
           whenever(tool.isInitialized) {
             val start = System.currentTimeMillis()

@@ -73,7 +73,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
       entry: ParsedArchiveEntry,
       tactic: Option[BelleExpr],
       unobservable: ListMap[K, Option[Formula]],
-      tool: QETacticTool with SimplificationTool,
+      tool: QETacticTool & SimplificationTool,
       postVarFactory: Variable => Variable = ModelPlex.NAMED_POST_VAR,
       checkFOResult: ProvableSig => Any = (_: ProvableSig) => _,
       checkWitnessResult: ProvableSig => Any = (_: ProvableSig) => _,
@@ -135,10 +135,10 @@ class PartialObservableModelplexTests extends TacticTestBase {
         .filter({ case SubstitutionPair(what, _) => StaticSemantics.symbols(what).intersect(expand).nonEmpty })
     )
 
-    val qfProof = (synthResult(subst)(UnifyUSCalculus.useAt(stepwiseQEProof)(SuccPos(0)).computeResult _, 0)(
-      PropositionalTactics.rightAssociate(SuccPos(0)).computeResult _,
+    val qfProof = (synthResult(subst)(UnifyUSCalculus.useAt(stepwiseQEProof)(SuccPos(0)).computeResult, 0)(
+      PropositionalTactics.rightAssociate(SuccPos(0)).computeResult,
       0,
-    )(SimplifierV3.simplify(SuccPos(0)).computeResult _, 0))
+    )(SimplifierV3.simplify(SuccPos(0)).computeResult, 0))
     val qf = qfProof.subgoals.loneElement.succ.loneElement
 
     val end = System.currentTimeMillis()
@@ -152,7 +152,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
     report(synthResult.subgoals.head.succ.head, qf, qfProof, entry.name, start, intermediate, synthEnd, end)
 
     // transform to test program
-    val testPrgProof = qfProof(ModelPlex.chaseToTests(combineTests = false)(SuccPos(0)).computeResult _, 0)
+    val testPrgProof = qfProof(ModelPlex.chaseToTests(combineTests = false)(SuccPos(0)).computeResult, 0)
     val testProg = testPrgProof.subgoals.head.succ.head
 
     // export code
@@ -823,9 +823,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
       )
       .head
     val unobservableVars = ListMap(
-      List("dx_0", "t_0", "yo_0", "w_0", "x_0", "y_0", "yo_0", "vo_0", "xo_0", "dy_0", "v_0").map(
-        _.asVariable -> None
-      ): _*
+      List("dx_0", "t_0", "yo_0", "w_0", "x_0", "y_0", "yo_0", "vo_0", "xo_0", "dy_0", "v_0").map(_.asVariable -> None)*
     )
     deriveMonitor(entry, Some(entry.tactics.head._3), unobservableVars, tool)
   }
@@ -843,7 +841,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
       val unobservableVars = ListMap(
         ("mx".asVariable -> Some("true".asFormula)) +:
           ("my".asVariable -> Some("(mx-x)^2+(my-y)^2 <= Dp()^2".asFormula)) +:
-          List("x_0", "y_0", "v_0", "dx_0", "dy_0", "w_0", "xo_0", "yo_0", "t_0").map(_.asVariable -> None): _*
+          List("x_0", "y_0", "v_0", "dx_0", "dy_0", "w_0", "xo_0", "yo_0", "t_0").map(_.asVariable -> None)*
       )
       deriveMonitor(entry, Some(entry.tactics.head._3), unobservableVars, tool)
     }

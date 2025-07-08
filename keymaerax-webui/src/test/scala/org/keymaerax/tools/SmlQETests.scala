@@ -155,7 +155,7 @@ class SmlQETests extends TacticTestBase with Logging {
     case _ => List(t)
   }
 
-  private def naiveNoDiv[T <: Expression](fml: T, tool: SimplificationTool with CounterExampleTool): T = {
+  private def naiveNoDiv[T <: Expression](fml: T, tool: SimplificationTool & CounterExampleTool): T = {
     def denominatorsOf(fml: Formula): List[Term] = {
       val denominators = scala.collection.mutable.ListBuffer.empty[Term]
       ExpressionTraversal.traverse(
@@ -216,7 +216,7 @@ class SmlQETests extends TacticTestBase with Logging {
     outDir.mkdirs()
     val smtFiles = listFiles(pwd, "smt2").sortBy(_.getName)
     println("Converting " + smtFiles.size + " files")
-    Table("filehandle", smtFiles.zipWithIndex: _*).forEvery({ case (file, i) =>
+    Table("filehandle", smtFiles.zipWithIndex*).forEvery({ case (file, i) =>
       println("Converting file " + i + ": " + file.getName)
       val (exprs, info) = SmtLibReader.read(new FileReader(file))
       exprs.filter(_.isInstanceOf[Formula]).map(_.asInstanceOf[Formula]) match {
@@ -269,7 +269,7 @@ class SmlQETests extends TacticTestBase with Logging {
     outDir.mkdirs()
     val smtFiles = listFiles(pwd, "smt2").sortBy(_.getName)
     println("Converting " + smtFiles.size + " files")
-    Table("filehandle", smtFiles.zipWithIndex: _*).forEvery({ case (file, i) =>
+    Table("filehandle", smtFiles.zipWithIndex*).forEvery({ case (file, i) =>
       println("Converting file " + i + ": " + file.getName)
       val (exprs, info) = SmtLibReader.read(new FileReader(file))
       exprs.filter(_.isInstanceOf[Formula]).map(_.asInstanceOf[Formula]) match {
@@ -292,7 +292,7 @@ class SmlQETests extends TacticTestBase with Logging {
     outDir.mkdirs()
     val smtFiles = listFiles(pwd, "smt2").sortBy(_.getName)
     println("Converting " + smtFiles.size + " files")
-    Table("filehandle", smtFiles.zipWithIndex: _*).forEvery({ case (file, i) =>
+    Table("filehandle", smtFiles.zipWithIndex*).forEvery({ case (file, i) =>
       println("Converting file " + i + ": " + file.getName)
       val (exprs, _) = SmtLibReader.read(new FileReader(file))
       exprs.filter(_.isInstanceOf[Formula]).map(_.asInstanceOf[Formula]) match {
@@ -376,7 +376,7 @@ class SmlQETests extends TacticTestBase with Logging {
     val entries = ArchiveParser(
       Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/benchmarks/qe/harrison.kyx")).mkString
     )
-    Table("entry", entries: _*).forEvery(entry => {
+    Table("entry", entries*).forEvery(entry => {
       val smt = DefaultSMTConverter(closed(naiveNoDiv(noExp(entry.model), tool).asInstanceOf[Formula]))
       val name =
         entry.name.substring(entry.name.lastIndexOf('/') + 1).replace("(", "").replace(")", "").replace(" ", "-")
@@ -390,7 +390,7 @@ class SmlQETests extends TacticTestBase with Logging {
     val entries = ArchiveParser(
       Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/benchmarks/qe/rounding.kyx")).mkString
     )
-    Table("entry", entries: _*).forEvery(entry => {
+    Table("entry", entries*).forEvery(entry => {
       // otherwise our exporter disallows numbers that cannot be represented as Double, but we want to test whether the tools disallow them when in their input
       val plainNumberConverter = new SMTConverter() {
         override def convertTerm(t: Term): String = t match {
@@ -415,7 +415,7 @@ class SmlQETests extends TacticTestBase with Logging {
     val entries = ArchiveParser(
       Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/benchmarks/qe/cex.kyx")).mkString
     )
-    Table("entry", entries: _*).forEvery(entry => {
+    Table("entry", entries*).forEvery(entry => {
       val smt = DefaultSMTConverter(closed(entry.model.asInstanceOf[Formula]))
       val name =
         entry.name.substring(entry.name.lastIndexOf('/') + 1).replace("(", "").replace(")", "").replace(" ", "-")
@@ -430,7 +430,7 @@ class SmlQETests extends TacticTestBase with Logging {
     outDir.mkdirs()
     val smtFiles = listFiles(pwd, "smt2")
     println("Exporting " + smtFiles.size + " files")
-    Table("filehandle", smtFiles: _*).forEvery(file => {
+    Table("filehandle", smtFiles*).forEvery(file => {
       println("Exporting " + file.getName)
       SmtLibReader.read(new FileReader(file))._1.filter(_.isInstanceOf[Formula]).map(_.asInstanceOf[Formula]) match {
         case Not(fml) :: Nil =>
@@ -467,7 +467,7 @@ class SmlQETests extends TacticTestBase with Logging {
       val summaryName = "summary-" + tool + "-" + c.getName + ".csv"
       val logFiles = listFiles(c, "log").sortBy(_.getName)
       new PrintWriter(summaryName) { try { write(BenchmarkResult.csvHeader + "\r\n") } finally { close() } }
-      Table("filehandle", logFiles.zipWithIndex: _*).forEvery({ case (logFile, i) =>
+      Table("filehandle", logFiles.zipWithIndex*).forEvery({ case (logFile, i) =>
         val log = Source.fromFile(logFile)
         try {
           val logLines = log.getLines().filter(_.nonEmpty).map(_.trim).toList
@@ -612,7 +612,7 @@ class SmlQETests extends TacticTestBase with Logging {
       tool.setOperationTimeout(TIMEOUT)
       val summaryName = "summary-Mathematica-" + c.getName + ".csv"
       new PrintWriter(summaryName) { try { write(BenchmarkResult.csvHeader + "\r\n") } finally { close() } }
-      Table("filehandle", smtFiles.zipWithIndex: _*).forEvery({ case (smtFile, i) =>
+      Table("filehandle", smtFiles.zipWithIndex*).forEvery({ case (smtFile, i) =>
         val (Not(fml: Formula) :: Nil, info) = converter(smtFile): @unchecked
         val infos = info ++ Map(
           "boundvars" -> StaticSemantics.boundVars(fml).toSet.size.toString,

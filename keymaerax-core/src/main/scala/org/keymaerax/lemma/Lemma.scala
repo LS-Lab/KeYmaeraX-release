@@ -34,7 +34,7 @@ object Lemma {
    * @note soundness-critical, only call with true facts that come from serialized lemmas.
    * @see [[Lemma.toString]]
    */
-  def fromString(lemma: String): Lemma = { fromStringInternal(lemma) } ensures
+  def fromString(lemma: String): Lemma = { fromStringInternal(lemma) } `ensures`
     (r => matchesInput(r, lemma), "Reparse of printed parse result should be original parse result")
 
   /**
@@ -133,7 +133,7 @@ final case class Lemma(fact: ProvableSig, evidence: immutable.List[Evidence], na
   override def toString: String = {
     toStringInternal
     // @note soundness-critical check that reparse succeeds as expected
-  } ensures
+  } `ensures`
     (
       r => {
         val reparsed = Lemma.fromStringInternal(r)

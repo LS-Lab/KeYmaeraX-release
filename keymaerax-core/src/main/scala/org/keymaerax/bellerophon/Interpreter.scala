@@ -111,7 +111,7 @@ trait Interpreter {
       // @todo substParent may have more subgoals than subderivation
       (false, subderivation)
     }
-  } ensures
+  } `ensures`
     (r =>
       r match {
         case (rmerged: Boolean, rp: ProvableSig) => (!rmerged && rp == subderivation) ||

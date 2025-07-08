@@ -66,7 +66,7 @@ class DLBelleParserTests
 
   override def afterEach(): Unit = { GlobalState.parser.setAnnotationListener((_, _) => {}) }
 
-  private var parser: DLBelleParser = _
+  private var parser: DLBelleParser = scala.compiletime.uninitialized
   private def parse(input: String, defs: Declaration = BuiltinSymbols.all) = parser(input, defs)
 
   "DLBelleParser" should "parse postfix \"using\"" in {

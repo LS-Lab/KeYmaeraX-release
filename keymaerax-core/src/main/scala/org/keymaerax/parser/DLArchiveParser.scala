@@ -188,7 +188,7 @@ class DLArchiveParser(val tacticParser: DLTacticParser) extends ArchiveParser {
   }
 
   /** Merges `newDecls` into `curDecls`, but checks that no duplicate symbol names occur. */
-  private def uniqueDecls(curDecls: Declaration, newDecls: List[(Name, Signature)])(implicit ctx: P[_]) = {
+  private def uniqueDecls(curDecls: Declaration, newDecls: List[(Name, Signature)])(implicit ctx: P[?]) = {
     val nn = newDecls.map(_._1)
     // @todo Fail messages show up in Expected and Hint
     nn.diff(nn.distinct) match {
@@ -245,7 +245,7 @@ class DLArchiveParser(val tacticParser: DLTacticParser) extends ArchiveParser {
     }) | importDef)
 
   /** `name(sort1 arg1, sorg2 arg2)` declaration part with optional interpretation. Input sort is the (codomain) sort */
-  def declPart(ty: Sort)(implicit ctx: P[_]): P[(Name, Signature)] =
+  def declPart(ty: Sort)(implicit ctx: P[?]): P[(Name, Signature)] =
     (Index ~ ident ~~ ("<<" ~/ formula ~ ">>").? ~~ ("(" ~/ (sort ~~ (blank ~ ident).?).rep(sep = ","./) ~ ")"./).? ~
       Index).map({ case (s, (n, idx), interp, argList, e) =>
       val args = argList
@@ -278,7 +278,7 @@ class DLArchiveParser(val tacticParser: DLTacticParser) extends ArchiveParser {
 
   /** `HP name ::= {program};` | `HG name ::= {program};` program definition. */
   // @todo better return type with ProgramConst/SystemConst instead of Name
-  def progDef(implicit ctx: P[_]): P[(Name, Signature)] = P(
+  def progDef(implicit ctx: P[?]): P[(Name, Signature)] = P(
     Index ~
       ("HP" | "HG") ~~ blank ~/ ident ~ "::=" ~ "{" ~/
       (NoCut(program) | odeprogram) ~ "}" ~ ";" ~ Index
@@ -327,7 +327,7 @@ class DLArchiveParser(val tacticParser: DLTacticParser) extends ArchiveParser {
     })
 
   /** `ProgramVariables Real x; Real y,z; End.` parsed. */
-  def programVariables(curDecls: Declaration)(implicit ctx: P[_]): P[Declaration] = P(
+  def programVariables(curDecls: Declaration)(implicit ctx: P[?]): P[Declaration] = P(
     "ProgramVariables" ~~ blank ~/
       // @todo how to ensure there is some whitespace between sort and baseVariable?
       (sort ~/ Index ~ ident ~ Index ~ (","./ ~ Index ~ ident ~ Index).rep ~ ";")

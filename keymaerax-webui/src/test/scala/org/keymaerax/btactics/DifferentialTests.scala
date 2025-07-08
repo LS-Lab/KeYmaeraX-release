@@ -2414,7 +2414,7 @@ class DifferentialTests extends TacticTestBase {
       (powZeroFree(inv), dx, dy, dz)
     }
 
-    val tasks = Table(("inv", "dx", "dy", "dz"), (1 to randomTrials).map(_ => makeTask).toList: _*)
+    val tasks = Table(("inv", "dx", "dy", "dz"), (1 to randomTrials).map(_ => makeTask).toList*)
     forEvery(tasks)({ case (inv, dx, dy, dz) =>
       val ode = DifferentialProduct(
         AtomicODE(DifferentialSymbol(vx), dx),

@@ -228,7 +228,7 @@ private[core] object AxiomBase extends Logging {
       insist(res.length == res.map(k => k._1).distinct.length, "No duplicate axiom names during parse of AxiomBase")
       res.map(k => (k._1 -> k._2)).toMap
     } catch { case e: Exception => logger.error("Cannot read axioms", e); sys.exit(10) }
-  } ensuring (assertCheckAxiomFile _, "checking parse of axioms against expected outcomes")
+  } ensuring (assertCheckAxiomFile, "checking parse of axioms against expected outcomes")
 
   /** Redundant code checking expected form of axioms after parsing */
   private def assertCheckAxiomFile(axs: Map[String, Formula]): Boolean = {
@@ -461,7 +461,7 @@ private[core] object AxiomBase extends Logging {
    * @see [[org.keymaerax.Bibliography.CadePlatzer18 Uniform substitution for differential game logic]]
    * @see [[org.keymaerax.Bibliography.ToclPlatzer15 Differential game logic]]
    */
-  private[this] def loadAxiomString(): String =
+  private def loadAxiomString(): String =
     """
 Axiom "<> diamond"
   ![a;]!p(||) <-> <a;>p(||)

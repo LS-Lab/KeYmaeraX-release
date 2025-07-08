@@ -223,7 +223,7 @@ object PlotConverter extends UncheckedBaseK2MConverter {
   override def apply(e: KExpr): MExpr = e match {
     case Imply(pre, Box(ODESystem(ode, domain), post)) =>
       val primedVars = DifferentialHelper.getPrimedVariables(ode)
-      val vectorField = list(DifferentialHelper.atomicOdes(ode).map(o => apply(o.e)): _*)
+      val vectorField = list(DifferentialHelper.atomicOdes(ode).map(o => apply(o.e))*)
 
       val show = NaryMathOpSpec(symbol("Show"))
       val regionPlot = NaryMathOpSpec(symbol("RegionPlot"))
@@ -238,10 +238,10 @@ object PlotConverter extends UncheckedBaseK2MConverter {
       val domainPlotStyle =
         rule(symbol("PlotStyle"), list(symbol("Blue"), UnaryMathOpSpec(symbol("Opacity"))(double(0.5))))
 
-      val prePlot = regionPlot((list(apply(pre)) +: (regions :+ prePlotStyle :+ plotPoints)): _*)
-      val vfPlot = streamPlot((vectorField +: regions): _*)
-      val domainPlot = regionPlot((list(apply(domain)) +: (regions :+ domainPlotStyle :+ plotPoints)): _*)
-      val postPlot = regionPlot((list(apply(Not(post))) +: (regions :+ postPlotStyle :+ plotPoints)): _*)
+      val prePlot = regionPlot((list(apply(pre)) +: (regions :+ prePlotStyle :+ plotPoints))*)
+      val vfPlot = streamPlot((vectorField +: regions)*)
+      val domainPlot = regionPlot((list(apply(domain)) +: (regions :+ domainPlotStyle :+ plotPoints))*)
+      val postPlot = regionPlot((list(apply(Not(post))) +: (regions :+ postPlotStyle :+ plotPoints))*)
 
       if (domain != True) show(prePlot, vfPlot, domainPlot, postPlot) else show(prePlot, vfPlot, postPlot)
     case _ => super.apply(e)
@@ -670,7 +670,7 @@ class MathematicaCEXTool(override val link: MathematicaLink)
           case Imply(a, b) => And(a, Not(b))
           case _ => Not(fml)
         })),
-        MathematicaOpSpec.list(cexVars.toList.sorted.map(s => k2m.convert(Right(s))): _*),
+        MathematicaOpSpec.list(cexVars.toList.sorted.map(s => k2m.convert(Right(s)))*),
         MathematicaOpSpec.reals.op,
       ))
       run(input) match {
@@ -712,7 +712,7 @@ class MathematicaODESolverTool(override val link: MathematicaLink)
     with DerivativeTool {
 
   def odeSolve(diffSys: DifferentialProgram, diffArg: Variable, iv: Map[Variable, Variable]): Option[Formula] =
-    diffSol(diffArg, iv, toDiffSys(diffSys, diffArg): _*)
+    diffSol(diffArg, iv, toDiffSys(diffSys, diffArg)*)
 
   /**
    * Converts a system of differential equations given as DifferentialProgram into list of x'=theta
@@ -747,7 +747,7 @@ class MathematicaODESolverTool(override val link: MathematicaLink)
    */
   private def diffSol(diffArg: Variable, iv: Map[Variable, Variable], diffSys: (Variable, Term)*): Option[Formula] = {
     val primedVars = diffSys.map(_._1)
-    val functionalizedTerms = diffSys.map { case (x, theta) => (x, functionalizeVars(theta, diffArg, primedVars: _*)) }
+    val functionalizedTerms = diffSys.map { case (x, theta) => (x, functionalizeVars(theta, diffArg, primedVars*)) }
     val mathTerms = functionalizedTerms.map({ case (x, theta) =>
       (ExtMathematicaOpSpec.dx(ExtMathematicaOpSpec.primed(k2m(x)))(k2m(diffArg)), k2m(theta))
     })
@@ -756,17 +756,17 @@ class MathematicaODESolverTool(override val link: MathematicaLink)
     val functions = diffSys.map(t => k2m(functionalizeVars(t._1, diffArg)))
 
     val initialValues =
-      diffSys.map(t => k2m(Equal(functionalizeVars(t._1, Number(BigDecimal(0)), primedVars: _*), iv(t._1))))
+      diffSys.map(t => k2m(Equal(functionalizeVars(t._1, Number(BigDecimal(0)), primedVars*), iv(t._1))))
 
     val input = ExtMathematicaOpSpec.dsolve(
-      MathematicaOpSpec.list(convertedDiffSys ++ initialValues: _*),
-      MathematicaOpSpec.list(functions: _*),
+      MathematicaOpSpec.list(convertedDiffSys ++ initialValues*),
+      MathematicaOpSpec.list(functions*),
       k2m(diffArg),
     )
 
     val (_, result) = run(input)
     result match {
-      case f: Formula => Some(defunctionalize(f, diffArg, primedVars.map(_.name): _*))
+      case f: Formula => Some(defunctionalize(f, diffArg, primedVars.map(_.name)*))
       case _ => None
     }
   }
@@ -843,11 +843,11 @@ class MathematicaPDESolverTool(override val link: MathematicaLink)
       .map({ case AtomicODE(DifferentialSymbol(x), t) =>
         MathematicaOpSpec.times(k2m(t), ExtMathematicaOpSpec.d(fall, k2m(x)))
       })
-    val pde = MathematicaOpSpec.equal(MathematicaOpSpec.plus(characteristics: _*), k2m(Number(0)))
+    val pde = MathematicaOpSpec.equal(MathematicaOpSpec.plus(characteristics*), k2m(Number(0)))
     val input = ExtMathematicaOpSpec.dsolve(
       pde,
       fall,
-      MathematicaOpSpec.list(vars.toSeq: _*),
+      MathematicaOpSpec.list(vars.toSeq*),
       MathematicaOpSpec.rule(
         ExtMathematicaOpSpec.generatedParameters.op,
         ExtMathematicaOpSpec.function(MathematicaOpSpec.symbol(DiffUncheckedM2KConverter.PREFIX + "C")),
@@ -877,13 +877,13 @@ class MathematicaLyapunovSolverTool(override val link: MathematicaLink)
   private val pathsList = Configuration
     .sanitizedPathSegments(Configuration.KEYMAERAX_HOME_PATH, pegasusPath)
     .map(string)
-  private val joinedPath = fileNameJoin(list(pathsList.toSeq: _*))
+  private val joinedPath = fileNameJoin(list(pathsList.toSeq*))
   private val setPathsCmd = compoundExpression(setDirectory(joinedPath), appendTo(path.op, joinedPath))
 
   /** Wraps `cmd` with the path and exception handling (suppressing). */
   private def createCommand(cmd: MExpr): MExpr = {
     val path = pathsList :+ string("Primitives") :+ string("Lyapunov.m")
-    quiet(compoundExpression(setPathsCmd, needs(string(LYAPUNOV_NAMESPACE), fileNameJoin(list(path.toSeq: _*))), cmd))
+    quiet(compoundExpression(setPathsCmd, needs(string(LYAPUNOV_NAMESPACE), fileNameJoin(list(path.toSeq*))), cmd))
   }
 
   /** Converts the differential equation systems `sys`. */
@@ -891,10 +891,10 @@ class MathematicaLyapunovSolverTool(override val link: MathematicaLink)
     list(sys.map(ode => {
       val primedVars = DifferentialHelper.getPrimedVariables(ode)
       val atomicODEs = DifferentialHelper.atomicOdes(ode)
-      val vars = list(primedVars.map(k2m): _*)
-      val vectorField = list(atomicODEs.map(o => k2m(o.e)): _*)
+      val vars = list(primedVars.map(k2m)*)
+      val vectorField = list(atomicODEs.map(o => k2m(o.e))*)
       list(vectorField, vars, k2m(ode.constraint))
-    }): _*)
+    })*)
   }
 
   /** @inheritdoc */
@@ -912,7 +912,7 @@ class MathematicaLyapunovSolverTool(override val link: MathematicaLink)
     val cmd = createCommand(
       applyFunc(
         lsymbol("GenMLF")
-      )(convertODEs(sys), list(trans.map({ case (s, t, g) => list(int(s), int(t), k2m(g)) }): _*))
+      )(convertODEs(sys), list(trans.map({ case (s, t, g) => list(int(s), int(t), k2m(g)) })*))
     )
     val (_, result) = run(cmd)
     result match {
@@ -985,7 +985,7 @@ class MathematicaEquationSolverTool(override val link: MathematicaLink)
     val eqs = k2m(equations)
     val v = vars.map(k2m)
 
-    val input = ExtMathematicaOpSpec.solve(eqs, MathematicaOpSpec.list(v: _*))
+    val input = ExtMathematicaOpSpec.solve(eqs, MathematicaOpSpec.list(v*))
     val (_, result) = run(input)
     result match {
       case f: Formula => Some(f)
@@ -1020,8 +1020,8 @@ class MathematicaAlgebraTool(override val link: MathematicaLink)
     // @note sort for stable results
     val vars = polynomials.flatMap(p => StaticSemantics.vars(p).symbols[NamedSymbol]).distinct.sorted
     val input = ExtMathematicaOpSpec.groebnerBasis(
-      MathematicaOpSpec.list(polynomials.map(k2m): _*),
-      MathematicaOpSpec.list(vars.map(k2m): _*),
+      MathematicaOpSpec.list(polynomials.map(k2m)*),
+      MathematicaOpSpec.list(vars.map(k2m)*),
       MathematicaOpSpec.rule(ExtMathematicaOpSpec.monomialOrder.op, ExtMathematicaOpSpec.degreeReverseLexicographic.op),
       MathematicaOpSpec.rule(ExtMathematicaOpSpec.coefficientDomain.op, ExtMathematicaOpSpec.rationals.op),
     )
@@ -1038,8 +1038,8 @@ class MathematicaAlgebraTool(override val link: MathematicaLink)
     val vars = (polynomial :: GB).flatMap(p => StaticSemantics.vars(p).symbols[NamedSymbol]).distinct.sorted
     val input = ExtMathematicaOpSpec.polynomialReduce(
       k2m(polynomial),
-      MathematicaOpSpec.list(GB.map(k2m): _*),
-      MathematicaOpSpec.list(vars.map(k2m): _*),
+      MathematicaOpSpec.list(GB.map(k2m)*),
+      MathematicaOpSpec.list(vars.map(k2m)*),
       MathematicaOpSpec.rule(ExtMathematicaOpSpec.monomialOrder.op, ExtMathematicaOpSpec.degreeReverseLexicographic.op),
       MathematicaOpSpec.rule(ExtMathematicaOpSpec.coefficientDomain.op, ExtMathematicaOpSpec.rationals.op),
     )
@@ -1073,7 +1073,7 @@ class MathematicaSimplificationTool(override val link: MathematicaLink)
       val ex = k2m(expr)
       val assuming = assumptions.map(k2m)
 
-      val input = ExtMathematicaOpSpec.fullSimplify(ex, MathematicaOpSpec.list(assuming: _*))
+      val input = ExtMathematicaOpSpec.fullSimplify(ex, MathematicaOpSpec.list(assuming*))
       val (_, result) = run(input)
       result match {
         case r: Expression => r
@@ -1130,8 +1130,8 @@ object SimulationK2MConverter extends K2MConverter[Simulation] {
   override def convert(e: Simulation): MExpr = {
     MathematicaOpSpec.list(
       e.map(r =>
-        MathematicaOpSpec.list(r.map(s => k2m(s.map { case (n: Term, v) => Equal(n, v) }.reduceLeft(And.apply))): _*)
-      ): _*
+        MathematicaOpSpec.list(r.map(s => k2m(s.map { case (n: Term, v) => Equal(n, v) }.reduceLeft(And.apply)))*)
+      )*
     )
   }
 }
@@ -1155,7 +1155,7 @@ class MathematicaSimulationTool(override val link: MathematicaLink)
         ExtMathematicaOpSpec.function(MathematicaOpSpec.list(ExtMathematicaOpSpec.placeholder)),
         ExtMathematicaOpSpec.findInstance(
           basek2m(initial),
-          MathematicaOpSpec.list(StaticSemantics.symbols(initial).toList.sorted.map(basek2m): _*),
+          MathematicaOpSpec.list(StaticSemantics.symbols(initial).toList.sorted.map(basek2m)*),
           MathematicaOpSpec.reals.op,
           ExtMathematicaOpSpec.placeholder,
         ),
@@ -1190,10 +1190,10 @@ class MathematicaSimulationTool(override val link: MathematicaLink)
     val step = ExtMathematicaOpSpec.setDelayed(
       MathematicaOpSpec.symbol("kyx`step"),
       ExtMathematicaOpSpec.function(MathematicaOpSpec.module(
-        MathematicaOpSpec.list(stepModuleInit.toSeq: _*),
+        MathematicaOpSpec.list(stepModuleInit.toSeq*),
         ExtMathematicaOpSpec.findInstance(
           basek2m(stateRelation),
-          MathematicaOpSpec.list(stepPostVars.toList.sorted.map(basek2m): _*),
+          MathematicaOpSpec.list(stepPostVars.toList.sorted.map(basek2m)*),
           MathematicaOpSpec.reals.op,
         ),
       )),

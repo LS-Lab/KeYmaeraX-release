@@ -47,24 +47,21 @@ protected object FOQuantifierTactics {
           val applyBase = (pr: ProvableSig) =>
             if (atTopLevel || pos.isTopLevel) {
               if (pos.isAnte) {
-                (pr(NotLeft(pos.checkAnte.top), 0)(base(SuccPos(sequent.succ.length)).computeResult _, 0)(
+                (pr(NotLeft(pos.checkAnte.top), 0)(base(SuccPos(sequent.succ.length)).computeResult, 0)(
                   NotRight(SuccPos(sequent.succ.length)),
                   0,
                 ))
               } else {
-                (pr(NotRight(pos.checkSucc.top), 0)(base(AntePos(sequent.ante.length)).computeResult _, 0)(
+                (pr(NotRight(pos.checkSucc.top), 0)(base(AntePos(sequent.ante.length)).computeResult, 0)(
                   NotLeft(AntePos(sequent.succ.length)),
                   0,
                 ))
               }
             } else {
-              (pr(base(pos ++ PosInExpr(0 :: Nil)).computeResult _, 0)(
-                useAt(Ax.doubleNegation)(pos).computeResult _,
-                0,
-              ))
+              (pr(base(pos ++ PosInExpr(0 :: Nil)).computeResult, 0)(useAt(Ax.doubleNegation)(pos).computeResult, 0))
             }
 
-          (provable(useAt(dual, PosInExpr(1 :: Nil))(pos).computeResult _, 0)(applyBase, 0))
+          (provable(useAt(dual, PosInExpr(1 :: Nil))(pos).computeResult, 0)(applyBase, 0))
         case Some(e) => throw new TacticInapplicableFailure(
             "existsByDuality only applicable to existential quantifiers, but got " + e.prettyString
           )
@@ -170,20 +167,20 @@ protected object FOQuantifierTactics {
                 if !StaticSemantics.freeVars(p).symbols.exists(t => t == vinst || t == DifferentialSymbol(x)) =>
               (
                 Box(Assign(vinst, vinst), p.replaceAll(x, vinst)),
-                ProofRuleTactics.boundRenameFw(x, vinst)(pos).computeResult _,
+                ProofRuleTactics.boundRenameFw(x, vinst)(pos).computeResult,
               )
-            case _ => (Box(Assign(x, t), p), skip.result _)
+            case _ => (Box(Assign(x, t), p), skip.result)
           }
 
           // @note stuttering needed for instantiating with terms in cases \forall x [x:=x+1;]x>0, plain useAt won't work
           // @todo forward tactic
           def assignbFw = TactixLibrary.proveBy(_: ProvableSig, HilbertCalculus.assignb(pos))
 
-          (pr(DLBySubst.stutterFw(x)(pos ++ PosInExpr(0 :: Nil)).computeResult _, 0)(assignPreprocess, 0)(
-            cutLRFw(ctx(assign))(pos.topLevel).computeResult _,
+          (pr(DLBySubst.stutterFw(x)(pos ++ PosInExpr(0 :: Nil)).computeResult, 0)(assignPreprocess, 0)(
+            cutLRFw(ctx(assign))(pos.topLevel).computeResult,
             0,
-          )(assignbFw, 0)(CoHideRight(SuccPos(sequent.succ.length)), 1)(CMonFw(pos.inExpr).result _, 1)(
-            US(ax(vars, Ax.allInst, Ax.allInstPrime).provable).result _,
+          )(assignbFw, 0)(CoHideRight(SuccPos(sequent.succ.length)), 1)(CMonFw(pos.inExpr).result, 1)(
+            US(ax(vars, Ax.allInst, Ax.allInstPrime).provable).result,
             1,
           ))
         case (_, f @ Forall(v, _)) if quantified.isDefined && !v.contains(quantified.get) =>
@@ -242,7 +239,7 @@ protected object FOQuantifierTactics {
               (
                 vinst,
                 Box(Assign(vinst, vinst), p.replaceAll(x, vinst)),
-                ProofRuleTactics.boundRenameFw(x, vinst)(pos).computeResult _,
+                ProofRuleTactics.boundRenameFw(x, vinst)(pos).computeResult,
                 RenUSubst(List(
                   (FuncOf(Function("f", None, Unit, Real), Nothing), vinst),
                   (
@@ -254,7 +251,7 @@ protected object FOQuantifierTactics {
             case _ => (
                 x,
                 Box(Assign(x, t), p),
-                skip.result _,
+                skip.result,
                 RenUSubst(List(
                   (FuncOf(Function("f", None, Unit, Real), Nothing), t),
                   (PredOf(Function("p_", None, Real, Bool), DotTerm()), Box(Assign(x, DotTerm()), p)),
@@ -268,11 +265,11 @@ protected object FOQuantifierTactics {
           // @todo forward tactic
           def assignbFw = TactixLibrary.proveBy(_: ProvableSig, HilbertCalculus.assignb(pos))
 
-          (pr(DLBySubst.stutterFw(x)(pos ++ PosInExpr(0 :: Nil)).computeResult _, 0)(assignPreprocess, 0)(
-            cutLRFw(ctx(assign))(pos.topLevel).computeResult _,
+          (pr(DLBySubst.stutterFw(x)(pos ++ PosInExpr(0 :: Nil)).computeResult, 0)(assignPreprocess, 0)(
+            cutLRFw(ctx(assign))(pos.topLevel).computeResult,
             0,
           )(assignbFw, 0)(if (pos.isAnte) CoHideLeft(pos.checkAnte.top) else CoHideRight(pos.checkSucc.top), 1)(
-            CMonFw(pos.inExpr).result _,
+            CMonFw(pos.inExpr).result,
             1,
           )(subst.toForward(rename), 1))
         case (_, f @ Exists(v, _)) if quantified.isDefined && !v.contains(quantified.get) =>
@@ -380,15 +377,15 @@ protected object FOQuantifierTactics {
         val breq = xs.map(x =>
           (p: Position) =>
             (pr: ProvableSig) =>
-              (pr(ProofRuleTactics.boundRenameFw(x, np(x))(p).computeResult _, 0)(assignEqualityFw(_, p), 0)(
-                hideL(Symbol("L"), Equal(np(x), x)).computeResult _,
+              (pr(ProofRuleTactics.boundRenameFw(x, np(x))(p).computeResult, 0)(assignEqualityFw(_, p), 0)(
+                hideL(Symbol("L"), Equal(np(x), x)).computeResult,
                 0,
               ))
         )
         def localRename(pr: ProvableSig, p: Position): ProvableSig = {
           (stutter
             .map(_(p))
-            .foldLeft(pr)({ (pr, r) => pr(r.computeResult _, 0) })(
+            .foldLeft(pr)({ (pr, r) => pr(r.computeResult, 0) })(
               breq.map(_(p)).foldLeft(_: ProvableSig)({ case (pr, r) => pr(r, 0) }),
               0,
             ))
@@ -403,7 +400,7 @@ protected object FOQuantifierTactics {
               else { localRename(_, p) }
             })
             .foldLeft(pr)({ (pr, r) => pr(r, 0) })
-        (provable(rename, 0)(ProofRuleTactics.skolemizeR(pos).computeResult _, 0))
+        (provable(rename, 0)(ProofRuleTactics.skolemizeR(pos).computeResult, 0))
       } else {
         // @note rename variable x wherever bound to fresh x_0, so that final uniform renaming step renames back
         val renaming = (pr: ProvableSig) =>
@@ -413,26 +410,26 @@ protected object FOQuantifierTactics {
                 (nppr: ProvableSig) =>
                   outerMostBoundPos(np._1, sequent)
                     .map(ProofRuleTactics.boundRenameFw(np._1, np._2)(_))
-                    .foldLeft(nppr)({ (pr, r) => pr(r.computeResult _, 0) })
+                    .foldLeft(nppr)({ (pr, r) => pr(r.computeResult, 0) })
               )
               .foldLeft(pr)({ (pr, r) => pr(r, 0) })
           } else {
             assert(namePairs.size == 1)
             outerMostBoundPos(namePairs.head._1, sequent)
               .map(ProofRuleTactics.boundRenameFw(namePairs.head._1, namePairs.head._2)(_))
-              .foldLeft(pr)({ (pr, r) => pr(r.computeResult _, 0) })
+              .foldLeft(pr)({ (pr, r) => pr(r.computeResult, 0) })
           }
         // uniformly rename variable x to x_0 and simultaneously x_0 to x, effectively swapping \forall x_0 p(x_0) back to \forall x p(x) but renaming all outside occurrences of x in context to x_0.
         val backrenaming = (pr: ProvableSig) =>
           if (namePairs.size > 1) {
             namePairs
               .map(np => ProofRuleTactics.uniformRenameFw(np._2, np._1))
-              .foldLeft(pr)({ (pr, r) => pr(r.result _, 0) })
+              .foldLeft(pr)({ (pr, r) => pr(r.result, 0) })
           } else {
             assert(namePairs.size == 1)
             ProofRuleTactics.uniformRenameFw(namePairs.head._2, namePairs.head._1).result(pr)
           }
-        (provable(renaming, 0)(ProofRuleTactics.skolemizeR(pos).computeResult _, 0)(backrenaming, 0))
+        (provable(renaming, 0)(ProofRuleTactics.skolemizeR(pos).computeResult, 0)(backrenaming, 0))
       }
     }
   }
@@ -494,7 +491,7 @@ protected object FOQuantifierTactics {
           )(Ax.existsGeneralize.provable(subst), 1) // closes goal 1
           (ImplyLeft(AntePos(sequent.ante.length)), 0) // creates goals 0+1
           (if (pos.isAnte) HideLeft(pos.checkAnte.top) else HideRight(pos.checkSucc.top), 1)(
-            ProofRuleTactics.boundRenameFw(Variable("x_"), x)(AntePos(sequent.ante.length - 1)).computeResult _,
+            ProofRuleTactics.boundRenameFw(Variable("x_"), x)(AntePos(sequent.ante.length - 1)).computeResult,
             1,
           )(Close(pos.checkAnte.top, SuccPos(sequent.succ.length)), 0))
         case Some(e) =>
@@ -570,10 +567,10 @@ protected object FOQuantifierTactics {
             "Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString
           )
       }
-      (provable(cutAtFw(genFml)(pos).computeResult _, 0)(
-        useAt(axiomLemma, PosInExpr(0 :: Nil), subst)(pos.topLevel ++ PosInExpr(0 +: pos.inExpr.pos)).computeResult _,
+      (provable(cutAtFw(genFml)(pos).computeResult, 0)(
+        useAt(axiomLemma, PosInExpr(0 :: Nil), subst)(pos.topLevel ++ PosInExpr(0 +: pos.inExpr.pos)).computeResult,
         1,
-      )(useAt(Ax.implySelf)(pos.top).computeResult _, 1)(CloseTrue(pos.checkSucc.top), 1))
+      )(useAt(Ax.implySelf)(pos.top).computeResult, 1)(CloseTrue(pos.checkSucc.top), 1))
     }
 
   /**
@@ -637,12 +634,12 @@ protected object FOQuantifierTactics {
           "Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString
         )
     }
-    (provable(cutAtFw(genFml)(pos).computeResult _, 0)(
+    (provable(cutAtFw(genFml)(pos).computeResult, 0)(
       useAt(axiomLemma, PosInExpr(1 :: Nil), subst)(
         SuccPosition.base0(sequent.succ.length, PosInExpr(1 +: pos.inExpr.pos))
-      ).computeResult _,
+      ).computeResult,
       1,
-    )(useAt(Ax.implySelf)(SuccPos(sequent.succ.length)).computeResult _, 1)(CloseTrue(SuccPos(sequent.succ.length)), 1))
+    )(useAt(Ax.implySelf)(SuccPos(sequent.succ.length)).computeResult, 1)(CloseTrue(SuccPos(sequent.succ.length)), 1))
   }
 
   /**
@@ -712,7 +709,7 @@ protected object FOQuantifierTactics {
         })
 
       if (sorted.isEmpty) provable
-      else sorted.map(t => universalGen(None, t)(pos)).foldLeft(provable)({ (pr, r) => pr(r.computeResult _, 0) })
+      else sorted.map(t => universalGen(None, t)(pos)).foldLeft(provable)({ (pr, r) => pr(r.computeResult, 0) })
     }
 
   /** Repeated application of [[TactixLibrary.allL]] */

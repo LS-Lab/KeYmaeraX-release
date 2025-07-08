@@ -869,7 +869,7 @@ class PairParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterAll {
   }
 
   def pairParse(expected: List[(String, String)], parser: String => Expression): Unit = {
-    forEvery(Table(("Input", "Expected"), expected: _*))({ (s1, s2) =>
+    forEvery(Table(("Input", "Expected"), expected*))({ (s1, s2) =>
       if (s2 == unparseable) {
         // ParseExceptions and CoreExceptions and AssertionErrors are simply all allowed.
         a[Throwable] should be thrownBy parser(s1)

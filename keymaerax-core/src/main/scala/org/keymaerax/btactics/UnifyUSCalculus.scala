@@ -688,7 +688,7 @@ object UnifyUSCalculus extends Logging {
 
   // main implementation
 
-  private[this] def useAtImpl(
+  private def useAtImpl(
       fact: ProvableInfo,
       inst: Option[Subst] => Subst = us =>
         us.getOrElse(
@@ -701,7 +701,7 @@ object UnifyUSCalculus extends Logging {
     case _ => useAtImpl(fact.codeName, fact.provable, defaultPosition, defaultMatcher, inst)
   }
 
-  private[this] def useAtWithImpl(
+  private def useAtWithImpl(
       fact: ProvableInfo,
       key: PosInExpr,
       inst: Option[Subst] => Subst = us =>
@@ -766,7 +766,7 @@ object UnifyUSCalculus extends Logging {
    * @see [[org.keymaerax.btactics]]
    * @todo could directly use prop rules instead of CE if key close to HereP if more efficient.
    */
-  private[this] def useAtImpl(
+  private def useAtImpl(
       codeName: String,
       fact: ProvableSig,
       key: PosInExpr,
@@ -777,7 +777,7 @@ object UnifyUSCalculus extends Logging {
       // @note performance impact
       import BelleExpr.RECHECK
 
-      private val (keyCtx: Context[_], keyPart) = fact.conclusion.succ.head.at(key): @unchecked
+      private val (keyCtx: Context[?], keyPart) = fact.conclusion.succ.head.at(key): @unchecked
 
       private def checkSubst(matcher: Matcher, key: Expression, expr: Expression): Subst =
         matcher.unifiable(key, expr) match {
@@ -909,9 +909,9 @@ object UnifyUSCalculus extends Logging {
           // @todo optimizable equivalenceCongruenceT by a direct CE call using context ctx
           (provable(cutLRFw(C(subst(other))).computeResult(_, p.top), 0)(CoHideRight(cutPos), 1)(
             if (other.kind == FormulaKind)
-              if (leftKey == p.isAnte) CEimpFw(p.inExpr).result _ else CErevimpFw(p.inExpr).result _
+              if (leftKey == p.isAnte) CEimpFw(p.inExpr).result else CErevimpFw(p.inExpr).result
             else if (other.kind == TermKind)
-              if (leftKey == p.isAnte) CQimpFw(p.inExpr).result _ else CQrevimpFw(p.inExpr).result _
+              if (leftKey == p.isAnte) CQimpFw(p.inExpr).result else CQrevimpFw(p.inExpr).result
             else throw new UnsupportedTacticFeature("Don't know how to handle kind " + other.kind + " of " + other),
             1,
           )(subst.toForward(fact), 1))
@@ -925,7 +925,7 @@ object UnifyUSCalculus extends Logging {
             case _: AntePosition => SuccPos(provable.subgoals.head.succ.length) // 'Rlast
           }
           (provable(cutLRFw(C(subst(other))).computeResult(_, p.topLevel), 0)(CoHideRight(cohide), 1)(
-            CMonFw(p.inExpr).result _,
+            CMonFw(p.inExpr).result,
             1,
           )(subst.toForward(fact), 1))
         }
@@ -1039,7 +1039,7 @@ object UnifyUSCalculus extends Logging {
                 (subst.toForward(fact), 1)
                 // left branch   |- subst(prereq)
                 (prereqFact.get, 0))
-                remFact ensures (r => r.subgoals == fact.subgoals, "Proved / no new subgoals expected " + remFact)
+                remFact `ensures` (r => r.subgoals == fact.subgoals, "Proved / no new subgoals expected " + remFact)
 
                 val remKey: PosInExpr = key.child
                 require(
@@ -1102,7 +1102,7 @@ object UnifyUSCalculus extends Logging {
                     (hide2Fw, 2)(Cut(C(subst(equiv))), 2) // creates subgoals 2+3
                     /* Show C(subst(equiv)) */
                     (HideRight(SuccPos(0)), 3) /* hide C(r)->C(l) */
-                    (implyRi.computeResult _, 3)(CMonFw(p.inExpr).result _, 3)(
+                    (implyRi.computeResult, 3)(CMonFw(p.inExpr).result, 3)(
                       ProvableSig.startProof(Imply(subst(prereq), subst(Context(remainder)(k))), fact.defs)(
                         subst.toForward(fact),
                         0,
@@ -1111,7 +1111,7 @@ object UnifyUSCalculus extends Logging {
                     )
                     /* Use C(subst(equiv)) */
                     (HideLeft(AntePos(0)), 2) /* hide C(prereq) */
-                    (ImplyRight(SuccPos(0)), 2)(andLi.computeResult _, 2)(implyRi.computeResult _, 2)(
+                    (ImplyRight(SuccPos(0)), 2)(andLi.computeResult, 2)(implyRi.computeResult, 2)(
                       condEquivCongruence(C.ctx, p.inExpr, HereP, commute, op),
                       2,
                     )(CloseTrue(SuccPos(0)), 2)
@@ -1143,58 +1143,58 @@ object UnifyUSCalculus extends Logging {
   ): ProvableSig => ProvableSig = (provable: ProvableSig) =>
     context match {
       case Box(_, p) if towards.head == 1 => (
-        provable(useAt(Ax.boxAnd, PosInExpr(1 :: Nil))(1, subPos ++ 0).computeResult _, 0)(
-          useAt(Ax.K, PosInExpr(1 :: Nil))(1, subPos).computeResult _,
+        provable(useAt(Ax.boxAnd, PosInExpr(1 :: Nil))(1, subPos ++ 0).computeResult, 0)(
+          useAt(Ax.K, PosInExpr(1 :: Nil))(1, subPos).computeResult,
           0,
         )(condEquivCongruence(p, towards.child, subPos ++ 1, commute, op), 0)(
-          useAt(Ax.boxTrueTrue)(1, subPos).computeResult _,
+          useAt(Ax.boxTrueTrue)(1, subPos).computeResult,
           0,
         )
       )
       case Imply(_, p) if towards.head == 1 => (
-        provable(useAt(Ax.impliesRightAnd)(1, subPos ++ 0).computeResult _, 0)(
-          useAt(Ax.sameImpliesImplies)(1, subPos).computeResult _,
+        provable(useAt(Ax.impliesRightAnd)(1, subPos ++ 0).computeResult, 0)(
+          useAt(Ax.sameImpliesImplies)(1, subPos).computeResult,
           0,
         )(condEquivCongruence(p, towards.child, subPos ++ 1, commute, op), 0)(
-          useAt(Ax.implyTrue)(1, subPos).computeResult _,
+          useAt(Ax.implyTrue)(1, subPos).computeResult,
           0,
         )
       )
       case And(p, _) if towards.head == 0 => (
-        provable(useAt(Ax.factorAndRight)(1, subPos ++ 0).computeResult _, 0)(
-          useAt(Ax.impliesMonAndLeft, PosInExpr(1 :: Nil))(1, subPos).computeResult _,
+        provable(useAt(Ax.factorAndRight)(1, subPos ++ 0).computeResult, 0)(
+          useAt(Ax.impliesMonAndLeft, PosInExpr(1 :: Nil))(1, subPos).computeResult,
           0,
         )(condEquivCongruence(p, towards.child, subPos, commute, op), 0)
       )
       case And(_, p) if towards.head == 1 => (
-        provable(useAt(Ax.factorAndLeft)(1, subPos ++ 0).computeResult _, 0)(
-          useAt(Ax.impliesMonAndRight, PosInExpr(1 :: Nil))(1, subPos).computeResult _,
+        provable(useAt(Ax.factorAndLeft)(1, subPos ++ 0).computeResult, 0)(
+          useAt(Ax.impliesMonAndRight, PosInExpr(1 :: Nil))(1, subPos).computeResult,
           0,
         )(condEquivCongruence(p, towards.child, subPos, commute, op), 0)
       )
       case Or(p, _) if towards.head == 0 => (
-        provable(useAt(Ax.factorOrRight)(1, subPos ++ 0).computeResult _, 0)(
-          useAt(Ax.factorImpliesOrRight)(1, subPos).computeResult _,
+        provable(useAt(Ax.factorOrRight)(1, subPos ++ 0).computeResult, 0)(
+          useAt(Ax.factorImpliesOrRight)(1, subPos).computeResult,
           0,
         )(condEquivCongruence(p, towards.child, subPos ++ 0, commute, op), 0)(
-          useAt(Ax.trueOr)(1, subPos).computeResult _,
+          useAt(Ax.trueOr)(1, subPos).computeResult,
           0,
         )
       )
       case Or(_, p) if towards.head == 1 => (
-        provable(useAt(Ax.factorOrLeft)(1, subPos ++ 0).computeResult _, 0)(
-          useAt(Ax.factorImpliesOrLeft)(1, subPos).computeResult _,
+        provable(useAt(Ax.factorOrLeft)(1, subPos ++ 0).computeResult, 0)(
+          useAt(Ax.factorImpliesOrLeft)(1, subPos).computeResult,
           0,
         )(condEquivCongruence(p, towards.child, subPos ++ 1, commute, op), 0)(
-          useAt(Ax.orTrue)(1, subPos).computeResult _,
+          useAt(Ax.orTrue)(1, subPos).computeResult,
           0,
         )
       )
       case Forall(x, p) if towards.head == 0 => (
-        provable(useAt(Ax.randomb, PosInExpr(1 :: Nil))(1, subPos ++ 0 ++ 0).computeResult _, 0)(
-          useAt(Ax.randomb, PosInExpr(1 :: Nil))(1, subPos ++ 0 ++ 1).computeResult _,
+        provable(useAt(Ax.randomb, PosInExpr(1 :: Nil))(1, subPos ++ 0 ++ 0).computeResult, 0)(
+          useAt(Ax.randomb, PosInExpr(1 :: Nil))(1, subPos ++ 0 ++ 1).computeResult,
           0,
-        )(useAt(Ax.randomb, PosInExpr(1 :: Nil))(1, subPos ++ 1).computeResult _, 0)(
+        )(useAt(Ax.randomb, PosInExpr(1 :: Nil))(1, subPos ++ 1).computeResult, 0)(
           condEquivCongruence(Box(AssignAny(x.head), p), PosInExpr(towards.pos.updated(0, 1)), subPos, commute, op),
           0,
         )
@@ -1204,7 +1204,7 @@ object UnifyUSCalculus extends Logging {
           case CecoEquiv => if (commute) Ax.ponensAndPassthrough_coEquiv else Ax.ponensAndPassthrough_Equiv
           case CecoImply => if (commute) Ax.ponensAndPassthrough_coImply else Ax.ponensAndPassthrough_Imply
         }
-        provable(useAt(ponensAndPassThrough)(1, subPos).computeResult _, 0)
+        provable(useAt(ponensAndPassThrough)(1, subPos).computeResult, 0)
     }
 
   // Let auto-tactics
@@ -1283,7 +1283,7 @@ object UnifyUSCalculus extends Logging {
           if (fmlPos == HereP)
             throw new InfiniteTacticLoopError("CQ split void, would cause infinite loop unless stopped")
           // @todo could optimize to build directly since ctx already known
-          (provable(CEFw(fmlPos).result _, 0)(CQFw(termPos).result _, 0))
+          (provable(CEFw(fmlPos).result, 0)(CQFw(termPos).result, 0))
         }
       case fml => throw new TacticInapplicableFailure("Expected equivalence, but got " + fml)
     }
@@ -1352,7 +1352,7 @@ object UnifyUSCalculus extends Logging {
           // if (p.at(fmlPos)._2.isInstanceOf[Modal]) logger.warn(">>CE TACTIC MAY PRODUCE INFINITE LOOP<<")
           // if (fmlPos == HereP) throw new InfiniteTacticLoopError("CQ split void, would cause infinite loop unless stopped")
           // @todo could optimize to build directly since ctx already known
-          (provable(CEimpFw(fmlPos).result _, 0)(CQFw(termPos).result _, 0))
+          (provable(CEimpFw(fmlPos).result, 0)(CQFw(termPos).result, 0))
         }
       case fml => throw new TacticInapplicableFailure("Expected equivalence, but got " + fml)
     }
@@ -1421,7 +1421,7 @@ object UnifyUSCalculus extends Logging {
           // if (p.at(fmlPos)._2.isInstanceOf[Modal]) logger.warn(">>CE TACTIC MAY PRODUCE INFINITE LOOP<<")
           // if (fmlPos == HereP) throw new InfiniteTacticLoopError("CQ split void, would cause infinite loop unless stopped")
           // @todo could optimize to build directly since ctx already known
-          (provable(CErevimpFw(fmlPos).result _, 0)(CQFw(termPos).result _, 0))
+          (provable(CErevimpFw(fmlPos).result, 0)(CQFw(termPos).result, 0))
         }
       case fml => throw new TacticInapplicableFailure("Expected equivalence, but got " + fml)
     }
@@ -1672,7 +1672,7 @@ object UnifyUSCalculus extends Logging {
    */
   def CMon: BuiltInRightTactic = "CMon".by { (provable: ProvableSig, pos: SuccPosition) =>
     // require(pos.isIndexDefined(sequent), "Cannot apply at undefined position " + pos + " in sequent " + sequent)
-    provable(CoHideRight(pos.top), 0)(CMonFw(PosInExpr(pos.inExpr.pos.tail)).result _, 0)
+    provable(CoHideRight(pos.top), 0)(CMonFw(PosInExpr(pos.inExpr.pos.tail)).result, 0)
   }
   //  def CMon: DependentPositionTactic = new DependentPositionTactic("CMon") {
   //    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
@@ -1763,19 +1763,19 @@ object UnifyUSCalculus extends Logging {
         )
         val (ctx, _) = sequent.at(pos)
         val (cutPos: SuccPos, commute: (ProvableSig => ProvableSig)) = pos match {
-          case p: SuccPosition => (p.top, ident.result _)
+          case p: SuccPosition => (p.top, ident.result)
           case _: AntePosition => (
               SuccPos(sequent.succ.length),
               fact.conclusion.succ.head match {
-                case _: Equal => commuteEqual(1).computeResult _
-                case _: Equiv => commuteEquivR(1).computeResult _
-                case _ => ident.result _
+                case _: Equal => commuteEqual(1).computeResult
+                case _: Equiv => commuteEquivR(1).computeResult
+                case _ => ident.result
               },
             )
         }
         val ctxOther = if (!LIBERAL) ctx(other) else sequent.replaceAt(pos, other)
-        (provable(cutLRFw(ctxOther)(pos.top).computeResult _, 0)(CoHideRight(cutPos), 1)(equivify, 1)(
-          tactic(pos.inExpr).result _,
+        (provable(cutLRFw(ctxOther)(pos.top).computeResult, 0)(CoHideRight(cutPos), 1)(equivify, 1)(
+          tactic(pos.inExpr).result,
           1,
         )(commute, 1)(fact, 1))
       }
@@ -2429,7 +2429,7 @@ object UnifyUSCalculus extends Logging {
         //        else if (C.ctx == DotFormula && polarity >= 0) Sequent(IndexedSeq(left), IndexedSeq(right))
         //        else if (polarity >= 0) Sequent(IndexedSeq(C(right)), IndexedSeq(C(left)))
         //        else Sequent(IndexedSeq(C(left)), IndexedSeq(C(right))))}, "Expected conclusion " + "\nin CMon.monStep(" + C + ",\nwhich is " + (if (polarity < 0) C(right) + "/" + C(left) else C(left) + "/" + C(right)) + ",\non " + mon + ")"
-      ) ensures (
+      ) `ensures` (
         r => !impl.isProved || r.isProved,
         "Proved if input fact proved" + "\nin CMon.monStep(" + C + ",\non " + mon + ")",
       )
@@ -2505,7 +2505,7 @@ object UnifyUSCalculus extends Logging {
       inst: Subst => Subst,
   ): ForwardPositionTactic = {
     // split key into keyCtx{keyPart} = fact
-    val (keyCtx: Context[_], keyPart) = fact.conclusion(SuccPos(0)).at(key): @unchecked
+    val (keyCtx: Context[?], keyPart) = fact.conclusion(SuccPos(0)).at(key): @unchecked
     logger.debug(s"useFor(${fact.conclusion}) key: $keyPart in key context: $keyCtx")
 
     pos =>
@@ -2618,10 +2618,10 @@ object UnifyUSCalculus extends Logging {
                 else CutLeft(C(subst(k)), p.top.asInstanceOf[AntePos]),
                 0,
               )(coside, 1)
-            } ensures (
+            } `ensures` (
               r => r.conclusion == proof.conclusion.updated(p.top, C(subst(o))),
               "prolonged conclusion",
-            ) ensures (
+            ) `ensures` (
               r => r.subgoals == List(proof.conclusion.updated(p.top, C(subst(k)))),
               "expected premise if fact.isProved",
             )
@@ -2637,10 +2637,10 @@ object UnifyUSCalculus extends Logging {
             // ------------------------------ CutLeft
             // G, C{subst(o)} |- D
             proved(proof, 0)
-          } ensures (
+          } `ensures` (
             r => r.conclusion == proof.conclusion.updated(p.top, C(subst(o))),
             "prolonged conclusion",
-          ) ensures (r => r.subgoals == proof.subgoals, "expected original premises")
+          ) `ensures` (r => r.subgoals == proof.subgoals, "expected original premises")
 
           // in which context of the fact does the key occur
           K.ctx match {
@@ -2859,7 +2859,7 @@ object UnifyUSCalculus extends Logging {
               (subst.toForward(fact), 1)
               // left branch   |- subst(prereq)
               (prereqFact, 0))
-              remFact ensures (r => r.subgoals == fact.subgoals, "Proved / no new subgoals expected " + remFact)
+              remFact `ensures` (r => r.subgoals == fact.subgoals, "Proved / no new subgoals expected " + remFact)
 
               val remKey: PosInExpr = key.child
               require(
@@ -2926,7 +2926,7 @@ object UnifyUSCalculus extends Logging {
    * critical choices. Unlike [[TactixLibrary.chaseAt]] will not branch or use propositional rules, merely transform the
    * chosen formula in place.
    */
-  val chase: BuiltInPositionTactic = "chase".by { chase(3, 3, AxIndex.axiomsFor(_: Expression)).computeResult _ }
+  val chase: BuiltInPositionTactic = "chase".by { chase(3, 3, AxIndex.axiomsFor(_: Expression)).computeResult }
 
   @Derivation
   val chaseInfo: PositionTacticInfo = PositionTacticInfo.create(
@@ -3083,7 +3083,7 @@ object UnifyUSCalculus extends Logging {
    * @param name What name to give to the use of of this tactic.
    * @author Andre Platzer
    */
-  private[this] def chaseFor2Back(name: String, forward: ForwardPositionTactic): BuiltInPositionTactic = {
+  private def chaseFor2Back(name: String, forward: ForwardPositionTactic): BuiltInPositionTactic = {
 
     /** Construct a proof proving the answer of the chase of e, so proves e=chased(e) or e<->chased(e) */
     @nowarn("msg=match may not be exhaustive")
@@ -3106,7 +3106,7 @@ object UnifyUSCalculus extends Logging {
       val r = forward(SuccPosition(1, 0 :: Nil))(initial)
       logger.debug(s"chase(${e.prettyString}) = ~~> $r done")
       r
-    } ensures (r => r.isProved, "chase remains proved: " + " final chase(" + e + ")")
+    } `ensures` (r => r.isProved, "chase remains proved: " + " final chase(" + e + ")")
     anon { (provable: ProvableSig, pos: Position) =>
       {
         val sequent = provable.subgoals.head
@@ -3205,7 +3205,7 @@ object UnifyUSCalculus extends Logging {
                 )
             }
         }
-      } ensures (
+      } `ensures` (
         r => r.subgoals == de.subgoals,
         "chase keeps subgoals unchanged: " + " final chase(" + de
           .conclusion
@@ -3253,7 +3253,7 @@ object UnifyUSCalculus extends Logging {
                 case Some((axUse, recursor)) => recursor.foldLeft(axUse)((pf, cursor) => doChase(pf, pos ++ cursor))
               }
           }
-        } ensures (
+        } `ensures` (
           r => r.subgoals == de.subgoals,
           "chase keeps subgoals unchanged: " + " final chase(" + de
             .conclusion

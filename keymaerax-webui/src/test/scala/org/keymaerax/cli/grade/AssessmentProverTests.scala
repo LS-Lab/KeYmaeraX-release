@@ -1006,7 +1006,7 @@ class AssessmentProverTests extends TacticTestBase {
       .map(p => p.copy(questions = p.questions.filter(_.isInstanceOf[AnyChoiceQuestion])))
       .toList
     val graders = anyChoiceProblems.flatMap(p => p.questions.map(toGrader)).map(_._1)
-    forEvery(Table("Grader", graders: _*)) {
+    forEvery(Table("Grader", graders*)) {
       _.check(ChoiceArtifact(Nil)).toOption.value shouldBe AssessmentProver.Messages.BLANK
     }
   }
@@ -1017,7 +1017,7 @@ class AssessmentProverTests extends TacticTestBase {
       .map(p => p.copy(questions = p.questions.filter(_.isInstanceOf[OneChoiceQuestion])))
       .toList
     val graders = oneChoiceProblems.flatMap(p => p.questions.map(toGrader)).map(_._1)
-    forEvery(Table("Grader", graders: _*)) {
+    forEvery(Table("Grader", graders*)) {
       _.check(ChoiceArtifact(Nil)).toOption.value shouldBe AssessmentProver.Messages.BLANK
     }
   }
@@ -1026,7 +1026,7 @@ class AssessmentProverTests extends TacticTestBase {
     val problems = (2 to 16).flatMap(i => extractProblems(QUIZ_PATH + "/" + i + "/main.tex"))
     val asktfProblems = problems.map(p => p.copy(questions = p.questions.filter(_.isInstanceOf[AskTFQuestion]))).toList
     val graders = asktfProblems.flatMap(p => p.questions.map(toGrader)).map(_._1)
-    forEvery(Table("Grader", graders: _*)) {
+    forEvery(Table("Grader", graders*)) {
       _.check(BoolArtifact(None)).toOption.value shouldBe AssessmentProver.Messages.BLANK
     }
   }
@@ -1035,7 +1035,7 @@ class AssessmentProverTests extends TacticTestBase {
     val problems = (2 to 16).flatMap(i => extractProblems(QUIZ_PATH + "/" + i + "/main.tex"))
     val askProblems = problems.map(p => p.copy(questions = p.questions.filter(_.isInstanceOf[AskQuestion]))).toList
     val graders = askProblems.flatMap(p => p.questions.map(toGrader)).map(_._1)
-    forEvery(Table("Grader", graders.drop(42): _*)) { g =>
+    forEvery(Table("Grader", graders.drop(42)*)) { g =>
       g.expected match {
         case TextArtifact(None) =>
           g.check(TextArtifact(None)).left.value.conclusion shouldBe "==>  explanation()&full()<->explanation()&full()"
@@ -1046,7 +1046,7 @@ class AssessmentProverTests extends TacticTestBase {
         case _ => g.check(TextArtifact(None)).toOption.value shouldBe AssessmentProver.Messages.BLANK
       }
     }
-    forEvery(Table("Grader", graders: _*)) { g =>
+    forEvery(Table("Grader", graders*)) { g =>
       g.expected match {
         case TextArtifact(None) => g
             .check(TextArtifact(Some("")))
@@ -1061,7 +1061,7 @@ class AssessmentProverTests extends TacticTestBase {
         case _ => g.check(TextArtifact(Some(""))).toOption.value shouldBe AssessmentProver.Messages.BLANK
       }
     }
-    forEvery(Table("Grader", graders: _*)) { g =>
+    forEvery(Table("Grader", graders*)) { g =>
       g.expected match {
         case TextArtifact(None) => g
             .check(TextArtifact(Some("   \n  \t  ")))
@@ -1975,7 +1975,7 @@ class AssessmentProverTests extends TacticTestBase {
         adjustedAnswers,
       )
     }
-    val submittedProblems = problems.zipWithIndex.map((createProblem _).tupled)
+    val submittedProblems = problems.zipWithIndex.map((createProblem).tupled)
     (Submission.Chapter(1, chapterLabel, submittedProblems.map(_._1)), submittedProblems.flatMap(_._2))
   }
 
@@ -2038,7 +2038,7 @@ class AssessmentProverTests extends TacticTestBase {
             val (grader, correct, incorrect) = toGrader(q)
             (p.name, grader, correct, incorrect)
           })
-      ): _*
+      )*
     )
   }
 

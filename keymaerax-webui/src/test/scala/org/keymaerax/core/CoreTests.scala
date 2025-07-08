@@ -202,11 +202,11 @@ class CoreTests extends AnyFlatSpec with Matchers with BeforeAndAfterAll {
     var msg3 = false
     var cnd4 = false
 
-    def fun1(): Int = { 0 } ensures (r => { cnd1 = true; r > 0 }, { msg1 = true; "non-positive" })
+    def fun1(): Int = { 0 } `ensures` (r => { cnd1 = true; r > 0 }, { msg1 = true; "non-positive" })
 
-    def fun2(): Int = { 0 } ensures (r => { cnd2 = true; r > 0 })
+    def fun2(): Int = { 0 } `ensures` (r => { cnd2 = true; r > 0 })
 
-    def fun3(): Int = { 0 } ensures ({ cnd3 = true; false }, { msg3 = true; "false" })
+    def fun3(): Int = { 0 } `ensures` ({ cnd3 = true; false }, { msg3 = true; "false" })
 
     def fun4(): Int = { 0 } ensures { cnd4 = true; false }
 

@@ -141,11 +141,7 @@ object Ax extends Logging {
     info
   }
 
-  private[this] def derivedRuleSequent(
-      info: DerivedRuleInfo,
-      derived: => Sequent,
-      tactic: => BelleExpr,
-  ): DerivedRuleInfo = {
+  private def derivedRuleSequent(info: DerivedRuleInfo, derived: => Sequent, tactic: => BelleExpr): DerivedRuleInfo = {
     val storageName = info.storedName
     val lemma = derivedAxiomDB.get(storageName) match {
       case Some(lemma) => lemma

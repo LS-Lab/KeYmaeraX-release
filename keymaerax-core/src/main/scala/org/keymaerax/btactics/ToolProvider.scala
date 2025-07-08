@@ -25,7 +25,7 @@ import scala.reflect.{classTag, ClassTag}
 object ToolProvider extends ToolProvider with Logging {
 
   /* @note mutable state for switching out default tool providers, which defaults to just returning None */
-  private[this] var f: ToolProvider = new NoneToolProvider()
+  private var f: ToolProvider = new NoneToolProvider()
 
   /** Returns the current tool provider. */
   def provider: ToolProvider = f
@@ -170,55 +170,55 @@ trait ToolProvider {
 class PreferredToolProvider[T <: Tool](val toolPreferences: List[T]) extends ToolProvider {
   require(toolPreferences != null && toolPreferences.nonEmpty, "Non-empty list of tools expected")
 
-  private[this] lazy val qe: Option[Tool with QETacticTool] = toolPreferences
+  private lazy val qe: Option[Tool & QETacticTool] = toolPreferences
     .find(_.isInstanceOf[QETacticTool])
-    .map(_.asInstanceOf[Tool with QETacticTool])
-  private[this] lazy val invgen: Option[Tool with InvGenTool] = toolPreferences
+    .map(_.asInstanceOf[Tool & QETacticTool])
+  private lazy val invgen: Option[Tool & InvGenTool] = toolPreferences
     .find(_.isInstanceOf[InvGenTool])
-    .map(_.asInstanceOf[Tool with InvGenTool])
-  private[this] lazy val ode: Option[Tool with ODESolverTool] = toolPreferences
+    .map(_.asInstanceOf[Tool & InvGenTool])
+  private lazy val ode: Option[Tool & ODESolverTool] = toolPreferences
     .find(_.isInstanceOf[ODESolverTool])
-    .map(_.asInstanceOf[Tool with ODESolverTool])
-  private[this] lazy val pde: Option[Tool with PDESolverTool] = toolPreferences
+    .map(_.asInstanceOf[Tool & ODESolverTool])
+  private lazy val pde: Option[Tool & PDESolverTool] = toolPreferences
     .find(_.isInstanceOf[PDESolverTool])
-    .map(_.asInstanceOf[Tool with PDESolverTool])
-  private[this] lazy val cex: Option[Tool with CounterExampleTool] = toolPreferences
+    .map(_.asInstanceOf[Tool & PDESolverTool])
+  private lazy val cex: Option[Tool & CounterExampleTool] = toolPreferences
     .find(_.isInstanceOf[CounterExampleTool])
-    .map(_.asInstanceOf[Tool with CounterExampleTool])
-  private[this] lazy val simplifier: Option[Tool with SimplificationTool] = toolPreferences
+    .map(_.asInstanceOf[Tool & CounterExampleTool])
+  private lazy val simplifier: Option[Tool & SimplificationTool] = toolPreferences
     .find(_.isInstanceOf[SimplificationTool])
-    .map(_.asInstanceOf[Tool with SimplificationTool])
-  private[this] lazy val simulator: Option[Tool with SimulationTool] = toolPreferences
+    .map(_.asInstanceOf[Tool & SimplificationTool])
+  private lazy val simulator: Option[Tool & SimulationTool] = toolPreferences
     .find(_.isInstanceOf[SimulationTool])
-    .map(_.asInstanceOf[Tool with SimulationTool])
-  private[this] lazy val solver: Option[Tool with EquationSolverTool] = toolPreferences
+    .map(_.asInstanceOf[Tool & SimulationTool])
+  private lazy val solver: Option[Tool & EquationSolverTool] = toolPreferences
     .find(_.isInstanceOf[EquationSolverTool])
-    .map(_.asInstanceOf[Tool with EquationSolverTool])
-  private[this] lazy val algebra: Option[Tool with AlgebraTool] = toolPreferences
+    .map(_.asInstanceOf[Tool & EquationSolverTool])
+  private lazy val algebra: Option[Tool & AlgebraTool] = toolPreferences
     .find(_.isInstanceOf[AlgebraTool])
-    .map(_.asInstanceOf[Tool with AlgebraTool])
-  private[this] lazy val sossolve: Option[Tool with SOSsolveTool] = toolPreferences
+    .map(_.asInstanceOf[Tool & AlgebraTool])
+  private lazy val sossolve: Option[Tool & SOSsolveTool] = toolPreferences
     .find(_.isInstanceOf[SOSsolveTool])
-    .map(_.asInstanceOf[Tool with SOSsolveTool])
-  private[this] lazy val lyapunov: Option[Tool with LyapunovSolverTool] = toolPreferences
+    .map(_.asInstanceOf[Tool & SOSsolveTool])
+  private lazy val lyapunov: Option[Tool & LyapunovSolverTool] = toolPreferences
     .find(_.isInstanceOf[LyapunovSolverTool])
-    .map(_.asInstanceOf[Tool with LyapunovSolverTool])
+    .map(_.asInstanceOf[Tool & LyapunovSolverTool])
 
   override def tools(): List[Tool] = toolPreferences
   override def defaultTool(): Option[Tool] = toolPreferences.headOption
-  override def qeTool(name: Option[String] = None): Option[QETacticTool] = ensureInitialized[Tool with QETacticTool](
+  override def qeTool(name: Option[String] = None): Option[QETacticTool] = ensureInitialized[Tool & QETacticTool](
     name match {
       case Some(qeToolName) => toolPreferences
           .find(t => t.isInstanceOf[QETacticTool] && t.name == qeToolName)
-          .map(_.asInstanceOf[Tool with QETacticTool])
+          .map(_.asInstanceOf[Tool & QETacticTool])
       case None => qe
     }
   )
-  override def invGenTool(name: Option[String] = None): Option[InvGenTool] = ensureInitialized[Tool with InvGenTool](
+  override def invGenTool(name: Option[String] = None): Option[InvGenTool] = ensureInitialized[Tool & InvGenTool](
     name match {
       case Some(invGenToolName) => toolPreferences
           .find(t => t.isInstanceOf[InvGenTool] && t.name == invGenToolName)
-          .map(_.asInstanceOf[Tool with InvGenTool])
+          .map(_.asInstanceOf[Tool & InvGenTool])
       case None => invgen
     }
   )

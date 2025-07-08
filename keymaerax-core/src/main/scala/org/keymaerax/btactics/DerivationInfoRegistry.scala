@@ -63,7 +63,7 @@ object DerivationInfoRegistry extends Logging {
   }
 
   /** Evaluate the method of a Scala object and register it with the global [[DerivationInfo]] object. */
-  private def registerDerivationFromMethod(clazz: Class[_], instance: AnyRef, method: Method): Unit = {
+  private def registerDerivationFromMethod(clazz: Class[?], instance: AnyRef, method: Method): Unit = {
     // Exceptions that occur during reflection are wrapped in an InvocationTargetException.
     // We unwrap and rethrow so from the outside it looks like we just evaluated the derivation normally.
     val valueAny = try { method.invoke(instance) } catch { case e: InvocationTargetException => throw e.getCause }
@@ -73,7 +73,7 @@ object DerivationInfoRegistry extends Logging {
   }
 
   /** Evaluate the field of a Scala object and register it with the global [[DerivationInfo]] object. */
-  private def registerDerivationFromField(clazz: Class[_], instance: AnyRef, field: Field): Unit = {
+  private def registerDerivationFromField(clazz: Class[?], instance: AnyRef, field: Field): Unit = {
     // Lazy vals are named something$lzy1 or similar by the compiler.
     // They have a getter function with the original name that is also annotated.
     // We collect annotated methods separately, so we can just skip here.
@@ -85,7 +85,7 @@ object DerivationInfoRegistry extends Logging {
     registerDerivationFromMethod(clazz, instance, getter)
   }
 
-  private def tryRegistering(clazz: Class[_], name: String, op: => Unit): Option[String] =
+  private def tryRegistering(clazz: Class[?], name: String, op: => Unit): Option[String] =
     try {
       op
       None

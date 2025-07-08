@@ -952,7 +952,7 @@ object SimplifierV3 {
   }
 
   private def termSimpWithDischarge(ctx: IndexedSeq[Formula], t: Term, taxs: termIndex): (Term, Option[ProvableSig]) = {
-    val hs = HashSet(ctx: _*) // todo: Apply simple decomposition that prop can handle here
+    val hs = HashSet(ctx*) // todo: Apply simple decomposition that prop can handle here
     val (recf, recpropt) = termSimp(t, hs, taxs)
     (
       recf,
@@ -984,7 +984,7 @@ object SimplifierV3 {
       faxs: formulaIndex,
       taxs: termIndex,
   ): (Formula, Option[ProvableSig]) = {
-    val hs = HashSet(ctx: _*) // todo: Apply simple decomposition that prop can handle here
+    val hs = HashSet(ctx*) // todo: Apply simple decomposition that prop can handle here
     val (recf, recpropt) = formulaSimp(f, hs, faxs, taxs)
     (
       recf,
@@ -1478,7 +1478,7 @@ object SimplifierV3 {
     def l2r(prv: ProvableSig, recursors: List[Int]*): List[(ProvableSig, PosInExpr, List[PosInExpr])] =
       List((prv, PosInExpr(0 :: Nil), recursors.toList.map(PosInExpr(_))))
     def recurseFml(recursors: List[Int]*): List[(ProvableSig, PosInExpr, List[PosInExpr])] = {
-      l2r(Ax.equivReflexive.provable, recursors: _*)
+      l2r(Ax.equivReflexive.provable, recursors*)
     }
     val A = List() // All / Whole subexpression
     val L = List(0) // Left

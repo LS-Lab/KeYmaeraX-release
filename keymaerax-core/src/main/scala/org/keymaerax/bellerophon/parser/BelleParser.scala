@@ -106,10 +106,7 @@ object BelleParser extends TacticParser with Logging {
       case None => parseTokenStream(
           BelleLexer(s),
           DefScope[String, DefTactic](
-            scala
-              .collection
-              .mutable
-              .Map[String, DefTactic](defs.map({ case (n, t) => (n, DefTactic(n, t)) }).toList: _*)
+            scala.collection.mutable.Map[String, DefTactic](defs.map({ case (n, t) => (n, DefTactic(n, t)) }).toList*)
           ),
           None,
           Declaration(Map.empty),
@@ -323,8 +320,8 @@ object BelleParser extends TacticParser with Logging {
           ParsedBelleExprList(branchTactics) =>
         assert(branchTactics.nonEmpty)
         val parsedExpr = {
-          if (branchTactics.forall(_.label.isDefined)) left.switch(branchTactics.map(t => t.label.get -> t.expr): _*)
-          else if (branchTactics.forall(_.label.isEmpty)) left.<(branchTactics.map(_.expr): _*)
+          if (branchTactics.forall(_.label.isDefined)) left.switch(branchTactics.map(t => t.label.get -> t.expr)*)
+          else if (branchTactics.forall(_.label.isEmpty)) left.<(branchTactics.map(_.expr)*)
           else {
             val bt = branchTactics
               .map(t => "  \"" + t.label.map(_.prettyString).getOrElse("<missing>") + "\": " + t.expr.prettyString)
@@ -344,7 +341,7 @@ object BelleParser extends TacticParser with Logging {
       // Allow doStuff<() for partial tactics that just leave all branches open. Useful for interactive tactic development.
       case r :+ ParsedBelleExpr(left, leftLoc, l) :+ BelleToken(BRANCH_COMBINATOR, combinatorLoc) :+
           BelleToken(OPEN_PAREN, _) :+ BelleToken(CLOSE_PAREN, cParenLoc) =>
-        val parsedExpr = left.<(Seq.empty[BelleExpr]: _*)
+        val parsedExpr = left.<(Seq.empty[BelleExpr]*)
         ParserState(r :+ ParsedBelleExpr(parsedExpr, leftLoc.spanTo(cParenLoc), l), st.input)
 
       case _ :+ ParsedBelleExpr(_, _, _) :+ BelleToken(BRANCH_COMBINATOR, loc) :+ BelleToken(OPEN_PAREN, _) :+

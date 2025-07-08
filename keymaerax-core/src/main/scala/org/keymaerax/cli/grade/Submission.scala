@@ -133,7 +133,7 @@ object Submission {
                   NAME -> "solfinsol".toJson,
                   BODY_SRC ->
                     argPlaceholder.replaceAllIn(expected, m => Regex.quoteReplacement(s"~~${m.group("arg")}~~")).toJson,
-                  COOKIES -> JsArray(grader.map(_.toJson).toList: _*),
+                  COOKIES -> JsArray(grader.map(_.toJson).toList*),
                 ),
                 USER_ANSWER -> JsObject(TEXT -> answer.toJson, IS_CHECKED -> false.toJson),
                 IS_CHOICE -> false.toJson,

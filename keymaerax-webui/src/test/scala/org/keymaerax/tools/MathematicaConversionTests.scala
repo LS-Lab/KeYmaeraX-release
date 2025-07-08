@@ -34,8 +34,9 @@ class MathematicaConversionTests extends AnyFlatSpec with Matchers with BeforeAn
   )
   private lazy val origConfig = Configuration.getString(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS)
 
-  private var link: JLinkMathematicaLink = _
-  private var ml: BaseKeYmaeraMathematicaBridge[KExpr] = _ // var so that we can instantiate within a test case.
+  private var link: JLinkMathematicaLink = scala.compiletime.uninitialized
+  private var ml: BaseKeYmaeraMathematicaBridge[KExpr] =
+    scala.compiletime.uninitialized // var so that we can instantiate within a test case.
 
   private val x = Variable("x", None, Real)
   private val y = Variable("y", None, Real)
@@ -214,30 +215,30 @@ class MathematicaConversionTests extends AnyFlatSpec with Matchers with BeforeAn
   }
 
   "KeYmaera <-> Mathematica converters" should "commute" in {
-    round trip num(5)
-    round trip x
-    round trip Variable("y", None, Real)
-    round trip Variable("xyzd", None, Real)
+    round `trip` num(5)
+    round `trip` x
+    round `trip` Variable("y", None, Real)
+    round `trip` Variable("xyzd", None, Real)
     // round trip Variable("_", None, Real)
-    round trip Variable("x_", None, Real)
-    round trip Variable("x", Some(0), Real)
-    round trip Variable("x", Some(5), Real)
-    round trip Variable("x_", Some(0), Real)
-    round trip Variable("x_", Some(2), Real)
-    round trip FuncOf(Function("x", None, Real, Real), Variable("y0", None, Real))
+    round `trip` Variable("x_", None, Real)
+    round `trip` Variable("x", Some(0), Real)
+    round `trip` Variable("x", Some(5), Real)
+    round `trip` Variable("x_", Some(0), Real)
+    round `trip` Variable("x_", Some(2), Real)
+    round `trip` FuncOf(Function("x", None, Real, Real), Variable("y0", None, Real))
   }
 
   it should "commute crazy names" in {
-    round trip Variable("x_", None, Real)
+    round `trip` Variable("x_", None, Real)
     // round trip Variable("_", None, Real)
-    round trip FuncOf(Function("x", None, Real, Real), Variable("y_", None, Real))
+    round `trip` FuncOf(Function("x", None, Real, Real), Variable("y_", None, Real))
   }
 
   it should "convert inequalities" in {
-    round trip "\\forall x x>y".asFormula
-    round trip "\\forall x x>=y".asFormula
-    round trip "\\forall x x<=y".asFormula
-    round trip "\\forall x x<y".asFormula
+    round `trip` "\\forall x x>y".asFormula
+    round `trip` "\\forall x x>=y".asFormula
+    round `trip` "\\forall x x<=y".asFormula
+    round `trip` "\\forall x x<y".asFormula
   }
 
   it should "associate minus and negation correctly" in {
@@ -264,15 +265,15 @@ class MathematicaConversionTests extends AnyFlatSpec with Matchers with BeforeAn
   }
 
   it should "convert Apply()" in {
-    round trip FuncOf(Function("x", None, Real, Real), Number(0))
-    round trip FuncOf(Function("x", None, Real, Real), Variable("y", None, Real))
+    round `trip` FuncOf(Function("x", None, Real, Real), Number(0))
+    round `trip` FuncOf(Function("x", None, Real, Real), Variable("y", None, Real))
   }
 
   it should "convert special functions only when forced to" in {
     Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, "true", saveToFile = false)
-    round trip "abs(x)".asTerm
-    round trip "min(x,y)".asTerm
-    round trip "max(x,y)".asTerm
+    round `trip` "abs(x)".asTerm
+    round `trip` "min(x,y)".asTerm
+    round `trip` "max(x,y)".asTerm
   }
 
   it should "convert non-arg functions with nonQEConverter" in {
@@ -289,7 +290,7 @@ class MathematicaConversionTests extends AnyFlatSpec with Matchers with BeforeAn
   }
 
   it should "convert nested quantifiers" in {
-    round trip "\\forall a \\forall b \\exists c \\forall d (a<=b -> c>=a+d)".asFormula
+    round `trip` "\\forall a \\forall b \\exists c \\forall d (a<=b -> c>=a+d)".asFormula
   }
 
   "KeYmaera -> Mathematica" should "convert Apply" in {

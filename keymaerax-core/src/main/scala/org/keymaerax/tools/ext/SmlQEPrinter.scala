@@ -54,9 +54,9 @@ class SmlQEPrinter(intPrinter: BigInt => String, realPrinter: BigDecimal => Stri
     case Imply(p, q) => print(Or(Not(p), q))
     case Equiv(p, q) => print(Or(And(p, q), And(Not(p), Not(q))))
     case Forall(x :: Nil, p) =>
-      s"AllQ (${print(p)(Map((vIdxs.map({ case (k, v) => k -> (v + 1) }).toList :+ (x -> 0)): _*))})"
+      s"AllQ (${print(p)(Map((vIdxs.map({ case (k, v) => k -> (v + 1) }).toList :+ (x -> 0))*))})"
     case Exists(x :: Nil, p) =>
-      s"ExQ (${print(p)(Map((vIdxs.map({ case (k, v) => k -> (v + 1) }).toList :+ (x -> 0)): _*))})"
+      s"ExQ (${print(p)(Map((vIdxs.map({ case (k, v) => k -> (v + 1) }).toList :+ (x -> 0))*))})"
   }
 
   /** Prints term `t`, encoding variables using DeBruijn-indices as supplied by `vIdx`. */

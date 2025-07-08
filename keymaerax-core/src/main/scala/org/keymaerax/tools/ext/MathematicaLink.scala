@@ -87,7 +87,7 @@ abstract class BaseKeYmaeraMathematicaBridge[T](
   var memoryLimit: Long = MEMORY_LIMIT_OFF
 
   protected val DEBUG: Boolean = Configuration(Configuration.Keys.DEBUG) == "true"
-  protected var mathematicaExecutor: ToolExecutor = _
+  protected var mathematicaExecutor: ToolExecutor = scala.compiletime.uninitialized
 
   /** @inheritdoc */
   override def runUnchecked(cmd: String): (String, T) = runUnchecked(cmd, m2k)
@@ -150,8 +150,8 @@ class JLinkMathematicaLink(val engineName: String) extends MathematicaLink with 
 
   // @todo really should be private -> fix SpiralGenerator
   // @todo concurrent access to ml needs ml access to be synchronized everywhere or pooled or
-  private[keymaerax] var ml: KernelLink = _
-  private var linkName: String = _
+  private[keymaerax] var ml: KernelLink = scala.compiletime.uninitialized
+  private var linkName: String = scala.compiletime.uninitialized
   private var jlinkLibDir: Option[String] = None
   private var tcpip: String = ""
 

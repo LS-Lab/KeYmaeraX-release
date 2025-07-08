@@ -91,7 +91,7 @@ class UIAbbreviatingKeYmaeraXPrettyPrinter extends KeYmaeraXWeightedPrettyPrinte
 }
 
 class UIAbbreviatingKeYmaeraXPrettierPrinter(margin: Int) extends KeYmaeraXPrettierPrinter(margin) {
-  override def apply(expr: Expression): String = stringify(expr) ensures
+  override def apply(expr: Expression): String = stringify(expr) `ensures`
     (
       // @note functions and interpreted functions are printed without parentheses/interpretations and do not reparse
       r =>
@@ -136,7 +136,7 @@ class UIKeYmaeraXPrettyPrinter(val topId: String, val plainText: Boolean) extend
   import UIKeYmaeraXPrettyPrinter._
   private def htmlSpan(c: String, body: String): String = htmlElement("span", body, Some(c))
 
-  private var topExpr: Expression = _
+  private var topExpr: Expression = scala.compiletime.uninitialized
   // @note just to get isAnte right for UIIndex
   private val pos: Position = if (topId.startsWith("-")) AntePosition(1) else SuccPosition(1)
 

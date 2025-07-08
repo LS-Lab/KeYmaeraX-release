@@ -98,7 +98,7 @@ object ReflectiveExpressionBuilder extends Logging {
       // If the tactic accepts arguments but wasn't given any, return the unapplied tactic under the assumption that
       // someone is going to plug in the arguments later
       case (expr: BelleExpr, Nil, _) => expr
-      case (expr: BelleExpr with PositionalTactic, arg :: Nil, 1) => AppliedPositionTactic(expr, arg)
+      case (expr: (BelleExpr & PositionalTactic), arg :: Nil, 1) => AppliedPositionTactic(expr, arg)
       case (expr: DependentTwoPositionTactic, Fixed(arg1: Position, _, _) :: Fixed(arg2: Position, _, _) :: Nil, 2) =>
         AppliedDependentTwoPositionTactic(expr, arg1, arg2)
       case (expr: DependentPositionWithAppliedInputTactic, loc :: Nil, 1) =>

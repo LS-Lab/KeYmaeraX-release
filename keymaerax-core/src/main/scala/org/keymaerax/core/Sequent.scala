@@ -146,7 +146,7 @@ final case class Sequent(ante: immutable.IndexedSeq[Formula], succ: immutable.In
    * @return a copy of this sequent concatenated with s. Results in a least upper bound with respect to subsets of this
    *   and s.
    */
-  def glue(s: Sequent): Sequent = { Sequent(ante ++ s.ante, succ ++ s.succ) } ensures
+  def glue(s: Sequent): Sequent = { Sequent(ante ++ s.ante, succ ++ s.succ) } `ensures`
     (
       r =>
         this.subsequentOf(r) && s.subsequentOf(r) && r.ante.forall(f => this.ante.contains(f) || s.ante.contains(f)) &&
@@ -197,7 +197,7 @@ final case class Sequent(ante: immutable.IndexedSeq[Formula], succ: immutable.In
    * A copy of this sequent with the indicated antecedent position replaced by gluing the sequent s, same as
    * [[updated(p:edu\.cmu\.cs\.ls\.keymaerax\.core\.SeqPos,s:edu\.cmu\.cs\.ls\.keymaerax\.core\.Sequent):edu\.cmu\.cs\.ls\.keymaerax\.core\.Sequent*]]
    */
-  def updated(p: AntePos, s: Sequent): Sequent = { Sequent(ante.patch(p.getIndex, Nil, 1), succ).glue(s) } ensures
+  def updated(p: AntePos, s: Sequent): Sequent = { Sequent(ante.patch(p.getIndex, Nil, 1), succ).glue(s) } `ensures`
     (
       r => r.glue(Sequent(immutable.IndexedSeq(this(p)), immutable.IndexedSeq())).sameSequentAs(this.glue(s)),
       "result after re-including updated formula is equivalent to " + this + " glue " + s,
@@ -207,7 +207,7 @@ final case class Sequent(ante: immutable.IndexedSeq[Formula], succ: immutable.In
    * A copy of this sequent with the indicated succedent position replaced by gluing the sequent s, same as
    * [[updated(p:edu\.cmu\.cs\.ls\.keymaerax\.core\.SeqPos,s:edu\.cmu\.cs\.ls\.keymaerax\.core\.Sequent):edu\.cmu\.cs\.ls\.keymaerax\.core\.Sequent*]]
    */
-  def updated(p: SuccPos, s: Sequent): Sequent = { Sequent(ante, succ.patch(p.getIndex, Nil, 1)).glue(s) } ensures
+  def updated(p: SuccPos, s: Sequent): Sequent = { Sequent(ante, succ.patch(p.getIndex, Nil, 1)).glue(s) } `ensures`
     (
       r => r.glue(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(this(p)))).sameSequentAs(this.glue(s)),
       "result after re-including updated formula is equivalent to " + this + " glue " + s,

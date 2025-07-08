@@ -86,7 +86,7 @@ sealed trait SetLattice[A] {
           ts.symbols ++ os.symbols,
         ) // union of cosets is intersection of exceptions
     }
-  } ensures (r => this.subsetOf(r) && other.subsetOf(r), "set union has both constituents as subsets")
+  } `ensures` (r => this.subsetOf(r) && other.subsetOf(r), "set union has both constituents as subsets")
 
   /** `this--other`: Set subtraction. */
   // @note the core only uses finite other here because mustBoundVars are finite
@@ -102,7 +102,7 @@ sealed trait SetLattice[A] {
           os.excluded -- ts.excluded
         ) /* (all \ t) \ (all \ o) == o \ t, t was excluded and all except o were then removed */
     }
-  } ensures (r => r.subsetOf(this) && r.intersect(other).isEmpty, "set subtraction gives less")
+  } `ensures` (r => r.subsetOf(this) && r.intersect(other).isEmpty, "set subtraction gives less")
 
   /** this intersect other: Set intersection. */
   def intersect(other: SetLattice[A]): SetLattice[A] = {
@@ -118,7 +118,7 @@ sealed trait SetLattice[A] {
           ts.symbols.intersect(os.symbols),
         ) /* (top except ts) /\ (top except os) == (top except ts++os), intersection of cosetsd is union of exceptions */
     }
-  } ensures (r => r.subsetOf(this) && r.subsetOf(other), "intersections are subsets of both constituents")
+  } `ensures` (r => r.subsetOf(this) && r.subsetOf(other), "intersections are subsets of both constituents")
 }
 
 object SetLattice {

@@ -28,7 +28,7 @@ class ArithmeticSimplificationTests extends TacticTestBase {
       "15*x-9*y+6*z-((0*t+15*1)*x0+15*t*0+((0-(0*t+9*1))*y0+(1-9*t)*0)+((0*t+6*1)*z0+6*t*0))".asTerm ->
         "15*x + (-(9))*y + 6*z + (-(15))*x0 + 9*y0 + (-(6))*z0".asTerm,
     )
-    forEvery(Table(("Input", "Expected"), terms: _*))({ (t1, t2) => tool.simplify(t1, List.empty) shouldBe t2 })
+    forEvery(Table(("Input", "Expected"), terms*))({ (t1, t2) => tool.simplify(t1, List.empty) shouldBe t2 })
   }
 
   "smartHide" should "simplify x=1,y=1 ==> x=1 to x=1 ==> x=1" in withMathematica { _ =>
@@ -360,7 +360,7 @@ class ArithmeticSimplificationTests extends TacticTestBase {
     // @todo hideNonmatchingBounds does not yet work on the "middle" (<= vs. >=) abs branches
     val s = proveBy(
       fml,
-      tactic switch
+      tactic `switch`
         (
           ("x_0-xo_0>=0&abs__0=x_0-xo_0//x-xo>=0&abs_=x-xo".asLabel, ArithmeticSpeculativeSimplification.speculativeQE),
           ("x_0-xo_0 < 0&abs__0=-(x_0-xo_0)//x-xo>=0&abs_=x-xo".asLabel, UnifyUSCalculus.skip),

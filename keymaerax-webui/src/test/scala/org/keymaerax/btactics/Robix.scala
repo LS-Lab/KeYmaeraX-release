@@ -588,7 +588,7 @@ class Robix extends TacticTestBase {
     val diffIndAllButFirst = skip +: Seq
       .tabulate(formulas.length)(_ => diHide & dI()(SuccPosition.base0(seq.succ.size - 1, pos.inExpr)) & done)
 
-    dC(formulas)(pos).<(diffIndAllButFirst: _*)
+    dC(formulas)(pos).<(diffIndAllButFirst*)
   })
 
   "Passive orientation safety" should "be provable" in withMathematica { _ =>

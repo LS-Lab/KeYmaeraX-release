@@ -389,8 +389,8 @@ private object DifferentialTactics extends Logging {
   /** Looks for special 'old' function symbol in f and creates DC (possibly with ghost) */
   private def ghostDC(f: Formula, origSeq: Sequent): DependentPositionTactic = anon((pos: Position, seq: Sequent) => {
     lazy val (ode, dc) = seq.sub(pos) match {
-      case Some(Box(os: ODESystem, _)) => (os, DC _)
-      case Some(Diamond(os: ODESystem, _)) => (os, DCd _)
+      case Some(Box(os: ODESystem, _)) => (os, DC)
+      case Some(Diamond(os: ODESystem, _)) => (os, DCd)
       case Some(e) => throw new TacticInapplicableFailure(
           "ghostDC only applicable to box/diamond properties, but got " + e.prettyString
         )
@@ -498,7 +498,7 @@ private object DifferentialTactics extends Logging {
             QE & done
           ) & done
         )
-        DifferentialEquationCalculus.dC(R)(pos).<(diffIndAllButFirst: _*)
+        DifferentialEquationCalculus.dC(R)(pos).<(diffIndAllButFirst*)
       }
   }
 

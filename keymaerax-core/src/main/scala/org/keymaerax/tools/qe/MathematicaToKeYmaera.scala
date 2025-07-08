@@ -107,7 +107,7 @@ class MathematicaToKeYmaera extends M2KConverter[KExpr] {
     else throw ConversionException(
       "Unsupported conversion for Mathematica expr: " + e.toString + " with infos: " + mathInfo(e)
     )
-  } ensures
+  } `ensures`
     (
       r =>
         StaticSemantics

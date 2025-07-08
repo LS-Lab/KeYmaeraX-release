@@ -62,7 +62,7 @@ trait Request extends Logging {
     }
   }
 
-  private var theSession: SessionManager.Session = _
+  private var theSession: SessionManager.Session = scala.compiletime.uninitialized
   def session: SessionManager.Session = theSession
 
   def resultingResponse(): Response

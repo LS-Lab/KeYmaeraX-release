@@ -21,7 +21,7 @@ class Z3BenchmarkTests extends TacticTestBase {
 
   "Z3" should "prove all recorded actual QE calls" in withZ3 { tool =>
     val logEntries = QELogger.parseLog(haveQeLogPath).map({ case (name, sequents) => name -> sequents.head._2 }).toList
-    val examples = Table(("Name", "Sequent"), logEntries: _*)
+    val examples = Table(("Name", "Sequent"), logEntries*)
     forEvery(examples) { (name, seq) =>
       whenever(tool.isInitialized) {
         println(s"Proving $name with Z3 ${seq.prettyString}")

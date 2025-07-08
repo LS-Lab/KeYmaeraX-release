@@ -185,7 +185,7 @@ trait Configuration {
 }
 
 object Configuration extends Configuration {
-  private[this] var conf: Configuration = _
+  private var conf: Configuration = scala.compiletime.uninitialized
 
   override def KEYMAERAX_HOME_PATH: String = conf.KEYMAERAX_HOME_PATH
 

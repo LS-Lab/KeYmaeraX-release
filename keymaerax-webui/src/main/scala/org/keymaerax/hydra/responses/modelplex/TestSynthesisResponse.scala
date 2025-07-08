@@ -42,7 +42,7 @@ class TestSynthesisResponse(
             }),
           "r" -> JsNumber(radius(variance)),
         )
-      }): _*
+      })*
   )
 
   // pre/post/labels/series
@@ -95,19 +95,19 @@ class TestSynthesisResponse(
           "labels" -> labels,
           "seriesData" -> series,
         )
-      }): _*
+      })*
   )
 
   def getJson: JsValue = JsObject(
     "modelid" -> JsString(model.modelId.toString),
     "metric" -> JsObject("html" -> fmlHtml, "string" -> fmlString, "plainString" -> fmlPlainString),
     "plot" -> JsObject(
-      "data" -> JsArray(testCases.map({ case (_, tc) => scatterData(tc) }): _*),
-      "series" -> JsArray(testCases.map({ case (name, _) => JsString(name) }): _*),
+      "data" -> JsArray(testCases.map({ case (_, tc) => scatterData(tc) })*),
+      "series" -> JsArray(testCases.map({ case (name, _) => JsString(name) })*),
       "labels" -> JsArray(JsString("Case"), JsString("Safety Margin"), JsString("Variance")),
     ),
     "caseInfos" -> JsArray(testCases.map({ case (name, data) =>
       JsObject("series" -> JsString(name), "data" -> seriesData(data))
-    }): _*),
+    })*),
   )
 }

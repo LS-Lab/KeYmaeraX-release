@@ -13,6 +13,6 @@ class GetPathAllResponse(path: List[ProofTreeNode], parentsRemaining: Int, margi
     extends Response {
   def getJson: JsValue = JsObject(
     "numParentsUntilComplete" -> JsNumber(parentsRemaining),
-    "path" -> JsArray(path.map(nodeJson(_, withSequent = true, marginLeft, marginRight)._2): _*),
+    "path" -> JsArray(path.map(nodeJson(_, withSequent = true, marginLeft, marginRight)._2)*),
   )
 }

@@ -45,13 +45,13 @@ trait ModelPlexTrait extends ((List[Variable], ModelPlexKind.Value) => (Formula 
   def apply(
       formula: Formula,
       kind: ModelPlexKind.Value,
-      unobservable: ListMap[_ <: NamedSymbol, Option[Formula]] = ListMap.empty,
+      unobservable: ListMap[? <: NamedSymbol, Option[Formula]] = ListMap.empty,
   ): Formula
   def apply(vars: List[Variable], kind: ModelPlexKind.Value): Formula => Formula
   def createMonitorSpecificationConjecture(
       fml: Formula,
       vars: List[Variable],
-      unobservable: ListMap[_ <: NamedSymbol, Option[Formula]],
+      unobservable: ListMap[? <: NamedSymbol, Option[Formula]],
       postVar: Variable => Variable = NAMED_POST_VAR,
   ): ModelPlexConjecture
   def controllerMonitorByChase: BuiltInPositionTactic
@@ -61,11 +61,11 @@ trait ModelPlexTrait extends ((List[Variable], ModelPlexKind.Value) => (Formula 
   def modelMonitorT: DependentPositionTactic
   def diamondDiffSolve2DT: DependentPositionTactic
   def diamondTestRetainConditionT: DependentPositionTactic
-  def locateT(tactics: List[AtPosition[_ <: BelleExpr]]): DependentPositionTactic
+  def locateT(tactics: List[AtPosition[? <: BelleExpr]]): DependentPositionTactic
   def optimizationOneWithSearch(
       tool: Option[SimplificationTool],
       assumptions: List[Formula],
-      unobservable: List[_ <: NamedSymbol],
+      unobservable: List[? <: NamedSymbol],
       simplifier: Option[BuiltInPositionTactic],
       postVar: Variable => Variable = NAMED_POST_VAR,
   ): DependentPositionTactic

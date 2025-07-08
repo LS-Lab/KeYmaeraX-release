@@ -82,7 +82,7 @@ class TacticTestBase(registerAxTactics: Option[String] = None)
   }
 
   protected def theInterpreter: Interpreter = BelleInterpreter.interpreter
-  private var interpreters: List[Interpreter] = _
+  private var interpreters: List[Interpreter] = scala.compiletime.uninitialized
 
   class Lazy[T](f: => T) {
     private var option: Option[T] = None
@@ -106,9 +106,9 @@ class TacticTestBase(registerAxTactics: Option[String] = None)
   private val WOLFRAM = ToolName.parse(System.getProperty("WOLFRAM", "mathematica"))
 
   // @note Initialize once per test class in beforeAll, but only if requested in a withMathematica call
-  private var mathematicaProvider: Lazy[DelayedShutdownToolProvider] = _
+  private var mathematicaProvider: Lazy[DelayedShutdownToolProvider] = scala.compiletime.uninitialized
   // @note setup lazy in beforeEach, automatically initialize in withDatabase, tear down in afterEach if initialized
-  private var dbTester: Lazy[TempDBTools] = _
+  private var dbTester: Lazy[TempDBTools] = scala.compiletime.uninitialized
 
   private val LOG_EARLIEST_QE = Configuration(Configuration.Keys.LOG_ALL_FO) == "true"
   private val LOG_QE = Configuration(Configuration.Keys.LOG_QE) == "true"
@@ -256,7 +256,7 @@ class TacticTestBase(registerAxTactics: Option[String] = None)
   }
 
   /** Tests with both Mathematica and Z3 as QE tools. */
-  def withQE(testcode: Tool with QETacticTool => Any, timeout: Int = -1, initLibrary: Boolean = true): Unit = {
+  def withQE(testcode: Tool & QETacticTool => Any, timeout: Int = -1, initLibrary: Boolean = true): Unit = {
     withClue("Mathematica") { withMathematica(testcode, timeout, initLibrary) }
     afterEach()
     beforeEach()

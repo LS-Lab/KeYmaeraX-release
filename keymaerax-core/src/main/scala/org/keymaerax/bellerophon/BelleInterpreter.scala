@@ -10,7 +10,7 @@ package org.keymaerax.bellerophon
  * @author Stefan Mitsch
  */
 object BelleInterpreter extends Interpreter {
-  private[this] var theInterpreter: Interpreter = _
+  private var theInterpreter: Interpreter = scala.compiletime.uninitialized
 
   /** Unsets the interpreter, killing it in the process. */
   def unsetInterpreter(): Unit = {

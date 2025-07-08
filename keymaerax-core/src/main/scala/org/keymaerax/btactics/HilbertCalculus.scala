@@ -112,7 +112,7 @@ object HilbertCalculus {
    * @see [[UnifyUSCalculus.CMon()]]
    */
   // @todo flexibilize via cohide2 first
-  lazy val monall: BuiltInTactic = "monall".by { US(Ax.monallrule.provable).result _ }
+  lazy val monall: BuiltInTactic = "monall".by { US(Ax.monallrule.provable).result }
 
   @Derivation
   val monallInfo: PlainTacticInfo = PlainTacticInfo.create(
@@ -132,7 +132,7 @@ object HilbertCalculus {
    * @see [[UnifyUSCalculus.CMon()]]
    */
   // @todo flexibilize via cohide2 first
-  lazy val monb: BuiltInTactic = "monb".by { US(Ax.monbaxiom.provable).result _ }
+  lazy val monb: BuiltInTactic = "monb".by { US(Ax.monbaxiom.provable).result }
 
   @Derivation
   val monbInfo: PlainTacticInfo = PlainTacticInfo.create(
@@ -152,7 +152,7 @@ object HilbertCalculus {
    * @see [[UnifyUSCalculus.CMon()]]
    */
   // @todo flexibilize via cohide2 first
-  lazy val mond: BuiltInTactic = "mond".by { US(Ax.mondrule.provable).result _ }
+  lazy val mond: BuiltInTactic = "mond".by { US(Ax.mondrule.provable).result }
 
   @Derivation
   val mondInfo: PlainTacticInfo = PlainTacticInfo.create(
@@ -574,7 +574,7 @@ object HilbertCalculus {
             },
             post,
           )
-          notPositions.map(p => chase(pos ++ p)).foldLeft(provable)({ (pr, r) => pr(r.computeResult _, 0) })
+          notPositions.map(p => chase(pos ++ p)).foldLeft(provable)({ (pr, r) => pr(r.computeResult, 0) })
         case _ => provable
       }
     }
@@ -628,8 +628,8 @@ object HilbertCalculus {
   /** boxTrue: proves `[a]true` directly for hybrid systems `a` that are not hybrid games. */
   // @note: do not use in derived axioms, instead use useAt(Ax.boxTrueAxiom) to avoid circular dependencies!
   lazy val boxTrue: BuiltInPositionTactic = "boxTrue".by { (provable: ProvableSig, pos: Position) =>
-    provable(useAt(Ax.boxTrueTrue)(pos).computeResult _, 0)(
-      if (pos.isSucc && pos.isTopLevel) SequentCalculus.closeT.result _ else skip.result _,
+    provable(useAt(Ax.boxTrueTrue)(pos).computeResult, 0)(
+      if (pos.isSucc && pos.isTopLevel) SequentCalculus.closeT.result else skip.result,
       0,
     )
   }

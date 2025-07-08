@@ -49,7 +49,7 @@ abstract class LemmaDBBase extends LemmaDB {
           )
         } else { lemma }
       ))
-  } ensures
+  } `ensures`
     (r =>
       r match {
         case Some(lemmas) =>
@@ -96,7 +96,7 @@ abstract class LemmaDBBase extends LemmaDB {
           )
         }
     }
-  } ensures
+  } `ensures`
     (
       get(id).contains(proofTermLemma(lemma)),
       "Source lemma and saved lemma differ:\n\tOriginal: " + lemma.toString + "\n\tReloaded: " + get(id).toString,
@@ -123,7 +123,7 @@ abstract class LemmaDBBase extends LemmaDB {
     // @note overwrites pre-existing identical lemma
     saveLemma(lemma, id)
     id
-  } ensures (r => get(r).contains(proofTermLemma(lemma)))
+  } `ensures` (r => get(r).contains(proofTermLemma(lemma)))
 
   /**
    * Turns a list of options into a list or to a None if any list element was None. For convenience when implementing
@@ -132,7 +132,7 @@ abstract class LemmaDBBase extends LemmaDB {
   protected def flatOpt[T](l: List[Option[T]]): Option[List[T]] = l.foldRight[Option[List[T]]](Some(Nil)) {
     case (Some(x), Some(xs)) => Some(x :: xs)
     case _ => None
-  } ensures (r => if (l.exists(_.isEmpty)) r.isEmpty else r.contains(l.flatten))
+  } `ensures` (r => if (l.exists(_.isEmpty)) r.isEmpty else r.contains(l.flatten))
 
   /**
    * Returns the lemma with a [[TermProvable]] in place of `lemma.fact` if proof terms are enable. Returns the lemma
@@ -147,7 +147,7 @@ abstract class LemmaDBBase extends LemmaDB {
         lemma.name,
       )
     } else lemma
-  } ensures
+  } `ensures`
     (r =>
       r.name == lemma.name && r.evidence == lemma.evidence && r.fact.underlyingProvable == lemma.fact.underlyingProvable
     )

@@ -82,7 +82,7 @@ private object EqualityTactics {
                   Some(
                     q.vars
                       .map(v => ProofRuleTactics.boundRenameFw(v, createNextSymbol(v))(pp))
-                      .foldLeft(_: ProvableSig)({ case (pr, r) => pr(r.computeResult _, 0) })
+                      .foldLeft(_: ProvableSig)({ case (pr, r) => pr(r.computeResult, 0) })
                   )
                 case (Box(Assign(x, _), _), pp) if freeRhs.contains(x) =>
                   Some(ProofRuleTactics.boundRenameFw(x, createNextSymbol(x))(pp).computeResult(_))
@@ -97,7 +97,7 @@ private object EqualityTactics {
         val occurrences = sequent.zipWithPositions.filter({ case (f, p) => p != pos && f.find(lhs).isDefined })
         occurrences
           .map({ case (_, p) =>
-            (pr: ProvableSig) => (pr(renameBoundRhs(p).computeResult _, 0)(eqL2R(pos.checkAnte)(p).computeResult _, 0))
+            (pr: ProvableSig) => (pr(renameBoundRhs(p).computeResult, 0)(eqL2R(pos.checkAnte)(p).computeResult, 0))
           })
           .foldLeft(provable)({ (pr, r) => pr(r, 0) })
       case Some(e) => throw new TacticInapplicableFailure(
@@ -184,9 +184,9 @@ private object EqualityTactics {
         /* show */
         (CoHideRight(SuccPos(sequent.succ.length)), 1)(subst.toForward(Ax.constFormulaCongruence.provable), 1)
         /* use */
-        (ImplyLeft(AntePos(sequent.ante.length)), 0)(cutLRFw(repl)(pos).computeResult _, 1) // creates subgoals 1+2
-        (HideLeft(AntePos(sequent.ante.length)), 1)(equivifyCommute, 2)(closeIdWith(closeWhere).computeResult _, 2)(
-          closeIdWith(SuccPos(sequent.succ.length)).computeResult _,
+        (ImplyLeft(AntePos(sequent.ante.length)), 0)(cutLRFw(repl)(pos).computeResult, 1) // creates subgoals 1+2
+        (HideLeft(AntePos(sequent.ante.length)), 1)(equivifyCommute, 2)(closeIdWith(closeWhere).computeResult, 2)(
+          closeIdWith(SuccPos(sequent.succ.length)).computeResult,
           0,
         ))
       case Some(e) =>
@@ -205,8 +205,8 @@ private object EqualityTactics {
     require(eqPos.isTopLevel, "Equality must be at top level, but is " + pos)
     sequent.sub(eqPos) match {
       case Some(Equal(lhs, rhs)) => (
-        provable(useAt(Ax.equalCommute)(eqPos).computeResult _, 0)(eqL2R(eqPos)(pos).computeResult _, 0)(
-          useAt(Ax.equalCommute)(Symbol("L"), Equal(rhs, lhs)).computeResult _,
+        provable(useAt(Ax.equalCommute)(eqPos).computeResult, 0)(eqL2R(eqPos)(pos).computeResult, 0)(
+          useAt(Ax.equalCommute)(Symbol("L"), Equal(rhs, lhs)).computeResult,
           0,
         )
       )
@@ -264,7 +264,7 @@ private object EqualityTactics {
           case _ => false // earlier rewriting may have rewritten LHS to non-trivial term, e.g., x=y+1, x=z+5 ~> z+5=y+1
         })(EqualityTactics.atomExhaustiveEqL2R(pos).computeResult)
       })
-      .foldLeft(provable)({ (pr, r) => pr(r.result _, 0) })
+      .foldLeft(provable)({ (pr, r) => pr(r.result, 0) })
   }
 
   @Derivation
@@ -287,10 +287,10 @@ private object EqualityTactics {
     sequent.sub(pos) match {
       // @Tactic in [[TactixLibrary]]
       case Some(fml @ Equal(lhs, rhs)) => (
-        provable(useAt(Ax.equalCommute)(pos, fml).computeResult _, 0)(
-          exhaustiveEqL2R(pos, Equal(rhs, lhs)).computeResult _,
+        provable(useAt(Ax.equalCommute)(pos, fml).computeResult, 0)(
+          exhaustiveEqL2R(pos, Equal(rhs, lhs)).computeResult,
           0,
-        )(useAt(Ax.equalCommute)(pos, Equal(rhs, lhs)).computeResult _, 0)
+        )(useAt(Ax.equalCommute)(pos, Equal(rhs, lhs)).computeResult, 0)
       )
     }
   }
@@ -347,13 +347,13 @@ private object EqualityTactics {
 
     (provable(Cut(Exists(List(v), Equal(v, t))), 0)
     /* show */
-    (CoHideRight(SuccPos(sequent.succ.length)), 1)(existsR(t)(1).computeResult _, 1)(
-      US(Ax.equalReflexive.provable).result _,
+    (CoHideRight(SuccPos(sequent.succ.length)), 1)(existsR(t)(1).computeResult, 1)(
+      US(Ax.equalReflexive.provable).result,
       1,
     )
     /* use */
-    (existsL(AntePos(sequent.ante.length)).computeResult _, 0)(
-      exhaustiveEqR2L(AntePos(sequent.ante.length)).computeResult _,
+    (existsL(AntePos(sequent.ante.length)).computeResult, 0)(
+      exhaustiveEqR2L(AntePos(sequent.ante.length)).computeResult,
       0,
     ))
   }
@@ -439,7 +439,7 @@ private object EqualityTactics {
           pos,
           sequent,
           {
-            case (t @ FuncOf(InterpretedSymbols.absF, _), pp) => Some((t, (pp, (abs(pp).computeResult _)(_))))
+            case (t @ FuncOf(InterpretedSymbols.absF, _), pp) => Some((t, (pp, (abs(pp).computeResult)(_))))
             case _ => None
           },
         )
@@ -456,10 +456,10 @@ private object EqualityTactics {
         if (StaticSemantics.boundVars(ctx.ctx).intersect(StaticSemantics.freeVars(t)).isEmpty) {
           val freshAbsIdx = TacticHelper.freshIndexInSequent(fn.name + "_", sequent)
           val absVar = Variable(fn.name + "_", freshAbsIdx)
-          (provable(abbrv(abs, Some(absVar)).result _, 0)(
-            useAt(Ax.equalCommute)(Symbol("L"), Equal(absVar, abs)).computeResult _,
+          (provable(abbrv(abs, Some(absVar)).result, 0)(
+            useAt(Ax.equalCommute)(Symbol("L"), Equal(absVar, abs)).computeResult,
             0,
-          )(useAt(Ax.abs)(Symbol("L"), Equal(abs, absVar)).computeResult _, 0))
+          )(useAt(Ax.abs)(Symbol("L"), Equal(abs, absVar)).computeResult, 0))
         } else { absAt(pos).computeResult(provable) }
       case (_, e) => throw new TacticInapplicableFailure("absExp only applicable to abs(.), but got " + e.prettyString)
     }
@@ -510,25 +510,25 @@ private object EqualityTactics {
               andL(-2) & eqL2R(-3)(1) & andL(-1) & id))
              */
             (
-              pr(abs(afterCMonPos).computeResult _, 0)(OrLeft(AntePos(0)), 0)
+              pr(abs(afterCMonPos).computeResult, 0)(OrLeft(AntePos(0)), 0)
               /* right */
               (OrLeft(AntePos(1)), 1) // creates subgoals 1+2
-              (AndLeft(AntePos(1)), 2)(eqL2R(-3)(1).computeResult _, 2)(AndLeft(AntePos(0)), 2)(id.result _, 2)(
+              (AndLeft(AntePos(1)), 2)(eqL2R(-3)(1).computeResult, 2)(AndLeft(AntePos(0)), 2)(id.result, 2)(
                 AndLeft(AntePos(1)),
                 1,
-              )(AndLeft(AntePos(0)), 1)(andLi(keepLeft = false)(AntePos(2), AntePos(0)).computeResult _, 1)(
-                useAt(absContradiction, PosInExpr(0 :: Nil))(-3).computeResult _,
+              )(AndLeft(AntePos(0)), 1)(andLi(keepLeft = false)(AntePos(2), AntePos(0)).computeResult, 1)(
+                useAt(absContradiction, PosInExpr(0 :: Nil))(-3).computeResult,
                 1,
-              )(closeF.result _, 1)
+              )(closeF.result, 1)
               /* left */
               (OrLeft(AntePos(1)), 0) // creates subgoals 0+1
               (AndLeft(AntePos(1)), 1)(AndLeft(AntePos(0)), 1)(
-                andLi(keepLeft = false)(AntePos(0), AntePos(2)).computeResult _,
+                andLi(keepLeft = false)(AntePos(0), AntePos(2)).computeResult,
                 1,
-              )(useAt(absContradiction, PosInExpr(0 :: Nil))(-3).computeResult _, 1)(closeF.result _, 1)(
+              )(useAt(absContradiction, PosInExpr(0 :: Nil))(-3).computeResult, 1)(closeF.result, 1)(
                 AndLeft(AntePos(1)),
                 0,
-              )(eqL2R(-3)(1).computeResult _, 0)(AndLeft(AntePos(0)), 0)(id.result _, 0)
+              )(eqL2R(-3)(1).computeResult, 0)(AndLeft(AntePos(0)), 0)(id.result, 0)
             )
           } else {
             /*
@@ -536,22 +536,22 @@ private object EqualityTactics {
             andL(-2) & eqL2R(-3)(-1) & andR(1) & OnAll(id),
             andL(-2) & eqL2R(-3)(-1) & andR(2) & OnAll(id))
              */
-            (pr(abs(afterCMonPos).computeResult _, 0)(OrRight(SuccPos(0)), 0)(OrLeft(AntePos(1)), 0)
+            (pr(abs(afterCMonPos).computeResult, 0)(OrRight(SuccPos(0)), 0)(OrLeft(AntePos(1)), 0)
             /* right */
-            (AndLeft(AntePos(1)), 1)(eqL2R(-3)(-1).computeResult _, 1)(AndRight(SuccPos(1)), 1)(id.result _, 2)(
-              id.result _,
+            (AndLeft(AntePos(1)), 1)(eqL2R(-3)(-1).computeResult, 1)(AndRight(SuccPos(1)), 1)(id.result, 2)(
+              id.result,
               1,
             )
             /* left */
-            (AndLeft(AntePos(1)), 0)(eqL2R(-3)(-1).computeResult _, 0)(AndRight(SuccPos(0)), 0)(id.result _, 1)(
-              id.result _,
+            (AndLeft(AntePos(1)), 0)(eqL2R(-3)(-1).computeResult, 0)(AndRight(SuccPos(0)), 0)(id.result, 1)(
+              id.result,
               0,
             ))
           }
 
-        (provable(cutAtFw(expanded)(parentPos).computeResult _, 0)
+        (provable(cutAtFw(expanded)(parentPos).computeResult, 0)
         /* show */
-        (cohidePos, 1)(CMonFw(parentPos.inExpr).result _, 1)(ImplyRight(SuccPos(0)), 1)(
+        (cohidePos, 1)(CMonFw(parentPos.inExpr).result, 1)(ImplyRight(SuccPos(0)), 1)(
           assertT(
             _.at(afterCMonPos) match {
               case (ctx, FuncOf(_, t)) =>
@@ -559,7 +559,7 @@ private object EqualityTactics {
               case _ => false
             },
             "Unable to expand " + fn + " since its argument is bound in context",
-          ).result _,
+          ).result,
           1,
         )(proveAbs, 1))
       case Some(e) => throw new TacticInapplicableFailure("absAt only applicable to abs, but got " + e.prettyString)
@@ -627,9 +627,9 @@ private object EqualityTactics {
             case _ => throw new AssertionError("Cannot happen")
           }
 
-          provable(abbrv(minmax, Some(minmaxVar)).result _, 0)
-            .apply(useAt(Ax.equalCommute)(Symbol("L"), Equal(minmaxVar, minmax)).computeResult _, 0)
-            .apply(useAt(ax)(Symbol("L"), Equal(minmax, minmaxVar)).computeResult _, 0)
+          provable(abbrv(minmax, Some(minmaxVar)).result, 0)
+            .apply(useAt(Ax.equalCommute)(Symbol("L"), Equal(minmaxVar, minmax)).computeResult, 0)
+            .apply(useAt(ax)(Symbol("L"), Equal(minmax, minmaxVar)).computeResult, 0)
         } else { minmaxAt(pos).computeResult(provable) }
 
       case (_, e) => throw new TacticInapplicableFailure("minmax only applicable to min/max, but got " + e.prettyString)
@@ -682,41 +682,41 @@ private object EqualityTactics {
               andL(-2) & eqL2R(-3)(1) & andL(-1) & id))
              */
             (
-              pr(minmax(afterCMonPos).computeResult _, 0)(OrLeft(AntePos(0)), 0)
+              pr(minmax(afterCMonPos).computeResult, 0)(OrLeft(AntePos(0)), 0)
               /* right */
-              (OrLeft(AntePos(1)), 1)(AndLeft(AntePos(1)), 2)(eqL2R(-3)(1).computeResult _, 2)(AndLeft(AntePos(0)), 2)(
-                id.result _,
+              (OrLeft(AntePos(1)), 1)(AndLeft(AntePos(1)), 2)(eqL2R(-3)(1).computeResult, 2)(AndLeft(AntePos(0)), 2)(
+                id.result,
                 2,
               )(AndLeft(AntePos(1)), 1)(AndLeft(AntePos(0)), 1)(
-                andLi(keepLeft = false)(AntePos(2), AntePos(0)).computeResult _,
+                andLi(keepLeft = false)(AntePos(2), AntePos(0)).computeResult,
                 1,
-              )(useAt(contradiction, PosInExpr(0 :: Nil))(-3).computeResult _, 1)(closeF.result _, 1)
+              )(useAt(contradiction, PosInExpr(0 :: Nil))(-3).computeResult, 1)(closeF.result, 1)
               /* left */
               (OrLeft(AntePos(1)), 0)(AndLeft(AntePos(1)), 1)(AndLeft(AntePos(0)), 1)(
-                andLi(keepLeft = false)(AntePos(0), AntePos(2)).computeResult _,
+                andLi(keepLeft = false)(AntePos(0), AntePos(2)).computeResult,
                 1,
-              )(useAt(contradiction, PosInExpr(0 :: Nil))(-3).computeResult _, 1)(closeF.result _, 1)(
+              )(useAt(contradiction, PosInExpr(0 :: Nil))(-3).computeResult, 1)(closeF.result, 1)(
                 AndLeft(AntePos(1)),
                 0,
-              )(eqL2R(-3)(1).computeResult _, 0)(AndLeft(AntePos(0)), 0)(id.result _, 0)
+              )(eqL2R(-3)(1).computeResult, 0)(AndLeft(AntePos(0)), 0)(id.result, 0)
             )
           } else {
-            (pr(minmax(afterCMonPos).computeResult _, 0)(OrRight(SuccPos(0)), 0)(OrLeft(AntePos(1)), 0)
+            (pr(minmax(afterCMonPos).computeResult, 0)(OrRight(SuccPos(0)), 0)(OrLeft(AntePos(1)), 0)
             /* right */
-            (AndLeft(AntePos(1)), 1)(eqL2R(-3)(-1).computeResult _, 1)(AndRight(SuccPos(1)), 1)(id.result _, 2)(
-              id.result _,
+            (AndLeft(AntePos(1)), 1)(eqL2R(-3)(-1).computeResult, 1)(AndRight(SuccPos(1)), 1)(id.result, 2)(
+              id.result,
               1,
             )
             /* left */
-            (AndLeft(AntePos(1)), 0)(eqL2R(-3)(-1).computeResult _, 0)(AndRight(SuccPos(0)), 0)(id.result _, 1)(
-              id.result _,
+            (AndLeft(AntePos(1)), 0)(eqL2R(-3)(-1).computeResult, 0)(AndRight(SuccPos(0)), 0)(id.result, 1)(
+              id.result,
               0,
             ))
           }
 
-        (provable(cutAtFw(expanded)(parentPos).computeResult _, 0)
+        (provable(cutAtFw(expanded)(parentPos).computeResult, 0)
         /* show */
-        (cohidePos, 1)(CMonFw(parentPos.inExpr).result _, 1)(ImplyRight(SuccPos(0)), 1)(
+        (cohidePos, 1)(CMonFw(parentPos.inExpr).result, 1)(ImplyRight(SuccPos(0)), 1)(
           assertT(
             _.at(afterCMonPos) match {
               case (ctx, FuncOf(_, t)) =>
@@ -724,7 +724,7 @@ private object EqualityTactics {
               case _ => false
             },
             "Unable to expand " + fn + " since its arguments are bound in context",
-          ).result _,
+          ).result,
           1,
         )(proveMinMax, 1))
       case Some(e) =>
@@ -776,7 +776,7 @@ private object EqualityTactics {
                 })
             )
         )(expandAll.result)
-        .result _,
+        .result,
       0,
     ))
   }

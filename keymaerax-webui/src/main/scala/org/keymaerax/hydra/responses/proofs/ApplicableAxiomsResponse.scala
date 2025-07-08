@@ -50,7 +50,7 @@ case class ApplicableAxiomsResponse(
   def inputsJson(info: List[ArgInfo]): JsArray = {
     info match {
       case Nil => JsArray()
-      case inputs => JsArray(inputs.map(inputJson): _*)
+      case inputs => JsArray(inputs.map(inputJson)*)
     }
   }
 
@@ -101,8 +101,8 @@ case class ApplicableAxiomsResponse(
 
   def sequentJson(sequent: DisplaySequent): JsValue = {
     val json = JsObject(
-      "ante" -> JsArray(sequent.ante.map(JsString(_)): _*),
-      "succ" -> JsArray(sequent.succ.map(JsString(_)): _*),
+      "ante" -> JsArray(sequent.ante.map(JsString(_))*),
+      "succ" -> JsArray(sequent.succ.map(JsString(_))*),
       "isClosed" -> JsBoolean(sequent.isClosed),
     )
     json
@@ -115,7 +115,7 @@ case class ApplicableAxiomsResponse(
       inputGenerator: Option[String],
   ): JsObject = {
     val conclusionJson = sequentJson(conclusion)
-    val premisesJson = JsArray(premises.map(sequentJson): _*)
+    val premisesJson = JsArray(premises.map(sequentJson)*)
     JsObject(
       "type" -> JsString("sequentrule"),
       "expansible" -> JsBoolean(info.revealInternalSteps),
@@ -179,5 +179,5 @@ case class ApplicableAxiomsResponse(
   }
 
   def getJson: JsValue =
-    JsArray(derivationInfos.map(i => Try(derivationJson(i)).toOption).filter(_.isDefined).map(_.get): _*)
+    JsArray(derivationInfos.map(i => Try(derivationJson(i)).toOption).filter(_.isDefined).map(_.get)*)
 }

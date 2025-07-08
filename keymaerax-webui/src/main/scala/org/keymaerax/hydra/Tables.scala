@@ -54,7 +54,7 @@ trait Tables {
   implicit def GetResultAgendaitemsRow(implicit e0: GR[Option[Int]], e1: GR[Option[String]]): GR[AgendaitemsRow] =
     GR { prs =>
       import prs._
-      (AgendaitemsRow.apply _).tupled((<<?[Int], <<?[Int], <<?[Int], <<?[Int], <<?[String]))
+      (AgendaitemsRow.apply).tupled((<<?[Int], <<?[Int], <<?[Int], <<?[Int], <<?[String]))
     }
 
   /** Table description of table agendaItems. Objects of this class serve as prototypes for rows in queries. */
@@ -106,7 +106,7 @@ trait Tables {
   /** GetResult implicit for fetching ConfigRow objects using plain SQL queries */
   implicit def GetResultConfigRow(implicit e0: GR[Option[Int]], e1: GR[Option[String]]): GR[ConfigRow] = GR { prs =>
     import prs._
-    (ConfigRow.apply _).tupled((<<?[Int], <<?[String], <<?[String], <<?[String]))
+    (ConfigRow.apply).tupled((<<?[Int], <<?[String], <<?[String], <<?[String]))
   }
 
   /** Table description of table config. Objects of this class serve as prototypes for rows in queries. */
@@ -140,7 +140,7 @@ trait Tables {
   implicit def GetResultExecutablesRow(implicit e0: GR[Option[Int]], e1: GR[Option[String]]): GR[ExecutablesRow] =
     GR { prs =>
       import prs._
-      (ExecutablesRow.apply _).tupled((<<?[Int], <<?[String]))
+      (ExecutablesRow.apply).tupled((<<?[Int], <<?[String]))
     }
 
   /** Table description of table executables. Objects of this class serve as prototypes for rows in queries. */
@@ -198,7 +198,7 @@ trait Tables {
       e2: GR[Option[String]],
   ): GR[ExecutionstepsRow] = GR { prs =>
     import prs._
-    (ExecutionstepsRow.apply _).tupled((
+    (ExecutionstepsRow.apply).tupled((
       <<?[Int],
       <<?[Int],
       <<?[Int],
@@ -262,7 +262,7 @@ trait Tables {
           { r =>
             import r._;
             _4.map(_ =>
-              (ExecutionstepsRow.apply _).tupled(
+              (ExecutionstepsRow.apply).tupled(
                 (_1, _2, _3, _4.get, _5, _6, _7, _8, _9, _10, _11, _12, _13.get, _14.get)
               )
             )
@@ -363,7 +363,7 @@ trait Tables {
   /** GetResult implicit for fetching LemmasRow objects using plain SQL queries */
   implicit def GetResultLemmasRow(implicit e0: GR[Option[Int]], e1: GR[Option[String]]): GR[LemmasRow] = GR { prs =>
     import prs._
-    (LemmasRow.apply _).tupled((<<?[Int], <<?[String]))
+    (LemmasRow.apply).tupled((<<?[Int], <<?[String]))
   }
 
   /** Table description of table lemmas. Objects of this class serve as prototypes for rows in queries. */
@@ -409,7 +409,7 @@ trait Tables {
   /** GetResult implicit for fetching ModelsRow objects using plain SQL queries */
   implicit def GetResultModelsRow(implicit e0: GR[Option[Int]], e1: GR[Option[String]]): GR[ModelsRow] = GR { prs =>
     import prs._
-    (ModelsRow.apply _).tupled((
+    (ModelsRow.apply).tupled((
       <<?[Int],
       <<?[String],
       <<?[String],
@@ -495,7 +495,7 @@ trait Tables {
   /** GetResult implicit for fetching ProofsRow objects using plain SQL queries */
   implicit def GetResultProofsRow(implicit e0: GR[Option[Int]], e1: GR[Option[String]]): GR[ProofsRow] = GR { prs =>
     import prs._
-    (ProofsRow.apply _).tupled(
+    (ProofsRow.apply).tupled(
       (<<?[Int], <<?[Int], <<?[String], <<?[String], <<?[String], <<?[Int], <<?[Int], <<?[Int], <<?[String])
     )
   }
@@ -561,7 +561,7 @@ trait Tables {
   /** GetResult implicit for fetching UsersRow objects using plain SQL queries */
   implicit def GetResultUsersRow(implicit e0: GR[Option[String]], e1: GR[Option[Int]]): GR[UsersRow] = GR { prs =>
     import prs._
-    (UsersRow.apply _).tupled((<<?[String], <<?[String], <<?[String], <<?[Int], <<?[Int]))
+    (UsersRow.apply).tupled((<<?[String], <<?[String], <<?[String], <<?[Int], <<?[Int]))
   }
 
   /** Table description of table users. Objects of this class serve as prototypes for rows in queries. */

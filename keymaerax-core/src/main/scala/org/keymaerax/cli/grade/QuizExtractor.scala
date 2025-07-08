@@ -362,7 +362,7 @@ object QuizExtractor {
     private val QUESTION_TEXT_EXTRACTOR = """\s*(.*?)\s*"""
     private val QUESTION_SOL_EXTRACTOR = """\\(solf(?!in)|solt)"""
     private val QUESTION_EXTRACTOR: Regex =
-      ("""(?s)\\""" + QUESTION_START + QUESTION_TEXT_EXTRACTOR + QUESTION_SOL_EXTRACTOR).r(GROUPS: _*)
+      ("""(?s)\\""" + QUESTION_START + QUESTION_TEXT_EXTRACTOR + QUESTION_SOL_EXTRACTOR).r(GROUPS*)
 
     def firstFromString(rawContent: String): Option[Question] = {
       val asktf = QUESTION_EXTRACTOR.findFirstMatchIn(rawContent).map(m => (m.group(QUESTION_TEXT), m.group(SOL)))
@@ -384,7 +384,7 @@ object QuizExtractor {
     private val CHOICES_EXTRACTOR = """((?:\\choice(?:\*)?\s*(?-s:.*)\s*)+)"""
     private val SINGLE_CHOICE_EXTRACTOR = """\\choice(\*)?\s*(.*)""".r(IS_CORRECT_CHOICE, CHOICE_TEXT)
     private val QUESTION_EXTRACTOR: Regex =
-      ("""(?s)\\""" + QUESTION_START + QUESTION_TEXT_EXTRACTOR + CHOICES_EXTRACTOR).r(GROUPS: _*)
+      ("""(?s)\\""" + QUESTION_START + QUESTION_TEXT_EXTRACTOR + CHOICES_EXTRACTOR).r(GROUPS*)
 
     def firstFromString(rawContent: String): Option[Question] = {
       val choices = QUESTION_EXTRACTOR.findFirstMatchIn(rawContent).map(m => (m.group(QUESTION_TEXT), m.group(CHOICES)))

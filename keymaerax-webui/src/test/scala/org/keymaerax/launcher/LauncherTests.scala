@@ -387,7 +387,7 @@ class LauncherTests extends TacticTestBase {
     val classpath = System.getProperty("java.class.path")
     val path = System.getProperty("java.home") + sep + "bin" + sep + "java"
     val pbArgs: List[String] = (path :: "-cp" :: classpath :: "org.keymaerax.launcher.KeYmaeraX" :: Nil) ++ args
-    val processBuilder = new ProcessBuilder(pbArgs: _*)
+    val processBuilder = new ProcessBuilder(pbArgs*)
     val process = processBuilder.start()
     val exitVal = process.waitFor()
     val output = scala.io.Source.fromInputStream(process.getInputStream).getLines().mkString("\n")

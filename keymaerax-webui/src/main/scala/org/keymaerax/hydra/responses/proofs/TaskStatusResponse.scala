@@ -36,7 +36,7 @@ case class TaskStatusResponse(
         "steps" -> JsArray(
           stepsProgress.map(e =>
             JsObject("id" -> JsString(e.id.toString), "maker" -> JsString(e.maker.getOrElse("<unknown>")))
-          ): _*
+          )*
         ),
         "tactic" -> JsString(tacticProgress),
       ),

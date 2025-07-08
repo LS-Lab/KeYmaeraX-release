@@ -237,11 +237,11 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
                       case Atom(g) => mQE.qeTool.qe(g)
                       case _ =>
                         throw new IllegalArgumentException("Unsupported parallel QE feature: nested non-atom in AllOf")
-                    }): _*),
+                    })*),
                   ))
                 case OneOf(_) =>
                   throw new IllegalArgumentException("Unsupported parallel QE feature: nested OneOf in OneOf")
-              }): _*),
+              })*),
             ),
           ),
           if (continueOnFalse) {

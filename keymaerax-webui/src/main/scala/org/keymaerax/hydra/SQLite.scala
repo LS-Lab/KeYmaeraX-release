@@ -136,7 +136,7 @@ object SQLite {
     private val lemmaDB = cachedSQLiteLemmaDB(this)
 
     /** The database session */
-    private var currentSession: Session = _
+    private var currentSession: Session = scala.compiletime.uninitialized
 
     // <editor-fold desc="Database interaction">
 
@@ -171,13 +171,13 @@ object SQLite {
     }
 
     /** Converts the Int-encoded boolean `x` to bool. */
-    private[this] def sqliteBoolToBoolean(x: Int) =
+    private def sqliteBoolToBoolean(x: Int) =
       if (x == 0) false
       else if (x == 1) true
       else throw new IllegalStateException("Expected boolean encoded as either 0 or 1, but got " + x)
 
     @nowarn("msg=match may not be exhaustive")
-    private[this] def splitNameLabel(s: String): (String, Option[String]) =
+    private def splitNameLabel(s: String): (String, Option[String]) =
       s.split(Regex.quote(RULENAME_BRANCH_SEPARATOR)).toList match {
         case rn :: Nil => (rn, None)
         case rn :: bl :: Nil => (rn, Some(bl))
@@ -195,13 +195,13 @@ object SQLite {
     private[SQLite] def updateLemma(lemmaId: Int, lemma: String): Unit =
       synchronized { runTransactionally(Lemmas.filter(_._Id === lemmaId).map(_.lemma).update(Some(lemma))) }
 
-    private[this] lazy val containsLemmaQuery = Compiled((lemmaId: Rep[Int]) => Lemmas.filter(_._Id === lemmaId).exists)
+    private lazy val containsLemmaQuery = Compiled((lemmaId: Rep[Int]) => Lemmas.filter(_._Id === lemmaId).exists)
 
     /** Returns true if the database contains the lemma identified by `lemmaId`, false otherwise. */
     private[SQLite] def containsLemma(lemmaId: Int): Boolean =
       synchronized { runTransactionally(containsLemmaQuery(lemmaId).result) }
 
-    private[this] lazy val lemmaQuery = Compiled((lemmaId: Rep[Int]) =>
+    private lazy val lemmaQuery = Compiled((lemmaId: Rep[Int]) =>
       Lemmas.filter(l => l._Id === lemmaId && l.lemma.isDefined).map(l => (l._Id.get, l.lemma.get))
     )
 
@@ -495,7 +495,7 @@ object SQLite {
     // This function does not run in the same transaction as whatever happens around it
     // but it should be fine since it does not modify the database in any way
     // so the worst that should happen is that the query results are slightly outdated
-    private[this] def getNumAllProofSteps(modelId: Int): Int = {
+    private def getNumAllProofSteps(modelId: Int): Int = {
       val query = Proofs
         .join(Executionsteps)
         .on((proofs, steps) => steps.proofid === proofs._Id)
@@ -504,14 +504,14 @@ object SQLite {
       runTransactionally(query.result)
     }
 
-    private[this] lazy val proofClosedQuery =
+    private lazy val proofClosedQuery =
       Compiled((proofId: Rep[Int]) => Proofs.filter(p => p._Id === proofId && p.closed.getOrElse(0) === 1).exists)
 
     /** @inheritdoc */
     override final def isProofClosed(proofId: Int): Boolean =
       synchronized { runTransactionally(proofClosedQuery(proofId).result) }
 
-    private[this] lazy val stepCountQuery = Compiled((proofId: Rep[Int]) =>
+    private lazy val stepCountQuery = Compiled((proofId: Rep[Int]) =>
       Executionsteps
         .filter(row =>
           row.proofid === proofId && row.status === ExecutionStepStatus.toString(ExecutionStepStatus.Finished)
@@ -588,7 +588,7 @@ object SQLite {
       synchronized { runTransactionally(Proofs.filter(_._Id === proof.proofId).update(proofPojoToRow(proof))) }
 
     /** Converts the proof meta information into database format. */
-    private[this] def proofPojoToRow(p: ProofPOJO): ProofsRow = ProofsRow(
+    private def proofPojoToRow(p: ProofPOJO): ProofsRow = ProofsRow(
       _Id = Some(p.proofId),
       modelid = p.modelId,
       name = Some(p.name),
@@ -649,7 +649,7 @@ object SQLite {
      * Initializes the proof by creating a provable from the model, returns the provable ID and optional substituted
      * tactic.
      */
-    private[this] def initializeProofForModel(modelId: Int, tactic: Option[String]): (Int, Option[String]) = {
+    private def initializeProofForModel(modelId: Int, tactic: Option[String]): (Int, Option[String]) = {
       val model = getModel(modelId)
       val entry = ArchiveParser.parseProblem(model.keyFile, parseTactics = false)
       val d = entry.defs
@@ -805,7 +805,7 @@ object SQLite {
     override final def getExecutable(executableId: Int): ExecutablePOJO = getExecutables(List(executableId)).head
 
     /** Allow retrieving executables in bulk to reduce the number of database queries. */
-    private[this] def getExecutables(executableIds: List[Int]): List[ExecutablePOJO] = synchronized {
+    private def getExecutables(executableIds: List[Int]): List[ExecutablePOJO] = synchronized {
       val q = for { exe <- Executables if exe._Id inSetBind executableIds } yield (exe._Id.get, exe.belleexpr.get)
       val executableMap = run(q.result).map(exe => (exe._1, ExecutablePOJO(exe._1, exe._2))).toMap
       try { executableIds.map(executableMap) }
@@ -815,7 +815,7 @@ object SQLite {
     /** @inheritdoc */
     override final def getProvable(lemmaId: Int): ProvablePOJO = loadProvables(List(lemmaId)).head
 
-    private[this] def loadProvables(lemmaIds: List[Int]): List[ProvablePOJO] = {
+    private def loadProvables(lemmaIds: List[Int]): List[ProvablePOJO] = {
       lemmaDB.get(lemmaIds.map(_.toString)) match {
         case None => throw new Exception(" No lemma for one of these IDs: " + lemmaIds)
         case Some(lemmas) => lemmas.zipWithIndex.map({ case (lemma, id) => ProvablePOJO(id, lemma.fact) })
@@ -882,7 +882,7 @@ object SQLite {
     )
 
     /** Recompute the open subgoals count of a step. */
-    private[this] def updateOpenSubgoalsCount(proofId: Int, stepId: Option[Int]): Unit = {
+    private def updateOpenSubgoalsCount(proofId: Int, stepId: Option[Int]): Unit = {
       stepId match {
         case None => // nothing to do
         case Some(sId) =>
@@ -919,7 +919,7 @@ object SQLite {
         .sortBy(e => (e.previousstep.asc, e.branchorder.desc))
     )
 
-    private[this] def proofSteps(executionId: Int): List[ExecutionStepPOJO] = synchronized {
+    private def proofSteps(executionId: Int): List[ExecutionStepPOJO] = synchronized {
       /* The Executionsteps table may contain many alternate histories for the same execution. In order to reconstruct
        * the current state of the world, we must pick the most recent alternative at every opportunity.*/
       var steps = runTransactionally(executionStepsQuery(executionId).result)
@@ -959,7 +959,7 @@ object SQLite {
     }
 
     /** Zips execution steps with auxiliary information (executable tactics, provables). */
-    private[this] def zipTrace(
+    private def zipTrace(
         executionSteps: List[ExecutionStepPOJO],
         provables: Option[(ProvableSig, Map[Option[Int], ProvableSig])],
     ): List[ExecutionStep] = {

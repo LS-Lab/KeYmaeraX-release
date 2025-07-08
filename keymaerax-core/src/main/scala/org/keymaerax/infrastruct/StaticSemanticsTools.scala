@@ -31,11 +31,11 @@ object StaticSemanticsTools {
     case PredicationalOf(p, arg) => boundVars(formula)
 
     // quantifier binding cases omit bound vars from fv and add bound variables to bf
-    case f: Quantified => SetLattice(f.vars) ensures
+    case f: Quantified => SetLattice(f.vars) `ensures`
         (r => r == boundVars(Forall(f.vars, True)) && r == boundVars(Exists(f.vars, True)))
 
     // modality bounding cases omit must-bound vars from fv and add (may-)bound vars to bv
-    case f: Modal => boundVars(f.program) ensures
+    case f: Modal => boundVars(f.program) `ensures`
         (r => r == boundVars(Box(f.program, True)) && r == boundVars(Diamond(f.program, True)))
 
     // special cases
@@ -186,13 +186,13 @@ object StaticSemanticsTools {
       val moreDeps = (proc
         .flatMap(y =>
           dep.get(y) match {
-            case Some(set) => (set -- d).toList ensures (r => r.distinct == r && r.intersect(d).isEmpty)
+            case Some(set) => (set -- d).toList `ensures` (r => r.distinct == r && r.intersect(d).isEmpty)
             case None => List.empty
           }
         )
-        .distinct) ensures (r => r.distinct == r && r.intersect(d).isEmpty)
+        .distinct) `ensures` (r => r.distinct == r && r.intersect(d).isEmpty)
       (d ++ moreDeps ++ moreDeps.flatMap(y => transitiveChase(moreDeps, moreDeps ++ d)).distinct).distinct
-    } ensures (r => r.distinct == r && d.forall(y => r.contains(y)), "transitivize(" + proc + ", " + d + ")")
+    } `ensures` (r => r.distinct == r && d.forall(y => r.contains(y)), "transitivize(" + proc + ", " + d + ")")
     dep.iterator.map(sp => sp._1 -> transitiveChase(sp._2.toList, sp._2.toList).reverse).toMap
   }
 

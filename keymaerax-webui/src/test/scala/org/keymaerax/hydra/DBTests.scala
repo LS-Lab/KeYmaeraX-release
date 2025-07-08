@@ -28,7 +28,7 @@ class DBTests extends TacticTestBase {
           .flatMap(i => ArchiveParser.parse(Source.fromInputStream(i).mkString))
           .flatMap(e => e.tactics.zipWithIndex.map(t => (e.name + " " + t._2, e.fileContent, t._1._3)))
 
-      val tactics = Table(("name", "fileContent", "tactic"), entries: _*)
+      val tactics = Table(("name", "fileContent", "tactic"), entries*)
       forEvery(tactics) { (name, fileContent, tactic) =>
         val tacticString = BellePrettyPrinter(tactic)
         val modelId = db.db.createModel(db.user.userName, name, fileContent, "", None, None, None, Some(tacticString))

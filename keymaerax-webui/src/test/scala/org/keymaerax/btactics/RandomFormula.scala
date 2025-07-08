@@ -700,7 +700,7 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
   }
 
   /** whether games are currently allowed */
-  private[this] val isGame: Boolean =
+  private val isGame: Boolean =
     try { Dual(AssignAny(Variable("x"))); true } catch { case ignore: IllegalArgumentException => false }
 
   def nextP(vars: IndexedSeq[Variable], n: Int): Program = nextP(vars, n, dotTs = false, dotFs = false)

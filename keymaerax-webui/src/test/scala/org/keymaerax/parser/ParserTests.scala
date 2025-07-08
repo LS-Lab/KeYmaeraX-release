@@ -506,7 +506,7 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
       "forall.key" :: "functions.key" :: "jdq2.key" :: "passivesafety.key" :: "sections.key" :: "semicolons.key" ::
       "test.key" :: "unity.key" :: Nil
 
-    forEvery(Table(("filename"), files: _*))({ fn =>
+    forEvery(Table(("filename"), files*))({ fn =>
       val src = Source.fromInputStream(getClass.getResourceAsStream("/examples/dev/t/parsing/positive/" + fn)).mkString
       GlobalState.archiveParser(src) // test fails on exception.
     })
@@ -549,7 +549,7 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
         ) :: Nil
     // ("UndeclaredVariables.key", "TODO") :: Nil //@note not yet caught (LAX?)
 
-    forEvery(Table(("filename", "msg1", "msg2"), files: _*))({ (fn, m1, m2) =>
+    forEvery(Table(("filename", "msg1", "msg2"), files*))({ (fn, m1, m2) =>
       val src = Source.fromInputStream(getClass.getResourceAsStream("/examples/dev/t/parsing/negative/" + fn)).mkString
       val ex = the[ParseException] thrownBy GlobalState.archiveParser(src)
       ex.getMessage should (startWith(m1) or startWith(m2))
@@ -675,7 +675,7 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
   "Annotation parsing" should "populate easy loop annotations" in {
     val input = "x>=2 -> [{x:=x+1;}*@invariant(x>=1)]x>=0"
     val listener = mock[(Program, Formula) => Unit]
-    (listener.apply _).expects("{x:=x+1;}*".asProgram, "x>=1".asFormula).once()
+    (listener.apply).expects("{x:=x+1;}*".asProgram, "x>=1".asFormula).once()
     GlobalState.parser.setAnnotationListener(listener)
     Parser(input)
   }
@@ -684,7 +684,7 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
     val input =
       "ArchiveEntry \"Test\" Definitions Real y(); End. ProgramVariables Real x; End. Problem x>=y+2 -> [{x:=x+1;}*@invariant(x>=y+1)]x>=y End. End."
     val listener = mock[(Program, Formula) => Unit]
-    (listener.apply _).expects("{x:=x+1;}*".asProgram, "x>=y()+1".asFormula).once()
+    (listener.apply).expects("{x:=x+1;}*".asProgram, "x>=y()+1".asFormula).once()
     GlobalState.parser.setAnnotationListener(listener)
     GlobalState.archiveParser(input).loneElement.model shouldBe "x>=y()+2 -> [{x:=x+1;}*]x>=y()".asFormula
   }
@@ -693,7 +693,7 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
     val input =
       "ArchiveEntry \"Test\" Definitions Real y() = 3+7; End. ProgramVariables Real x; End. Problem x>=y+2 -> [{x:=x+1;}*@invariant(x>=y()+1)]x>=y End. End."
     val listener = mock[(Program, Formula) => Unit]
-    (listener.apply _).expects("{x:=x+1;}*".asProgram, "x>=y()+1".asFormula).once()
+    (listener.apply).expects("{x:=x+1;}*".asProgram, "x>=y()+1".asFormula).once()
     GlobalState.parser.setAnnotationListener(listener)
     GlobalState.archiveParser(input).loneElement.model shouldBe "x>=y()+2 -> [{x:=x+1;}*]x>=y()".asFormula
   }
@@ -702,7 +702,7 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
     val input =
       "ArchiveEntry \"Test\" Definitions Real y() = 3+z(); Real z() = 7; End. ProgramVariables Real x; End. Problem x>=y+2 -> [{x:=x+1;}*@invariant(x>=y()+1)]x>=y End. End."
     val listener = mock[(Program, Formula) => Unit]
-    (listener.apply _).expects("{x:=x+1;}*".asProgram, "x>=y()+1".asFormula).once()
+    (listener.apply).expects("{x:=x+1;}*".asProgram, "x>=y()+1".asFormula).once()
     GlobalState.parser.setAnnotationListener(listener)
     GlobalState.archiveParser(input).loneElement.model shouldBe "x>=y()+2 -> [{x:=x+1;}*]x>=y()".asFormula
   }
@@ -712,7 +712,7 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
       val input =
         "ArchiveEntry \"Test\" Definitions Real y() = 3+z(); Real z() = 7*y(); End. ProgramVariables Real x; End. Problem x>=y+2 -> [{x:=x+1;}*@invariant(x>=y()+1)]x>=y End. End."
       val listener = mock[(Program, Formula) => Unit]
-      (listener.apply _).expects("{x:=x+1;}*".asProgram, "x>=y()+1".asFormula).once()
+      (listener.apply).expects("{x:=x+1;}*".asProgram, "x>=y()+1".asFormula).once()
       GlobalState.parser.setAnnotationListener(listener)
       GlobalState.archiveParser(input).loneElement.model shouldBe "x>=y()+2 -> [{x:=x+1;}*]x>=y()".asFormula
     }
@@ -721,7 +721,7 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
     val input =
       "ArchiveEntry \"Test\" Definitions Real y() = 3+7; End. ProgramVariables Real x; End. Problem x>=y+2 -> [{x:=x+1;}*@invariant(x>=y+1)]x>=y End. End."
     val listener = mock[(Program, Formula) => Unit]
-    (listener.apply _).expects("{x:=x+1;}*".asProgram, "x>=y()+1".asFormula).once()
+    (listener.apply).expects("{x:=x+1;}*".asProgram, "x>=y()+1".asFormula).once()
     GlobalState.parser.setAnnotationListener(listener)
     GlobalState.archiveParser(input).loneElement.model shouldBe "x>=y()+2 -> [{x:=x+1;}*]x>=y()".asFormula
   }
@@ -749,7 +749,7 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
     val input =
       "ArchiveEntry \"Test\" Definitions Bool inv() <-> x>=1; End. ProgramVariables Real x; End. Problem x>=2 -> [{x:=x+1;}*@invariant(inv())]x>=0 End. End."
     val listener = mock[(Program, Formula) => Unit]
-    (listener.apply _).expects("{x:=x+1;}*".asProgram, "inv()".asFormula).once()
+    (listener.apply).expects("{x:=x+1;}*".asProgram, "inv()".asFormula).once()
     GlobalState.parser.setAnnotationListener(listener)
     GlobalState.archiveParser(input).loneElement.model shouldBe "x>=2 -> [{x:=x+1;}*]x>=0".asFormula
   }
@@ -758,7 +758,7 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
     val input =
       "ArchiveEntry \"Test\" Definitions Real y() = 3+7; Bool inv() <-> x>=y(); End. ProgramVariables Real x; End. Problem x>=2 -> [{x:=x+1;}*@invariant(inv())]x>=0 End. End."
     val listener = mock[(Program, Formula) => Unit]
-    (listener.apply _).expects("{x:=x+1;}*".asProgram, "inv()".asFormula).once()
+    (listener.apply).expects("{x:=x+1;}*".asProgram, "inv()".asFormula).once()
     GlobalState.parser.setAnnotationListener(listener)
     GlobalState.archiveParser(input).loneElement.model shouldBe "x>=2 -> [{x:=x+1;}*]x>=0".asFormula
   }
@@ -767,7 +767,7 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
     val input =
       "ArchiveEntry \"Test\" Definitions Real b; Real y() = 3+b; Bool inv() <-> x>=y(); End. ProgramVariables Real x; End. Problem x>=2 -> [{x:=x+b;}*@invariant(inv())]x>=0 End. End."
     val listener = mock[(Program, Formula) => Unit]
-    (listener.apply _).expects("{x:=x+b();}*".asProgram, "inv()".asFormula).once()
+    (listener.apply).expects("{x:=x+b();}*".asProgram, "inv()".asFormula).once()
     GlobalState.parser.setAnnotationListener(listener)
     val entry = GlobalState.archiveParser(input).loneElement
     inside(entry.defs.decls(Name("inv", None))) { case Signature(domain, sort, argNames, expr, _) =>
@@ -831,7 +831,7 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
   it should "populate easy ODE annotations" in {
     val input = "x>=2 -> [{x'=1}@invariant(x>=1)]x>=0"
     val listener = mock[(Program, Formula) => Unit]
-    (listener.apply _).expects("{x'=1}".asProgram, "x>=1".asFormula).once()
+    (listener.apply).expects("{x'=1}".asProgram, "x>=1".asFormula).once()
     GlobalState.parser.setAnnotationListener(listener)
     Parser(input)
   }
@@ -839,7 +839,7 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
   it should "populate ODE annotations with old(.)" in {
     val input = "x>=2 -> [{x'=1}@invariant(x>=old(x))]x>=0"
     val listener = mock[(Program, Formula) => Unit]
-    (listener.apply _).expects("{x'=1}".asProgram, "x>=old(x)".asFormula).once()
+    (listener.apply).expects("{x'=1}".asProgram, "x>=old(x)".asFormula).once()
     GlobalState.parser.setAnnotationListener(listener)
     Parser(input)
   }
@@ -848,8 +848,8 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
     val input = "x>=3 -> [{x'=1}@invariant(x>=2, x>=1)]x>=0"
     val listener = mock[(Program, Formula) => Unit]
     inSequence {
-      (listener.apply _).expects("{x'=1}".asProgram, "x>=2".asFormula).once()
-      (listener.apply _).expects("{x'=1}".asProgram, "x>=1".asFormula).once()
+      (listener.apply).expects("{x'=1}".asProgram, "x>=2".asFormula).once()
+      (listener.apply).expects("{x'=1}".asProgram, "x>=1".asFormula).once()
     }
     GlobalState.parser.setAnnotationListener(listener)
     Parser(input)
@@ -858,7 +858,7 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
   it should "bind annotations strongest" in {
     val input = "x>=3 -> [x:=2; ++ x:=3; {x'=1}@invariant(x>=2)]x>=0"
     val listener = mock[(Program, Formula) => Unit]
-    inSequence { (listener.apply _).expects("{x'=1}".asProgram, "x>=2".asFormula).once() }
+    inSequence { (listener.apply).expects("{x'=1}".asProgram, "x>=2".asFormula).once() }
     GlobalState.parser.setAnnotationListener(listener)
     Parser(input)
   }
@@ -866,7 +866,7 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
   it should "parse @variant annotation" in {
     val input = "x=0 -> <{x:=x+1;}*@variant(\\exists i i+x>=5)>x>=5"
     val listener = mock[(Program, Formula) => Unit]
-    inSequence { (listener.apply _).expects("{x:=x+1;}*".asProgram, "\\exists i i+x>=5".asFormula).once() }
+    inSequence { (listener.apply).expects("{x:=x+1;}*".asProgram, "\\exists i i+x>=5".asFormula).once() }
     GlobalState.parser.setAnnotationListener(listener)
     Parser(input)
   }

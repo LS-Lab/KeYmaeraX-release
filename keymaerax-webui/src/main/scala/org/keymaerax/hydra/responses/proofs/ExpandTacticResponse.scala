@@ -30,12 +30,12 @@ case class ExpandTacticResponse(
     "tactic" -> JsObject("stepsTactic" -> JsString(stepsTactic.trim()), "parent" -> JsString(tacticParent)),
     "detailsProofId" -> JsString(detailsProofId.toString),
     if (tree.nonEmpty) "proofTree" -> proofTree else "proofTree" -> JsObject(),
-    "goalSequents" -> JsArray(goalSequents.map(g => JsString(g.toString)): _*),
+    "goalSequents" -> JsArray(goalSequents.map(g => JsString(g.toString))*),
     "backendGoals" -> JsArray(
       backendGoals.map(g =>
         if (g.nonEmpty) JsObject("mathematica" -> JsString(g.get._1), "z3" -> JsString(g.get._2)) else JsObject()
-      ): _*
+      )*
     ),
-    "openGoals" -> JsObject(openGoals.map(itemJson): _*),
+    "openGoals" -> JsObject(openGoals.map(itemJson)*),
   )
 }

@@ -272,7 +272,7 @@ sealed trait NamedSymbol extends Expression with Ordered[NamedSymbol] {
       // @note .getCanonicalName would cause no collisions if same class name in different packages, but expressions are sealed in core.
       if (cmp2 != 0) cmp2 else getClass.getSimpleName.compareTo(other.getClass.getSimpleName)
     }
-  } ensures
+  } `ensures`
     (
       r => r != 0 || this == other,
       "no different categories of symbols with same name " + this + " compared to " + other,
@@ -1110,11 +1110,11 @@ object DifferentialProduct {
       "No duplicate differential equations when composing differential equations " + left + " and " + right,
     )
     reassociate(left, right)
-  } ensures
+  } `ensures`
     (
       r => listify(r) == listify(left) ++ listify(right),
       "reassociating DifferentialProduct does not change the list of atomic ODEs",
-    ) ensures
+    ) `ensures`
     (
       r => differentialSymbols(r).length == differentialSymbols(r).distinct.length,
       "No undetected duplicate differential equations when composing differential equations " + left + " and " + right +
@@ -1157,7 +1157,7 @@ object DifferentialProduct {
       case AtomicODE(xp, _) => xp :: Nil
       case a: DifferentialProgramConst => Nil
     }
-  } ensures
+  } `ensures`
     (
       r => r.toSet == StaticSemantics.symbols(ode).filter(x => x.isInstanceOf[DifferentialSymbol]),
       "StaticSemantics should agree since differential symbols only occur on the left-hand side of differential equations " +

@@ -49,7 +49,7 @@ private object DLBySubst {
   private[btactics] lazy val monb2 = byUS(Ax.monb2)
 
   /** whether games are currently allowed */
-  private[this] val isGame: Boolean = Try({ Dual(AssignAny(Variable("x"))); true }).getOrElse(false)
+  private val isGame: Boolean = Try({ Dual(AssignAny(Variable("x"))); true }).getOrElse(false)
 
   /** @see [[HilbertCalculus.G]] */
   @nowarn("cat=deprecation&origin=org.keymaerax.bellerophon.SequentType")
@@ -199,16 +199,16 @@ private object DLBySubst {
     sequent.at(pos) match {
       case (ctx, f: Formula) =>
         val (hidePos, commute) =
-          if (pos.isAnte) (SuccPosition.base0(sequent.succ.size), commuteEquivR(1).computeResult _)
-          else (pos.topLevel, skip.result _)
-        (pr(cutLRFw(ctx(Box(Assign(x, x), f)))(pos).computeResult _, 0)(
+          if (pos.isAnte) (SuccPosition.base0(sequent.succ.size), commuteEquivR(1).computeResult)
+          else (pos.topLevel, skip.result)
+        (pr(cutLRFw(ctx(Box(Assign(x, x), f)))(pos).computeResult, 0)(
           if (hidePos.isAnte) CoHideLeft(hidePos.checkAnte.top) else CoHideRight(hidePos.checkSucc.top),
           1,
-        )(EquivifyRight(SuccPos(0)), 1)(commute, 1)(CEFw(pos.inExpr).result _, 1)(
+        )(EquivifyRight(SuccPos(0)), 1)(commute, 1)(CEFw(pos.inExpr).result, 1)(
           x match {
-            case v: BaseVariable => US(Ax.selfassignb.provable(URename("x_".asVariable, v, semantic = true))).result _
-            case DifferentialSymbol(v) =>
-              US(Ax.Dselfassignb.provable(URename("x_".asVariable, v, semantic = true))).result _
+            case v: BaseVariable => US(Ax.selfassignb.provable(URename("x_".asVariable, v, semantic = true))).result
+            case DifferentialSymbol(v) => US(Ax.Dselfassignb.provable(URename("x_".asVariable, v, semantic = true)))
+                .result
           },
           1,
         ))

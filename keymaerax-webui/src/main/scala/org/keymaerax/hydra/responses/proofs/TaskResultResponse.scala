@@ -22,9 +22,9 @@ case class TaskResultResponse(
     "proofId" -> JsString(proofId),
     "parent" -> JsObject(
       "id" -> JsString(parent.id.toString),
-      "children" -> JsArray(openChildren.map(c => JsString(c.id.toString)): _*),
+      "children" -> JsArray(openChildren.map(c => JsString(c.id.toString))*),
     ),
-    "newNodes" -> JsArray(nodesJson(openChildren, marginLeft, marginRight).map(_._2): _*),
+    "newNodes" -> JsArray(nodesJson(openChildren, marginLeft, marginRight).map(_._2)*),
     "progress" -> JsBoolean(progress),
     "type" -> JsString("taskresult"),
   )

@@ -111,7 +111,7 @@ final case class USubstChurch(subsDefsInput: immutable.Seq[SubstitutionPair]) ex
    * automatically filter out identity substitution no-ops, which can happen by systematic constructions such as
    * unification
    */
-  private[this] val subsDefs: immutable.Seq[SubstitutionPair] = subsDefsInput.filter(p => p.what != p.repl)
+  private val subsDefs: immutable.Seq[SubstitutionPair] = subsDefsInput.filter(p => p.what != p.repl)
 
   insist(noException(dataStructureInvariant()), "unique left-hand sides in substitutees " + this)
 
@@ -179,7 +179,7 @@ final case class USubstChurch(subsDefsInput: immutable.Seq[SubstitutionPair]) ex
   def apply(t: Term): Term = {
     try usubst(t)
     catch { case ex: ProverException => throw ex.inContext(t.prettyString) }
-  } ensures
+  } `ensures`
     (
       r => matchKeys.toSet.intersect(StaticSemantics.signature(r) -- signature).isEmpty,
       "Uniform Substitution substituted all occurrences (except when reintroduced by substitution) " + this + "\non" +
@@ -190,7 +190,7 @@ final case class USubstChurch(subsDefsInput: immutable.Seq[SubstitutionPair]) ex
   def apply(f: Formula): Formula = {
     try usubst(f)
     catch { case ex: ProverException => throw ex.inContext(f.prettyString) }
-  } ensures
+  } `ensures`
     (
       r => matchKeys.toSet.intersect(StaticSemantics.signature(r) -- signature).isEmpty,
       "Uniform Substitution substituted all occurrences (except when reintroduced by substitution) " + this + "\non" +
@@ -201,7 +201,7 @@ final case class USubstChurch(subsDefsInput: immutable.Seq[SubstitutionPair]) ex
   def apply(p: Program): Program = {
     try usubst(p)
     catch { case ex: ProverException => throw ex.inContext(p.prettyString) }
-  } ensures
+  } `ensures`
     (
       r => matchKeys.toSet.intersect(StaticSemantics.signature(r) -- signature).isEmpty,
       "Uniform Substitution substituted all occurrences (except when reintroduced by substitution) " + this + "\non" +
@@ -212,7 +212,7 @@ final case class USubstChurch(subsDefsInput: immutable.Seq[SubstitutionPair]) ex
   def apply(p: DifferentialProgram): DifferentialProgram = {
     try usubst(p)
     catch { case ex: ProverException => throw ex.inContext(p.prettyString) }
-  } ensures
+  } `ensures`
     (
       r => matchKeys.toSet.intersect(StaticSemantics.signature(r) -- signature).isEmpty,
       "Uniform Substitution substituted all occurrences (except when reintroduced by substitution) " + this + "\non" +

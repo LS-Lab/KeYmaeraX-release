@@ -103,7 +103,7 @@ abstract class MonitorGenerator(
           val successPrg = if (onlyEqualities(p)) CMeasureZeroMargin(pDist) else CSafetyMargin(pDist)
           CIfThenElse(
             compileFormula(p),
-            successPrg and compileProgramFormula(q),
+            successPrg `and` compileProgramFormula(q),
             CErrorMargin(errorId(p), pDist, p.prettyString),
           )
         case Or(Diamond(Test(p: ComparisonFormula), ifP), Diamond(Test(Not(q: ComparisonFormula)), elseP)) if p == q =>
@@ -117,11 +117,11 @@ abstract class MonitorGenerator(
           }
           CIfThenElse(
             compileFormula(p),
-            ifDist and compileProgramFormula(ifP),
-            elseDist and compileProgramFormula(elseP),
+            ifDist `and` compileProgramFormula(ifP),
+            elseDist `and` compileProgramFormula(elseP),
           )
-        case Or(l, r) => compileProgramFormula(l) or compileProgramFormula(r)
-        case And(l, r) => compileProgramFormula(l) and compileProgramFormula(r)
+        case Or(l, r) => compileProgramFormula(l) `or` compileProgramFormula(r)
+        case And(l, r) => compileProgramFormula(l) `and` compileProgramFormula(r)
       }
     }
 

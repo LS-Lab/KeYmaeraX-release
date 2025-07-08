@@ -69,7 +69,7 @@ object SignAnalysis {
       p._1 ->
         (if (p._2.size > 1 && p._2.contains(Sign.Unknown)) p._2.view.filterKeys(_ != Sign.Unknown).toMap else p._2)
     )
-  } ensures
+  } `ensures`
     (r =>
       r.forall(p => p._2.keySet.size == 1 || !p._2.keySet.contains(Sign.Unknown))
     ) // either unambiguous one of (+,-,?) or contradiction (+-)

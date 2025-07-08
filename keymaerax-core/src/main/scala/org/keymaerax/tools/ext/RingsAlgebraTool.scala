@@ -168,7 +168,7 @@ class RingsLibrary(terms: Iterable[Term]) {
   def polynomialReduce(polynomial: Term, GB: List[Term]): (List[Term], Term) = {
     val ringpoly = toRing(polynomial)
     val ringGB = GB.map(toRing)
-    val res = ringpoly./%/%*(ringGB: _*).toList
+    val res = ringpoly./%/%*(ringGB*).toList
     (res.init.map(fromRing), fromRing(res.last))
   }
 
@@ -273,7 +273,7 @@ class RingsLibrary(terms: Iterable[Term]) {
 
   /** split polynomial according to order w.r.t variables in list */
   def splitInternal(p: Ring, order: Int, vars: Seq[Int], drop: Seq[Int]) = {
-    def keep(p: Monomial[Rational[BigInteger]]): Boolean = p.dvTotalDegree(vars: _*) <= order && !drop.exists { d =>
+    def keep(p: Monomial[Rational[BigInteger]]): Boolean = p.dvTotalDegree(vars*) <= order && !drop.exists { d =>
       val pdve = p.dv.exponents
       p.dv.exponents(d) > 0
     }

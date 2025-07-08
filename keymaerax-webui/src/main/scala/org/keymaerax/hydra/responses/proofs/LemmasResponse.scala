@@ -31,6 +31,6 @@ case class LemmasResponse(infos: List[ProvableInfo]) extends Response {
       )
     }
     val json = infos.map(i => Try(getInfoJson(i)).toOption).filter(_.isDefined).map(_.get)
-    JsObject("lemmas" -> JsArray(json: _*))
+    JsObject("lemmas" -> JsArray(json*))
   }
 }

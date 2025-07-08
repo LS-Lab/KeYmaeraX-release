@@ -93,25 +93,25 @@ class ARCHNonlinearBenchmark extends TacticTestBase {
       |""".stripMargin.split("\n").toList.filter(_ != "").map(GlobalState.parser.formulaParser)
 
   "ODE" should "prove some examples with Z3" taggedAs SlowTest in withZ3 { _ =>
-    forEvery(Table("Formula", z3Benchmarks: _*)) { (fml: Formula) =>
+    forEvery(Table("Formula", z3Benchmarks*)) { (fml: Formula) =>
       proveBy(fml, SequentCalculus.implyR(1) & TactixLibrary.ODE(1)) shouldBe Symbol("proved")
     }
   }
 
   it should "prove most examples with Mathematica" taggedAs SlowTest in withMathematica { _ =>
-    forEvery(Table("Formula", mathematicaBenchmarks: _*)) { (fml: Formula) =>
+    forEvery(Table("Formula", mathematicaBenchmarks*)) { (fml: Formula) =>
       proveBy(fml, SequentCalculus.implyR(1) & TactixLibrary.ODE(1)) shouldBe Symbol("proved")
     }
   }
 
   it should "prove some more with Mathematica and Matlab" taggedAs IgnoreInBuildTest in withMathematicaMatlab { _ =>
-    forEvery(Table("Formula", matlabBenchmarks: _*)) { (fml: Formula) =>
+    forEvery(Table("Formula", matlabBenchmarks*)) { (fml: Formula) =>
       proveBy(fml, SequentCalculus.implyR(1) & TactixLibrary.ODE(1)) shouldBe Symbol("proved")
     }
   }
 
   it should "FEATURE_REQUEST: prove remaining examples" taggedAs IgnoreInBuildTest in withMathematicaMatlab { _ =>
-    forEvery(Table("Formula", todoBenchmarks: _*)) { (fml: Formula) =>
+    forEvery(Table("Formula", todoBenchmarks*)) { (fml: Formula) =>
       proveBy(fml, SequentCalculus.implyR(1) & TactixLibrary.ODE(1)) shouldBe Symbol("proved")
     }
   }

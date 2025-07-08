@@ -190,7 +190,7 @@ trait BaseMatcher extends Matcher with Logging {
     catch {
       case ex: ProverException => throw ex.inContext("match " + e1.prettyString + "\n   with  " + e2.prettyString)
     }
-  } ensures
+  } `ensures`
     (
       r => !REVERIFY || r(e1) == e2,
       "unifier match expected to unify or fail\nunify: " + e1.prettyString + "\nwith:  " + e2.prettyString +
@@ -203,7 +203,7 @@ trait BaseMatcher extends Matcher with Logging {
     catch {
       case ex: ProverException => throw ex.inContext("match " + e1.prettyString + "\n   with  " + e2.prettyString)
     }
-  } ensures
+  } `ensures`
     (
       r => !REVERIFY || r(e1) == e2,
       "unifier match expected to unify or fail\nunify: " + e1.prettyString + "\nwith:  " + e2.prettyString +
@@ -216,7 +216,7 @@ trait BaseMatcher extends Matcher with Logging {
     catch {
       case ex: ProverException => throw ex.inContext("match " + e1.prettyString + "\n   with  " + e2.prettyString)
     }
-  } ensures
+  } `ensures`
     (
       r => !REVERIFY || r(e1) == e2,
       "unifier match expected to unify or fail\nunify: " + e1.prettyString + "\nwith:  " + e2.prettyString +
@@ -229,7 +229,7 @@ trait BaseMatcher extends Matcher with Logging {
     catch {
       case ex: ProverException => throw ex.inContext("match " + e1.prettyString + "\n   with  " + e2.prettyString)
     }
-  } ensures
+  } `ensures`
     (
       r => !REVERIFY || r(e1) == e2,
       "unifier match expected to unify or fail\nunify: " + e1.prettyString + "\nwith:  " + e2.prettyString +
@@ -240,7 +240,7 @@ trait BaseMatcher extends Matcher with Logging {
   override def apply(e1: Sequent, e2: Sequent): Subst = {
     try { unifier(e1, e2, unify(e1, e2)) }
     catch { case ex: ProverException => throw ex.inContext("match " + e1.toString + "\n   with  " + e2.toString) }
-  } ensures
+  } `ensures`
     (
       r => !REVERIFY || r(e1) == e2,
       "unifier match expected to unify or fail\nunify: " + e1.prettyString + "\nwith:  " + e2.prettyString +

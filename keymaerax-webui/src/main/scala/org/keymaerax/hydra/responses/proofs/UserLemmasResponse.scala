@@ -26,5 +26,5 @@ class UserLemmasResponse(proofs: List[(ProofPOJO, Option[(String, Lemma)])]) ext
     )
   })
 
-  override def getJson: JsValue = JsArray(objects: _*)
+  override def getJson: JsValue = JsArray(objects*)
 }

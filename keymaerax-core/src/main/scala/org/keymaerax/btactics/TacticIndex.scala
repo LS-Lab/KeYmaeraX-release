@@ -60,11 +60,11 @@ trait TacticIndex {
    */
   def tacticFor(
       expr: Expression,
-      restrictTo: List[AtPosition[_ <: BelleExpr]],
-  ): (Option[AtPosition[_ <: BelleExpr]], Option[AtPosition[_ <: BelleExpr]])
+      restrictTo: List[AtPosition[? <: BelleExpr]],
+  ): (Option[AtPosition[? <: BelleExpr]], Option[AtPosition[? <: BelleExpr]])
 
   /** Returns canonical tactics to try at `expr` (tuple of antecedent and succedent tactics) */
-  def tacticsFor(expr: Expression): (List[AtPosition[_ <: BelleExpr]], List[AtPosition[_ <: BelleExpr]])
+  def tacticsFor(expr: Expression): (List[AtPosition[? <: BelleExpr]], List[AtPosition[? <: BelleExpr]])
 
   /**
    * Indicates whether `tactic` is potentially applicable at `expr`. Some(true) when definitely applicable, Some(false)
@@ -195,8 +195,8 @@ class DefaultTacticIndex extends TacticIndex {
   /** Give the first canonical (derived) axiom name or tactic name that simplifies the expression `expr`. */
   def tacticFor(
       expr: Expression,
-      restrictTo: List[AtPosition[_ <: BelleExpr]],
-  ): (Option[AtPosition[_ <: BelleExpr]], Option[AtPosition[_ <: BelleExpr]]) = {
+      restrictTo: List[AtPosition[? <: BelleExpr]],
+  ): (Option[AtPosition[? <: BelleExpr]], Option[AtPosition[? <: BelleExpr]]) = {
     val tactics = tacticsFor(expr)
     (tactics._1.intersect(restrictTo).headOption, tactics._2.intersect(restrictTo).headOption)
   }
@@ -204,7 +204,7 @@ class DefaultTacticIndex extends TacticIndex {
   /** Return ordered list of all canonical tactic names that simplifies the expression `expr` (ante, succ). */
   @nowarn("cat=deprecation&origin=org.keymaerax.btactics.ProofRuleTactics.closeTrue")
   @nowarn("cat=deprecation&origin=org.keymaerax.btactics.ProofRuleTactics.closeFalse")
-  def tacticsFor(expr: Expression): (List[AtPosition[_ <: BelleExpr]], List[AtPosition[_ <: BelleExpr]]) = {
+  def tacticsFor(expr: Expression): (List[AtPosition[? <: BelleExpr]], List[AtPosition[? <: BelleExpr]]) = {
     if (expr.kind == TermKind) expr match { case _ => (Nil, Nil) }
     else expr match {
       case Box(a, p) =>

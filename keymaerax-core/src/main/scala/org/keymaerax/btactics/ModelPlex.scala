@@ -63,7 +63,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
   override def apply(
       formula: Formula,
       kind: ModelPlexKind.Value,
-      unobservable: ListMap[_ <: NamedSymbol, Option[Formula]] = ListMap.empty,
+      unobservable: ListMap[? <: NamedSymbol, Option[Formula]] = ListMap.empty,
   ): Formula = {
     val vars = StaticSemantics
       .boundVars(formula)
@@ -147,7 +147,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
 
   def mxAutoInstantiate(
       assumptions: List[Formula],
-      unobservable: List[_ <: NamedSymbol],
+      unobservable: List[? <: NamedSymbol],
       simplifier: Option[BuiltInPositionTactic],
   ): InputTactic = inputanon {
     TryCatch(
@@ -197,7 +197,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
 
   /** Partitions the unobservable symbols into unobservable state variables and unknown model parameters. */
   @nowarn("msg=match may not be exhaustive")
-  def partitionUnobservable(unobservable: ListMap[_ <: NamedSymbol, Option[Formula]]): (
+  def partitionUnobservable(unobservable: ListMap[? <: NamedSymbol, Option[Formula]]): (
       ListMap[Variable, Option[Formula]],
       ListMap[(Function, Variable), Option[Formula]],
       ListMap[(Function, Variable), Option[Formula]],
@@ -233,7 +233,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
   override def createMonitorSpecificationConjecture(
       fml: Formula,
       vars: List[Variable],
-      unobservable: ListMap[_ <: NamedSymbol, Option[Formula]],
+      unobservable: ListMap[? <: NamedSymbol, Option[Formula]],
       postVar: Variable => Variable = NAMED_POST_VAR,
   ): ModelPlexConjecture = {
     require(vars.nonEmpty, "ModelPlex expects non-empty list of variables to monitor")
@@ -344,7 +344,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
   def createSlidingMonitorSpec(
       fml: Formula,
       vars: List[Variable],
-      unobservable: ListMap[_ <: NamedSymbol, Option[Formula]],
+      unobservable: ListMap[? <: NamedSymbol, Option[Formula]],
       windowSize: Int,
   ): (Formula, List[Formula]) = {
     assert(vars.forall(_.index.isEmpty), "Variables with index not allowed, since sliding window generates indices")
@@ -370,7 +370,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
   def createMonitorCorrectnessConjecture(
       vars: List[Variable],
       kind: ModelPlexKind.Value,
-      unobservable: ListMap[_ <: NamedSymbol, Option[Formula]],
+      unobservable: ListMap[? <: NamedSymbol, Option[Formula]],
   ): (Formula => Formula) = formula => {
     val monitor = apply(vars, kind)(formula)
     val ModelPlexConjecture(_, monitorConjecture, assumptions) =
@@ -1428,7 +1428,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
    * @param tactics The list of tactics.
    * @return The tactic.
    */
-  override def locateT(tactics: List[AtPosition[_ <: BelleExpr]]): DependentPositionTactic = anon(
+  override def locateT(tactics: List[AtPosition[? <: BelleExpr]]): DependentPositionTactic = anon(
     (pos: Position, sequent: Sequent) => {
       require(tactics.nonEmpty, "At least 1 tactic required")
       val here = tactics.map(_(pos)).reduceRight[BelleExpr](_ | _)
@@ -1599,7 +1599,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
       fml: Formula,
       assumptions: List[Formula],
       defs: Declaration,
-      tool: QETacticTool with SimplificationTool,
+      tool: QETacticTool & SimplificationTool,
       preQE: (Formula, Int) => Unit = (_, _) => {},
       postQE: (Formula, Int) => Unit = (_, _) => {},
   ): ProvableSig = fml.at(innermostQuantifierPos(fml)) match {
@@ -1828,7 +1828,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
   override def optimizationOneWithSearch(
       tool: Option[SimplificationTool],
       assumptions: List[Formula],
-      unobservable: List[_ <: NamedSymbol],
+      unobservable: List[? <: NamedSymbol],
       simplifier: Option[BuiltInPositionTactic],
       postVar: Variable => Variable = NAMED_POST_VAR,
   ): DependentPositionTactic = anon((pos: Position, sequent: Sequent) => {
@@ -1891,7 +1891,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
   private def instantiateQuantifiers(
       tool: Option[SimplificationTool],
       assumptions: List[Formula],
-      unobservable: List[_ <: NamedSymbol],
+      unobservable: List[? <: NamedSymbol],
       simplifier: Option[BuiltInPositionTactic],
       postVar: Variable => Variable,
   ): DependentPositionTactic = anon((pos: Position, sequent: Sequent) => {
@@ -1986,7 +1986,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
 
         class SynonymFinder(v: Variable) extends ExpressionTraversalFunction {
           private val vs = if (v.name.endsWith("_")) List(v) else List(v, postVar(v))
-          var synonyms: mutable.Map[Variable, Set[Term]] = mutable.Map(vs.map(_ -> Set[Term]()): _*)
+          var synonyms: mutable.Map[Variable, Set[Term]] = mutable.Map(vs.map(_ -> Set[Term]())*)
           override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
             case Equal(l: Variable, r: Variable) =>
               if (vs.contains(l)) synonyms(l) = synonyms(l) + r

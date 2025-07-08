@@ -26,7 +26,7 @@ class UniformSubstitutionTests extends TacticTestBase with PrivateMethodTester {
   private def V(s: String) = Variable(s, None, Real)
 
   object SubstitutionTester {
-    def create(subs: SubstitutionPair*) = new SubstitutionTester(scala.collection.immutable.Seq(subs: _*))
+    def create(subs: SubstitutionPair*) = new SubstitutionTester(scala.collection.immutable.Seq(subs*))
   }
   class SubstitutionTester(val subsDefs: scala.collection.immutable.Seq[SubstitutionPair]) {
     private val gs = USubst(subsDefs)
@@ -992,7 +992,7 @@ class UniformSubstitutionTests extends TacticTestBase with PrivateMethodTester {
       rndF.nextT(rndF.nextNames("rhs", size / 3 + 1), size)
     }
 
-    def rndExtensionOf(s: SubstitutionTester) = create(new Random().shuffle(s.subsDefs ++ rndSubstDefs(5)): _*)
+    def rndExtensionOf(s: SubstitutionTester) = create(new Random().shuffle(s.subsDefs ++ rndSubstDefs(5))*)
 
     // TODO variable substitution not yet supported (commented cases), all current cases should work for variables too
     val cases =
