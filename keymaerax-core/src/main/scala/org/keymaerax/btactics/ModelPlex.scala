@@ -510,7 +510,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
     }
     override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, Throwable]): Unit = expr match {
       case b: BranchTactic if loopBranch.contains(b) => loopBranch = None
-      case t: AppliedDependentPositionTactic if t.name == "dW" => (inDW = false)
+      case t: AppliedDependentPositionTactic if t.name == "dW" => { inDW = false }
       case _ =>
     }
     override def kill(): Unit = {}
