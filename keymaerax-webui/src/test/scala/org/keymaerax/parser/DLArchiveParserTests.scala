@@ -2357,7 +2357,7 @@ class DLArchiveParserTests extends TacticTestBase {
         |End.
         |""".stripMargin
     }
-    val a :: Nil = ArchiveParser(contentA)
+    val a :: Nil = ArchiveParser(contentA): @unchecked
     val ta =
       ArchiveParser.tacticParser(
         tacticA,
@@ -2366,7 +2366,7 @@ class DLArchiveParserTests extends TacticTestBase {
     a.tactics.map(_._3) should contain theSameElementsInOrderAs List(ta)
     // @note if not robustly reset, will use contentA definition x() in tactic parser and as a consequence will get
     // assertion error in the next line because the parser cannot elaborate x in x' to x()
-    val b :: Nil = ArchiveParser(contentB)
+    val b :: Nil = ArchiveParser(contentB): @unchecked
     b.tactics.map(_._3) should contain theSameElementsInOrderAs
       List(
         """implyR('R=="x>=0 -> [{x'=x}]x>=0"); dC("x>=old(x)", 'R=="[{x'=x}]x>=0")""".asTactic(b.defs)

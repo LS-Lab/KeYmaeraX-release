@@ -84,7 +84,7 @@ class ContinuousInvariantTests extends TacticTestBase {
         })) { (name, model, defs) =>
           whenever(tool.isInitialized) {
             println("\n" + name)
-            val Imply(assumptions, goal @ Box(ode: ODESystem, _)) = model
+            val Imply(assumptions, goal @ Box(ode: ODESystem, _)) = model: @unchecked
 
             // @note the annotations in nonlinear.kyx are produced by Pegasus
             val invariants = InvariantGenerator
@@ -123,7 +123,7 @@ class ContinuousInvariantTests extends TacticTestBase {
       })) { (name, model) =>
         whenever(tool.isInitialized) {
           println("\n" + name)
-          val Imply(_, Box(ode @ ODESystem(_, _), _)) = model
+          val Imply(_, Box(ode @ ODESystem(_, _), _)) = model: @unchecked
           annotatedInvariants.products.get(ode) match {
             case Some(invs) => tool.lzzCheck(ode, invs.map(_.formula).reduce(And.apply)) shouldBe true
             case None => // no invariant to fast-check
@@ -171,7 +171,7 @@ class ContinuousInvariantTests extends TacticTestBase {
         (name, model, defs) =>
           whenever(tool.isInitialized) {
             println("\n" + name)
-            val Imply(assumptions, goal @ Box(ODESystem(_, _), _)) = model
+            val Imply(assumptions, goal @ Box(ODESystem(_, _), _)) = model: @unchecked
             val invariants = InvariantGenerator
               .pegasusInvariants
               .generate(Sequent(IndexedSeq(assumptions), IndexedSeq(goal)), SuccPos(0), defs)

@@ -55,7 +55,7 @@ class GetAgendaAwesomeRequest(db: DBAbstraction, userId: String, proofId: String
       .getOrElse("renderMargins", "[40,80]")
       .parseJson
       .convertTo[Array[Int]]
-      .toList
+      .toList: @unchecked
 
     // Goals in web UI
     val agendaItems: List[AgendaItem] = openGoals.map(n => AgendaItem(n.id.toString, AgendaItem.nameOf(n), proofId))

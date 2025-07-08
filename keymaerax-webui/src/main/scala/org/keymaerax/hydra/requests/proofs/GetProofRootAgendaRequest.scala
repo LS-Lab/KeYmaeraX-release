@@ -30,7 +30,7 @@ class GetProofRootAgendaRequest(db: DBAbstraction, userId: String, proofId: Stri
       .getOrElse("renderMargins", "[40,80]")
       .parseJson
       .convertTo[Array[Int]]
-      .toList
+      .toList: @unchecked
     AgendaAwesomeResponse(
       tree.info.modelId.get.toString,
       proofId,

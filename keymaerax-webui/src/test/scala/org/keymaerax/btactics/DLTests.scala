@@ -652,7 +652,7 @@ class DLTests extends TacticTestBase {
   }
 
   "I gen" should "work on a simple example" in withTactics {
-    val succ @ Box(prg, _) = "[{x:=x+1;}*]x>0".asFormula
+    val succ @ Box(prg, _) = "[{x:=x+1;}*]x>0".asFormula: @unchecked
     val result = proveBy(
       Sequent(IndexedSeq("x>2".asFormula), IndexedSeq(succ)),
       loop(new ConfigurableGenerator(Map((prg, Invariant("x>1".asFormula) :: Nil))))(1),
@@ -863,7 +863,8 @@ class DLTests extends TacticTestBase {
         recordInternal = false,
       ))
 
-      val BelleProvable(result, _) = interpreter(tactic, BelleProvable.plain(ProvableSig.startPlainProof(fml)))
+      val BelleProvable(result, _) =
+        interpreter(tactic, BelleProvable.plain(ProvableSig.startPlainProof(fml))): @unchecked
       result.subgoals.size shouldBe 3
       val finalTree = DbProofTree(db.db, proofId.toString).load()
       finalTree.openGoals.flatMap(_.goal) should contain theSameElementsAs result.subgoals
@@ -902,7 +903,7 @@ class DLTests extends TacticTestBase {
   }
 
   it should "keep constant context" in withTactics {
-    val succ @ Box(prg, _) = "[{x:=A+B+1;}*]x>0".asFormula
+    val succ @ Box(prg, _) = "[{x:=A+B+1;}*]x>0".asFormula: @unchecked
     val result = proveBy(
       s"A>0, x>2, !B<=0 ==> C<1, ${succ.prettyString}, D<1".asSequent,
       loop(new ConfigurableGenerator(Map((prg, Invariant("x>1".asFormula) :: Nil))))(2),

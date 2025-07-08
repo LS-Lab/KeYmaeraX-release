@@ -210,7 +210,7 @@ abstract class BelleBaseInterpreter(
                   if (origLabels.size == combinedProvable.subgoals.size) Some(origLabels)
                   else Some(origLabels.patch(cidx, List.empty, 1)) // goal cidx was closed, remove label
                 } else {
-                  val l :: rest = labels
+                  val l :: rest = labels: @unchecked
                   Some(origLabels.patch(cidx, List(l), 1) ++ rest)
                 }
               case (None, Some(newLabels)) =>

@@ -169,7 +169,7 @@ object CEXM2KConverter extends M2KConverter[Either[KExpr, NamedSymbol]] {
 
     override def convert(e: MExpr): KExpr = {
       if (ExtMathematicaOpSpec.complex.applies(e)) {
-        val r :: i :: Nil = e.args().toList
+        val r :: i :: Nil = e.args().toList: @unchecked
         // @note not actually a complex number, encode only for the sake of reporting a counterexample
         FuncOf(
           Function("Complex", None, Real, Tuple(Real, Real), None),

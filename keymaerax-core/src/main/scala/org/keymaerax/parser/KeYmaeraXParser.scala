@@ -445,7 +445,7 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
   // @todo performance bottleneck
   // @todo reorder cases also such that pretty cases like fully parenthesized get parsed fast and early
   private def parseStep(st: ParseState, lax: Boolean): ParseState = {
-    val ParseState(s, (next @ Token(la, laloc)) :: _) = st
+    val ParseState(s, (next @ Token(la, laloc)) :: _) = st: @unchecked
     logger.trace(s"$s")
     logger.trace(s"$la")
     // @note This table of LR Parser matches needs an entry for every prefix substring of the grammar.
@@ -1304,7 +1304,7 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
     var dia = 0
     var stack = st.stack
     while (!stack.isEmpty) {
-      val rest :+ t = stack
+      val rest :+ t = stack: @unchecked
       t match {
         case Token(RBRACE, _) => brace = brace + 1
         case tok @ Token(LBRACE, _) =>
@@ -1348,7 +1348,7 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
       loc: Location,
       remainder: Stack[Item],
   ): ParseState = {
-    val ParseState(_, Token(la, _) :: _) = st
+    val ParseState(_, Token(la, _) :: _) = st: @unchecked
     OpSpec.interpretedFuncSortDomain(name.name) match {
       // backwards compatibility: allow declaring interpreted functions
       case Some((Real, d)) =>
@@ -1399,7 +1399,7 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
       loc: Location,
       remainder: Stack[Item],
   ): ParseState = {
-    val ParseState(_, Token(la, _) :: _) = st
+    val ParseState(_, Token(la, _) :: _) = st: @unchecked
     require(name.index.isEmpty, "no index supported for unit functional or unit predicational")
     if (termBinOp(la) || isTerm(st) && followsTerm(la))
       reduce(st, consuming, UnitFunctional(name.name, arg, Real), loc, remainder)
@@ -1427,7 +1427,7 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
       loc: Location,
       remainder: Stack[Item],
   ): ParseState = {
-    val ParseState(_, Token(la, _) :: _) = st
+    val ParseState(_, Token(la, _) :: _) = st: @unchecked
     reduce(st, consuming, FuncOf(Function(name.name, name.index, arg.sort, Real, Some(interp)), arg), loc, remainder)
   }
 
@@ -1522,7 +1522,7 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
 
   /** Shift to put the next input token la on the parser stack s. */
   private def shift(st: ParseState): ParseState = {
-    val ParseState(s, la :: rest) = st
+    val ParseState(s, la :: rest) = st: @unchecked
     if (parseErrorsAsExceptions && la.tok == EOF)
       throw ParseException("Unfinished input. Parser cannot shift past end of file", st)
     else require(la.tok != EOF, "Cannot shift past end of file")
@@ -1578,7 +1578,7 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
   private def error(st: ParseState, expect: List[Expected]): ParseState = {
     if (parseErrorsAsExceptions) throw ParseException("Unexpected token cannot be parsed", st, expect)
     else {
-      val ParseState(s, la :: _) = st
+      val ParseState(s, la :: _) = st: @unchecked
       ParseState(
         s :+ Error("Unexpected token cannot be parsed\nFound: " + la + "\nExpected: " + expect, la.loc, st.toString),
         st.input,
@@ -1590,7 +1590,7 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
     if (parseErrorsAsExceptions)
       throw ParseException("Unexpected token cannot be parsed", at, found, expect.mkString("\n      or: "))
     else {
-      val ParseState(s, la :: _) = st
+      val ParseState(s, la :: _) = st: @unchecked
       ParseState(
         s :+ Error("Unexpected token cannot be parsed\nFound: " + la + "\nExpected: " + expect, la.loc, st.toString),
         st.input,
@@ -1600,7 +1600,7 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
 
   /** Error parsing the next input token la when in parser stack s. */
   private def errormsg(st: ParseState, expect: String): ParseState = {
-    val ParseState(s, la :: _) = st
+    val ParseState(s, la :: _) = st: @unchecked
     if (parseErrorsAsExceptions) throw ParseException("Unexpected token cannot be parsed", st, expect)
     else ParseState(
       s :+ Error("Unexpected token cannot be parsed\nFound: " + la + "\nExpected: " + expect, la.loc, st.toString),

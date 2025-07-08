@@ -91,7 +91,7 @@ class CounterExampleResponse(
     }
 
     if (cex.nonEmpty & cex.forall(_._2.isInstanceOf[Term])) {
-      val Imply(assumptions, conclusion) = fml
+      val Imply(assumptions, conclusion) = fml: @unchecked
 
       // @note flag false comparison formulas `cmp` with (cmp<->false)
       val cexConclusion = ExpressionTraversal

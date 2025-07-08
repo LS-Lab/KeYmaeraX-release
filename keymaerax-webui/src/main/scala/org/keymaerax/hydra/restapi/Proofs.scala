@@ -408,7 +408,7 @@ object Proofs {
           if (str.equals("null") && positionStringParts.length == 1) 1
           else throw new Exception("Invalid formulaId " + str + " when parsing positions")
       }
-    )
+    ): @unchecked
 
     try { Position(idx, inExprs) }
     catch {
@@ -447,10 +447,8 @@ object Proofs {
           post {
             entity(as[String]) { params =>
               {
-                val (what: JsString) :: (repl: JsString) :: Nil = JsonParser(params)
-                  .asJsObject
-                  .getFields("what", "repl")
-                  .toList
+                val (what: JsString) :: (repl: JsString) :: Nil =
+                  JsonParser(params).asJsObject.getFields("what", "repl").toList: @unchecked
                 val request = new SetDefinitionsRequest(database, userId, proofId, what.value, repl.value)
                 completeRequest(request, t)
               }
@@ -591,10 +589,8 @@ object Proofs {
           pathEnd {
             post {
               entity(as[String]) { params =>
-                val (pName: JsString) :: (pType: JsString) :: (pValue: JsString) :: Nil = JsonParser(params)
-                  .asJsObject
-                  .getFields("param", "type", "value")
-                  .toList
+                val (pName: JsString) :: (pType: JsString) :: (pValue: JsString) :: Nil =
+                  JsonParser(params).asJsObject.getFields("param", "type", "value").toList: @unchecked
                 completeRequest(
                   new CheckTacticInputRequest(
                     database,
@@ -755,7 +751,7 @@ object Proofs {
                     .map({ elem =>
                       val obj = elem.asJsObject()
                       val (paramName: JsString) :: (paramValue: JsString) :: Nil =
-                        obj.getFields("param", "value").toList
+                        obj.getFields("param", "value").toList: @unchecked
                       val paramInfo = expectedInputs.find(_.name == paramName.value)
                       BelleTermInput(paramValue.value, paramInfo)
                     })

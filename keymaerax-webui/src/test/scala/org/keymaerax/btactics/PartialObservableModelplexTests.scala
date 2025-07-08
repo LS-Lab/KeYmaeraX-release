@@ -156,7 +156,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
     val testProg = testPrgProof.subgoals.head.succ.head
 
     // export code
-    val Imply(_, Box(Loop(prg), _)) = entry.expandedModel
+    val Imply(_, Box(Loop(prg), _)) = entry.expandedModel: @unchecked
     val inputs = CodeGenerator.getInputs(prg) --
       unobservable.keySet.filter(_.isInstanceOf[BaseVariable]).map(_.asInstanceOf[BaseVariable])
     val sensorsForUnobservables = unobservable
@@ -248,7 +248,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
         Source
           .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx"))
           .mkString,
-      )
+      ): @unchecked
 
       checkArchiveEntries(List(curvedBot))
 
@@ -259,7 +259,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
         Source
           .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx"))
           .mkString,
-      )
+      ): @unchecked
       approx._1 shouldBe approxEntry.defs.exhaustiveSubst(approxEntry.model)
 
       val monitor = deriveMonitor(curvedBot, Some(curvedBot.tactics.head._3), ListMap.empty, tool)
@@ -275,7 +275,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
       Source
         .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx"))
         .mkString,
-    )
+    ): @unchecked
 
     checkArchiveEntries(List(curvedBot))
 
@@ -301,7 +301,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
         Source
           .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx"))
           .mkString,
-      )
+      ): @unchecked
       val unobservable = ListMap[Variable, Option[Formula]](Variable("ad") -> None)
       deriveMonitor(entry, Some(entry.tactics.head._3), unobservable, tool) shouldBe
         "\\forall d (-1-D()<=d&d<=-1+D()->(xr+w/d-xo)^2+(yr-v/d-yo)^2!=v^2+w^2)&(-1-D()<=adpost&adpost<=-1+D())&(xr+w/adpost-xo)^2+(yr-v/adpost-yo)^2!=v^2+w^2&(xrpost+wpost/adpost-xo)^2+(yrpost-vpost/adpost-yo)^2!=vpost^2+wpost^2&apost=-1&wpost_0=w&vpost_0=v&xrpost_0=xr&yrpost_0=yr|\\forall d (1-D()<=d&d<=1+D()->(xr+w/d-xo)^2+(yr-v/d-yo)^2!=v^2+w^2)&(1-D()<=adpost&adpost<=1+D())&(xr+w/adpost-xo)^2+(yr-v/adpost-yo)^2!=v^2+w^2&(xrpost+wpost/adpost-xo)^2+(yrpost-vpost/adpost-yo)^2!=vpost^2+wpost^2&apost=1&wpost_0=w&vpost_0=v&xrpost_0=xr&yrpost_0=yr"
@@ -315,7 +315,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
       Source
         .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx"))
         .mkString,
-    )
+    ): @unchecked
 
     val unobservable = ListMap[Variable, Option[Formula]]("c_0".asVariable -> None, "l_0".asVariable -> None)
 
@@ -347,7 +347,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
       Source
         .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx"))
         .mkString,
-    )
+    ): @unchecked
 
     val unobservable =
       ListMap[Variable, Option[Formula]]("fd".asVariable -> None, "c_0".asVariable -> None, "l_0".asVariable -> None)
@@ -361,7 +361,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
         Source
           .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx"))
           .mkString,
-      )
+      ): @unchecked
       val model = entry
         .model
         .exhaustiveSubst(USubst(entry.defs.substs.filter(_.what.isInstanceOf[SystemConst])))
@@ -401,7 +401,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
         Source
           .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx"))
           .mkString,
-      )
+      ): @unchecked
       // monitor for disturbance: exists 0<=D<=0.2
       val unobservable = ListMap("fd".asVariable -> None, "D()".asFunction -> Some("0 <= D() & D() <= 0.2".asFormula))
       deriveMonitor(entry, None, unobservable, tool)
@@ -416,7 +416,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
         Source
           .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx"))
           .mkString,
-      )
+      ): @unchecked
       val unobservable = ListMap[NamedSymbol, Option[Formula]](
         Variable("l") -> Some("0 <= lU() & lS-lU() <= l & l <= lS+lU()".asFormula),
         Variable("fd") -> None,
@@ -431,7 +431,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
       Source
         .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx"))
         .mkString,
-    )
+    ): @unchecked
     val unobservable = ListMap[Variable, Option[Formula]](
       "l".asVariable -> Some("lu-U()<=l&l<=lu+U()".asFormula),
       "c_0".asVariable -> None,
@@ -448,7 +448,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
         Source
           .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx"))
           .mkString,
-      )
+      ): @unchecked
       val unobservable = ListMap[Variable, Option[Formula]](
         "l".asVariable -> Some("lu-U()<=l&l<=lu+U()".asFormula),
         "c_0".asVariable -> None,
@@ -549,7 +549,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
       Source
         .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx"))
         .mkString,
-    )
+    ): @unchecked
     val unobservable =
       ListMap("x_0".asVariable -> None, "y_0".asVariable -> None, "dx_0".asVariable -> None, "dy_0".asVariable -> None)
     deriveMonitor(entry, Some(entry.tactics.head._3), unobservable, tool) shouldBe
@@ -564,7 +564,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
       Source
         .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx"))
         .mkString,
-    )
+    ): @unchecked
     val unobservable =
       ListMap("x_0".asVariable -> None, "y_0".asVariable -> None, "dx_0".asVariable -> None, "dy_0".asVariable -> None)
     deriveMonitor(entry, Some(entry.tactics.head._3), unobservable, tool) shouldBe
@@ -579,7 +579,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
         Source
           .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx"))
           .mkString,
-      )
+      ): @unchecked
       val unobservableVars = ListMap(
         "w1".asVariable -> None,
         "x_0".asVariable -> None,
@@ -600,7 +600,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
         Source
           .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx"))
           .mkString,
-      )
+      ): @unchecked
       val unobservableVars = ListMap(
         "w1".asVariable -> None,
         "x_0".asVariable -> None,
@@ -619,7 +619,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
         Source
           .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx"))
           .mkString,
-      )
+      ): @unchecked
       val unobservableVars = ListMap(
         "v2".asVariable -> Some("v2-v2U()<=v2m&v2m<=v2+v2U()".asFormula),
         "x_0".asVariable -> None,
@@ -640,7 +640,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
         Source
           .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx"))
           .mkString,
-      )
+      ): @unchecked
       val unobservableVars = ListMap(
         "v2".asVariable -> Some("v2-v2U()<=v2m&v2m<=v2+v2U()".asFormula),
         "x_0".asVariable -> None,
@@ -668,7 +668,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
         Source
           .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx"))
           .mkString,
-      )
+      ): @unchecked
       val unobservableVars = ListMap(
         "w1".asVariable -> None,
         "v2".asVariable -> Some("0<v2m & v2-vU()<=v2m&v2m<=v2+vU()".asFormula),
@@ -696,7 +696,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
       Source
         .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx"))
         .mkString,
-    )
+    ): @unchecked
     checkArchiveEntries(entry :: Nil)
   }
 
@@ -726,7 +726,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
       Source
         .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx"))
         .mkString,
-    )
+    ): @unchecked
     val unobservableVars = ListMap(
       "z".asVariable -> Some("z-zU()<=zm&zm<=z+zU()".asFormula),
       "z_0".asVariable -> None,
@@ -744,7 +744,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
         Source
           .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx"))
           .mkString,
-      )
+      ): @unchecked
       val unobservableVars =
         ListMap("a".asVariable -> None, "z_0".asVariable -> None, "v_0".asVariable -> None, "t_0".asVariable -> None)
       val monitor = deriveMonitor(entry, Some(entry.tactics.head._3), unobservableVars, tool)
@@ -760,7 +760,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
       Source
         .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx"))
         .mkString,
-    )
+    ): @unchecked
     val unobservable = ListMap("v1_0".asVariable -> None, "t_0".asVariable -> None, "x1_0".asVariable -> None)
     val monitor = deriveMonitor(entry, Some(entry.tactics.head._3), unobservable, tool)
     monitor shouldBe
@@ -775,7 +775,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
       Source
         .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx"))
         .mkString,
-    )
+    ): @unchecked
     val unobservable =
       ListMap("a1".asVariable -> None, "v1_0".asVariable -> None, "t_0".asVariable -> None, "x1_0".asVariable -> None)
     val monitor = deriveMonitor(entry, Some(entry.tactics.head._3), unobservable, tool)
@@ -791,7 +791,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
       Source
         .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx"))
         .mkString,
-    )
+    ): @unchecked
     val unobservable = ListMap(
       "x1".asVariable -> Some("x1m-xU()<=x1&x1<=x1m+xU()".asFormula),
       "v1_0".asVariable -> None,
@@ -839,7 +839,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
         Source
           .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx"))
           .mkString,
-      )
+      ): @unchecked
       val unobservableVars = ListMap(
         ("mx".asVariable -> Some("true".asFormula)) +:
           ("my".asVariable -> Some("(mx-x)^2+(my-y)^2 <= Dp()^2".asFormula)) +:

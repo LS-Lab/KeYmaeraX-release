@@ -1180,7 +1180,7 @@ class ScriptedRequestTests extends TacticTestBase {
       pos1: Option[PositionLocator],
       pos2: Option[PositionLocator],
       consultAxiomInfo: Boolean,
-    ) = tactic match {
+    ) = (tactic match {
       case AppliedPositionTactic(t, p) => (t.prettyString, Nil, Some(p), None, true)
       case t: AppliedDependentPositionTactic => t.pt match {
           case inner: DependentPositionWithAppliedInputTactic =>
@@ -1191,7 +1191,7 @@ class ScriptedRequestTests extends TacticTestBase {
       case NamedTactic(name, _) => (name, Nil, None, None, true)
       case InputTactic(name, inputs) => (name, createInputs(name, inputs), None, None, true)
       case t => (BellePrettyPrinter(t), Nil, None, None, false)
-    }
+    }): @unchecked
     runTacticString(db, token, proofId)(nodeId, tacticString, consultAxiomInfo, pos1, pos2, inputs)
   }
 

@@ -47,11 +47,12 @@ object KeYmaeraXStoredProvableParser extends (String => immutable.List[Sequent])
 
   /** Parses a sequent. */
   private def parseSequent(input: TokenStream): Sequent = {
-    val (anteTokens, Token(TURNSTILE, _) :: succTokens) = input.span(_.tok != TURNSTILE)
+    val (anteTokens, Token(TURNSTILE, _) :: succTokens) = input.span(_.tok != TURNSTILE): @unchecked
     Sequent(parseFormulas(anteTokens), parseFormulas(succTokens))
   } ensures
     (r => {
-      val (anteTokens, Token(TURNSTILE, _) :: succTokens) = input.splitAt(input.indexWhere(_.tok == TURNSTILE))
+      val (anteTokens, Token(TURNSTILE, _) :: succTokens) =
+        input.splitAt(input.indexWhere(_.tok == TURNSTILE)): @unchecked
       r.ante.size == (if (anteTokens.isEmpty) 0 else 1) + anteTokens.count(_.tok == FORMULA_SEPARATOR) &&
       r.succ.size == (if (succTokens.isEmpty) 0 else 1) + succTokens.count(_.tok == FORMULA_SEPARATOR)
     })

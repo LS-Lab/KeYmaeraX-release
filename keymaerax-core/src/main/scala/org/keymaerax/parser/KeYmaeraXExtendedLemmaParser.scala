@@ -75,11 +75,11 @@ object KeYmaeraXExtendedLemmaParser
 
     // Find the End. token and exclude it
     val (Token(DOUBLE_QUOTES_STRING(storedProvable), _) :: Nil, remainderTokens) =
-      nameRemainderTokens.span(_.tok != END_BLOCK) match {
+      (nameRemainderTokens.span(_.tok != END_BLOCK) match {
         case (Token(PERIOD, _) :: a, Token(END_BLOCK, _) :: Token(PERIOD, _) :: r) => (a, r)
         case (a, Token(END_BLOCK, _) :: Token(PERIOD, _) :: r) => (a, r)
         case (a, Token(END_BLOCK, _) :: r) => (a, r)
-      }
+      }): @unchecked
 
     val (allEvidence, remainder) = parseAllEvidence(remainderTokens)
     val provable = Provable.fromStorageString(storedProvable)

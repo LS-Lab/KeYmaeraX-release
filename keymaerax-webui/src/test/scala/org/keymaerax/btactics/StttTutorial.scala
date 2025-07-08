@@ -137,7 +137,7 @@ class StttTutorial extends TacticTestBase {
         )
         .get
         .fileContent
-      val Imply(_, Box(loop, _)) = ArchiveParser.parseAsFormula(modelContent)
+      val Imply(_, Box(loop, _)) = ArchiveParser.parseAsFormula(modelContent): @unchecked
       db.proveBy(
         modelContent,
         master(new ConfigurableGenerator(Map((loop, Invariant("v>=0".asFormula) :: Nil)))),

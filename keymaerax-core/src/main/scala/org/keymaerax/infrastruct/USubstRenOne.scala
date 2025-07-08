@@ -237,7 +237,7 @@ final case class USubstRenOne(private[infrastruct] val subsDefsInput: immutable.
       case x: Variable => renVar(x)
       case app @ FuncOf(f, theta) => matchHeads.get(f) match {
           case Some(subs) =>
-            val FuncOf(wf, wArg) = subs.what
+            val FuncOf(wf, wArg) = subs.what: @unchecked
             // assert(wf == of, "match on same function heads")
             // assert(SubstitutionAdmissibility.isSubstitutableArg(wArg))
             requireAdmissible(u, subs.freeVars, subs.repl, term)
@@ -271,7 +271,7 @@ final case class USubstRenOne(private[infrastruct] val subsDefsInput: immutable.
     formula match {
       case app @ PredOf(p, theta) => matchHeads.get(p) match {
           case Some(subs) =>
-            val PredOf(wp, wArg) = subs.what
+            val PredOf(wp, wArg) = subs.what: @unchecked
             // assert(wp == p, "match only if same head")
             // assert(SubstitutionAdmissibility.isSubstitutableArg(wArg))
             requireAdmissible(u, subs.freeVars, subs.repl, formula)
@@ -283,7 +283,7 @@ final case class USubstRenOne(private[infrastruct] val subsDefsInput: immutable.
       // unofficial
       case app @ PredicationalOf(p, fml) => matchHeads.get(p) match {
           case Some(subs) =>
-            val PredicationalOf(wp, wArg) = subs.what
+            val PredicationalOf(wp, wArg) = subs.what: @unchecked
             // assert(wp == p, "match only if same head")
             // assert(wArg == DotFormula)
             USubstRenOne(wArg -> usubst(allVars, fml) :: Nil).usubst(bottom[Variable], subs.repl.asInstanceOf[Formula])

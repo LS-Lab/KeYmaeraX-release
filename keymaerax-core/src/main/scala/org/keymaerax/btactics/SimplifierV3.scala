@@ -464,7 +464,7 @@ object SimplifierV3 {
         } else None
       case Equiv(k, v) =>
         val unif = try { UnificationMatch(k, f) } catch { case _: UnificationException => return None }
-        val Equiv(fsubst, _) = unif(Equiv(k, v))
+        val Equiv(fsubst, _) = unif(Equiv(k, v)): @unchecked
         if (fsubst == f) {
           val concl = unif(v)
           // @todo construct substitution

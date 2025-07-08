@@ -650,7 +650,7 @@ case class TwoThreeTreePolynomialRing(
           variableOrdering.compare(x, y) match {
             case c if c == 0 =>
               val (recPowers, recPrv) = rec(l - 1, r - 1)
-              val Times(xs, ys) = lhsOf(recPrv)
+              val Times(xs, ys) = lhsOf(recPrv): @unchecked
               val xys = rhsOf(recPrv)
               val k = i + j
               val numPrv = ProvableSig.proveArithmetic(
@@ -677,7 +677,7 @@ case class TwoThreeTreePolynomialRing(
               (recPowers :+ (x, k), newPrv)
             case c if c < 0 =>
               val (recPowers, recPrv) = rec(l, r - 1)
-              val Times(xs, ys) = lhsOf(recPrv)
+              val Times(xs, ys) = lhsOf(recPrv): @unchecked
               val xys = rhsOf(recPrv)
               val newPrv = useDirectly(
                 timesPowersRight,
@@ -687,7 +687,7 @@ case class TwoThreeTreePolynomialRing(
               (recPowers :+ (y, j), newPrv)
             case c if c > 0 =>
               val (recPowers, recPrv) = rec(l - 1, r)
-              val Times(xs, ys) = lhsOf(recPrv)
+              val Times(xs, ys) = lhsOf(recPrv): @unchecked
               val xys = rhsOf(recPrv)
               val newPrv = useDirectly(
                 timesPowersLeft,

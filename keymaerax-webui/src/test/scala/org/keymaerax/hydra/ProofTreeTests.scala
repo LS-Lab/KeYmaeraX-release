@@ -779,7 +779,7 @@ class ProofTreeTests extends TacticTestBase {
           |""".stripMargin
       }
 
-      val lemma :: theorem :: Nil = ArchiveParser(modelContent)
+      val lemma :: theorem :: Nil = ArchiveParser(modelContent): @unchecked
 
       val lemmaId = db.createProof(lemma.fileContent)
       val provedLemma = checkTree(db.db, lemmaId, lemma.tactics.loneElement._3, "==> x>y*y -> x>y*y".asSequent)
@@ -846,7 +846,7 @@ class ProofTreeTests extends TacticTestBase {
           |""".stripMargin
       }
 
-      val lemma :: theorem :: Nil = ArchiveParser(modelContent)
+      val lemma :: theorem :: Nil = ArchiveParser(modelContent): @unchecked
 
       val lemmaId = db.createProof(lemma.fileContent)
       val provedLemma = checkTree(db.db, lemmaId, lemma.tactics.loneElement._3, "==> gt(x,y*y) -> gt(x,y*y)".asSequent)
@@ -898,7 +898,7 @@ class ProofTreeTests extends TacticTestBase {
           |""".stripMargin
       }
 
-      val theorem :: Nil = ArchiveParser(modelContent)
+      val theorem :: Nil = ArchiveParser(modelContent): @unchecked
 
       val theoremId = db.createProof(theorem.fileContent)
       checkTree(db.db, theoremId, theorem.tactics.loneElement._3, "==> x>sq(y) -> x>sq(y) & x>sq(y)".asSequent)

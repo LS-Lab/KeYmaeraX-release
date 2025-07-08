@@ -54,7 +54,7 @@ object ArchHSTPCsvProofStatisticsPrinter extends BaseProofStatisticsPrinter {
 
   /** @inheritdoc */
   override def toCsv(ps: ProofStatistics): String = {
-    val _ :: category :: instance = ps.name.split("/").toList
+    val _ :: category :: instance = ps.name.split("/").toList: @unchecked
     s"$category,${instance.mkString("/")},${ps.status},${ps.duration}"
   }
 }

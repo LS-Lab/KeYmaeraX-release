@@ -71,11 +71,8 @@ class LauncherTests extends TacticTestBase {
       KeYmaeraXExtendedLemmaParser(input)
     }
     exported._2.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(conjecture.expandedModel.asInstanceOf[Formula]))
-    val ("tool", "KeYmaera X") :: ("model", model) :: ("tactic", tactic) :: ("proof", proof) :: Nil = exported
-      ._3
-      .loneElement
-      .asInstanceOf[ToolEvidence]
-      .info
+    val ("tool", "KeYmaera X") :: ("model", model) :: ("tactic", tactic) :: ("proof", proof) :: Nil =
+      exported._3.loneElement.asInstanceOf[ToolEvidence].info: @unchecked
     GlobalState.archiveParser(model).loneElement.expandedModel shouldBe conjecture.expandedModel
     tactic shouldBe "master"
     proof shouldBe empty // proof term not exported
@@ -145,7 +142,7 @@ class LauncherTests extends TacticTestBase {
         exported._2.conclusion shouldBe
           Sequent(IndexedSeq(), IndexedSeq(conjecture.expandedModel.asInstanceOf[Formula]))
         val ("tool", "KeYmaera X") :: ("model", model) :: ("tactic", tactic) :: ("proof", proof) :: Nil =
-          exported._3.loneElement.asInstanceOf[ToolEvidence].info
+          exported._3.loneElement.asInstanceOf[ToolEvidence].info: @unchecked
         val entry = GlobalState.archiveParser(model).loneElement
         entry.name shouldBe conjecture.name
         entry.expandedModel shouldBe conjecture.expandedModel

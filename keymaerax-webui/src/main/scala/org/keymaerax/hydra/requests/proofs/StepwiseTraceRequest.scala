@@ -36,7 +36,7 @@ class StepwiseTraceRequest(db: DBAbstraction, userId: String, proofId: String)
       .getOrElse("renderMargins", "[40,80]")
       .parseJson
       .convertTo[Array[Int]]
-      .toList
+      .toList: @unchecked
     ExpandTacticResponse(
       proofId.toInt,
       Nil,

@@ -183,7 +183,7 @@ object Transitivity {
   private def hasTermCycle(prefix: List[Formula], termsSoFar: Set[Term] = Set()): Boolean = prefix match {
     case Nil => false
     case e :: es => {
-      val Some((direction, left, right)) = decomposeInequality(e)
+      val Some((direction, left, right)) = decomposeInequality(e): @unchecked
       if (termsSoFar.contains(right)) true else hasTermCycle(es, termsSoFar.union(Set(right)))
     }
   }

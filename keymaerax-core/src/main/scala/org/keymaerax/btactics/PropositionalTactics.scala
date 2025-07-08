@@ -765,7 +765,7 @@ private[keymaerax] object PropositionalTactics extends Logging {
     (
       q,
       trafos.foldLeft(ProvableSig.startPlainProof(Equiv(p, q)))({ case (p, t) =>
-        val Equiv(l, r) = p.conclusion.succ.head
+        val Equiv(l, r) = p.conclusion.succ.head: @unchecked
         if (l != r) t(p) else p
       })(subst.toForward(ax.provable), 0),
     )
@@ -1104,7 +1104,7 @@ private[keymaerax] object PropositionalTactics extends Logging {
         subProofs
           .zipWithIndex
           .foldRight(pr)({ case ((pi, i), po) =>
-            val Equiv(lp, rp) = pi.conclusion.succ.head
+            val Equiv(lp, rp) = pi.conclusion.succ.head: @unchecked
             val subPos = if (i < subProofs.size - 1) PosInExpr(List.fill(i)(1) :+ 0) else PosInExpr(List.fill(i)(1))
             if (lp != rp) timed(UnifyUSCalculus.CEat(pi, key)(pos ++ subPos).computeResult(po), "Applying subproof")
             else po

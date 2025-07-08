@@ -225,7 +225,7 @@ object Simplifier {
   def makeCE(fml: Formula, opt: Option[(PosInExpr, Term, BelleExpr)], where: Position): BelleExpr = {
     opt match {
       case Some((pos, t2, e)) =>
-        val (ctx, t1: Term) = fml.at(pos)
+        val (ctx, t1: Term) = fml.at(pos): @unchecked
         val eqProof = TactixLibrary.proveBy(Equal(t1, t2), e)
         UnifyUSCalculus.useAt(UnifyUSCalculus.CE(ctx)(eqProof), PosInExpr(0 :: Nil))(where)
       case None => UnifyUSCalculus.nil

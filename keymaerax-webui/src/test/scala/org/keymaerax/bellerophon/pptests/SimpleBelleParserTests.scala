@@ -441,7 +441,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
 
   it should "parse as case tactic when labels are present" in {
     val result @ SeqTactic(loop +: CaseTactic(children) +: Nil) =
-      tacticParser("loop(\"x>=0\",1); <(\"Init\": andL(-1), \"Step\": andL(-2), \"Post\": andL(-3))")
+      tacticParser("loop(\"x>=0\",1); <(\"Init\": andL(-1), \"Step\": andL(-2), \"Post\": andL(-3))"): @unchecked
     result shouldBe (round trip result)
     loop shouldBe HybridProgramCalculus.loop("x>=0".asFormula)(1)
     children should contain theSameElementsAs List(
@@ -476,7 +476,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
   it should "parse as case tactic when labels are present on nested tactics" in {
     val result @ SeqTactic(loop +: CaseTactic(children) +: Nil) = tacticParser(
       "loop(\"x>=0\",1); <(\"Init\": andL(-1); orL(-1), \"Step\": orL(-2); <(andL(-2), orR(2)), \"Post\": andL(-3) using \"x=2\" | andR(3))"
-    )
+    ): @unchecked
     result shouldBe (round trip result)
     loop shouldBe HybridProgramCalculus.loop("x>=0".asFormula)(1)
     children should contain theSameElementsAs List(
@@ -489,7 +489,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
   it should "parse nested case tactics" in {
     val result @ SeqTactic(loop +: CaseTactic(children) +: Nil) = tacticParser(
       "loop(\"x>=0\",1); <(\"Init\": andL(-1), \"Step\": orL(-2); <(\"LHS\": andL(-2), \"RHS\": orR(2)), \"Post\": andL(-3))"
-    )
+    ): @unchecked
     result shouldBe (round trip result)
     loop shouldBe HybridProgramCalculus.loop("x>=0".asFormula)(1)
     children should contain theSameElementsAs List(
@@ -1040,7 +1040,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
     val SeqTactic(_ +: (adpt: AppliedDependentPositionTactic) +: Nil) = tacticParser(
       "useLemma(\"Lemma\",\"prop\"); MR(\"safeDist()>0\",1)",
       Declaration(Map(Name("safeDist", None) -> Signature(None, Real, None, Right(Some("y".asTerm)), null))),
-    )
+    ): @unchecked
     adpt.pt should have(Symbol("inputs")("safeDist()>0".asFormula :: Nil))
   }
 

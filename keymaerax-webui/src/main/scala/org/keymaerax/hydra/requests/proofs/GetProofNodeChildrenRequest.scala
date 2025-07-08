@@ -34,7 +34,7 @@ class GetProofNodeChildrenRequest(db: DBAbstraction, userId: String, proofId: St
           .getOrElse("renderMargins", "[40,80]")
           .parseJson
           .convertTo[Array[Int]]
-          .toList
+          .toList: @unchecked
         NodeChildrenResponse(proofId, node, marginLeft, marginRight)
     }
   }

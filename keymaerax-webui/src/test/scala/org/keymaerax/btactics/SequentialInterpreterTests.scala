@@ -661,7 +661,7 @@ class SequentialInterpreterTests extends TacticTestBase {
 
     listener.calls should have size 9
     val andT @ SeqTactic(andRRule :: (labelT @ BranchTactic(labels)) :: Nil) =
-      andR(1).computeExpr(BelleProvable.plain(ProvableSig.startPlainProof("==> false & true".asSequent)))
+      andR(1).computeExpr(BelleProvable.plain(ProvableSig.startPlainProof("==> false & true".asSequent))): @unchecked
 
     listener.calls should contain theSameElementsInOrderAs ("andR(1); <(close, close)".asTactic :: "andR(1)".asTactic ::
       andT :: andRRule :: labelT :: labels(0) :: labels(1) ::
@@ -687,7 +687,7 @@ class SequentialInterpreterTests extends TacticTestBase {
         |==> 1:  false	False$}""".stripMargin
 
     val andT @ SeqTactic(andRRule :: (labelT @ BranchTactic(labels)) :: Nil) =
-      andR(1).computeExpr(BelleProvable.plain(ProvableSig.startPlainProof("==> false & true".asSequent)))
+      andR(1).computeExpr(BelleProvable.plain(ProvableSig.startPlainProof("==> false & true".asSequent))): @unchecked
 
     listener.calls should have size 10
     listener.calls should contain theSameElementsInOrderAs ("andR(1); <(close, close)".asTactic :: "andR(1)".asTactic ::
@@ -706,7 +706,7 @@ class SequentialInterpreterTests extends TacticTestBase {
       val BelleProvable(result, _) = ExhaustiveSequentialInterpreter(Nil, throwWithDebugInfo = true)(
         SaturateTactic(implyR(Symbol("R")) | andL(Symbol("L")) | orR(Symbol("R")) | assignb(Symbol("R"))),
         BelleProvable.plain(ProvableSig.startPlainProof(Imply(ante, succ))),
-      )
+      ): @unchecked
       result.subgoals.head.ante should have size 100
       result.subgoals.head.succ should have size 50
       result.subgoals.head.succ.foreach(_ shouldBe a[Greater])
@@ -724,7 +724,7 @@ class SequentialInterpreterTests extends TacticTestBase {
       val BelleProvable(result, _) = ExhaustiveSequentialInterpreter(Nil)(
         SaturateTactic(implyR(Symbol("R")) | andL(Symbol("L")) | orR(Symbol("R")) | assignb(Symbol("R"))),
         BelleProvable.plain(ProvableSig.startPlainProof(Imply(ante, succ))),
-      )
+      ): @unchecked
       result.subgoals.head.ante should have size 100
       result.subgoals.head.succ should have size 50
       result.subgoals.head.succ.foreach(_ shouldBe a[Greater])

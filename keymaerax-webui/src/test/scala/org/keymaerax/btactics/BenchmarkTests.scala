@@ -370,7 +370,7 @@ class BenchmarkTester(val benchmarkName: String, val url: String, val timeout: I
       val (model, defs) = parseStripHints(modelContent)
 
       try {
-        val Imply(ante, succ) = defs.exhaustiveSubst(model)
+        val Imply(ante, succ) = defs.exhaustiveSubst(model): @unchecked
         succ match {
           case Box(_: ODESystem, _) =>
             val seq = Sequent(IndexedSeq(ante), IndexedSeq(succ))

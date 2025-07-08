@@ -110,7 +110,7 @@ object InvariantProvers extends Logging {
 
           /** name(args) */
           def constructPred(name: String, args: Seq[Term]): Formula = {
-            val head :: tail = args.reverse
+            val head :: tail = args.reverse: @unchecked
             val arg = tail.foldLeft(head)({ case (ps, t) => Pair(t, ps) })
             PredOf(Function(name, None, arg.sort, Bool), arg)
           }

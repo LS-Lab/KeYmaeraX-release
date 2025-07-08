@@ -216,7 +216,7 @@ class ModelPlexRequest(
   }
 
   private def createMonitor(model: ModelPOJO, modelFml: Formula, vars: Set[BaseVariable]): Response = {
-    val Imply(init, Box(prg, _)) = modelFml
+    val Imply(init, Box(prg, _)) = modelFml: @unchecked
     createMonitorCondition(modelFml, vars, ListMap.empty) match {
       case Left((modelplexConjecture, monitorFml, synthesizeTactic)) => conditionKind match {
           case "dL" =>

@@ -24,7 +24,7 @@ class ProofTaskNodeRequest(db: DBAbstraction, userId: String, proofId: String, n
           .getOrElse("renderMargins", "[40,80]")
           .parseJson
           .convertTo[Array[Int]]
-          .toList
+          .toList: @unchecked
         new ProofTaskNodeResponse(node, marginLeft, marginRight)
       case None => new ErrorResponse("Cannot get parent of node " + nodeId + ", node might be unknown or root")
     }

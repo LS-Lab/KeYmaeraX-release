@@ -777,7 +777,7 @@ object UnifyUSCalculus extends Logging {
       // @note performance impact
       import BelleExpr.RECHECK
 
-      private val (keyCtx: Context[_], keyPart) = fact.conclusion.succ.head.at(key)
+      private val (keyCtx: Context[_], keyPart) = fact.conclusion.succ.head.at(key): @unchecked
 
       private def checkSubst(matcher: Matcher, key: Expression, expr: Expression): Subst =
         matcher.unifiable(key, expr) match {
@@ -1641,8 +1641,8 @@ object UnifyUSCalculus extends Logging {
       case Imply(l, r) =>
         if (inEqPos == HereP) provable
         else {
-          val (ctxP, p: Formula) = l.at(inEqPos)
-          val (ctxQ, q: Formula) = r.at(inEqPos)
+          val (ctxP, p: Formula) = l.at(inEqPos): @unchecked
+          val (ctxQ, q: Formula) = r.at(inEqPos): @unchecked
           require(ctxP == ctxQ, "Contexts must be equal, but " + ctxP + " != " + ctxQ)
           if (FormulaTools.polarityAt(l, inEqPos) < 0) implyR(SuccPos(0)).computeResult(provable)(
             CMon(ctxP)(ProvableSig.startProof(Sequent(IndexedSeq(q), IndexedSeq(p)), provable.defs)),
@@ -2505,7 +2505,7 @@ object UnifyUSCalculus extends Logging {
       inst: Subst => Subst,
   ): ForwardPositionTactic = {
     // split key into keyCtx{keyPart} = fact
-    val (keyCtx: Context[_], keyPart) = fact.conclusion(SuccPos(0)).at(key)
+    val (keyCtx: Context[_], keyPart) = fact.conclusion(SuccPos(0)).at(key): @unchecked
     logger.debug(s"useFor(${fact.conclusion}) key: $keyPart in key context: $keyCtx")
 
     pos =>
@@ -2894,7 +2894,7 @@ object UnifyUSCalculus extends Logging {
   private def inverseImplyR: ForwardTactic = pr => {
     val pos = SuccPos(0)
     val last = AntePos(pr.conclusion.ante.length)
-    val Imply(a, b) = pr.conclusion.succ.head
+    val Imply(a, b) = pr.conclusion.succ.head: @unchecked
     (ProvableSig.startProof(pr.conclusion.updated(pos, b).glue(Sequent(IndexedSeq(a), IndexedSeq())), pr.defs)(
       CutRight(a, pos),
       0,

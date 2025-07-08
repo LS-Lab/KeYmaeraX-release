@@ -100,7 +100,7 @@ object FileConfiguration extends Configuration {
   override def getMap(key: String): Map[String, String] = {
     getList(key)
       .map(entry => {
-        val k :: v :: Nil = entry.split("->").toList
+        val k :: v :: Nil = entry.split("->").toList: @unchecked
         k.trim -> v.trim.stripPrefix("->").trim
       })
       .toMap

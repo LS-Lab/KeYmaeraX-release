@@ -253,7 +253,7 @@ final case class USubstChurch(subsDefsInput: immutable.Seq[SubstitutionPair]) ex
         x
       case app @ FuncOf(of, theta) if matchHead(app) =>
         val subs = uniqueElementOf[SubstitutionPair](subsDefs, sp => sp.what.isInstanceOf[FuncOf] && sp.sameHead(app))
-        val FuncOf(wf, wArg) = subs.what
+        val FuncOf(wf, wArg) = subs.what: @unchecked
         assert(wf == of, "match on same function heads")
         assert(SubstitutionAdmissibility.isSubstitutableArg(wArg))
         // unofficial substitution for Nothing (no effect) and Anything in analogy to substitution for DotTerm
@@ -293,7 +293,7 @@ final case class USubstChurch(subsDefsInput: immutable.Seq[SubstitutionPair]) ex
     formula match {
       case app @ PredOf(op, theta) if matchHead(app) =>
         val subs = uniqueElementOf[SubstitutionPair](subsDefs, sp => sp.what.isInstanceOf[PredOf] && sp.sameHead(app))
-        val PredOf(wp, wArg) = subs.what
+        val PredOf(wp, wArg) = subs.what: @unchecked
         assert(wp == op, "match only if same head")
         assert(SubstitutionAdmissibility.isSubstitutableArg(wArg))
         // unofficial substitution for Nothing (no effect) and Anything in analogy to substitution for DotTerm
@@ -304,7 +304,7 @@ final case class USubstChurch(subsDefsInput: immutable.Seq[SubstitutionPair]) ex
         requireAdmissible(allVars, fml, formula)
         val subs =
           uniqueElementOf[SubstitutionPair](subsDefs, sp => sp.what.isInstanceOf[PredicationalOf] && sp.sameHead(app))
-        val PredicationalOf(wp, wArg) = subs.what
+        val PredicationalOf(wp, wArg) = subs.what: @unchecked
         assert(wp == op, "match only if same head")
         assert(wArg == DotFormula)
         USubstChurch(SubstitutionPair(wArg, usubst(fml)) :: Nil).usubst(subs.repl.asInstanceOf[Formula])

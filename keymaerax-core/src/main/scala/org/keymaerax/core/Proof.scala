@@ -1227,7 +1227,7 @@ final case class NotRight(pos: SuccPos) extends RightRule {
 
   /** !R Not right */
   def apply(s: Sequent): immutable.List[Sequent] = {
-    val Not(p) = s(pos)
+    val Not(p) = s(pos): @unchecked
     immutable.List(s.updated(pos, Sequent(immutable.IndexedSeq(p), immutable.IndexedSeq())))
   }
 }
@@ -1245,7 +1245,7 @@ final case class NotLeft(pos: AntePos) extends LeftRule {
 
   /** !L Not left */
   def apply(s: Sequent): immutable.List[Sequent] = {
-    val Not(p) = s(pos)
+    val Not(p) = s(pos): @unchecked
     immutable.List(s.updated(pos, Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(p))))
   }
 }
@@ -1263,7 +1263,7 @@ final case class AndRight(pos: SuccPos) extends RightRule {
 
   /** &R And right */
   def apply(s: Sequent): immutable.List[Sequent] = {
-    val And(p, q) = s(pos)
+    val And(p, q) = s(pos): @unchecked
     immutable.List(s.updated(pos, p), s.updated(pos, q))
   }
 }
@@ -1281,7 +1281,7 @@ final case class AndLeft(pos: AntePos) extends LeftRule {
 
   /** &L And left */
   def apply(s: Sequent): immutable.List[Sequent] = {
-    val And(p, q) = s(pos)
+    val And(p, q) = s(pos): @unchecked
     immutable.List(s.updated(pos, Sequent(immutable.IndexedSeq(p, q), immutable.IndexedSeq())))
   }
 }
@@ -1299,7 +1299,7 @@ final case class OrRight(pos: SuccPos) extends RightRule {
 
   /** |R Or right */
   def apply(s: Sequent): immutable.List[Sequent] = {
-    val Or(p, q) = s(pos)
+    val Or(p, q) = s(pos): @unchecked
     immutable.List(s.updated(pos, Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(p, q))))
   }
 }
@@ -1317,7 +1317,7 @@ final case class OrLeft(pos: AntePos) extends LeftRule {
 
   /** |L Or left */
   def apply(s: Sequent): immutable.List[Sequent] = {
-    val Or(p, q) = s(pos)
+    val Or(p, q) = s(pos): @unchecked
     immutable.List(s.updated(pos, p), s.updated(pos, q))
   }
 }
@@ -1335,7 +1335,7 @@ final case class ImplyRight(pos: SuccPos) extends RightRule {
 
   /** ->R Imply right */
   def apply(s: Sequent): immutable.List[Sequent] = {
-    val Imply(p, q) = s(pos)
+    val Imply(p, q) = s(pos): @unchecked
     immutable.List(s.updated(pos, Sequent(immutable.IndexedSeq(p), immutable.IndexedSeq(q))))
   }
 }
@@ -1353,7 +1353,7 @@ final case class ImplyLeft(pos: AntePos) extends LeftRule {
 
   /** ->L Imply left */
   def apply(s: Sequent): immutable.List[Sequent] = {
-    val Imply(p, q) = s(pos)
+    val Imply(p, q) = s(pos): @unchecked
     immutable.List(s.updated(pos, Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(p))), s.updated(pos, q))
   }
 }
@@ -1371,7 +1371,7 @@ final case class EquivRight(pos: SuccPos) extends RightRule {
 
   /** <->R Equiv right */
   def apply(s: Sequent): immutable.List[Sequent] = {
-    val Equiv(p, q) = s(pos)
+    val Equiv(p, q) = s(pos): @unchecked
     immutable.List(
       s.updated(pos, Sequent(immutable.IndexedSeq(p), immutable.IndexedSeq(q))),
       s.updated(pos, Sequent(immutable.IndexedSeq(q), immutable.IndexedSeq(p))),
@@ -1393,7 +1393,7 @@ final case class EquivLeft(pos: AntePos) extends LeftRule {
 
   /** <->L Equiv left */
   def apply(s: Sequent): immutable.List[Sequent] = {
-    val Equiv(p, q) = s(pos)
+    val Equiv(p, q) = s(pos): @unchecked
     // @note This choice is compatible with tactics and has stable positions but is perhaps unreasonably surprising. Could prefer upper choices
     immutable.List(s.updated(pos, And(p, q)), s.updated(pos, And(Not(p), Not(q))))
   }
@@ -1737,7 +1737,7 @@ final case class CutLeft(c: Formula, pos: AntePos) extends Rule {
 final case class CommuteEquivRight(pos: SuccPos) extends RightRule {
   val name: String = "CommuteEquivRight"
   def apply(s: Sequent): immutable.List[Sequent] = {
-    val Equiv(p, q) = s(pos)
+    val Equiv(p, q) = s(pos): @unchecked
     immutable.List(s.updated(pos, Equiv(q, p)))
   }
 }
@@ -1756,7 +1756,7 @@ final case class CommuteEquivRight(pos: SuccPos) extends RightRule {
 final case class CommuteEquivLeft(pos: AntePos) extends LeftRule {
   val name: String = "CommuteEquivLeft"
   def apply(s: Sequent): immutable.List[Sequent] = {
-    val Equiv(p, q) = s(pos)
+    val Equiv(p, q) = s(pos): @unchecked
     immutable.List(s.updated(pos, Equiv(q, p)))
   }
 }
@@ -1774,7 +1774,7 @@ final case class CommuteEquivLeft(pos: AntePos) extends LeftRule {
 final case class EquivifyRight(pos: SuccPos) extends RightRule {
   val name: String = "EquivifyRight"
   def apply(s: Sequent): immutable.List[Sequent] = {
-    val Imply(a, b) = s(pos)
+    val Imply(a, b) = s(pos): @unchecked
     immutable.List(s.updated(pos, Equiv(a, b)))
   }
 }

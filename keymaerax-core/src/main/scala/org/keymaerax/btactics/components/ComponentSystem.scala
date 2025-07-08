@@ -510,9 +510,9 @@ object ComponentSystem {
   ) = anon((pos: Position, seq: Sequent) =>
     seq.sub(pos) match {
       case Some(_: Imply) =>
-        val Imply(_, Box(_, Box(_, Box(_, Box(_, foutSafety))))) = fout
+        val Imply(_, Box(_, Box(_, Box(_, Box(_, foutSafety))))) = fout: @unchecked
         val Box(Compose(_, Compose(_, Compose(_, Compose(plant2, Compose(in2, cp2))))), c2inv) =
-          c2step.fact.conclusion.succ.head
+          c2step.fact.conclusion.succ.head: @unchecked
 
         SeqTactic(
           DebuggingTactics.print("Justify Fout"),
@@ -655,9 +655,9 @@ object ComponentSystem {
         val Box(
           Compose(delta1, Compose(_ /*ctrl1*/, Compose(_ /*rememberStart*/, Compose(plant1, Compose(in1, cp1))))),
           _,
-        ) = c1step.fact.conclusion.succ.head
+        ) = c1step.fact.conclusion.succ.head: @unchecked
 
-        val Compose(_, in2) = in3
+        val Compose(_, in2) = in3: @unchecked
 
         val piouts = fout match {
           case Imply(_, Box(delta, Box(ctrl, Box(remember, Box(plant, pi2Out))))) => FormulaTools.leftConjuncts(pi2Out)
@@ -667,7 +667,7 @@ object ComponentSystem {
         val plant2Vars = (StaticSemantics.boundVars(plant3).toSet.filter(_.isInstanceOf[BaseVariable]) -- plant1Vars) ++
           StaticSemantics.boundVars(time).toSet.filter(_.isInstanceOf[BaseVariable])
 
-        val Compose(_, Compose(_, con)) = cp3
+        val Compose(_, Compose(_, con)) = cp3: @unchecked
         val connections = leftAssignments(con, piouts.size)
         val conStaticSem = connections.map(p => StaticSemantics.boundVars(p) -> StaticSemantics.freeVars(p)).toMap
         val connectedVars = connections.flatMap(StaticSemantics.boundVars(_).toSet).toSet
@@ -813,7 +813,7 @@ object ComponentSystem {
             )
           ) =>
         // @todo check program shapes in lemmas
-        val cr1 :: cr2 :: Nil = (0 to 3) :: (4 to 6) :: Nil
+        val cr1 :: cr2 :: Nil = (0 to 3) :: (4 to 6) :: Nil: @unchecked
 
         SeqTactic(
           DebuggingTactics.print("Proving component loops and communication guarantees"),
@@ -1045,9 +1045,10 @@ object ComponentSystem {
     (pos: Position, seq: Sequent) =>
       seq.sub(pos) match {
         case Some(Imply(asys, Box(Loop(prgsys), gsys))) =>
-          val And(tbootstrap, And(omega, And(a1, a2))) = asys
-          val And(And(g1, p1), And(g2, p2)) = gsys
-          val Compose(memsys, Compose(ctrlsys, Compose(tmem, Compose(plantsys, Compose(insys, cpsys))))) = prgsys
+          val And(tbootstrap, And(omega, And(a1, a2))) = asys: @unchecked
+          val And(And(g1, p1), And(g2, p2)) = gsys: @unchecked
+          val Compose(memsys, Compose(ctrlsys, Compose(tmem, Compose(plantsys, Compose(insys, cpsys))))) =
+            prgsys: @unchecked
 
           LemmaDBFactory.lemmaDB.get("user/" + c1baseLemma) match {
             case Some(c1base) => LemmaDBFactory.lemmaDB.get("user/" + c1useLemma) match {
@@ -1169,14 +1170,14 @@ object ComponentSystem {
   );
 
   private def checkComponentLemmas(cbase: Lemma, cuse: Lemma, cstep: Lemma): Unit = {
-    val Imply(_, invbase) =
-      if (cbase.fact.conclusion.ante.isEmpty) cbase.fact.conclusion.succ.head else cbase.fact.conclusion.toFormula
+    val Imply(_, invbase) = (if (cbase.fact.conclusion.ante.isEmpty) cbase.fact.conclusion.succ.head
+                             else cbase.fact.conclusion.toFormula): @unchecked
 
-    val Imply(invuse, _) =
-      if (cuse.fact.conclusion.ante.isEmpty) cuse.fact.conclusion.succ.head else cuse.fact.conclusion.toFormula
+    val Imply(invuse, _) = (if (cuse.fact.conclusion.ante.isEmpty) cuse.fact.conclusion.succ.head
+                            else cuse.fact.conclusion.toFormula): @unchecked
 
-    val Imply(invstepa, Box(_, invstepb)) =
-      if (cstep.fact.conclusion.ante.isEmpty) cuse.fact.conclusion.succ.head else cstep.fact.conclusion.toFormula
+    val Imply(invstepa, Box(_, invstepb)) = (if (cstep.fact.conclusion.ante.isEmpty) cuse.fact.conclusion.succ.head
+                                             else cstep.fact.conclusion.toFormula): @unchecked
 
     if ((FormulaTools.conjuncts(invbase).toSet -- FormulaTools.conjuncts(invuse)).nonEmpty)
       throw new InputFormatFailure(
@@ -1223,9 +1224,9 @@ object ComponentSystem {
         Compose(ctrl1, _),
         Compose(t1, Compose(plantsys: ODESystem, Compose(Compose(in1, _), Compose(cp1, Compose(_, con))))),
       ),
-    ) = sys
+    ) = sys: @unchecked
     val Imply(_, Box(Compose(mem, Compose(ctrl, Compose(t, Compose(plant: ODESystem, Compose(in, cp))))), _)) =
-      step.fact.conclusion.toFormula
+      step.fact.conclusion.toFormula: @unchecked
 
     checkPrograms(mem1 -> mem, ctrl1 -> ctrl, t1 -> t, plantsys -> plant, in1 -> in, cp1 -> cp)
   }
@@ -1237,9 +1238,9 @@ object ComponentSystem {
         Compose(_, ctrl2),
         Compose(t2, Compose(plantsys: ODESystem, Compose(Compose(_, in2), Compose(_, Compose(cp2, con))))),
       ),
-    ) = sys
+    ) = sys: @unchecked
     val Imply(_, Box(Compose(mem, Compose(ctrl, Compose(t, Compose(plant: ODESystem, Compose(in, cp))))), _)) =
-      step.fact.conclusion.toFormula
+      step.fact.conclusion.toFormula: @unchecked
 
     checkPrograms(mem2 -> mem, ctrl2 -> ctrl, t2 -> t, plantsys -> plant, in2 -> in, cp2 -> cp)
   }

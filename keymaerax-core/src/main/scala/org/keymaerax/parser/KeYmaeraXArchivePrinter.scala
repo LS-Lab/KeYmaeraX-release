@@ -196,7 +196,7 @@ object KeYmaeraXArchivePrinter {
   private def createArg(domain: Sort, names: List[Name]): (Term, List[Name]) = domain match {
     case Unit => (Nothing, names)
     case Real =>
-      val n :: tail = names
+      val n :: tail = names: @unchecked
       (BaseVariable(n.name, n.index), tail)
     case Tuple(l, r) =>
       val (ls, lnames) = createArg(l, names)

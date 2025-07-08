@@ -116,7 +116,7 @@ class DependencyAnalysisTests extends TacticTestBase {
   "DependencyAnalysis" should "correctly find SCCs" in withMathematica { qeTool =>
     val Some((_, pr, seq)) = parseStr(
       "@Chilled water#Tll() < a(), a() < Tlu(), h()>0, r()>0, e()=1, h()/r()+a() < Tlu(), Tw < Tl, Tl < Tlu(), a()<=Tw, l=1->v=1, v=0->l=0, l=0|l=1, v=1|v=0, v=1->Tw=a(), v=1, t=0\n  ==>  [{Tw'=-r()*(1-v)*(Tw-Tl),Tl'=-r()*(Tl-Tw)+1*h(),t'=1&(0<=t&t < e())&Tw=a()}]((1=1->v=1)&(v=0->1=0)&(1=0|1=1)&(v=1|v=0)&(v=1->Tw=a()))#Tll() < a(), a() < Tlu(), h()>0, r()>0, e()=1, h()/r()+a() < Tlu(), l=1->v=1, v=0->l=0, l=0|l=1, v=1|v=0, v=1\n  ==>  (0<=t&t < e())&Tw=a()->(1=1->v=1)&(v=0->1=0)&(1=0|1=1)&(v=1|v=0)&(v=1->Tw=a())"
-    )
+    ): @unchecked
     val p = stripSeq(pr).get
     val adjls = analyseModal(p, seq).view.mapValues(v => v._1).toMap
 
@@ -127,10 +127,10 @@ class DependencyAnalysisTests extends TacticTestBase {
   "DependencyAnalysis" should "analyse dependencies for some examples" in withMathematica { qeTool =>
     val Some((_, pr1, seq1)) = parseStr(
       "@ETCS#v_0()=v, z_0()=z, kyxtime_0()=kyxtime, v>=0&v=(-b())*(kyxtime-kyxtime_0())+v_0()\n  ==>  [{z'=v,v'=-b(),kyxtime'=1&v>=0&v=(-b())*(kyxtime-kyxtime_0())+v_0()}](z=(-b())/2*(kyxtime-kyxtime_0())^2+v_0()*(kyxtime-kyxtime_0())+z_0())'#v_0()=v, z_0()=z, kyxtime_0()=kyxtime, v>=0&v=(-b())*(kyxtime-kyxtime_0())+v_0()\n  ==>  \\forall kyxtime \\forall v (v>=0&v=(-b())*(kyxtime-kyxtime_0())+v_0()->v=(-b())/2*(2*(kyxtime-kyxtime_0())^(2-1)*(1-0))+v_0()*(1-0)+0)"
-    )
+    ): @unchecked
     val Some((_, pr2, seq2)) = parseStr(
       "@Chilled water#Tll() < a(), a() < Tlu(), h()>0, r()>0, e()=1, h()/r()+a() < Tlu(), Tw < Tl, Tl < Tlu(), a()<=Tw, l=1->v=1, v=0->l=0, l=0|l=1, v=0, v=1->Tw=a(), t=0\n  ==>  [{Tw'=-r()*(1-v)*(Tw-Tl),Tl'=-r()*(Tl-Tw)+0*h(),t'=1&0<=t&t < e()}]Tw < Tl#Tll() < a(), a() < Tlu(), h()>0, r()>0, e()=1, h()/r()+a() < Tlu(), Tw < Tl, Tl < Tlu(), a()<=Tw, l=1->v=1, v=0->l=0, l=0|l=1, v=0, v=1->Tw=a(), t=0\n  ==>  \\exists y (0<=t&t < e()->(Tl-Tw)*y^2>0&\\forall Tl \\forall Tw \\forall t \\forall y (0<=t&t < e()->(-r()*(Tl-Tw)+0*h()--r()*(1-v)*(Tw-Tl))*y^2+(Tl-Tw)*(2*y^(2-1)*(r()*y+0))>=0))"
-    )
+    ): @unchecked
     val p1 = stripSeq(pr1).get
     val p2 = stripSeq(pr2).get
 
@@ -319,8 +319,8 @@ class DependencyAnalysisTests extends TacticTestBase {
   "DependencyAnalysis" should "analyse dependencies for labs" taggedAs IgnoreInBuildTest in withMathematica { qeTool =>
     val l2 = scala.io.Source.fromFile("L2Q2.kya").mkString
     val l3 = scala.io.Source.fromFile("L3Q6.kya").mkString
-    val archiveL2 :: Nil = ArchiveParser.parse(l2)
-    val archiveL3 :: Nil = ArchiveParser.parse(l3)
+    val archiveL2 :: Nil = ArchiveParser.parse(l2): @unchecked
+    val archiveL3 :: Nil = ArchiveParser.parse(l3): @unchecked
 
     val (l2f, l2t) = (archiveL2.model.asInstanceOf[Formula], archiveL2.tactics.head._2)
     val (l3f, l3t) = (archiveL3.model.asInstanceOf[Formula], archiveL3.tactics.head._2)
@@ -336,7 +336,7 @@ class DependencyAnalysisTests extends TacticTestBase {
 
   "DependencyAnalysis" should "record time to re-prove lab 2" taggedAs IgnoreInBuildTest in withMathematica { qeTool =>
     val l2 = scala.io.Source.fromFile("L2Q2.kya").mkString
-    val archiveL2 :: Nil = ArchiveParser.parse(l2)
+    val archiveL2 :: Nil = ArchiveParser.parse(l2): @unchecked
 
     val (l2f, l2t) = (archiveL2.model.asInstanceOf[Formula], archiveL2.tactics.head._2)
 
@@ -368,7 +368,7 @@ class DependencyAnalysisTests extends TacticTestBase {
 
   "DependencyAnalysis" should "record time to re-prove lab 3" taggedAs IgnoreInBuildTest in withMathematica { qeTool =>
     val l3 = scala.io.Source.fromFile("L3Q6.kya").mkString
-    val archiveL3 :: Nil = ArchiveParser.parse(l3)
+    val archiveL3 :: Nil = ArchiveParser.parse(l3): @unchecked
 
     val (l3f, l3t) = (archiveL3.model.asInstanceOf[Formula], archiveL3.tactics.head._2)
 

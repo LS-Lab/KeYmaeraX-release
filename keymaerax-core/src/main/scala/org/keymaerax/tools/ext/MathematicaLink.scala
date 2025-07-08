@@ -194,10 +194,10 @@ class JLinkMathematicaLink(val engineName: String) extends MathematicaLink with 
       ml =
         if (tcpip.nonEmpty && tcpip != "false") {
           logger.info(s"Connecting to Math Kernel over TCPIP to $tcpip")
-          val port :: machine = tcpip match {
+          val port :: machine = (tcpip match {
             case "true" => DEFAULT_PORT :: Nil
             case _ => tcpip.split("@").toList
-          }
+          }): @unchecked
           val args =
             if (machine.isEmpty) {
               startKernel(linkName, port) match {

@@ -158,8 +158,8 @@ object DependencyAnalysis {
   ): (Set[BaseVariable], Set[Function]) = {
     val ode = p.ode
     val dom = p.constraint
-    val (fvdom: Set[BaseVariable]) = if (ignoreTest) Set.empty else freeVars(dom)
-    val (fvsig: Set[Function]) = if (ignoreTest) Set.empty else signature(dom)
+    val (fvdom: Set[BaseVariable]) = (if (ignoreTest) Set.empty else freeVars(dom)): @unchecked
+    val (fvsig: Set[Function]) = (if (ignoreTest) Set.empty else signature(dom)): @unchecked
     // Converts the ODE to a list of AtomicODEs
     val odels = collapseODE(ode)
 

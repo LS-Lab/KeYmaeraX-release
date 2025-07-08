@@ -354,7 +354,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
       createMonitorSpecificationConjecture(fml, vars, unobservable, NAMED_POST_VAR)
 
     val (unobservableStateVars, unknownParams, _) = partitionUnobservable(unobservable)
-    val (ctx, specFml: Formula) = spec.at(PosInExpr(List.fill(unknownParams.keys.size)(0)))
+    val (ctx, specFml: Formula) = spec.at(PosInExpr(List.fill(unknownParams.keys.size)(0))): @unchecked
     def ithMon(mon: Formula, vars: List[Variable], i: Int): Formula = {
       (vars.toSet -- unobservableStateVars.keySet).foldLeft(mon)({ case (f, v) =>
         f.replaceAll(v, BaseVariable(v.name, Some(i - 1))).replaceAll(NAMED_POST_VAR(v), BaseVariable(v.name, Some(i)))
@@ -875,8 +875,10 @@ object ModelPlex extends ModelPlexTrait with Logging {
     )
 
     // @todo generalize to fallback with nondeterministic choice
-    val Diamond(_, fallbackUpsilon) =
-      proveBy(Box(fallbackCtrl, Diamond(ctrl, upsilon)), SaturateTactic(chaseFallback(1))).subgoals.head.succ.head
+    val Diamond(_, fallbackUpsilon) = proveBy(
+      Box(fallbackCtrl, Diamond(ctrl, upsilon)),
+      SaturateTactic(chaseFallback(1)),
+    ).subgoals.head.succ.head: @unchecked
 
     val fallbackUpsilonConjuncts = FormulaTools.conjuncts(fallbackUpsilon)
 
@@ -985,8 +987,10 @@ object ModelPlex extends ModelPlexTrait with Logging {
     )
 
     // @todo generalize to fallback with nondeterministic choice
-    val Diamond(_, fallbackUpsilon) =
-      proveBy(Box(fallbackCtrl, Diamond(ctrl, upsilon)), SaturateTactic(chaseFallback(1))).subgoals.head.succ.head
+    val Diamond(_, fallbackUpsilon) = proveBy(
+      Box(fallbackCtrl, Diamond(ctrl, upsilon)),
+      SaturateTactic(chaseFallback(1)),
+    ).subgoals.head.succ.head: @unchecked
 
     val fallbackUpsilonConjuncts = FormulaTools.conjuncts(fallbackUpsilon)
 
@@ -1529,7 +1533,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
     val goal = p.subgoals.head
     assert(goal.ante.isEmpty && goal.succ.size == 1)
     val qfResult = mxPartialQE(goal.succ.head, defs, tool)
-    val Equiv(_, qf) = qfResult.conclusion.succ.head
+    val Equiv(_, qf) = qfResult.conclusion.succ.head: @unchecked
     p(CutRight(qf, SuccPos(0)), 0)(EquivifyRight(SuccPos(0)), 1)(CommuteEquivRight(SuccPos(0)), 1)(qfResult, 1)
   }
   def mxPartialQE(fml: Formula, defs: Declaration, tool: QETacticTool): ProvableSig = mxPartialQE(List(fml), defs, tool)
@@ -1570,10 +1574,10 @@ object ModelPlex extends ModelPlexTrait with Logging {
 
   /** Simplifies the right-hand side of the equivalence conclusion of `p`. */
   private def simplifyEquivProof(p: ProvableSig): ProvableSig = {
-    val Equiv(orig, result) = p.conclusion.succ.head
+    val Equiv(orig, result) = p.conclusion.succ.head: @unchecked
     SimplifierV3.formulaSimp(result, faxs = SimplifierV3.defaultFaxs, taxs = SimplifierV3.defaultTaxs) match {
       case (simplifiedResult, Some((True, simpProof))) =>
-        val Imply(True, equiv) = simpProof.conclusion.succ.head
+        val Imply(True, equiv) = simpProof.conclusion.succ.head: @unchecked
         val uncondSimpProof = ProvableSig.startProof(equiv, p.defs)(
           CEat(
             Ax.trueImply
@@ -1645,7 +1649,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
             )
           })(qfVarifiedProof, 0)
 
-          val Equiv(_, qfResult) = qfProof.conclusion.succ.head
+          val Equiv(_, qfResult) = qfProof.conclusion.succ.head: @unchecked
           postQE(qfResult, i)
           qfProof
         })
@@ -1656,8 +1660,8 @@ object ModelPlex extends ModelPlexTrait with Logging {
           val (l, r) = pr.splitAt(pr.size / 2)
           val lproof = mergeDisjuncts(l)
           val rproof = mergeDisjuncts(r)
-          val Equiv(Exists(x, p), pqf) = lproof.conclusion.succ.head
-          val Equiv(Exists(y, q), qqf) = rproof.conclusion.succ.head
+          val Equiv(Exists(x, p), pqf) = lproof.conclusion.succ.head: @unchecked
+          val Equiv(Exists(y, q), qqf) = rproof.conclusion.succ.head: @unchecked
           assert(x == y)
           val dot = DotTerm()
           val merged = ProvableSig.startProof(Equiv(Exists(x, Or(p, q)), Or(pqf, qqf)), defs)(
@@ -1688,7 +1692,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
 
       val mergedProof = timed(simplifyEquivProof(mergeDisjuncts(componentResults)), "Merging QE component results")
       assert(mergedProof.isProved, "Expected a finished merge proof, but proof not closed")
-      val merged @ Equiv(lq, rqf) = mergedProof.conclusion.succ.head
+      val merged @ Equiv(lq, rqf) = mergedProof.conclusion.succ.head: @unchecked
       assert(
         StaticSemantics.boundVars(rqf).isEmpty,
         "Expected all quantifiers eliminated, but formula still has quantifiers: " + rqf.prettyString,
@@ -1696,7 +1700,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
 
       val (reassociated, reassociateProof) = timed(
         {
-          val Exists(x, l) = lq
+          val Exists(x, l) = lq: @unchecked
           val (lr, lp) = PropositionalTactics.rightAssociate(l)
           val (rr, rp) = PropositionalTactics.rightAssociate(rqf)
           val result = Equiv(Exists(x, lr), rr)
@@ -1719,14 +1723,14 @@ object ModelPlex extends ModelPlexTrait with Logging {
         "Reassociating",
       )
 
-      val Equiv(_, Equiv(_, qfResult)) = reassociated
+      val Equiv(_, Equiv(_, qfResult)) = reassociated: @unchecked
       val es = StaticSemantics.symbols(exists)
       val qfs = StaticSemantics.symbols(qfResult)
 
       val expand = monitorComponents
         .zip(componentResults)
         .map({ case (o, qfProof) =>
-          val Equiv(_, qf) = qfProof.conclusion.succ.head
+          val Equiv(_, qf) = qfProof.conclusion.succ.head: @unchecked
           StaticSemantics.symbols(o) -- StaticSemantics.symbols(qf)
         })
         .reduce(_ ++ _)
@@ -1759,7 +1763,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
       logger.trace(s"Finished quantifier $x at ${innermostPos.prettyString}, advancing outwards")
 
       val outerProof = stepwisePartialQE(ctx(qfResult), assumptions, defs, tool)(subst)
-      val Equiv(_, outerQf) = outerProof.conclusion.succ.head
+      val Equiv(_, outerQf) = outerProof.conclusion.succ.head: @unchecked
 
       val outerExpand = StaticSemantics.symbols(ctx(qfResult)) -- StaticSemantics.symbols(outerQf)
       val outerSubst = USubst(
@@ -1779,7 +1783,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
     case (ctx, p: Forall) =>
       // @todo conjunctive normal form and split
       val innerProof = ModelPlex.mxPartialQE(p, defs, tool)
-      val Equiv(_, qf) = innerProof.conclusion.succ.head
+      val Equiv(_, qf) = innerProof.conclusion.succ.head: @unchecked
 
       val innerExpand = StaticSemantics.symbols(p) -- StaticSemantics.symbols(qf)
       val innerSubst = USubst(
@@ -1791,7 +1795,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
       // @todo
       // stepwisePartialQE(ctx(timed(tool.simplify(qf, assumptions), "QE 1/1")), assumptions, defs, tool)
       val outerProof = stepwisePartialQE(ctx(qf), assumptions, defs, tool)(innerSubst)
-      val Equiv(_, outerQf) = outerProof.conclusion.succ.head
+      val Equiv(_, outerQf) = outerProof.conclusion.succ.head: @unchecked
 
       val outerExpand = StaticSemantics.symbols(ctx(qf)) -- StaticSemantics.symbols(outerQf)
       val outerSubst = USubst(
@@ -2010,10 +2014,10 @@ object ModelPlex extends ModelPlexTrait with Logging {
                 .map(s =>
                   if (!StaticSemantics.freeVars(s).contains(v)) { s }
                   else {
-                    val Equal(_, syn) = ToolProvider.solverTool() match {
+                    val Equal(_, syn) = (ToolProvider.solverTool() match {
                       case Some(t) => t.solve(Equal(postVar(v), s), List(v)).getOrElse(Equal(v, s))
                       case None => Equal(v, s) // @note filtered afterwards
-                    }
+                    }): @unchecked
                     syn
                   }
                 )

@@ -235,7 +235,7 @@ class Compbased extends TacticTestBase {
           val metric = proveBy(Equiv(False, "<margin:=1;>margin<=0".asFormula), assignd(1, 1 :: Nil) & QE & done)
           useAt(metric, PosInExpr(0 :: Nil))(pos ++ PosInExpr(0 :: 1 :: 1 :: 0 :: Nil))
         case Some(Diamond(Choice(Compose(Test(p), Test(True)), Compose(Test(Not(q)), Test(False))), _)) if p == q =>
-          val LessEqual(metric, _) = ModelPlex.toMetric(p)
+          val LessEqual(metric, _) = ModelPlex.toMetric(p): @unchecked
           val margin = Variable("margin")
           val repl = proveBy(
             Imply(p, Equiv(True, Diamond(Assign(margin, metric), LessEqual(margin, Number(0))))),

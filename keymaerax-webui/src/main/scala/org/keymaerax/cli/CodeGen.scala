@@ -170,7 +170,7 @@ object CodeGen extends Logging {
       monitorProgProof.subgoals.size == 1,
       "Converted to tests incorrectly: expected a single goal but got\n" + monitorProgProof.prettyString,
     )
-    val Imply(True, monitorProg) = monitorProgProof.subgoals.head.toFormula
+    val Imply(True, monitorProg) = monitorProgProof.subgoals.head.toFormula: @unchecked
     val inputs = CodeGenerator.getInputs(monitorProg)
     val monitorCode = (
       new CGenerator(new CMonitorGenerator(Symbol("resist"), entry.defs), True, entry.defs)

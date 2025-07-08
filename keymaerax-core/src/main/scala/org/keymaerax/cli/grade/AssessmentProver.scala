@@ -1721,7 +1721,7 @@ object AssessmentProver {
                     (prompt, prompt.points * 0.75)
                   } else if (q.prettyString.startsWith("partialexists(")) {
                     val args = q.prettyString.stripPrefix("partialexists(").stripSuffix(")").split(",").toList
-                    val (v, missing :: expected :: Nil) = args.splitAt(args.length - 2)
+                    val (v, missing :: expected :: Nil) = args.splitAt(args.length - 2): @unchecked
                     msgStream.println(Messages.PASS + ":Partial (think about the role of " + v.mkString(",") + ")")
                     (prompt, prompt.points * 0.5 * (expected.toFloat - missing.toFloat) / expected.toFloat)
                   } else {

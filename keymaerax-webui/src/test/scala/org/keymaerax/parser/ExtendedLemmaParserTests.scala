@@ -304,7 +304,7 @@ class ExtendedLemmaParserTests extends TacticTestBase {
 
     val (ev, Token(EOF, _) :: Nil) = KeYmaeraXExtendedLemmaParser.parseAllEvidence(
       KeYmaeraXLexer.inMode(e1.toString + "\n" + e2.toString, LemmaFileMode)
-    )
+    ): @unchecked
     ev should contain theSameElementsInOrderAs List(e1, e2)
   }
 

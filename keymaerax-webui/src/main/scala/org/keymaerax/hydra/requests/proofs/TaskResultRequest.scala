@@ -44,7 +44,7 @@ class TaskResultRequest(db: DBAbstraction, userId: String, proofId: String, node
       .getOrElse("renderMargins", "[40,80]")
       .parseJson
       .convertTo[Array[Int]]
-      .toList
+      .toList: @unchecked
     executor.synchronized {
       val response = executor.wait(taskId) match {
         case Some(Left(_: BelleProvable)) =>

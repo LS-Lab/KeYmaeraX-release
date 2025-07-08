@@ -68,7 +68,7 @@ class MoreSimpleBelleParserTests extends TacticTestBase {
   }
 
   it should "parse either" in withTactics {
-    val EitherTactic(alts) = parser("nil | implyR(1)")
+    val EitherTactic(alts) = parser("nil | implyR(1)"): @unchecked
     alts should contain theSameElementsInOrderAs List(UnifyUSCalculus.nil, SequentCalculus.implyR(1))
   }
 

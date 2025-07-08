@@ -30,7 +30,7 @@ case class GetPathAllRequest(db: DBAbstraction, userId: String, proofId: String,
       .getOrElse("renderMargins", "[40,80]")
       .parseJson
       .convertTo[Array[Int]]
-      .toList
+      .toList: @unchecked
     new GetPathAllResponse(path.reverse, parentsRemaining, marginLeft, marginRight)
   }
 }

@@ -553,7 +553,7 @@ case class TermProvable(provable: ProvableSig, pt: ProofTerm, defs: Declaration)
 
         // If such an axiom exists, create evidence using the axiom's associated proof certificate.
         if (coreAxiom.isDefined) {
-          val TermProvable(subProvable, subPT, _) = TermProvable.axioms(coreAxiom.get._1)
+          val TermProvable(subProvable, subPT, _) = TermProvable.axioms(coreAxiom.get._1): @unchecked
           val thePt = Sub(pt, subPT, subgoal)
           TermProvable(provable(subProvable, subgoal), thePt, defs ++ subderivation.defs)
         } else if (derivedAxiom.isDefined) {
@@ -568,7 +568,7 @@ case class TermProvable(provable: ProvableSig, pt: ProofTerm, defs: Declaration)
         }
         // And ditto for rules.
         else if (rule.isDefined) {
-          val TermProvable(subProvable, subPT, _) = TermProvable.rules(rule.get._1)
+          val TermProvable(subProvable, subPT, _) = TermProvable.rules(rule.get._1): @unchecked
           val thePt = Sub(pt, subPT, subgoal)
           TermProvable(provable(subProvable, subgoal), thePt, defs ++ subderivation.defs)
         } else if (derivedRule.isDefined) {

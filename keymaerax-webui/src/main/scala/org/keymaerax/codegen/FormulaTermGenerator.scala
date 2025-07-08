@@ -67,8 +67,8 @@ abstract class FormulaTermGenerator(termContainer: Expression => String, defs: D
         }
       case FuncOf(fn, child) => nameIdentifier(fn) match {
           case "abs" => CAbs(compileTerm(child))
-          case "min" => val CPair(l, r) = compileTerm(child); CMin(l, r)
-          case "max" => val CPair(l, r) = compileTerm(child); CMax(l, r)
+          case "min" => val CPair(l, r) = compileTerm(child): @unchecked; CMin(l, r)
+          case "max" => val CPair(l, r) = compileTerm(child): @unchecked; CMax(l, r)
           case _ => CUnaryFunction(nameIdentifier(fn), compileTerm(child))
         }
       case Pair(l, r) => CPair(compileTerm(l), compileTerm(r))

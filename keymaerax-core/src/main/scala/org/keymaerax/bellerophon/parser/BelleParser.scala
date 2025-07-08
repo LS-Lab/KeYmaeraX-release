@@ -229,7 +229,7 @@ object BelleParser extends TacticParser with Logging {
         case BelleToken(OPEN_PAREN, _) => openParens = openParens + 1; openParens > 0
         case BelleToken(CLOSE_PAREN, _) => openParens = openParens - 1; openParens > 0
         case _ => openParens > 0
-      })
+      }): @unchecked
 
       val innerExpr = parseLoop(
         ParserState(Bottom, inner),

@@ -41,7 +41,7 @@ final class BigDecimalTool extends Tool with QETacticTool with ToolOperationMana
   /** @inheritdoc */
   override def qe(g: Goal, continueOnFalse: Boolean): (Goal, Formula) = g match {
     case Atom(fml) =>
-      val Sequent(IndexedSeq(), IndexedSeq(Equiv(_, result))) = qe(fml).fact.conclusion
+      val Sequent(IndexedSeq(), IndexedSeq(Equiv(_, result))) = qe(fml).fact.conclusion: @unchecked
       g -> result
     case _ => throw ToolExecutionException("BigDecimalQETool supports only atom goals")
   }

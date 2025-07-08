@@ -351,7 +351,7 @@ case class Z3ToolProvider(config: ToolConfiguration = ToolConfiguration(z3Path =
   /** Returns the main Z3 tool. */
   def tool(): Z3 = tools().head.asInstanceOf[Z3]
   override def init(): Boolean = {
-    val (z3: Z3) :: (algebra: RingsAlgebraTool) :: (ode: IntegratorODESolverTool) :: Nil = tools()
+    val (z3: Z3) :: (algebra: RingsAlgebraTool) :: (ode: IntegratorODESolverTool) :: Nil = tools(): @unchecked
     z3.init(config)
     z3.isInitialized && algebra.isInitialized && ode.isInitialized
   }

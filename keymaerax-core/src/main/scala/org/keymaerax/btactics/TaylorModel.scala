@@ -71,7 +71,7 @@ object TaylorModelTactics extends Logging {
       val antepos = pos.checkTop
 
       /** matching on [[And]] like in [[AndLeft]] */
-      val fml @ And(p, q) = subgoal(pos.checkTop)
+      val fml @ And(p, q) = subgoal(pos.checkTop): @unchecked
       val Llast = subgoal.ante.length
       provable(core.Cut(fml), 0)
         .apply(Close(antepos, SuccPos(subgoal.succ.length)), 1)
@@ -89,7 +89,7 @@ object TaylorModelTactics extends Logging {
       val antepos = pos.checkTop
 
       /** matching on [[Exists]] like in [[AndLeft]] */
-      val fml @ Exists(_, _) = subgoal(pos.checkTop)
+      val fml @ Exists(_, _) = subgoal(pos.checkTop): @unchecked
       val Llast = subgoal.ante.length
       proveBy(
         provable(core.Cut(fml), 0).apply(Close(antepos, SuccPos(subgoal.succ.length)), 1),

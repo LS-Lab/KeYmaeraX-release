@@ -660,8 +660,8 @@ object AxiomaticODESolver {
       val fact = s.sub(withInitialsPos) match {
         case Some(fml: Formula) if polarity > 0 =>
           val odePos = PosInExpr(pos.inExpr.pos.takeRight(contextSize))
-          val (ctx, modal: Modal) = Context.at(fml, odePos)
-          val ODESystem(_, e) = modal.program
+          val (ctx, modal: Modal) = Context.at(fml, odePos): @unchecked
+          val ODESystem(_, e) = modal.program: @unchecked
           TactixLibrary.proveBy(
             Imply(ctx(modal.replaceAt(PosInExpr(0 :: 1 :: Nil), And(e, cut))), fml),
             SeqTactic(
@@ -682,8 +682,8 @@ object AxiomaticODESolver {
           )
         case Some(fml: Formula) if polarity < 0 =>
           val odePos = PosInExpr(pos.inExpr.pos.takeRight(contextSize))
-          val (ctx, modal: Modal) = Context.at(fml, odePos)
-          val ODESystem(_, e) = modal.program
+          val (ctx, modal: Modal) = Context.at(fml, odePos): @unchecked
+          val ODESystem(_, e) = modal.program: @unchecked
           TactixLibrary.proveBy(
             Imply(fml, ctx(modal.replaceAt(PosInExpr(0 :: 1 :: Nil), And(e, cut)))),
             CMon(odePos) & useAt(Ax.DR, PosInExpr(1 :: Nil))(1) & DW(1) & G(1) & implyR(1) & andL(-1) & close(-1, 1),
@@ -849,16 +849,16 @@ object AxiomaticODESolver {
     val fact = s.sub(withInitialsPos) match {
       case Some(fml: Formula) if polarity > 0 =>
         val odePos = PosInExpr(pos.inExpr.pos.takeRight(odeSize + 1))
-        val (ctx, modal: Modal) = Context.at(fml, odePos)
-        val ODESystem(_, And(e, soln)) = modal.program
+        val (ctx, modal: Modal) = Context.at(fml, odePos): @unchecked
+        val ODESystem(_, And(e, soln)) = modal.program: @unchecked
         TactixLibrary.proveBy(
           Imply(ctx(modal.replaceAt(PosInExpr(0 :: 1 :: Nil), e)), fml),
           CMon(odePos) & useAt(Ax.DR, PosInExpr(1 :: Nil))(1) & DW(1) & G(1) & implyR(1) & andL(-1) & close(-1, 1),
         )
       case Some(fml: Formula) if polarity < 0 =>
         val odePos = PosInExpr(pos.inExpr.pos.takeRight(odeSize + 1))
-        val (ctx, modal: Modal) = Context.at(fml, odePos)
-        val ODESystem(_, And(e, soln)) = modal.program
+        val (ctx, modal: Modal) = Context.at(fml, odePos): @unchecked
+        val ODESystem(_, And(e, soln)) = modal.program: @unchecked
         TactixLibrary.proveBy(
           Imply(fml, ctx(modal.replaceAt(PosInExpr(0 :: 1 :: Nil), e))),
           SeqTactic(

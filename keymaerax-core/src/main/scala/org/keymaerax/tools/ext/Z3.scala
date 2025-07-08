@@ -59,7 +59,7 @@ final class Z3 extends Tool with QETacticTool with SimplificationTool with ToolO
   /** @inheritdoc */
   override def qe(g: Goal, continueOnFalse: Boolean): (Goal, Formula) = g match {
     case Atom(fml) =>
-      val Sequent(IndexedSeq(), IndexedSeq(Equiv(_, result))) = qe(fml).fact.conclusion
+      val Sequent(IndexedSeq(), IndexedSeq(Equiv(_, result))) = qe(fml).fact.conclusion: @unchecked
       g -> result
     case _ => throw ToolExecutionException("Z3 supports only atom goals")
   }

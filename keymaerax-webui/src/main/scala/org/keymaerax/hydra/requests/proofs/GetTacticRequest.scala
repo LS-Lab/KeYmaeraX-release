@@ -19,7 +19,7 @@ class GetTacticRequest(db: DBAbstraction, userId: String, proofIdStr: String)
     extends UserProofRequest(db, userId, proofIdStr) with ReadRequest {
   override def doResultingResponse(): Response = {
     val proofInfo = db.getProofInfo(proofIdStr)
-    val (tactic: String, proofStateInfo: Map[Location, String]) = proofInfo.tactic match {
+    val (tactic: String, proofStateInfo: Map[Location, String]) = (proofInfo.tactic match {
       case Some(t) =>
         import TacticInfoJsonProtocol._
         try {
@@ -29,7 +29,7 @@ class GetTacticRequest(db: DBAbstraction, userId: String, proofIdStr: String)
           case _: ParsingException => (t, Map.empty) // @note backwards compatibility with database tactics not in JSON
         }
       case None => (BellePrettyPrinter(Idioms.nil), Map.empty)
-    }
+    }): @unchecked
     GetTacticResponse(tactic, proofStateInfo)
   }
 }

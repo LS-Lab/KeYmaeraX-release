@@ -247,7 +247,7 @@ class ModelplexTacticTests extends TacticTestBase {
         .fromInputStream(getClass.getResourceAsStream("/examples/casestudies/modelplex/watertank/watertank.key"))
         .mkString
     )
-    val Imply(_, Box(prg, _)) = model
+    val Imply(_, Box(prg, _)) = model: @unchecked
 
     val stateVars = List("f", "l", "c").map(_.asVariable.asInstanceOf[BaseVariable])
     val ModelPlexConjecture(_, modelplexInput, assumptions) =
@@ -514,7 +514,7 @@ class ModelplexTacticTests extends TacticTestBase {
     val Some(entry) = ArchiveParser.getEntry(
       "ICFEM09/Proposition 5: Safety",
       Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/etcs/etcs.kyx")).mkString,
-    )
+    ): @unchecked
     val model = entry.expandedModel.asInstanceOf[Formula]
 
     val unobservable: ListMap[NamedSymbol, Option[Formula]] =
@@ -563,7 +563,7 @@ class ModelplexTacticTests extends TacticTestBase {
     )
 
     val testProg = testResult.subgoals.loneElement.succ.loneElement
-    val Imply(_, Box(Loop(prg), _)) = entry.expandedModel
+    val Imply(_, Box(Loop(prg), _)) = entry.expandedModel: @unchecked
     val inputs = CodeGenerator.getInputs(prg) -- sensorDefs.keySet.map(_.asInstanceOf[BaseVariable])
     println("Inputs: " + inputs)
     val sensors = sensorDefs
@@ -593,7 +593,7 @@ class ModelplexTacticTests extends TacticTestBase {
       val Some(entry) = ArchiveParser.getEntry(
         "IJRR17/Theorem 2: Passive safety",
         Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/ijrr/robix.kyx")).mkString,
-      )
+      ): @unchecked
       val model = entry.defs.exhaustiveSubst(entry.model.asInstanceOf[Formula])
       val ModelPlexConjecture(_, modelplexInput, assumptions) = createMonitorSpecificationConjecture(
         model,
@@ -622,7 +622,7 @@ class ModelplexTacticTests extends TacticTestBase {
       val Some(entry) = ArchiveParser.getEntry(
         "IJRR17/Theorem 2: Passive safety",
         Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/ijrr/robix.kyx")).mkString,
-      )
+      ): @unchecked
       val model = entry.defs.exhaustiveSubst(entry.model.asInstanceOf[Formula])
       val ModelPlexConjecture(_, modelplexInput, assumptions) = createMonitorSpecificationConjecture(
         model,
@@ -650,7 +650,7 @@ class ModelplexTacticTests extends TacticTestBase {
     val Some(entry) = ArchiveParser.getEntry(
       "IJRR17/Theorem 2: Passive safety",
       Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/ijrr/robix.kyx")).mkString,
-    )
+    ): @unchecked
     val model = entry.defs.exhaustiveSubst(entry.model.asInstanceOf[Formula])
     val ModelPlexConjecture(_, modelplexInput, _) = createMonitorSpecificationConjecture(
       model,
@@ -680,7 +680,7 @@ class ModelplexTacticTests extends TacticTestBase {
       val Some(entry) = ArchiveParser.getEntry(
         "IJRR17/Theorem 4: Passive orientation safety",
         Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/ijrr/robix.kyx")).mkString,
-      )
+      ): @unchecked
       val model = entry.defs.exhaustiveSubst(entry.model.asInstanceOf[Formula])
 
       val ModelPlexConjecture(_, modelplexInput, assumptions) = createMonitorSpecificationConjecture(
@@ -867,7 +867,7 @@ class ModelplexTacticTests extends TacticTestBase {
       "==> S-x>=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&(v>=0&0<=ep)&xpost=x&vpost=v&apost=A&tpost=0|v=0&0<=ep&xpost=x&vpost=0&apost=0&tpost=0|(v>=0&0<=ep)&xpost=x&vpost=v&apost=-b&tpost=0"
         .asSequent
 
-    val Or(acc, Or(coast, brake)) = result.subgoals.head.succ.head
+    val Or(acc, Or(coast, brake)) = result.subgoals.head.succ.head: @unchecked
     acc shouldBe "S-x>=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&(v>=0&0<=ep)&xpost=x&vpost=v&apost=A&tpost=0".asFormula
     coast shouldBe "v=0&0<=ep&xpost=x&vpost=0&apost=0&tpost=0".asFormula
     brake shouldBe "(v>=0&0<=ep)&xpost=x&vpost=v&apost=-b&tpost=0".asFormula
@@ -887,7 +887,7 @@ class ModelplexTacticTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe
       "==> S-x>=ep*vpost&0<=ep&xpost=x&tpost=0|0<=ep&xpost=x&vpost=0&tpost=0".asSequent
 
-    val Or(acc, stop) = result.subgoals.head.succ.head
+    val Or(acc, stop) = result.subgoals.head.succ.head: @unchecked
     acc shouldBe "S-x>=ep*vpost&0<=ep&xpost=x&tpost=0".asFormula
     stop shouldBe "0<=ep&xpost=x&vpost=0&tpost=0".asFormula
   }
@@ -908,7 +908,7 @@ class ModelplexTacticTests extends TacticTestBase {
         "==> S-x>=ep*(v+cpost+D)&(-D<=dpost&dpost<=D)&0<=ep&xpost=x&vpost=v&tpost=0|0<=ep&xpost=x&vpost=0&dpost=0&cpost=0&tpost=0"
           .asSequent
 
-      val Or(acc, stop) = result.subgoals.head.succ.head
+      val Or(acc, stop) = result.subgoals.head.succ.head: @unchecked
       acc shouldBe "S-x>=ep*(v+cpost+D)&(-D<=dpost&dpost<=D)&0<=ep&xpost=x&vpost=v&tpost=0".asFormula
       stop shouldBe "0<=ep&xpost=x&vpost=0&dpost=0&cpost=0&tpost=0".asFormula
   }
@@ -927,7 +927,7 @@ class ModelplexTacticTests extends TacticTestBase {
       mxResult,
       ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1),
     )
-    val Sequent(IndexedSeq(), IndexedSeq(Or(acc, Or(coast, brake)))) = result.subgoals.loneElement
+    val Sequent(IndexedSeq(), IndexedSeq(Or(acc, Or(coast, brake)))) = result.subgoals.loneElement: @unchecked
     acc shouldBe
       "S-x>=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&((((((((ep=0&tpost=0)&(A!=0|apost=0))&(A=0|A=apost))&(v=0|v=vpost))&(v=vpost|vpost=0))&(vpost=0|v>0))&x=xpost)&v>=0|ep>0&((((((((tpost=0&(A!=0|apost=0))&(A=0|A=apost))&(v=0|v=vpost))&(v=vpost|vpost=0))&(vpost=0|v>0))&x=xpost)&v>=0|(tpost>0&tpost < ep)&(v=0&(((A=0&vpost=0)&x=xpost)&apost=0|((A>0&A*tpost=vpost)&xpost=1/2*A*tpost^2+x)&A=apost)|v>0&(((A=0&apost=0)&v=vpost)&tpost*v+x=xpost|((A=apost&A*tpost+v=vpost)&xpost=1/2*A*tpost^2+tpost*v+x)&(A < 0&(-tpost^(-1))*v<=A|A>0))))|ep=tpost&(v=0&(((A=0&vpost=0)&x=xpost)&apost=0|((A>0&A*tpost=vpost)&xpost=1/2*A*tpost^2+x)&A=apost)|v>0&(((A=0&apost=0)&v=vpost)&tpost*v+x=xpost|((A=apost&A*tpost+v=vpost)&xpost=1/2*A*tpost^2+tpost*v+x)&(A < 0&(-ep^(-1))*v<=A|A>0)))))"
         .asFormula
@@ -949,7 +949,7 @@ class ModelplexTacticTests extends TacticTestBase {
         ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1),
     )
 
-    val Sequent(IndexedSeq(), IndexedSeq(Or(acc, stop))) = result.subgoals.loneElement
+    val Sequent(IndexedSeq(), IndexedSeq(Or(acc, stop))) = result.subgoals.loneElement: @unchecked
     acc shouldBe "S-x>=ep*vpost&(tpost>=0&ep>=tpost)&tpost*vpost+x=xpost".asFormula
     stop shouldBe "((tpost>=0&ep>=tpost)&x=xpost)&vpost=0".asFormula
   }
@@ -966,7 +966,7 @@ class ModelplexTacticTests extends TacticTestBase {
         ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1),
     )
 
-    val Sequent(IndexedSeq(), IndexedSeq(Or(acc, stop))) = result.subgoals.loneElement
+    val Sequent(IndexedSeq(), IndexedSeq(Or(acc, stop))) = result.subgoals.loneElement: @unchecked
     acc shouldBe
       "S-x>=ep*(v+cpost+D)&(-D<=dpost&dpost<=D)&((tpost>=0&ep>=tpost)&tpost*(cpost+dpost+v)+x=xpost)&v=vpost".asFormula
     stop shouldBe "((((tpost>=0&ep>=tpost)&x=xpost)&vpost=0)&dpost=0)&cpost=0".asFormula
@@ -978,7 +978,7 @@ class ModelplexTacticTests extends TacticTestBase {
       Source
         .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/veriphy/velocitycar_extended_dist.kyx"))
         .mkString,
-    )
+    ): @unchecked
     proveBy(entry.model.asInstanceOf[Formula], entry.tactics.head._3, defs = entry.defs) shouldBe Symbol("proved")
   }
 
@@ -988,7 +988,7 @@ class ModelplexTacticTests extends TacticTestBase {
       Source
         .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/veriphy/velocitycar_extended_dist.kyx"))
         .mkString,
-    )
+    ): @unchecked
     val model = entry.defs.exhaustiveSubst(entry.model.asInstanceOf[Formula])
     val ModelPlexConjecture(_, modelplexInput, assumptions) =
       createMonitorSpecificationConjecture(model, List("d", "v", "t").map(_.asVariable), ListMap.empty)
@@ -1008,7 +1008,7 @@ class ModelplexTacticTests extends TacticTestBase {
       Source
         .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/veriphy/velocitycar_extended_dist.kyx"))
         .mkString,
-    )
+    ): @unchecked
     proveBy(entry.model.asInstanceOf[Formula], entry.tactics.head._3) shouldBe Symbol("proved")
   }
 
@@ -1019,7 +1019,7 @@ class ModelplexTacticTests extends TacticTestBase {
         Source
           .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/veriphy/velocitycar_extended_dist.kyx"))
           .mkString,
-      )
+      ): @unchecked
       val fallback = "t:=0;v:=0;".asProgram
       val ((sandbox, sbTactic), lemmas) = ModelPlex.createSandbox(
         entry.name,
@@ -1081,7 +1081,7 @@ class ModelplexTacticTests extends TacticTestBase {
       Source
         .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/veriphy/velocitycar_extended_dist.kyx"))
         .mkString,
-    )
+    ): @unchecked
     proveBy(entry.model.asInstanceOf[Formula], entry.tactics.head._3, defs = entry.defs) shouldBe Symbol("proved")
   }
 
@@ -1098,7 +1098,7 @@ class ModelplexTacticTests extends TacticTestBase {
     val Some(entry) = ArchiveParser.getEntry(
       "Veriphy/Velocity Car Safety",
       Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/veriphy/velocitycar_dist.kyx")).mkString,
-    )
+    ): @unchecked
     val model = entry.defs.exhaustiveSubst(entry.model.asInstanceOf[Formula])
 
     val ctrlMonitorStateVars = List("d", "v", "t").map(_.asVariable.asInstanceOf[BaseVariable])
@@ -1255,7 +1255,7 @@ class ModelplexTacticTests extends TacticTestBase {
       "RAL19/Robot preserves loop invariant",
       Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/ral/relative-full.kyx")).mkString,
       parseTactics = false,
-    )
+    ): @unchecked
     val model = entry.defs.exhaustiveSubst(entry.model.asInstanceOf[Formula])
 
     val stateVars = List("xg", "yg", "v", "a", "t", "vl", "vh", "k").map(_.asVariable.asInstanceOf[BaseVariable])
@@ -1278,9 +1278,9 @@ class ModelplexTacticTests extends TacticTestBase {
       "RAL19/Robot preserves loop invariant",
       Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/ral/relative-full.kyx")).mkString,
       parseTactics = true,
-    )
+    ): @unchecked
     val model = entry.model.asInstanceOf[Formula]
-    val Imply(_, Box(Loop(Compose(prg, _)), _)) = model
+    val Imply(_, Box(Loop(Compose(prg, _)), _)) = model: @unchecked
 
     val diffCuts =
       "(t>=0&(k*(eps()*eps())-2*100*eps())*(10*10) < k*(xg*xg+yg*yg)-2*xg*100*10&k*(xg*xg+yg*yg)-2*xg*100*10 < (k*(eps()*eps())+2*100*eps())*(10*10)|10*v+a*(T()-t)>=0&((a>=0&10*v+a*(T()-t)<=10*vh|a<=0&v<=vh)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(B()*(2*v*(T()-t)*10+a*((T()-t)*(T()-t)))+((v*10+a*(T()-t))*(v*10+a*(T()-t))-10*vh*(10*vh)))<=2*B()*(yg-10*eps())*(100*100)*(10*10)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(B()*(2*v*(T()-t)*10+a*((T()-t)*(T()-t)))+((v*10+a*(T()-t))*(v*10+a*(T()-t))-10*vh*(10*vh)))<=2*B()*(abs(xg)-10*eps())*(100*100)*(10*10))&((a>=0&v>=vl|a<=0&10*v+a*(T()-t)>=10*vl)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(A()*(2*v*(T()-t)*10+a*((T()-t)*(T()-t)))+(vl*10*(vl*10)-(v*10+a*(T()-t))*(v*10+a*(T()-t))))<=2*A()*(yg-10*eps())*(100*100)*(10*10)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(A()*(2*v*(T()-t)*10+a*((T()-t)*(T()-t)))+(vl*10*(vl*10)-(v*10+a*(T()-t))*(v*10+a*(T()-t))))<=2*A()*(abs(xg)-10*eps())*(100*100)*(10*10)))"
@@ -1297,7 +1297,7 @@ class ModelplexTacticTests extends TacticTestBase {
         ),
         safe,
       ),
-    ) = nonlinearModelApprox._1
+    ) = nonlinearModelApprox._1: @unchecked
     ctrl shouldBe prg
     x0Ghosts shouldBe "t_0:=t;v_0:=v;xg_0:=xg;yg_0:=yg;".asProgram
     x0EvolDomain shouldBe expectedEvolutionDomain

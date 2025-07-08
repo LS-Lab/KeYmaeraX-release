@@ -1832,7 +1832,7 @@ class AssessmentProverTests extends TacticTestBase {
                 case _ => ("\\sol", artifactString(a), artifactSrcString(grader.expected))
               }
             case MultiAskGrader(main, _) =>
-              val TextAnswer(_, _, name, _, answer, expected) :: Nil = createAnswer(main, a)
+              val TextAnswer(_, _, name, _, answer, expected) :: Nil = createAnswer(main, a): @unchecked
               (name, answer, expected)
           }
           TextAnswer(1, "", name, graderCookie, answer, expected) :: Nil

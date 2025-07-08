@@ -65,8 +65,9 @@ class SetupSimulationRequest(db: DBAbstraction, userId: String, proofId: String,
             val vars = (StaticSemantics.symbols(prg) ++ StaticSemantics.symbols(initial)).filter(
               _.isInstanceOf[BaseVariable]
             )
-            val Box(prgPre, _) =
-              vars.foldLeft[Formula](b)((b, v) => b.replaceAll(v, Variable("pre" + v.name, v.index, v.sort)))
+            val Box(prgPre, _) = vars.foldLeft[Formula](b)((b, v) =>
+              b.replaceAll(v, Variable("pre" + v.name, v.index, v.sort))
+            ): @unchecked
             val stateRelEqs = vars
               .map(v => Equal(v.asInstanceOf[Term], Variable("pre" + v.name, v.index, v.sort)))
               .reduceRightOption(And.apply)

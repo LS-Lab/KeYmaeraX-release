@@ -96,7 +96,7 @@ class TestSynthesisRequest(
       )
     }
 
-    val Imply(True, cond) = monitorCond.subgoals.head.toFormula
+    val Imply(True, cond) = monitorCond.subgoals.head.toFormula: @unchecked
 
     val assumptionsCond = assumptions.reduceOption(And.apply).getOrElse(True)
     val testSpecs: List[(String, Formula)] = testKinds

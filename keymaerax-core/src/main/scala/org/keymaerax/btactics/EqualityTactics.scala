@@ -120,7 +120,7 @@ private object EqualityTactics {
         val lhsFv = StaticSemantics.freeVars(lhs)
         val topFml = sequent(pos.top)
 
-        val (condEquiv @ Imply(_, Equiv(_, repl)), dottedRepl) = sequent.sub(pos) match {
+        val (condEquiv @ Imply(_, Equiv(_, repl)), dottedRepl) = (sequent.sub(pos) match {
           case Some(f: Formula) =>
             val diffPos = FormulaTools.posOf(
               f,
@@ -164,7 +164,7 @@ private object EqualityTactics {
               Imply(eq, Equiv(sequent(pos.top), sequent(pos.top).replaceAt(pos.inExpr, t.replaceFree(lhs, rhs)))),
               sequent(pos.top).replaceAt(pos.inExpr, t.replaceFree(lhs, DotTerm())),
             )
-        }
+        }): @unchecked
 
         // @note "stupid" order of cuts, since otherwise original formula not unambiguous from result (e.g., x=0, 0*y=0 ambiguous: was original formula x*y=x or x*y=0 or 0*y=x?)
         val (equivifyCommute, closeWhere) =

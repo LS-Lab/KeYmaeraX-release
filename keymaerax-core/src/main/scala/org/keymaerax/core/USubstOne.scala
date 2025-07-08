@@ -191,7 +191,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
       case x: Variable => x
       case app @ FuncOf(f, theta) => subsDefs.find(sp => sp.what.isInstanceOf[FuncOf] && sp.sameHead(app)) match {
           case Some(subs) =>
-            val FuncOf(wf, wArg) = subs.what
+            val FuncOf(wf, wArg) = subs.what: @unchecked
             // redundant: assert(wf == f, "match on same function heads")
             // redundant: assert(SubstitutionAdmissibility.isSubstitutableArg(wArg))
             requireAdmissible(u, subs.freeVars, subs.repl, term)
@@ -236,7 +236,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
     formula match {
       case app @ PredOf(p, theta) => subsDefs.find(sp => sp.what.isInstanceOf[PredOf] && sp.sameHead(app)) match {
           case Some(subs) =>
-            val PredOf(wp, wArg) = subs.what
+            val PredOf(wp, wArg) = subs.what: @unchecked
             // redundant: assert(wp == p, "match only if same head")
             // redundant: assert(SubstitutionAdmissibility.isSubstitutableArg(wArg))
             requireAdmissible(u, subs.freeVars, subs.repl, formula)
@@ -250,7 +250,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
         subsDefs.find(sp => sp.what.isInstanceOf[PredicationalOf] && sp.sameHead(app)) match {
           case Some(subs) =>
             // @note val PredicationalOf(_, DotFormula) = subs.what is easier to read even if possibly a little slower
-            val PredicationalOf(wp, wArg) = subs.what
+            val PredicationalOf(wp, wArg) = subs.what: @unchecked
             // redundant: assert(wp == p, "match only if same head")
             // redundant: assert(wArg == DotFormula)
             USubstOne(SubstitutionPair(wArg, usubst(allVars, fml)) :: Nil).usubst(

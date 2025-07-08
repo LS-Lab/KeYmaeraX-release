@@ -366,17 +366,17 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
     )
 
     val (_, result) = runUnchecked(command.toString, IdentityConverter)
-    val dimension :: classes :: details :: Nil = result.args().toList
+    val dimension :: classes :: details :: Nil = result.args().toList: @unchecked
 
     def asTuple(t: Expr): (String, String) = {
       require(rule.applies(t), "Expected Rule[String,String]")
-      val key :: value :: Nil = t.args().map(_.asString).toList
+      val key :: value :: Nil = t.args().map(_.asString).toList: @unchecked
       (key, value)
     }
 
     def asCategory(cat: Expr): (String, Map[String, String]) = {
       require(rule.applies(cat), "Expected Rule[String, {...}]")
-      val key :: values :: Nil = cat.args().toList
+      val key :: values :: Nil = cat.args().toList: @unchecked
       (key.asString, values.args().map(asTuple).toMap)
     }
 

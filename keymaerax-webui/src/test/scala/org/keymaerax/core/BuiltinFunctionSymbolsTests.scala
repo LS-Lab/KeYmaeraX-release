@@ -22,7 +22,7 @@ class BuiltinFunctionSymbolsTests extends TacticTestBase {
     val f = "max(a, 0) = a".asFormula
     val counterExample = tool.findCounterExample(f)
     counterExample shouldBe Symbol("nonEmpty")
-    val Number(n) = counterExample.head("a".asVariable)
+    val Number(n) = counterExample.head("a".asVariable): @unchecked
     n.toInt should be < 0
   }
 }

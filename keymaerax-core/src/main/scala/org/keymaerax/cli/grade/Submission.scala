@@ -37,7 +37,7 @@ object Submission {
             .fields
             .toList
             .map({ case (title, JsNumber(v)) =>
-              val JsNumber(points) = problems(title)
+              val JsNumber(points) = problems(title): @unchecked
               (Problem(-1, -1, "-1", title.trim, "", points.toDouble, Nil), v.toDouble)
             })
         }

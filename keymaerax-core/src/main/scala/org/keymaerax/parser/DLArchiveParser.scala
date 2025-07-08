@@ -379,7 +379,7 @@ class DLArchiveParser(val tacticParser: DLTacticParser) extends ArchiveParser {
         "Implicit ODE declarations can only declare real-valued " + "functions of a single real variable."
       )
 
-      val (t, Real) = sigs.head._2.arguments.get.head
+      val (t, Real) = sigs.head._2.arguments.get.head: @unchecked
       if (sigs.exists(_._2.arguments.get.head._1 != t))
         return Fail.opaque("Implicit ODE declarations should all use the same " + "time argument.")
 

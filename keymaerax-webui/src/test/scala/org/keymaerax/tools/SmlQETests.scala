@@ -451,7 +451,7 @@ class SmlQETests extends TacticTestBase with Logging {
   /** Returns the duration from lines `user` and `sys` in ms. */
   private def parseDuration(logLines: List[String]): Long = {
     def parseDuration(d: String): Long = {
-      val minutes :: s :: Nil = d.split("m").toList
+      val minutes :: s :: Nil = d.split("m").toList: @unchecked
       minutes.toLong * 60000 + (s.stripSuffix("s").toDouble * 1000).toLong
     }
     val user = logLines.find(_.startsWith("user")).map(_.stripPrefix("user").trim).map(parseDuration).getOrElse(0L)
@@ -579,7 +579,7 @@ class SmlQETests extends TacticTestBase with Logging {
             .map({ case (l, i) =>
               // format e.g. {cade09converted/ETCS-d-braking-node1346.smt2, {0.090669, {379, True}}}
               val name :: duration :: _ :: result :: Nil =
-                l.replace("{", "").replace("}", "").split(",").map(_.trim).toList
+                l.replace("{", "").replace("}", "").split(",").map(_.trim).toList: @unchecked
               result match {
                 case "True" =>
                   BenchmarkResultEntry(name, i, "aproved", l, TIMEOUT * 1000, (duration.toDouble * 1000).toLong)
@@ -613,7 +613,7 @@ class SmlQETests extends TacticTestBase with Logging {
       val summaryName = "summary-Mathematica-" + c.getName + ".csv"
       new PrintWriter(summaryName) { try { write(BenchmarkResult.csvHeader + "\r\n") } finally { close() } }
       Table("filehandle", smtFiles.zipWithIndex: _*).forEvery({ case (smtFile, i) =>
-        val (Not(fml: Formula) :: Nil, info) = converter(smtFile)
+        val (Not(fml: Formula) :: Nil, info) = converter(smtFile): @unchecked
         val infos = info ++ Map(
           "boundvars" -> StaticSemantics.boundVars(fml).toSet.size.toString,
           "freevars" -> StaticSemantics.freeVars(fml).toSet.size.toString,

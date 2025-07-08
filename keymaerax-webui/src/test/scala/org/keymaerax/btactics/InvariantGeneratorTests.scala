@@ -397,7 +397,7 @@ class NonlinearExamplesTester(
       val classifications = entries.map(e => {
         val (model, defs) = parseStripHints(e.model)
         val expandedModel = defs.exhaustiveSubst(model)
-        val Imply(assumptions, Box(ode: ODESystem, post)) = expandedModel
+        val Imply(assumptions, Box(ode: ODESystem, post)) = expandedModel: @unchecked
         e.name -> pegasus.problemClassification(ode, assumptions :: Nil, post)
       })
       val filename = "_classification.csv"
