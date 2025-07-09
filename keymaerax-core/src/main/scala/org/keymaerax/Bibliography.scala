@@ -175,6 +175,8 @@ object Bibliography {
    * André Platzer. [[https://doi.org/10.1007/978-3-319-63588-0 Logical Foundations of Cyber-Physical Systems]].
    * Springer, Cham, 2018. 659 pages. ISBN 978-3-319-63587-3.
    */
+  // @see
+  //   [[org.keymaerax.Bibliography.Platzer18 Logical Foundations of Cyber-Physical Systems]]
   object Platzer18
 
   /**

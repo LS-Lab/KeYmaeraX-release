@@ -192,7 +192,7 @@ import scala.collection.immutable
  * @see
  *   [[org.keymaerax.Bibliography.CadePlatzer18]]
  * @see
- *   [[org.keymaerax.Bibliography.Platzer18]]
+ *   [[org.keymaerax.Bibliography.Platzer18 Logical Foundations of Cyber-Physical Systems]]
  * @see
  *   [[org.keymaerax.Bibliography.CadeFultonMQVP15 KeYmaera X: An aXiomatic tactical theorem prover for hybrid systems]]
  * @see

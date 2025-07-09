@@ -86,7 +86,7 @@ import scala.util.Try
  * @see
  *   [[org.keymaerax.Bibliography.CadePlatzer15]]
  * @see
- *   [[org.keymaerax.Bibliography.Platzer18]]
+ *   [[org.keymaerax.Bibliography.Platzer18 Logical Foundations of Cyber-Physical Systems]]
  * @see
  *   [[Ax]]
  * @see

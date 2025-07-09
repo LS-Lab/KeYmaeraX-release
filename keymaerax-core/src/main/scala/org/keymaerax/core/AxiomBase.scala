@@ -178,7 +178,7 @@ private[core] object AxiomBase extends Logging {
 //        * Interderives with FP fixpoint rule.
 //        * FP is used as basis, because deriving FP from ind leads to a duplicate premise, needing list to set contraction.
 //        * @see Lemma 4.1 in [[org.keymaerax.Bibliography.ToclPlatzer15]]
-//        * @see Lemma 7.2 and Corollary 16.1 in [[org.keymaerax.Bibliography.Platzer18]]
+//        * @see Lemma 7.2 and Corollary 16.1 in [[org.keymaerax.Bibliography.Platzer18 Logical Foundations of Cyber-Physical Systems]]
 //        */
 //      ("ind induction",
 //        (immutable.IndexedSeq(Sequent(immutable.IndexedSeq(pany), immutable.IndexedSeq(Box(a, pany)))),
@@ -200,7 +200,8 @@ private[core] object AxiomBase extends Logging {
        * @see
        *   [[org.keymaerax.Bibliography.ToclPlatzer15]]
        * @see
-       *   Lemma 16.11 and Corollary 16.1 in [[org.keymaerax.Bibliography.Platzer18]]
+       *   Lemma 16.11 and Corollary 16.1 in
+       *   [[org.keymaerax.Bibliography.Platzer18 Logical Foundations of Cyber-Physical Systems]]
        */
       (
         "FP fixpoint",
@@ -223,7 +224,7 @@ private[core] object AxiomBase extends Logging {
        * @see
        *   [[org.keymaerax.Bibliography.LicsPlatzer12b]]
        * @see
-       *   Section 17.4 in [[org.keymaerax.Bibliography.Platzer18]]
+       *   Section 17.4 in [[org.keymaerax.Bibliography.Platzer18 Logical Foundations of Cyber-Physical Systems]]
        */
       (
         "con convergence",

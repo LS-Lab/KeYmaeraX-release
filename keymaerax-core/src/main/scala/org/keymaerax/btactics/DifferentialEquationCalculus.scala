@@ -33,14 +33,14 @@ import scala.collection.immutable.*
  * [[HilbertCalculus]].
  *
  * Provides the elementary derived proof rules for differential equations from Figure 11.20 and Figure 12.9 in
- * [[org.keymaerax.Bibliography.Platzer18]].
+ * [[org.keymaerax.Bibliography.Platzer18 Logical Foundations of Cyber-Physical Systems]].
  *
  * @author
  *   Andre Platzer
  * @author
  *   Stefan Mitsch
  * @see
- *   [[org.keymaerax.Bibliography.Platzer18]]
+ *   [[org.keymaerax.Bibliography.Platzer18 Logical Foundations of Cyber-Physical Systems]]
  * @see
  *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
  * @see

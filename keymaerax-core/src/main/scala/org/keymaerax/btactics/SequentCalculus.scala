@@ -44,7 +44,7 @@ import scala.annotation.nowarn
  * @see
  *   [[org.keymaerax.Bibliography.JarPlatzer08]]
  * @see
- *   [[org.keymaerax.Bibliography.Platzer18]]
+ *   [[org.keymaerax.Bibliography.Platzer18 Logical Foundations of Cyber-Physical Systems]]
  * @see
  *   [[org.keymaerax.core.Rule]]
  * @see

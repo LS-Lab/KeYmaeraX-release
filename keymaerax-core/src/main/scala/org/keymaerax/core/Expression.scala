@@ -181,7 +181,7 @@ final case class Except(taboos: immutable.Seq[Variable]) extends Space {
  * @see
  *   [[org.keymaerax.Bibliography.CadePlatzer15]]
  * @see
- *   [[org.keymaerax.Bibliography.Platzer18]]
+ *   [[org.keymaerax.Bibliography.Platzer18 Logical Foundations of Cyber-Physical Systems]]
  * @see
  *   [[org.keymaerax.parser.KeYmaeraXParser.apply]]
  * @see

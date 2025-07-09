@@ -1159,7 +1159,8 @@ object Ax extends Logging {
    * @see
    *   Lemma 4.1 in [[org.keymaerax.Bibliography.ToclPlatzer15]]
    * @see
-   *   Lemma 7.2 and Corollary 16.1 in [[org.keymaerax.Bibliography.Platzer18]]
+   *   Lemma 7.2 and Corollary 16.1 in
+   *   [[org.keymaerax.Bibliography.Platzer18 Logical Foundations of Cyber-Physical Systems]]
    */
   @Derivation
   lazy val indrule: DerivedRuleInfo = derivedRuleSequent(
@@ -1200,7 +1201,8 @@ object Ax extends Logging {
    * @see
    *   Lemma 4.1 in [[org.keymaerax.Bibliography.ToclPlatzer15]]
    * @see
-   *   Lemma 16.11 and Corollary 16.1 in [[org.keymaerax.Bibliography.Platzer18]]
+   *   Lemma 16.11 and Corollary 16.1 in
+   *   [[org.keymaerax.Bibliography.Platzer18 Logical Foundations of Cyber-Physical Systems]]
    * @see
    *   [[FPrule]]
    */
@@ -3559,7 +3561,7 @@ object Ax extends Logging {
    * End.
    * }}}
    * @see
-   *   Lemma 7.6 in [[org.keymaerax.Bibliography.Platzer18]]
+   *   Lemma 7.6 in [[org.keymaerax.Bibliography.Platzer18 Logical Foundations of Cyber-Physical Systems]]
    * @Derived
    */
   @Derivation
@@ -3608,7 +3610,7 @@ object Ax extends Logging {
    * End.
    * }}}
    * @see
-   *   Lemma 7.5 in [[org.keymaerax.Bibliography.Platzer18]]
+   *   Lemma 7.5 in [[org.keymaerax.Bibliography.Platzer18 Logical Foundations of Cyber-Physical Systems]]
    * @Derived
    *   for programs
    */
@@ -3636,7 +3638,7 @@ object Ax extends Logging {
    * End.
    * }}}
    * @see
-   *   Lemma 7.5 in [[org.keymaerax.Bibliography.Platzer18]]
+   *   Lemma 7.5 in [[org.keymaerax.Bibliography.Platzer18 Logical Foundations of Cyber-Physical Systems]]
    * @Derived
    *   for programs
    */
@@ -3662,7 +3664,7 @@ object Ax extends Logging {
    * End.
    * }}}
    * @see
-   *   Figure 7.8 in [[org.keymaerax.Bibliography.Platzer18]]
+   *   Figure 7.8 in [[org.keymaerax.Bibliography.Platzer18 Logical Foundations of Cyber-Physical Systems]]
    * @Derived
    *   for programs
    */
@@ -3694,7 +3696,7 @@ object Ax extends Logging {
    * End.
    * }}}
    * @see
-   *   Section 7.7.4 in [[org.keymaerax.Bibliography.Platzer18]]
+   *   Section 7.7.4 in [[org.keymaerax.Bibliography.Platzer18 Logical Foundations of Cyber-Physical Systems]]
    * @Derived
    *   for programs
    */
