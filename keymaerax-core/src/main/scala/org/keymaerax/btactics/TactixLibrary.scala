@@ -946,7 +946,7 @@ object TactixLibrary {
    * @see
    *   [[org.keymaerax.Bibliography.JacmPlatzerT20 Differential equation invariance axiomatization]]
    * @see
-   *   [[org.keymaerax.Bibliography.LicsPlatzerT18]]
+   *   [[org.keymaerax.Bibliography.LicsPlatzerT18 Differential equation axiomatization: The impressive power of differential ghosts]]
    * @see
    *   [[odeInvariantComplete]]
    * @example
@@ -971,7 +971,7 @@ object TactixLibrary {
    * @see
    *   [[org.keymaerax.Bibliography.JacmPlatzerT20 Differential equation invariance axiomatization]]
    * @see
-   *   [[org.keymaerax.Bibliography.LicsPlatzerT18]]
+   *   [[org.keymaerax.Bibliography.LicsPlatzerT18 Differential equation axiomatization: The impressive power of differential ghosts]]
    * @see
    *   [[odeInvariant]]
    * @example

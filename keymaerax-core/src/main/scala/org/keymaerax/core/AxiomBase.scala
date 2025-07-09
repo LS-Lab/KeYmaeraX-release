@@ -15,7 +15,7 @@
  * @see
  *   [[org.keymaerax.Bibliography.JacmPlatzerT20 Differential equation invariance axiomatization]]
  * @see
- *   [[org.keymaerax.Bibliography.LicsPlatzerT18]]
+ *   [[org.keymaerax.Bibliography.LicsPlatzerT18 Differential equation axiomatization: The impressive power of differential ghosts]]
  * @see
  *   [[org.keymaerax.Bibliography.CadePlatzer18]]
  * @see
@@ -46,7 +46,7 @@ import org.keymaerax.parser.DLAxiomParser
  * @see
  *   [[org.keymaerax.Bibliography.JacmPlatzerT20 Differential equation invariance axiomatization]]
  * @see
- *   [[org.keymaerax.Bibliography.LicsPlatzerT18]]
+ *   [[org.keymaerax.Bibliography.LicsPlatzerT18 Differential equation axiomatization: The impressive power of differential ghosts]]
  * @see
  *   [[org.keymaerax.Bibliography.CadePlatzer18]]
  * @see

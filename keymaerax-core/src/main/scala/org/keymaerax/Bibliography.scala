@@ -175,6 +175,8 @@ object Bibliography {
    * In Anuj Dawar and Erich Grädel, editors, Proceedings of the 33rd Annual ACM/IEEE Symposium on Logic in Computer
    * Science, LICS'18, pp. 819-828. ACM 2018.
    */
+  // @see
+  //   [[org.keymaerax.Bibliography.LicsPlatzerT18 Differential equation axiomatization: The impressive power of differential ghosts]]
   object LicsPlatzerT18
 
   /**

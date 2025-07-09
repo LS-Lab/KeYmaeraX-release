@@ -43,7 +43,7 @@ import scala.collection.mutable.ListBuffer
  * Created by yongkiat on 05/14/18.
  *
  * @see
- *   [[org.keymaerax.Bibliography.LicsPlatzerT18]]
+ *   [[org.keymaerax.Bibliography.LicsPlatzerT18 Differential equation axiomatization: The impressive power of differential ghosts]]
  */
 
 object ODEInvariance {
@@ -416,7 +416,7 @@ object ODEInvariance {
    *   1. P fails to normalize to f>=0 form (it isn't closed)
    *   1. it is not invariant
    * @see
-   *   [[org.keymaerax.Bibliography.LicsPlatzerT18]]
+   *   [[org.keymaerax.Bibliography.LicsPlatzerT18 Differential equation axiomatization: The impressive power of differential ghosts]]
    */
   // was "sAIc"
   def sAIclosed: DependentPositionTactic = anon((pos: Position, seq: Sequent) => {
@@ -647,7 +647,7 @@ object ODEInvariance {
    *   whether to skip over closed invariants (this should be used if the outer tactic already tried sAIclosedPlus,
    *   which is much faster than this one anyway) The option only applies if doReorder = true
    * @see
-   *   [[org.keymaerax.Bibliography.LicsPlatzerT18]]
+   *   [[org.keymaerax.Bibliography.LicsPlatzerT18 Differential equation axiomatization: The impressive power of differential ghosts]]
    */
   // was "sAIR1"
   def sAIRankOne(doReorder: Boolean = true, skipClosed: Boolean = true): DependentPositionTactic =
@@ -1030,7 +1030,7 @@ object ODEInvariance {
    * @return
    *   tactic implementing vdbx as described above
    * @see
-   *   [[org.keymaerax.Bibliography.LicsPlatzerT18]]
+   *   [[org.keymaerax.Bibliography.LicsPlatzerT18 Differential equation axiomatization: The impressive power of differential ghosts]]
    * @note
    *   uses Dconstify and handles other constification internally instead of an external wrapper
    */
@@ -1894,7 +1894,7 @@ object ODEInvariance {
    *   closes the subgoal if P is indeed invariant, fails if P fails to normalize to f>=0 form, or if one of tactic
    *   limitations is met
    * @see
-   *   [[org.keymaerax.Bibliography.LicsPlatzerT18]]
+   *   [[org.keymaerax.Bibliography.LicsPlatzerT18 Differential equation axiomatization: The impressive power of differential ghosts]]
    */
   // was "sAIc"
   def sAIclosedPlus(bound: Int = 1): DependentPositionTactic = anon { (pos: Position, seq: Sequent) =>
@@ -2299,7 +2299,7 @@ object ODEInvariance {
    * @return
    *   closes the subgoal if P is indeed invariant,
    * @see
-   *   [[org.keymaerax.Bibliography.LicsPlatzerT18]]
+   *   [[org.keymaerax.Bibliography.LicsPlatzerT18 Differential equation axiomatization: The impressive power of differential ghosts]]
    */
   def sAI: DependentPositionTactic = anon((pos: Position, seq: Sequent) => {
     if (!(pos.isTopLevel && pos.isSucc)) throw new IllFormedTacticApplicationException(
