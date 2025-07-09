@@ -44,7 +44,7 @@ import scala.language.reflectiveCalls
  * @see
  *   [[org.keymaerax.Bibliography.FmsdMitschP16 ModelPlex: Verified runtime validation of verified cyber-physical system models (FMSD)]]
  * @see
- *   [[org.keymaerax.Bibliography.RvMitschP14]]
+ *   [[org.keymaerax.Bibliography.RvMitschP14 ModelPlex: Verified runtime validation of verified cyber-physical system models]]
  */
 object ModelPlex extends ModelPlexTrait with Logging {
   private val NAMESPACE = "modelplex"

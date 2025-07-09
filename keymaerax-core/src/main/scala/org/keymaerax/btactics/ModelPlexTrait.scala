@@ -32,7 +32,7 @@ case class ModelPlexConjecture(init: Formula, conjecture: Formula, constAssumpti
  * @see
  *   [[org.keymaerax.Bibliography.FmsdMitschP16 ModelPlex: Verified runtime validation of verified cyber-physical system models (FMSD)]]
  * @see
- *   [[org.keymaerax.Bibliography.RvMitschP14]]
+ *   [[org.keymaerax.Bibliography.RvMitschP14 ModelPlex: Verified runtime validation of verified cyber-physical system models]]
  */
 trait ModelPlexTrait extends ((List[Variable], ModelPlexKind.Value) => (Formula => Formula)) {
 
