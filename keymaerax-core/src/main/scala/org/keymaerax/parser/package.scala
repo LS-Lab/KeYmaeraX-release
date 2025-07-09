@@ -192,7 +192,7 @@ import org.keymaerax.core.CoreException
  * @see
  *   [[org.keymaerax.Bibliography.ToclPlatzer15]]
  * @see
- *   [[org.keymaerax.Bibliography.CadeFultonMQVP15]]
+ *   [[org.keymaerax.Bibliography.CadeFultonMQVP15 KeYmaera X: An aXiomatic tactical theorem prover for hybrid systems]]
  * @see
  *   [[http://keymaeraX.org/doc/dL-grammar.md Grammar of Differential Dynamic Logic]]
  * @see

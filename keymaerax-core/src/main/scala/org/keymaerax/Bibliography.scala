@@ -96,6 +96,8 @@ object Bibliography {
    * In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE-25, Berlin,
    * Germany, Proceedings, volume 9195 of LNCS, pp. 527-538. Springer, 2015.
    */
+  // @see
+  //   [[org.keymaerax.Bibliography.CadeFultonMQVP15 KeYmaera X: An aXiomatic tactical theorem prover for hybrid systems]]
   object CadeFultonMQVP15
 
   /**

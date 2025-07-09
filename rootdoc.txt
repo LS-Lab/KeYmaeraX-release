@@ -79,7 +79,7 @@ Additional entry points and usage points for KeYmaera X API:
 Full references on KeYmaera X are provided at [[http://keymaeraX.org/]]. The main references are the following:
 
 1. [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
-1. [[org.keymaerax.Bibliography.CadeFultonMQVP15]]
+1. [[org.keymaerax.Bibliography.CadeFultonMQVP15 KeYmaera X: An aXiomatic tactical theorem prover for hybrid systems]]
 1. [[org.keymaerax.Bibliography.Platzer18]]
 
 [[http://video.lfcps.org/ Videos]]
