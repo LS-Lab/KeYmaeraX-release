@@ -188,7 +188,7 @@ import scala.collection.immutable
  * @see
  *   [[org.keymaerax.Bibliography.JacmPlatzerT20 Differential equation invariance axiomatization]]
  * @see
- *   [[org.keymaerax.Bibliography.CadePlatzer15]]
+ *   [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
  * @see
  *   [[org.keymaerax.Bibliography.CadePlatzer18 Uniform substitution for differential game logic]]
  * @see

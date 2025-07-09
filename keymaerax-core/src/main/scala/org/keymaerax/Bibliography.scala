@@ -108,6 +108,8 @@ object Bibliography {
    * Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE-25, Berlin,
    * Germany, Proceedings, volume 9195 of LNCS, pp. 467-481. Springer, 2015.
    */
+  // @see
+  //   [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
   object CadePlatzer15
 
   /**

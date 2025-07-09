@@ -11,7 +11,7 @@
  * @see
  *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
  * @see
- *   [[org.keymaerax.Bibliography.CadePlatzer15]]
+ *   [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
  * @note
  *   Code Review: 2020-02-17
  */
@@ -36,7 +36,7 @@ import scala.collection.immutable
  *   Section 2.3 in
  *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
  * @see
- *   [[org.keymaerax.Bibliography.CadePlatzer15]]
+ *   [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
  * @example
  *   {{{
  *   val fml = Imply(Greater(Variable("x",None,Real), Number(5)),

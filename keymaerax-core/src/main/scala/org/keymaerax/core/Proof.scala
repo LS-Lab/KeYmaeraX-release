@@ -19,7 +19,7 @@
  * @see
  *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
  * @see
- *   [[org.keymaerax.Bibliography.CadePlatzer15]]
+ *   [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
  * @see
  *   [[org.keymaerax.Bibliography.ToclPlatzer15]]
  * @see
@@ -586,7 +586,7 @@ object Provable {
    * }}}
    *
    * @see
-   *   [[org.keymaerax.Bibliography.CadePlatzer15]]
+   *   [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
    * @note
    *   soundness-critical: only valid formulas are sound axioms.
    */
@@ -606,7 +606,7 @@ object Provable {
    * }}}
    *
    * @see
-   *   [[org.keymaerax.Bibliography.CadePlatzer15]]
+   *   [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
    * @note
    *   soundness-critical: only list locally sound rules.
    * @see

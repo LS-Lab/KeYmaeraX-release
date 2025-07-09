@@ -106,7 +106,7 @@ import scala.util.Try
  * @see
  *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
  * @see
- *   [[org.keymaerax.Bibliography.CadePlatzer15]]
+ *   [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
  * @Tactic
  *   completed
  */
@@ -1533,7 +1533,7 @@ object UnifyUSCalculus {
    * @see
    *   [[UnifyUSCalculus.CEat(Provable)]]
    * @see
-   *   [[org.keymaerax.Bibliography.CadePlatzer15]]
+   *   [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
    */
   def CE(inEqPos: PosInExpr): InputTactic = "CECongruence".byWithInputs(List(inEqPos), CEFw(inEqPos))
 
@@ -1590,7 +1590,7 @@ object UnifyUSCalculus {
    * @see
    *   [[UnifyUSCalculus.CE(Context)]]
    * @see
-   *   [[org.keymaerax.Bibliography.CadePlatzer15]]
+   *   [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
    */
   def CEimp(inEqPos: PosInExpr): InputTactic = "CEimp".byWithInputs(List(inEqPos), CEimpFw(inEqPos))
 
@@ -1647,7 +1647,7 @@ object UnifyUSCalculus {
    * @see
    *   [[UnifyUSCalculus.CE(Context)]]
    * @see
-   *   [[org.keymaerax.Bibliography.CadePlatzer15]]
+   *   [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
    */
   def CErevimp(inEqPos: PosInExpr): InputTactic = "CErevimp".byWithInputs(List(inEqPos), CErevimpFw(inEqPos))
 

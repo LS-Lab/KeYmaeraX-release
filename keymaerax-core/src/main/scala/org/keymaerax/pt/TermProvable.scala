@@ -258,7 +258,7 @@ sealed trait ProvableSig {
    * }}}
    *
    * @see
-   *   [[org.keymaerax.Bibliography.CadePlatzer15]]
+   *   [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
    */
   val axioms: Map[String, ProvableSig]
 
@@ -271,7 +271,7 @@ sealed trait ProvableSig {
    * }}}
    *
    * @see
-   *   [[org.keymaerax.Bibliography.CadePlatzer15]]
+   *   [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
    * @see
    *   [[Provable.apply(USubst)]]
    */
@@ -344,7 +344,7 @@ object ProvableSig {
    * }}}
    *
    * @see
-   *   [[org.keymaerax.Bibliography.CadePlatzer15]]
+   *   [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
    */
   def axioms: immutable.Map[String, ProvableSig] = {
     if (PROOF_TERMS_ENABLED) TermProvable.axioms else ElidingProvable.axioms
@@ -359,7 +359,7 @@ object ProvableSig {
    * }}}
    *
    * @see
-   *   [[org.keymaerax.Bibliography.CadePlatzer15]]
+   *   [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
    * @see
    *   [[Provable.apply(USubst)]]
    */

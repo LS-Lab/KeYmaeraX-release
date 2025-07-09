@@ -4900,7 +4900,8 @@ object Ax extends Logging {
    * }}}
    *
    * @see
-   *   footnote 3 in [[org.keymaerax.Bibliography.CadePlatzer15]]
+   *   footnote 3 in
+   *   [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
    */
   @Derivation
   lazy val DW: DerivedAxiomInfo = derivedAxiom(

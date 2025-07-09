@@ -19,7 +19,7 @@
  * @see
  *   [[org.keymaerax.Bibliography.CadePlatzer18 Uniform substitution for differential game logic]]
  * @see
- *   [[org.keymaerax.Bibliography.CadePlatzer15]]
+ *   [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
  * @see
  *   [[org.keymaerax.Bibliography.ToclPlatzer15]]
  * @see
@@ -50,7 +50,7 @@ import org.keymaerax.parser.DLAxiomParser
  * @see
  *   [[org.keymaerax.Bibliography.CadePlatzer18 Uniform substitution for differential game logic]]
  * @see
- *   [[org.keymaerax.Bibliography.CadePlatzer15]]
+ *   [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
  * @see
  *   [[org.keymaerax.Bibliography.ToclPlatzer15]]
  * @see
@@ -78,7 +78,7 @@ private[core] object AxiomBase extends Logging {
    * @see
    *   [[org.keymaerax.Bibliography.CadePlatzer18 Uniform substitution for differential game logic]]
    * @see
-   *   [[org.keymaerax.Bibliography.CadePlatzer15]]
+   *   [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
    * @see
    *   [[org.keymaerax.Bibliography.ToclPlatzer15]]
    * @see
