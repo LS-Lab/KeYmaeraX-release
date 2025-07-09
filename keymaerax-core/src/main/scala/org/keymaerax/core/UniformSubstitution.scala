@@ -11,7 +11,7 @@
  * @author
  *   smitsch
  * @see
- *   [[org.keymaerax.Bibliography.JarPlatzer17]]
+ *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
  * @see
  *   [[org.keymaerax.Bibliography.CadePlatzer15]]
  * @see
@@ -67,7 +67,7 @@ object SubstitutionAdmissibility {
  * @see
  *   [[USubstChurch]]
  * @see
- *   [[org.keymaerax.Bibliography.JarPlatzer17]]
+ *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
  * @see
  *   [[org.keymaerax.Bibliography.CadePlatzer19]]
  */
@@ -153,7 +153,8 @@ final case class SubstitutionPair(what: Expression, repl: Expression) {
    * @return
    *   essentially freeVars(repl) except for special handling of UnitFunctional and UnitPredicational arguments.
    * @see
-   *   Definition 19 in [[org.keymaerax.Bibliography.JarPlatzer17]]
+   *   Definition 19 in
+   *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
    * @see
    *   [[StaticSemantics.freeVars(f:edu\.cmu\.cs\.ls\.keymaerax\.core\.Formula):edu\.cmu\.cs\.ls\.keymaerax\.core\.SetLattice[edu\.cmu\.cs\.ls\.keymaerax\.core\.Variable]*]]
    */

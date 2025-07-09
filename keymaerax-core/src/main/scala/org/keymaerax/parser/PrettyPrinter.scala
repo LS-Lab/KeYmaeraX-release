@@ -9,7 +9,7 @@
  * @author
  *   Andre Platzer
  * @see
- *   [[org.keymaerax.Bibliography.JarPlatzer17]]
+ *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
  * @note
  *   Code Review 2020-02-14
  */
@@ -31,7 +31,7 @@ import org.keymaerax.core._
  * @see
  *   [[org.keymaerax.core.PrettyPrinter]]
  * @see
- *   [[org.keymaerax.Bibliography.JarPlatzer17]]
+ *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
  */
 trait PrettyPrinter extends (Expression => String) {
 

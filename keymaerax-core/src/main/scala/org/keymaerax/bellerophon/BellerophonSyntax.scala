@@ -1167,7 +1167,8 @@ case class LetInspect(abbr: Expression, instantiator: ProvableSig => Expression,
  * @param abbr
  *   the abbreviation to instantiate, which should be fresh in the Provable
  * @see
- *   Example 32 in [[org.keymaerax.Bibliography.JarPlatzer17]]
+ *   Example 32 in
+ *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
  * @see
  *   [[NoProverException]]
  */

@@ -104,7 +104,7 @@ import scala.util.Try
  * @see
  *   [[AxIndex]]
  * @see
- *   [[org.keymaerax.Bibliography.JarPlatzer17]]
+ *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
  * @see
  *   [[org.keymaerax.Bibliography.CadePlatzer15]]
  * @Tactic
@@ -3427,7 +3427,7 @@ object UnifyUSCalculus {
    * from @[[org.keymaerax.btactics.macros.Axiom]] declarations.
    *
    * @see
-   *   [[org.keymaerax.Bibliography.JarPlatzer17]]
+   *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
    */
   private[keymaerax] def matcherFor(pi: ProvableInfo): Matcher = pi match {
     case ifo: AxiomInfo => ifo.unifier match {

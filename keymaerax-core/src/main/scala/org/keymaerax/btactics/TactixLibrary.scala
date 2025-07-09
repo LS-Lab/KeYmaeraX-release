@@ -82,7 +82,7 @@ import scala.util.Try
  * @author
  *   Stefan Mitsch
  * @see
- *   [[org.keymaerax.Bibliography.JarPlatzer17]]
+ *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
  * @see
  *   [[org.keymaerax.Bibliography.CadePlatzer15]]
  * @see
@@ -713,7 +713,8 @@ object TactixLibrary {
    * @see
    *   [[loopauto]]
    * @see
-   *   Example 32 in [[org.keymaerax.Bibliography.JarPlatzer17]]
+   *   Example 32 in
+   *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
    */
   def loopSR(gen: InvariantGenerator): DependentPositionTactic = InvariantProvers.loopSR(gen)
 
@@ -727,7 +728,8 @@ object TactixLibrary {
    * @author
    *   Stefan Mitsch
    * @see
-   *   Example 32 in [[org.keymaerax.Bibliography.JarPlatzer17]]
+   *   Example 32 in
+   *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
    */
   def loopPostMaster(gen: InvariantGenerator): DependentPositionTactic = InvariantProvers.loopPostMaster(gen)
 

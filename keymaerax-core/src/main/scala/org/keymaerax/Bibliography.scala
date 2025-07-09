@@ -144,6 +144,8 @@ object Bibliography {
    * See also [[https://arxiv.org/abs/1601.06183 arXiv:1601.06183]] for a long article extending the conference version
    * that appeared at CADE 2015.
    */
+  // @see
+  //   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
   object JarPlatzer17
 
   /**

@@ -9,7 +9,7 @@
  * @author
  *   Andre Platzer
  * @see
- *   [[org.keymaerax.Bibliography.JarPlatzer17]]
+ *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
  * @see
  *   [[org.keymaerax.Bibliography.CadePlatzer15]]
  * @note
@@ -33,7 +33,8 @@ import scala.collection.immutable
  * @note
  *   soundness-critical
  * @see
- *   Section 2.3 in [[org.keymaerax.Bibliography.JarPlatzer17]]
+ *   Section 2.3 in
+ *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
  * @see
  *   [[org.keymaerax.Bibliography.CadePlatzer15]]
  * @example

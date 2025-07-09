@@ -11,7 +11,7 @@
  * @author
  *   Andre Platzer
  * @see
- *   [[org.keymaerax.Bibliography.JarPlatzer17]]
+ *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
  * @see
  *   [[org.keymaerax.Bibliography.JacmPlatzerT20]]
  * @see
@@ -42,7 +42,7 @@ import org.keymaerax.parser.DLAxiomParser
  * axiomatizations.
  *
  * @see
- *   [[org.keymaerax.Bibliography.JarPlatzer17]]
+ *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
  * @see
  *   [[org.keymaerax.Bibliography.JacmPlatzerT20]]
  * @see
@@ -74,7 +74,7 @@ private[core] object AxiomBase extends Logging {
    * @return
    *   immutable list of locally sound axiomatic proof rules (premise, conclusion)
    * @see
-   *   [[org.keymaerax.Bibliography.JarPlatzer17]]
+   *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
    * @see
    *   [[org.keymaerax.Bibliography.CadePlatzer18]]
    * @see
@@ -112,7 +112,8 @@ private[core] object AxiomBase extends Logging {
        * }}}
        *
        * @see
-       *   Figure 2 in [[org.keymaerax.Bibliography.JarPlatzer17]]
+       *   Figure 2 in
+       *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
        */
       (
         "CQ equation congruence",
@@ -135,7 +136,8 @@ private[core] object AxiomBase extends Logging {
        * }}}
        *
        * @see
-       *   Figure 2 in [[org.keymaerax.Bibliography.JarPlatzer17]]
+       *   Figure 2 in
+       *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
        */
       (
         "CE congruence",
@@ -282,7 +284,7 @@ private[core] object AxiomBase extends Logging {
     val H0 = PredOf(Function("H", None, Unit, Bool), Nothing)
 
     /** HYBRID PROGRAM MODALITY AXIOMS */
-    // @see Figure 2 in [[org.keymaerax.Bibliography.JarPlatzer17]]
+    // @see Figure 2 in [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
     insist(axs("<> diamond") == Equiv(Not(Box(a, Not(pany))), Diamond(a, pany)), "<> diamond")
     insist(axs("[:=] assign") == Equiv(Box(Assign(x, f0), PredOf(p, x)), PredOf(p, f0)), "[:=] assign")
     insist(
@@ -302,7 +304,7 @@ private[core] object AxiomBase extends Logging {
     insist(axs("VK vacuous") == Imply(Box(a, True), Imply(p0, Box(a, p0))), "VK vacuous")
 
     /** DIFFERENTIAL EQUATION AXIOMS */
-    // @see Figure 3 in [[org.keymaerax.Bibliography.JarPlatzer17]]
+    // @see Figure 3 in [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
     insist(axs("DW base") == Box(ODESystem(ode, qany), qany), "DW base")
     insist(
       axs("DMP differential modus ponens") == Imply(
@@ -494,7 +496,7 @@ private[core] object AxiomBase extends Logging {
    * @author
    *   Fabian Immler
    * @see
-   *   [[org.keymaerax.Bibliography.JarPlatzer17]]
+   *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
    * @see
    *   [[org.keymaerax.Bibliography.JacmPlatzerT20]]
    * @see

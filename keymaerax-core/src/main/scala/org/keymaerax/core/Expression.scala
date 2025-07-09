@@ -9,7 +9,7 @@
  * @author
  *   Andre Platzer
  * @see
- *   [[org.keymaerax.Bibliography.JarPlatzer17]]
+ *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
  * @see
  *   [[org.keymaerax.Bibliography.CadePlatzer15]]
  * @see
@@ -170,12 +170,14 @@ final case class Except(taboos: immutable.Seq[Variable]) extends Space {
  *   1. [[Function function symbols]] are degenerate expressions that are syntactically incomplete, since not yet
  *      applied to arguments via [[FuncOf]] to form a term or via [[PredOf]] or [[PredicationalOf]] to form a formula.
  *
- * See [[org.keymaerax.Bibliography.JarPlatzer17]] Section 2.1.
+ * See
+ * [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
+ * Section 2.1.
  *
  * @author
  *   Andre Platzer
  * @see
- *   [[org.keymaerax.Bibliography.JarPlatzer17]]
+ *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
  * @see
  *   [[org.keymaerax.Bibliography.CadePlatzer15]]
  * @see
@@ -637,7 +639,7 @@ final case class Power(left: Term, right: Term) extends RBinaryCompositeTerm {
  * `(child)'` differential of the term `child`.
  *
  * @see
- *   [[org.keymaerax.Bibliography.JarPlatzer17]]
+ *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
  */
 final case class Differential(child: Term) extends RUnaryCompositeTerm {
   override def reapply: Term => Differential = copy

@@ -34,7 +34,8 @@ final case class URenSubstitutionPair(what: Expression, repl: Expression) {
    * @return
    *   essentially freeVars(repl) except for special handling of UnitFunctional and UnitPredicational arguments.
    * @see
-   *   Definition 19 in [[org.keymaerax.Bibliography.JarPlatzer17]]
+   *   Definition 19 in
+   *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
    * @see
    *   [[SubstitutionPair.freeVars]]
    */

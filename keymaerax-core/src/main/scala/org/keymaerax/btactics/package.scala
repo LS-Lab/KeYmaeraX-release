@@ -290,7 +290,7 @@ package org.keymaerax
  * @todo
  *   Expand descriptions
  * @see
- *   [[org.keymaerax.Bibliography.JarPlatzer17]]
+ *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
  * @see
  *   [[org.keymaerax.btactics.TactixLibrary]]
  * @see

@@ -171,7 +171,8 @@ sealed trait ProvableSig {
    * @author
    *   Andre Platzer
    * @see
-   *   Theorem 26+27 in [[org.keymaerax.Bibliography.JarPlatzer17]]
+   *   Theorem 26+27 in
+   *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
    */
   def apply(subst: USubst): ProvableSig
 
