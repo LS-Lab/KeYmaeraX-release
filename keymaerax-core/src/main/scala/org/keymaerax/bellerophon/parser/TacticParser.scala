@@ -9,7 +9,7 @@
  * @author
  *   Andre Platzer
  * @see
- *   [[org.keymaerax.Bibliography.ItpFultonMBP17]]
+ *   [[org.keymaerax.Bibliography.ItpFultonMBP17 Bellerophon: Tactical theorem proving for hybrid systems]]
  */
 
 package org.keymaerax.bellerophon.parser
@@ -33,7 +33,7 @@ import fastparse.P
  * @author
  *   Andre Platzer
  * @see
- *   [[org.keymaerax.Bibliography.ItpFultonMBP17]]
+ *   [[org.keymaerax.Bibliography.ItpFultonMBP17 Bellerophon: Tactical theorem proving for hybrid systems]]
  */
 trait TacticParser extends (String => BelleExpr) {
 

@@ -78,7 +78,7 @@ object BelleExpr {
  * @todo
  *   Consolidate the members of BelleExpr and finalize an abstract syntax.
  * @see
- *   Table 1 of [[org.keymaerax.Bibliography.ItpFultonMBP17]]
+ *   Table 1 of [[org.keymaerax.Bibliography.ItpFultonMBP17 Bellerophon: Tactical theorem proving for hybrid systems]]
  * @author
  *   Nathan Fulton
  * @author

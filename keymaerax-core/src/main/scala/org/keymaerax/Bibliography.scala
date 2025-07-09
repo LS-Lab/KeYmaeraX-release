@@ -136,6 +136,8 @@ object Bibliography {
    * Mauricio Ayala-Rincón and César A. Muñoz, editors, Interactive Theorem Proving, International Conference, ITP 2017,
    * volume 10499 of LNCS, pp. 207-224. Springer, 2017.
    */
+  // @see
+  //   [[org.keymaerax.Bibliography.ItpFultonMBP17 Bellerophon: Tactical theorem proving for hybrid systems]]
   object ItpFultonMBP17
 
   /**

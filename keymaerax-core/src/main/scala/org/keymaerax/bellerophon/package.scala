@@ -73,7 +73,7 @@ package org.keymaerax
  * @author
  *   Andre Platzer
  * @see
- *   [[org.keymaerax.Bibliography.ItpFultonMBP17]]
+ *   [[org.keymaerax.Bibliography.ItpFultonMBP17 Bellerophon: Tactical theorem proving for hybrid systems]]
  * @see
  *   [[BelleExpr]]
  * @see
