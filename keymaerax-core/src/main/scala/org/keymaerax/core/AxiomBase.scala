@@ -17,7 +17,7 @@
  * @see
  *   [[org.keymaerax.Bibliography.LicsPlatzerT18 Differential equation axiomatization: The impressive power of differential ghosts]]
  * @see
- *   [[org.keymaerax.Bibliography.CadePlatzer18]]
+ *   [[org.keymaerax.Bibliography.CadePlatzer18 Uniform substitution for differential game logic]]
  * @see
  *   [[org.keymaerax.Bibliography.CadePlatzer15]]
  * @see
@@ -48,7 +48,7 @@ import org.keymaerax.parser.DLAxiomParser
  * @see
  *   [[org.keymaerax.Bibliography.LicsPlatzerT18 Differential equation axiomatization: The impressive power of differential ghosts]]
  * @see
- *   [[org.keymaerax.Bibliography.CadePlatzer18]]
+ *   [[org.keymaerax.Bibliography.CadePlatzer18 Uniform substitution for differential game logic]]
  * @see
  *   [[org.keymaerax.Bibliography.CadePlatzer15]]
  * @see
@@ -76,7 +76,7 @@ private[core] object AxiomBase extends Logging {
    * @see
    *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
    * @see
-   *   [[org.keymaerax.Bibliography.CadePlatzer18]]
+   *   [[org.keymaerax.Bibliography.CadePlatzer18 Uniform substitution for differential game logic]]
    * @see
    *   [[org.keymaerax.Bibliography.CadePlatzer15]]
    * @see
@@ -501,7 +501,7 @@ private[core] object AxiomBase extends Logging {
    * @see
    *   [[org.keymaerax.Bibliography.JacmPlatzerT20 Differential equation invariance axiomatization]]
    * @see
-   *   [[org.keymaerax.Bibliography.CadePlatzer18]]
+   *   [[org.keymaerax.Bibliography.CadePlatzer18 Uniform substitution for differential game logic]]
    * @see
    *   [[org.keymaerax.Bibliography.ToclPlatzer15]]
    */

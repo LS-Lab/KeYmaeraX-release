@@ -190,7 +190,7 @@ import scala.collection.immutable
  * @see
  *   [[org.keymaerax.Bibliography.CadePlatzer15]]
  * @see
- *   [[org.keymaerax.Bibliography.CadePlatzer18]]
+ *   [[org.keymaerax.Bibliography.CadePlatzer18 Uniform substitution for differential game logic]]
  * @see
  *   [[org.keymaerax.Bibliography.Platzer18 Logical Foundations of Cyber-Physical Systems]]
  * @see

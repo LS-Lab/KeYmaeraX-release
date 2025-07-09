@@ -167,6 +167,8 @@ object Bibliography {
    * In Didier Galmiche, Stephan Schulz and Roberto Sebastiani, editors, Automated Reasoning, 9th International Joint
    * Conference, IJCAR 2018, Oxford, UK, Proceedings, volume 10900 of LNCS, pp. 211-227. Springer 2018.
    */
+  // @see
+  //   [[org.keymaerax.Bibliography.CadePlatzer18 Uniform substitution for differential game logic]]
   object CadePlatzer18
 
   /**
