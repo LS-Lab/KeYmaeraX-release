@@ -419,7 +419,7 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
    *   Theorem 26+27 in
    *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
    * @see
-   *   [[org.keymaerax.Bibliography.CadePlatzer19]]
+   *   [[org.keymaerax.Bibliography.CadePlatzer19 Uniform substitution at one fell swoop]]
    * @since 4.7.5
    * @note
    *   soundness-critical: Semantic uniform renaming requires locally sound input provables. The kernel is easier when

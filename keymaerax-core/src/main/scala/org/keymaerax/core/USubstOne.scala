@@ -9,7 +9,7 @@
  * @author
  *   Andre Platzer
  * @see
- *   [[org.keymaerax.Bibliography.CadePlatzer19]]
+ *   [[org.keymaerax.Bibliography.CadePlatzer19 Uniform substitution at one fell swoop]]
  * @see
  *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
  * @note
@@ -40,7 +40,7 @@ import scala.collection.immutable
  *   Andre Platzer Created by aplatzer on 2019-2-12.
  * @since 4.7
  * @see
- *   [[org.keymaerax.Bibliography.CadePlatzer19]]
+ *   [[org.keymaerax.Bibliography.CadePlatzer19 Uniform substitution at one fell swoop]]
  * @see
  *   [[org.keymaerax.core.Provable.apply(subst:edu\.cmu\.cs\.ls\.keymaerax\.core\.USubstOne):edu\.cmu\.cs\.ls\.keymaerax\.core\.Provable*]]
  * @see
@@ -197,7 +197,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
   def ++(other: USubstOne): USubstOne = USubstOne((this.subsDefs ++ other.subsDefs).distinct)
 
   // implementation of uniform substitution application
-  // @see Figure 2 in [[org.keymaerax.Bibliography.Platzer19]]
+  // @see Figure 2 in [[org.keymaerax.Bibliography.Platzer19 Uniform substitution at one fell swoop]]
 
   /**
    * uniform substitution on terms.

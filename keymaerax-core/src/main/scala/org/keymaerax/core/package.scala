@@ -144,7 +144,7 @@ import scala.collection.immutable
  * formula in (.) and likewise for function symbols f(.) and program constants. Uniform substitutions and their
  * application mechanism for differential dynamic logic are implemented in [[org.keymaerax.core.USubst]]. See
  * [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
- * Section 3 and [[org.keymaerax.Bibliography.CadePlatzer19]] one-pass Section 3.
+ * Section 3 and [[org.keymaerax.Bibliography.CadePlatzer19 Uniform substitution at one fell swoop]] one-pass Section 3.
  *
  * [[org.keymaerax.core.USubst Uniform substitutions]] can be used on proof certificates with the
  * [[org.keymaerax.core.Provable.apply(subst:edu\.cmu\.cs\.ls\.keymaerax\.core\.USubst):edu\.cmu\.cs\.ls\.keymaerax\.core\.Provable*]],
@@ -184,7 +184,7 @@ import scala.collection.immutable
  * @see
  *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
  * @see
- *   [[org.keymaerax.Bibliography.CadePlatzer19]]
+ *   [[org.keymaerax.Bibliography.CadePlatzer19 Uniform substitution at one fell swoop]]
  * @see
  *   [[org.keymaerax.Bibliography.JacmPlatzerT20 Differential equation invariance axiomatization]]
  * @see

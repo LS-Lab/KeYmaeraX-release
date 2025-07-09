@@ -199,6 +199,8 @@ object Bibliography {
    * Fontaine, editor, International Conference on Automated Deduction, CADE-27, Natal, Brazil, Proceedings, volume
    * 11716 of LNCS, pp. 425-441. Springer, 2019.
    */
+  // @see
+  //   [[org.keymaerax.Bibliography.CadePlatzer19 Uniform substitution at one fell swoop]]
   object CadePlatzer19
 
   /**
