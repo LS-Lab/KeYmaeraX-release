@@ -30,7 +30,7 @@ case class ModelPlexConjecture(init: Formula, conjecture: Formula, constAssumpti
  * @author
  *   Andre Platzer
  * @see
- *   [[org.keymaerax.Bibliography.FmsdMitschP16]]
+ *   [[org.keymaerax.Bibliography.FmsdMitschP16 ModelPlex: Verified runtime validation of verified cyber-physical system models (FMSD)]]
  * @see
  *   [[org.keymaerax.Bibliography.RvMitschP14]]
  */
