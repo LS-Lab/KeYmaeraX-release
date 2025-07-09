@@ -944,7 +944,7 @@ object TactixLibrary {
    * }}}
    *
    * @see
-   *   [[org.keymaerax.Bibliography.JacmPlatzerT20]]
+   *   [[org.keymaerax.Bibliography.JacmPlatzerT20 Differential equation invariance axiomatization]]
    * @see
    *   [[org.keymaerax.Bibliography.LicsPlatzerT18]]
    * @see
@@ -969,7 +969,7 @@ object TactixLibrary {
    * }}}
    *
    * @see
-   *   [[org.keymaerax.Bibliography.JacmPlatzerT20]]
+   *   [[org.keymaerax.Bibliography.JacmPlatzerT20 Differential equation invariance axiomatization]]
    * @see
    *   [[org.keymaerax.Bibliography.LicsPlatzerT18]]
    * @see

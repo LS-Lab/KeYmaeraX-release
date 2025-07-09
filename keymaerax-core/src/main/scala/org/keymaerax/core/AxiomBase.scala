@@ -13,7 +13,7 @@
  * @see
  *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
  * @see
- *   [[org.keymaerax.Bibliography.JacmPlatzerT20]]
+ *   [[org.keymaerax.Bibliography.JacmPlatzerT20 Differential equation invariance axiomatization]]
  * @see
  *   [[org.keymaerax.Bibliography.LicsPlatzerT18]]
  * @see
@@ -44,7 +44,7 @@ import org.keymaerax.parser.DLAxiomParser
  * @see
  *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
  * @see
- *   [[org.keymaerax.Bibliography.JacmPlatzerT20]]
+ *   [[org.keymaerax.Bibliography.JacmPlatzerT20 Differential equation invariance axiomatization]]
  * @see
  *   [[org.keymaerax.Bibliography.LicsPlatzerT18]]
  * @see
@@ -499,7 +499,7 @@ private[core] object AxiomBase extends Logging {
    * @see
    *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
    * @see
-   *   [[org.keymaerax.Bibliography.JacmPlatzerT20]]
+   *   [[org.keymaerax.Bibliography.JacmPlatzerT20 Differential equation invariance axiomatization]]
    * @see
    *   [[org.keymaerax.Bibliography.CadePlatzer18]]
    * @see

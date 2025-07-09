@@ -5658,7 +5658,7 @@ object Ax extends Logging {
    *   For soundness, the cofactor g must not mention divisions that are not guarded by the ODE domain constraint (see
    *   DG).
    * @see
-   *   [[org.keymaerax.Bibliography.JacmPlatzerT20]]
+   *   [[org.keymaerax.Bibliography.JacmPlatzerT20 Differential equation invariance axiomatization]]
    * @see
    *   [[DBXgtOpen]]
    */
@@ -5769,7 +5769,7 @@ object Ax extends Logging {
    *   For soundness, the cofactor g must not mention divisions that are not guarded by the ODE domain constraint (see
    *   DG)
    * @see
-   *   [[org.keymaerax.Bibliography.JacmPlatzerT20]]
+   *   [[org.keymaerax.Bibliography.JacmPlatzerT20 Differential equation invariance axiomatization]]
    * @see
    *   [[DBXgt]]
    */
@@ -5884,7 +5884,7 @@ object Ax extends Logging {
    *   For soundness, the cofactor g must not mention divisions that are not guarded by the ODE domain constraint (see
    *   DG)
    * @see
-   *   [[org.keymaerax.Bibliography.JacmPlatzerT20]]
+   *   [[org.keymaerax.Bibliography.JacmPlatzerT20 Differential equation invariance axiomatization]]
    * @see
    *   [[DBXgt]]
    */
@@ -5994,7 +5994,7 @@ object Ax extends Logging {
    *   For soundness, the cofactor g must not mention divisions that are not guarded by the ODE domain constraint (see
    *   DG)
    * @see
-   *   [[org.keymaerax.Bibliography.JacmPlatzerT20]]
+   *   [[org.keymaerax.Bibliography.JacmPlatzerT20 Differential equation invariance axiomatization]]
    * @see
    *   [[DBXge]]
    */
@@ -6047,7 +6047,7 @@ object Ax extends Logging {
    *   For soundness, the cofactor g must not mention divisions that are not guarded by the ODE domain constraint (see
    *   DG)
    * @see
-   *   [[org.keymaerax.Bibliography.JacmPlatzerT20]]
+   *   [[org.keymaerax.Bibliography.JacmPlatzerT20 Differential equation invariance axiomatization]]
    * @see
    *   [[DBXgt]]
    */
@@ -6094,7 +6094,7 @@ object Ax extends Logging {
    *   For soundness, the cofactor g must not mention divisions that are not guarded by the ODE domain constraint (see
    *   DG)
    * @see
-   *   [[org.keymaerax.Bibliography.JacmPlatzerT20]]
+   *   [[org.keymaerax.Bibliography.JacmPlatzerT20 Differential equation invariance axiomatization]]
    * @see
    *   [[DBXgt]]
    */
@@ -6142,7 +6142,7 @@ object Ax extends Logging {
    *   For soundness, the cofactor g must not mention divisions that are not guarded by the ODE domain constraint (see
    *   DG)
    * @see
-   *   [[org.keymaerax.Bibliography.JacmPlatzerT20]]
+   *   [[org.keymaerax.Bibliography.JacmPlatzerT20 Differential equation invariance axiomatization]]
    * @see
    *   [[DBXgt]]
    */

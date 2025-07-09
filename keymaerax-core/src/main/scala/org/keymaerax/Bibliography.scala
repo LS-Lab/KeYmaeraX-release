@@ -203,5 +203,7 @@ object Bibliography {
    * André Platzer and Yong Kiam Tan.
    * [[https://doi.org/10.1145/3380825 Differential equation invariance axiomatization]]. J. ACM 67(1), 6:1-6:66, 2020.
    */
+  // @see
+  //   [[org.keymaerax.Bibliography.JacmPlatzerT20 Differential equation invariance axiomatization]]
   object JacmPlatzerT20
 }

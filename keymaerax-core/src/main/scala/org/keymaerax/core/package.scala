@@ -186,7 +186,7 @@ import scala.collection.immutable
  * @see
  *   [[org.keymaerax.Bibliography.CadePlatzer19]]
  * @see
- *   [[org.keymaerax.Bibliography.JacmPlatzerT20]]
+ *   [[org.keymaerax.Bibliography.JacmPlatzerT20 Differential equation invariance axiomatization]]
  * @see
  *   [[org.keymaerax.Bibliography.CadePlatzer15]]
  * @see

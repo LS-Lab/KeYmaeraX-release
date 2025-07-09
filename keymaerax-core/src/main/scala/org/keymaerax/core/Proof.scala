@@ -15,7 +15,7 @@
  * @author
  *   nfulton
  * @see
- *   [[org.keymaerax.Bibliography.JacmPlatzerT20]]
+ *   [[org.keymaerax.Bibliography.JacmPlatzerT20 Differential equation invariance axiomatization]]
  * @see
  *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
  * @see
