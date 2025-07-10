@@ -66,6 +66,8 @@ object Bibliography {
    * In Lennart Beringer and Amy Felty, editors, Interactive Theorem Proving, International Conference, ITP 2012, August
    * 13-15, Princeton, USA, Proceedings, volume 7406 of LNCS, pp. 28-48. Springer, 2012.
    */
+  // @see
+  //   [[org.keymaerax.Bibliography.ItpPlatzer12 A differential operator approach to equational differential invariants]]
   object ItpPlatzer12
 
   /**

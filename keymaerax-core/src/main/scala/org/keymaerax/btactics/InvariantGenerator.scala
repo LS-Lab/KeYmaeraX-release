@@ -161,7 +161,7 @@ class ConfigurableGenerator(var products: Map[Expression, Seq[Invariant]] = Map[
  * @see
  *   [[TactixLibrary.invSupplier]]
  * @see
- *   [[org.keymaerax.Bibliography.ItpPlatzer12]]
+ *   [[org.keymaerax.Bibliography.ItpPlatzer12 A differential operator approach to equational differential invariants]]
  * @see
  *   [[org.keymaerax.Bibliography.FmsdPlatzerC09]]
  */
@@ -431,7 +431,7 @@ object InvariantGenerator extends Logging {
    * Inverse Characteristic Method differential invariant generator.
    *
    * @see
-   *   [[org.keymaerax.Bibliography.ItpPlatzer12]]
+   *   [[org.keymaerax.Bibliography.ItpPlatzer12 A differential operator approach to equational differential invariants]]
    */
   @nowarn("msg=match may not be exhaustive")
   val inverseCharacteristicDifferentialInvariantGenerator: InvariantGenerator = (sequent, pos, defs) => {
