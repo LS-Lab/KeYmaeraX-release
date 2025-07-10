@@ -58,6 +58,8 @@ object Bibliography {
    * [[https://doi.org/10.1007/978-3-642-14509-4 Logical Analysis of Hybrid Systems: Proving Theorems for Complex Dynamics]].
    * Springer, Heidelberg, 2010. 426 pages. ISBN 978-3-642-14508-7.
    */
+  // @see
+  //   [[org.keymaerax.Bibliography.Platzer10 Logical Analysis of Hybrid Systems: Proving Theorems for Complex Dynamics]]
   object Platzer10
 
   /**
