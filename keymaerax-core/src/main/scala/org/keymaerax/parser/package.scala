@@ -190,7 +190,7 @@ import org.keymaerax.core.CoreException
  * @see
  *   [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
  * @see
- *   [[org.keymaerax.Bibliography.ToclPlatzer15]]
+ *   [[org.keymaerax.Bibliography.ToclPlatzer15 Differential game logic]]
  * @see
  *   [[org.keymaerax.Bibliography.CadeFultonMQVP15 KeYmaera X: An aXiomatic tactical theorem prover for hybrid systems]]
  * @see

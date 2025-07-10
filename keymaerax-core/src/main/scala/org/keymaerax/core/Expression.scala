@@ -13,7 +13,7 @@
  * @see
  *   [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
  * @see
- *   [[org.keymaerax.Bibliography.ToclPlatzer15]]
+ *   [[org.keymaerax.Bibliography.ToclPlatzer15 Differential game logic]]
  * @see
  *   [[org.keymaerax.Bibliography.LicsPlatzer12b]]
  * @note

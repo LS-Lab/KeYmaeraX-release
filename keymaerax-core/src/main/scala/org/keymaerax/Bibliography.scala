@@ -116,6 +116,8 @@ object Bibliography {
    * André Platzer. [[https://doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), pp.
    * 1:1-1:52, 2015.
    */
+  // @see
+  //   [[org.keymaerax.Bibliography.ToclPlatzer15 Differential game logic]]
   object ToclPlatzer15
 
   /**

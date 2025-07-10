@@ -21,7 +21,7 @@
  * @see
  *   [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
  * @see
- *   [[org.keymaerax.Bibliography.ToclPlatzer15]]
+ *   [[org.keymaerax.Bibliography.ToclPlatzer15 Differential game logic]]
  * @see
  *   [[org.keymaerax.Bibliography.LicsPlatzer12b]]
  * @note
@@ -52,7 +52,7 @@ import org.keymaerax.parser.DLAxiomParser
  * @see
  *   [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
  * @see
- *   [[org.keymaerax.Bibliography.ToclPlatzer15]]
+ *   [[org.keymaerax.Bibliography.ToclPlatzer15 Differential game logic]]
  * @see
  *   [[org.keymaerax.Bibliography.LicsPlatzer12b]]
  * @author
@@ -80,7 +80,7 @@ private[core] object AxiomBase extends Logging {
    * @see
    *   [[org.keymaerax.Bibliography.CadePlatzer15 A uniform substitution calculus for differential dynamic logic]]
    * @see
-   *   [[org.keymaerax.Bibliography.ToclPlatzer15]]
+   *   [[org.keymaerax.Bibliography.ToclPlatzer15 Differential game logic]]
    * @see
    *   [[org.keymaerax.Bibliography.LicsPlatzer12b]]
    * @author
@@ -157,7 +157,7 @@ private[core] object AxiomBase extends Logging {
        * End.
        * }}}
        * @see
-       *   [[org.keymaerax.Bibliography.ToclPlatzer15]]
+       *   [[org.keymaerax.Bibliography.ToclPlatzer15 Differential game logic]]
        */
       (
         "<> monotone",
@@ -177,7 +177,7 @@ private[core] object AxiomBase extends Logging {
 //        * }}}
 //        * Interderives with FP fixpoint rule.
 //        * FP is used as basis, because deriving FP from ind leads to a duplicate premise, needing list to set contraction.
-//        * @see Lemma 4.1 in [[org.keymaerax.Bibliography.ToclPlatzer15]]
+//        * @see Lemma 4.1 in [[org.keymaerax.Bibliography.ToclPlatzer15 Differential game logic]]
 //        * @see Lemma 7.2 and Corollary 16.1 in [[org.keymaerax.Bibliography.Platzer18 Logical Foundations of Cyber-Physical Systems]]
 //        */
 //      ("ind induction",
@@ -198,7 +198,7 @@ private[core] object AxiomBase extends Logging {
        * induction rule. FP is used as basis, because deriving FP from ind leads to a duplicate premise, needing list to
        * set contraction.
        * @see
-       *   [[org.keymaerax.Bibliography.ToclPlatzer15]]
+       *   [[org.keymaerax.Bibliography.ToclPlatzer15 Differential game logic]]
        * @see
        *   Lemma 16.11 and Corollary 16.1 in
        *   [[org.keymaerax.Bibliography.Platzer18 Logical Foundations of Cyber-Physical Systems]]
@@ -503,7 +503,7 @@ private[core] object AxiomBase extends Logging {
    * @see
    *   [[org.keymaerax.Bibliography.CadePlatzer18 Uniform substitution for differential game logic]]
    * @see
-   *   [[org.keymaerax.Bibliography.ToclPlatzer15]]
+   *   [[org.keymaerax.Bibliography.ToclPlatzer15 Differential game logic]]
    */
   private[this] def loadAxiomString(): String = """
 Axiom "<> diamond"

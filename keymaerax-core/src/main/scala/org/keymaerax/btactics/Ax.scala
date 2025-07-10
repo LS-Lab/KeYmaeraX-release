@@ -1157,7 +1157,7 @@ object Ax extends Logging {
    * Interderives with FP fixpoint rule.
    *
    * @see
-   *   Lemma 4.1 in [[org.keymaerax.Bibliography.ToclPlatzer15]]
+   *   Lemma 4.1 in [[org.keymaerax.Bibliography.ToclPlatzer15 Differential game logic]]
    * @see
    *   Lemma 7.2 and Corollary 16.1 in
    *   [[org.keymaerax.Bibliography.Platzer18 Logical Foundations of Cyber-Physical Systems]]
@@ -1199,7 +1199,7 @@ object Ax extends Logging {
    * premise, needing list to set contraction.
    *
    * @see
-   *   Lemma 4.1 in [[org.keymaerax.Bibliography.ToclPlatzer15]]
+   *   Lemma 4.1 in [[org.keymaerax.Bibliography.ToclPlatzer15 Differential game logic]]
    * @see
    *   Lemma 16.11 and Corollary 16.1 in
    *   [[org.keymaerax.Bibliography.Platzer18 Logical Foundations of Cyber-Physical Systems]]
@@ -1589,7 +1589,7 @@ object Ax extends Logging {
    * @derived
    *   useAt(diamond) & by("<> monotone")
    * @see
-   *   [[org.keymaerax.Bibliography.ToclPlatzer15]]
+   *   [[org.keymaerax.Bibliography.ToclPlatzer15 Differential game logic]]
    * @see
    *   [[org.keymaerax.Bibliography.ToclPlatzer17]]
    * @note
@@ -1630,7 +1630,7 @@ object Ax extends Logging {
    * @derived
    *   useAt(boxMonotone) with p and q swapped
    * @see
-   *   [[org.keymaerax.Bibliography.ToclPlatzer15]]
+   *   [[org.keymaerax.Bibliography.ToclPlatzer15 Differential game logic]]
    * @see
    *   [[org.keymaerax.Bibliography.ToclPlatzer17]]
    * @note

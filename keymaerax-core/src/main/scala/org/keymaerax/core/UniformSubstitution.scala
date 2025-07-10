@@ -17,7 +17,7 @@
  * @see
  *   [[org.keymaerax.Bibliography.CadePlatzer18 Uniform substitution for differential game logic]]
  * @see
- *   [[org.keymaerax.Bibliography.ToclPlatzer15]]
+ *   [[org.keymaerax.Bibliography.ToclPlatzer15 Differential game logic]]
  * @note
  *   Code Review: 2020-02-17
  */

@@ -17,7 +17,7 @@
  * @see
  *   [[org.keymaerax.Bibliography.CadePlatzer18 Uniform substitution for differential game logic]]
  * @see
- *   [[org.keymaerax.Bibliography.ToclPlatzer15]]
+ *   [[org.keymaerax.Bibliography.ToclPlatzer15 Differential game logic]]
  * @note
  *   Code Review: 2020-02-17
  */
@@ -55,7 +55,7 @@ import scala.collection.immutable
  * @see
  *   [[org.keymaerax.Bibliography.CadePlatzer18 Uniform substitution for differential game logic]]
  * @see
- *   [[org.keymaerax.Bibliography.ToclPlatzer15]]
+ *   [[org.keymaerax.Bibliography.ToclPlatzer15 Differential game logic]]
  * @see
  *   [[org.keymaerax.core.Provable.apply(subst:edu\.cmu\.cs\.ls\.keymaerax\.core\.USubstChurch):edu\.cmu\.cs\.ls\.keymaerax\.core\.Provable*]]
  * @see

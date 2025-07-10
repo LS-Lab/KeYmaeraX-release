@@ -10,7 +10,7 @@
  * @see
  *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
  * @see
- *   [[org.keymaerax.Bibliography.ToclPlatzer15]]
+ *   [[org.keymaerax.Bibliography.ToclPlatzer15 Differential game logic]]
  * @see
  *   [[org.keymaerax.Bibliography.LicsPlatzer12b]]
  * @note
