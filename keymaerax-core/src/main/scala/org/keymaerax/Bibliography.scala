@@ -30,9 +30,11 @@ object Bibliography {
 
   /**
    * André Platzer, Jan-David Quesel and Philipp Rümmer.
-   * [[https://logic.kastel.kit.edu/ap/pub/rwv-TR.pdf Real World Verification]]. Reports of SFB/TR 14 AVACS 52, 2009.
-   * ISSN: 1860-9821, www.avacs.org.
+   * [[https://logic.kastel.kit.edu/ap/pub/rwv-TR.pdf Real World Verification (Technical Report)]]. Reports of SFB/TR 14
+   * AVACS 52, 2009. ISSN: 1860-9821, www.avacs.org.
    */
+  // @see
+  //  [[org.keymaerax.Bibliography.CadePlatzerQR09Tr Real World Verification (Technical Report)]]
   object CadePlatzerQR09Tr
 
   /**
