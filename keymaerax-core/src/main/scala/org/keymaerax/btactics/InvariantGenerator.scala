@@ -163,7 +163,7 @@ class ConfigurableGenerator(var products: Map[Expression, Seq[Invariant]] = Map[
  * @see
  *   [[org.keymaerax.Bibliography.ItpPlatzer12 A differential operator approach to equational differential invariants]]
  * @see
- *   [[org.keymaerax.Bibliography.FmsdPlatzerC09]]
+ *   [[org.keymaerax.Bibliography.FmsdPlatzerC09 Computing differential invariants of hybrid systems as fixedpoints]]
  */
 object InvariantGenerator extends Logging {
 
