@@ -28,7 +28,7 @@ import scala.annotation.nowarn
  * Tactic to prove system safety from isolated component and compatibility proofs.
  *
  * @see
- *   [[org.keymaerax.Bibliography.StttMullerMRSP18]]
+ *   [[org.keymaerax.Bibliography.StttMullerMRSP18 Tactical contract composition for hybrid system component verification]]
  * @author
  *   Stefan Mitsch
  */

@@ -214,6 +214,8 @@ object Bibliography {
    * [[https://doi.org/10.1007/s10009-018-0502-9 Tactical contract composition for hybrid system component verification]].
    * STTT 20(6), pp. 615-643, 2018.
    */
+  // @see
+  //   [[org.keymaerax.Bibliography.StttMullerMRSP18 Tactical contract composition for hybrid system component verification]]
   object StttMullerMRSP18
 
   /**
