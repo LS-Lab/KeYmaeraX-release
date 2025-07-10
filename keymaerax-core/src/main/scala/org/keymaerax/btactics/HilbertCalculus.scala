@@ -46,7 +46,7 @@ import scala.collection.mutable.ListBuffer
  * @see
  *   [[org.keymaerax.Bibliography.ToclPlatzer15 Differential game logic]]
  * @see
- *   [[org.keymaerax.Bibliography.LicsPlatzer12a]]
+ *   [[org.keymaerax.Bibliography.LicsPlatzer12a Logics of dynamical systems]]
  * @see
  *   [[org.keymaerax.Bibliography.LicsPlatzer12b]]
  * @see

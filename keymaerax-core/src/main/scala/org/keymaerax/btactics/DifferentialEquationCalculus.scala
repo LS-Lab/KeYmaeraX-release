@@ -44,7 +44,7 @@ import scala.collection.immutable.*
  * @see
  *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
  * @see
- *   [[org.keymaerax.Bibliography.LicsPlatzer12a]]
+ *   [[org.keymaerax.Bibliography.LicsPlatzer12a Logics of dynamical systems]]
  * @see
  *   [[org.keymaerax.Bibliography.LicsPlatzer12b]]
  * @see
