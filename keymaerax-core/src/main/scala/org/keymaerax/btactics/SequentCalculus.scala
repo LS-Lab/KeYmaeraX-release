@@ -42,7 +42,7 @@ import scala.annotation.nowarn
  * @author
  *   Stefan Mitsch
  * @see
- *   [[org.keymaerax.Bibliography.JarPlatzer08]]
+ *   [[org.keymaerax.Bibliography.JarPlatzer08 Differential dynamic logic for hybrid systems]]
  * @see
  *   [[org.keymaerax.Bibliography.Platzer18 Logical Foundations of Cyber-Physical Systems]]
  * @see

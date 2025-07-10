@@ -202,7 +202,7 @@ import scala.collection.immutable
  * @see
  *   [[org.keymaerax.Bibliography.LicsPlatzer12b The complete proof theory of hybrid systems]]
  * @see
- *   [[org.keymaerax.Bibliography.JarPlatzer08]]
+ *   [[org.keymaerax.Bibliography.JarPlatzer08 Differential dynamic logic for hybrid systems]]
  * @see
  *   [[org.keymaerax.core.Provable]]
  * @see

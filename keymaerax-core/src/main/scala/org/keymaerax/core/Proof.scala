@@ -25,7 +25,7 @@
  * @see
  *   [[org.keymaerax.Bibliography.LicsPlatzer12b The complete proof theory of hybrid systems]]
  * @see
- *   [[org.keymaerax.Bibliography.JarPlatzer08]]
+ *   [[org.keymaerax.Bibliography.JarPlatzer08 Differential dynamic logic for hybrid systems]]
  * @note
  *   Code Review: 2020-02-17
  */

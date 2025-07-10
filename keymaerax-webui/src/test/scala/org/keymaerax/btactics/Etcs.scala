@@ -24,7 +24,7 @@ import scala.language.postfixOps
  * @see
  *   [[org.keymaerax.Bibliography.IcfemPlatzerQ09Tr]]
  * @see
- *   [[org.keymaerax.Bibliography.JarPlatzer08]]
+ *   [[org.keymaerax.Bibliography.JarPlatzer08 Differential dynamic logic for hybrid systems]]
  * @author
  *   Stefan Mitsch
  */

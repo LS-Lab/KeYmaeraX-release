@@ -16,6 +16,8 @@ object Bibliography {
    * André Platzer. [[https://doi.org/10.1007/s10817-008-9103-8 Differential dynamic logic for hybrid systems]]. Journal
    * of Automated Reasoning 41(2), pp. 143-189, 2008.
    */
+  // @see
+  //  [[org.keymaerax.Bibliography.JarPlatzer08 Differential dynamic logic for hybrid systems]]
   object JarPlatzer08
 
   /**

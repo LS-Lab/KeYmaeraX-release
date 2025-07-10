@@ -3036,7 +3036,7 @@ object UnifyUSCalculus {
    * }}}
    *
    * @see
-   *   Lemma 7 in [[org.keymaerax.Bibliography.JarPlatzer08]]
+   *   Lemma 7 in [[org.keymaerax.Bibliography.JarPlatzer08 Differential dynamic logic for hybrid systems]]
    */
   private def inverseImplyR: ForwardTactic = pr => {
     val pos = SuccPos(0)
