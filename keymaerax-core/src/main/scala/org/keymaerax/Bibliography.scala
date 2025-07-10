@@ -108,6 +108,8 @@ object Bibliography {
    * In Markus Müller-Olm and Helmut Seidl, editors, 21st International Static Analysis Symposium, SAS 2014, volume 8723
    * of LNCS, pp. 151-167. Springer, 2014.
    */
+  // @see
+  //   [[org.keymaerax.Bibliography.SasGhorbalSP14 Invariance of conjunctions of polynomial equalities for algebraic differential equations]]
   object SasGhorbalSP14
 
   /**
