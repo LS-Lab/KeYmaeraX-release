@@ -2241,7 +2241,7 @@ object ODEInvariance {
    * }}}
    *
    * @see
-   *   [[org.keymaerax.Bibliography.VmcaiSogokonGJP16]]
+   *   [[org.keymaerax.Bibliography.VmcaiSogokonGJP16 A method for invariant generation for polynomial continuous systems]]
    * @param p
    *   the DDC polynomial
    * @return

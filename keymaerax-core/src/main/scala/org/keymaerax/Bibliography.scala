@@ -156,6 +156,8 @@ object Bibliography {
    * 17th International Conference, VMCAI 2016, St. Petersburg, Florida, USA, January 17-19, 2016, Proceedings, volume
    * 9583 of LNCS, pp. 268-288. Springer, 2016.
    */
+  // @see
+  //   [[org.keymaerax.Bibliography.VmcaiSogokonGJP16 A method for invariant generation for polynomial continuous systems]]
   object VmcaiSogokonGJP16
 
   /**
