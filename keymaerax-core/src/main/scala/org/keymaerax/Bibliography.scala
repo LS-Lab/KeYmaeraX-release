@@ -26,6 +26,8 @@ object Bibliography {
    * International Conference on Automated Deduction, CADE-22, Montreal, Canada, Proceedings, volume 5663 of LNCS, pp.
    * 485-501. Springer, 2009.
    */
+  // @see
+  //   [[org.keymaerax.Bibliography.CadePlatzerQR09 Real world verification]]
   object CadePlatzerQR09
 
   /**

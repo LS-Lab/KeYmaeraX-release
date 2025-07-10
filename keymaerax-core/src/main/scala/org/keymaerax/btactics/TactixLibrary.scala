@@ -1939,7 +1939,7 @@ object TactixLibrary {
    * G_FOLR, p=0 |- q<=0, r<0, D_FOLR
    * }}}
    * @see
-   *   [[org.keymaerax.Bibliography.CadePlatzerQR09]]
+   *   [[org.keymaerax.Bibliography.CadePlatzerQR09 Real world verification]]
    * @see
    *   [[QE]]
    * @example
