@@ -28,7 +28,7 @@ import org.keymaerax.infrastruct.Position
  * @see
  *   [[org.keymaerax.Bibliography.LicsPlatzer12a Logics of dynamical systems]]
  * @see
- *   [[org.keymaerax.Bibliography.LicsPlatzer12b]]
+ *   [[org.keymaerax.Bibliography.LicsPlatzer12b The complete proof theory of hybrid systems]]
  * @see
  *   [[org.keymaerax.core.AxiomBase]]
  * @see

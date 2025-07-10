@@ -13,7 +13,7 @@
  * @see
  *   [[org.keymaerax.Bibliography.ToclPlatzer15 Differential game logic]]
  * @see
- *   [[org.keymaerax.Bibliography.LicsPlatzer12b]]
+ *   [[org.keymaerax.Bibliography.LicsPlatzer12b The complete proof theory of hybrid systems]]
  * @note
  *   Code Review: 2020-02-17
  */
@@ -200,7 +200,7 @@ import scala.collection.immutable
  * @see
  *   [[org.keymaerax.Bibliography.LicsPlatzer12a Logics of dynamical systems]]
  * @see
- *   [[org.keymaerax.Bibliography.LicsPlatzer12b]]
+ *   [[org.keymaerax.Bibliography.LicsPlatzer12b The complete proof theory of hybrid systems]]
  * @see
  *   [[org.keymaerax.Bibliography.JarPlatzer08]]
  * @see

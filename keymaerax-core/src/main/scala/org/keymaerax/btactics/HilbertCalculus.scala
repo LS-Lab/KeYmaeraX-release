@@ -48,7 +48,7 @@ import scala.collection.mutable.ListBuffer
  * @see
  *   [[org.keymaerax.Bibliography.LicsPlatzer12a Logics of dynamical systems]]
  * @see
- *   [[org.keymaerax.Bibliography.LicsPlatzer12b]]
+ *   [[org.keymaerax.Bibliography.LicsPlatzer12b The complete proof theory of hybrid systems]]
  * @see
  *   [[HilbertCalculus.stepAt]]
  * @see

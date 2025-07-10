@@ -23,7 +23,7 @@
  * @see
  *   [[org.keymaerax.Bibliography.ToclPlatzer15 Differential game logic]]
  * @see
- *   [[org.keymaerax.Bibliography.LicsPlatzer12b]]
+ *   [[org.keymaerax.Bibliography.LicsPlatzer12b The complete proof theory of hybrid systems]]
  * @note
  *   Code Review: 2020-02-17
  */
@@ -54,7 +54,7 @@ import org.keymaerax.parser.DLAxiomParser
  * @see
  *   [[org.keymaerax.Bibliography.ToclPlatzer15 Differential game logic]]
  * @see
- *   [[org.keymaerax.Bibliography.LicsPlatzer12b]]
+ *   [[org.keymaerax.Bibliography.LicsPlatzer12b The complete proof theory of hybrid systems]]
  * @author
  *   Andre Platzer
  * @author
@@ -82,7 +82,7 @@ private[core] object AxiomBase extends Logging {
    * @see
    *   [[org.keymaerax.Bibliography.ToclPlatzer15 Differential game logic]]
    * @see
-   *   [[org.keymaerax.Bibliography.LicsPlatzer12b]]
+   *   [[org.keymaerax.Bibliography.LicsPlatzer12b The complete proof theory of hybrid systems]]
    * @author
    *   Andre Platzer
    */
@@ -222,7 +222,7 @@ private[core] object AxiomBase extends Logging {
        *     \exists x J(x) |- <a{|x|}*>\exists x (x<=0 & J(x))
        * }}}
        * @see
-       *   [[org.keymaerax.Bibliography.LicsPlatzer12b]]
+       *   [[org.keymaerax.Bibliography.LicsPlatzer12b The complete proof theory of hybrid systems]]
        * @see
        *   Section 17.4 in [[org.keymaerax.Bibliography.Platzer18 Logical Foundations of Cyber-Physical Systems]]
        */
