@@ -170,6 +170,8 @@ object Bibliography {
    * André Platzer. [[https://doi.org/10.1145/3091123 Differential hybrid games]]. ACM Trans. Comput. Log. 18(3), pp.
    * 19:1-19:44, 2017.
    */
+  // @see
+  //   [[org.keymaerax.Bibliography.ToclPlatzer17 Differential hybrid games]]
   object ToclPlatzer17
 
   /**

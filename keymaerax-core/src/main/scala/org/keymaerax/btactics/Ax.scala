@@ -1591,7 +1591,7 @@ object Ax extends Logging {
    * @see
    *   [[org.keymaerax.Bibliography.ToclPlatzer15 Differential game logic]]
    * @see
-   *   [[org.keymaerax.Bibliography.ToclPlatzer17]]
+   *   [[org.keymaerax.Bibliography.ToclPlatzer17 Differential hybrid games]]
    * @note
    *   Notation changed to p instead of p_ just for the sake of the derivation.
    */
@@ -1632,7 +1632,7 @@ object Ax extends Logging {
    * @see
    *   [[org.keymaerax.Bibliography.ToclPlatzer15 Differential game logic]]
    * @see
-   *   [[org.keymaerax.Bibliography.ToclPlatzer17]]
+   *   [[org.keymaerax.Bibliography.ToclPlatzer17 Differential hybrid games]]
    * @note
    *   Renamed form of boxMonotone.
    */
