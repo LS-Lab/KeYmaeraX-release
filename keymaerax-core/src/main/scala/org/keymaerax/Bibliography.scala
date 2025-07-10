@@ -49,6 +49,8 @@ object Bibliography {
    * [[https://logic.kastel.kit.edu/ap/pub/ETCS-TR.pdf European Train Control System: A Case Study in Formal Verification]].
    * Reports of SFB/TR 14 AVACS 54, 2009. ISSN: 1860-9821, www.avacs.org.
    */
+  // @see
+  //   [[org.keymaerax.Bibliography.IcfemPlatzerQ09Tr European Train Control System: A Case Study in Formal Verification]]
   object IcfemPlatzerQ09Tr
 
   /**

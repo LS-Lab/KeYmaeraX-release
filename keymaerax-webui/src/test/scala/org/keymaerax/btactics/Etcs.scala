@@ -22,7 +22,7 @@ import scala.language.postfixOps
  * ETCS test cases. Essentials of European Train Control System (ETCS).
  *
  * @see
- *   [[org.keymaerax.Bibliography.IcfemPlatzerQ09Tr]]
+ *   [[org.keymaerax.Bibliography.IcfemPlatzerQ09Tr European Train Control System: A Case Study in Formal Verification]]
  * @see
  *   [[org.keymaerax.Bibliography.JarPlatzer08 Differential dynamic logic for hybrid systems]]
  * @author
