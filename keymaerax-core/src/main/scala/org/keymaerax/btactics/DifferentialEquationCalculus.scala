@@ -6,6 +6,7 @@
 package org.keymaerax.btactics
 
 import org.keymaerax.bellerophon.*
+import org.keymaerax.btactics.TaylorModelTactics.*
 import org.keymaerax.btactics.TacticFactory.*
 import org.keymaerax.btactics.macros.{
   DisplayLevel,
@@ -24,7 +25,8 @@ import org.keymaerax.btactics.macros.{
 }
 import org.keymaerax.core.*
 import org.keymaerax.core.btactics.annotations.Derivation
-import org.keymaerax.infrastruct.Position
+import org.keymaerax.infrastruct.{AntePosition, Position}
+import org.keymaerax.tools.ext.BigDecimalTool
 
 import scala.collection.immutable.*
 
@@ -474,4 +476,49 @@ object DifferentialEquationCalculus {
   def dR(formula: Formula, hide: Boolean = true): DependentPositionTactic =
     DifferentialTactics.diffRefine(formula, hide)
 
+  /**
+   * Performs a differential cut with a Taylor model of the given order and precision. The assumptions must be listed in
+   * the first antecedent position, and of the form `t=0 & x1 = a*r0() + 0*r1() + ... + c1 & x2 = 0*r() + b*r1() + ... +
+   * c2 & x3 = ...` where the `ri()` are ranges in `[-1, 1]` and `a`, `b`, and `ci` are constants.
+   *
+   * The differential equation must include a time variable `t'=1` with evolution domain constraint `0 <= t & t <= 0 +
+   * T` for some literal duration `T`.
+   *
+   * @example
+   *   {{{
+   *   (t = 0
+   *    & x = 0.01*r0() + 0*r1() + 0.5  /*  0.49 <= x <= 0.51 */
+   *    & y = 0*r0() + 0.01*r1() + 0).  /* -0.01 <= y <= 0.01 */
+   *    & (-1 <= r0() & r0() <= 1)
+   *    & (-1 <= r1() & r1() <= 1)
+   *   |-
+   *   [{x' = y, y' = x, t' = 1 & 0 <= t & t <= 0+0.5}](x^2 + y^2 <= 1.1)
+   *   }}}
+   *
+   * @param order
+   *   Order of the Taylor model to use, e.g. 2 for a second-order Taylor model.
+   * @param prec
+   *   Precision of the Taylor model, e.g. 10 for a precision of 10 decimal places.
+   */
+  def cutTaylorModel(order: Number, prec: Number): DependentPositionWithAppliedInputTactic =
+    inputanon { (pos: Position, seq: Sequent) =>
+      seq(pos.checkTop) match {
+        case Box(ODESystem(ode, _), _) =>
+          val tm = TaylorModelTactics.TaylorModel(ode, order.value.toIntExact)
+          // feature request: transform assumptions into the expected shape
+          tm.cutTM(prec.value.toIntExact, AntePosition(1), new BigDecimalTool())(pos)
+        // tm.cutTM(prec.value.toIntExact, AntePosition(1), ToolProvider.qeTool().getOrElse(new BigDecimalTool()))(pos)
+        case e =>
+          throw new IllegalArgumentException("Expected a differential program x′=f(x), but got " + e.prettyString)
+      }
+    }
+
+  @Derivation
+  val cutTaylorModelInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
+    name = "cutTM",
+    displayNameLong = Some("Cut Taylor Model"),
+    displayPremises = "Γ |- Taylor(order,prec)(x'=f(x) & 0<=t<=0+T)",
+    displayConclusion = "Γ |- x'=f(x) & 0<=t<=0+T",
+    constructor = TacticConstructor2.create(TermArg("order"), TermArg("prec"))(cutTaylorModel),
+  )
 }
