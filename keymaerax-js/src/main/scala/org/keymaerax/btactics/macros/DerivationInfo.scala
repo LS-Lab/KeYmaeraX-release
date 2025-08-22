@@ -205,6 +205,7 @@ object DerivationInfo {
     case "allInstPrime" => DerivationInfo("allInstPrime", List(), 1)
     case "barrier" => DerivationInfo("barrier", List(), 1)
     case "print" => DerivationInfo("print", List(StringArg("msg", List())), 0)
+    case "printCex" => DerivationInfo("printCex", List(), 0)
     case "coefficientPlusPrv" => DerivationInfo("coefficientPlusPrv", List(), 1)
     case "alphaRenAll" => DerivationInfo("alphaRenAll", List(VariableArg("x", List()),VariableArg("y", List("y"))), 0)
     case "assignDual" => DerivationInfo("assignDual", List(), 1)

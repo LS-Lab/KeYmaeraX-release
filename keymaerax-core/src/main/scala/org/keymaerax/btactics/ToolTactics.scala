@@ -14,7 +14,15 @@ import org.keymaerax.btactics.SequentCalculus.*
 import org.keymaerax.btactics.TacticFactory.*
 import org.keymaerax.btactics.TactixLibrary.*
 import org.keymaerax.btactics.UnifyUSCalculus.*
-import org.keymaerax.btactics.macros.{InputTacticInfo, ListArg, StringArg, TacticConstructor1, VariableArg}
+import org.keymaerax.btactics.macros.{
+  InputTacticInfo,
+  ListArg,
+  PlainTacticInfo,
+  StringArg,
+  TacticConstructor0,
+  TacticConstructor1,
+  VariableArg,
+}
 import org.keymaerax.core.*
 import org.keymaerax.core.btactics.annotations.Derivation
 import org.keymaerax.infrastruct.*
@@ -115,6 +123,23 @@ private object ToolTactics {
     name = "useSolver",
     constructor = TacticConstructor1.create(StringArg("toolStr"))((toolStr: String) => switchSolver(toolStr)),
   )
+
+  def printCex: BuiltInTactic = "printCex".by { (provable: ProvableSig) =>
+    ProofRuleTactics.requireOneSubgoal(provable, "ToolTactics.printCounterexample")
+    val sequent = provable.subgoals.head
+    val formula = Imply(sequent.ante.fold(True)(And.apply), sequent.succ.fold(False)(Or.apply))
+    Try(findCounterExample(formula)) match {
+      case Success(Some(cex)) =>
+        val cexString = s"Counterexample found:\n${cex.toList.sortBy(_._1).mkString("\n")}\n"
+        DebuggingTactics.print(cexString)(provable)
+      case Success(None) => DebuggingTactics.print("No counterexample found")(provable)
+      case Failure(ex) => throw ex
+    }
+  }
+
+  @Derivation
+  val printCexInfo: PlainTacticInfo = PlainTacticInfo
+    .create(name = "printCex", constructor = TacticConstructor0.create()(() => printCex))
 
   /** Assert that there is no counter example. skip if none, error if there is. */
   // was  "assertNoCEX"
