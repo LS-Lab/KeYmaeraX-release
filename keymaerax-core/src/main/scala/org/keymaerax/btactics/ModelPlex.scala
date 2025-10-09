@@ -1940,6 +1940,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
             .boundVars(q)
             .isEmpty => instantiateODESolution(ode)
       case Some(e: Exists) if polarityInSeq(sequent, pos) > 0 /*&& StaticSemantics.boundVars(q).isEmpty*/ =>
+        @nowarn("msg=match may not be exhaustive")
         val unobservableVars = unobservable.map({
           case v: Variable => v
           case Function(n, i, _, s, _) => Variable(n, i, s)

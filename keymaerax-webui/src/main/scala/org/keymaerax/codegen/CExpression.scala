@@ -7,6 +7,8 @@ package org.keymaerax.codegen
 import org.keymaerax.codegen.CPrettyPrinter.{CURR, PARAMS, PRE}
 import org.keymaerax.core.{NamedSymbol, Sort}
 
+import scala.annotation.nowarn
+
 /**
  * C expressions.
  *
@@ -684,6 +686,7 @@ class CMpfrPrettyPrinter(precision: Int = 200, roundingMode: String = "MPFR_RNDD
   private val topExpressions: scala.collection.mutable.ListBuffer[CExpression] =
     scala.collection.mutable.ListBuffer.empty
 
+  @nowarn("msg=match may not be exhaustive")
   private def printMpfr(): String = {
     val arithmetic = topExpressions.map(printMpfrArithmetic).filter(_.nonEmpty).mkString("\n")
     val mpfrInit = mpfrVars

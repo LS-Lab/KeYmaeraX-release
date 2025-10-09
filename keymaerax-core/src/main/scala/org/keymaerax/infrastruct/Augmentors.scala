@@ -320,12 +320,14 @@ object Augmentors {
   }
 
   implicit class ExpressionAugmentor[E <: Expression](val e: E) {
+    @nowarn("msg=match may not be exhaustive")
     def sub(pos: PosInExpr): Option[Expression] = e match {
       case f: Formula => f.sub(pos)
       case t: Term => t.sub(pos)
       case h: Program => h.sub(pos)
     }
 
+    @nowarn("msg=match may not be exhaustive")
     def replaceAt(pos: PosInExpr, repl: Expression): Expression = e match {
       case f: Formula => f.replaceAt(pos, repl)
       case t: Term => t.replaceAt(pos, repl)
@@ -491,6 +493,7 @@ object Augmentors {
         dots.toSet
       }
 
+      @nowarn("msg=match may not be exhaustive")
       val signature = e match {
         case FuncOf(_, t) => t
         case PredOf(_, t) => t
@@ -619,6 +622,7 @@ object Augmentors {
     }
 
     /** Lists all subpositions of expression `e`, categorized by their kind. */
+    @nowarn("msg=match may not be exhaustive")
     def listSubPos: List[(Kind, PosInExpr)] = {
       def collector(collected: ListBuffer[(Kind, PosInExpr)]): ExpressionTraversalFunction =
         new ExpressionTraversalFunction {
@@ -662,6 +666,7 @@ object Augmentors {
      * Returns all symbols of this `e` minus the explicitly quantified symbols (when we want \forall x differently from
      * [x:=...;]).
      */
+    @nowarn("msg=match may not be exhaustive")
     def baseSymbols: Set[NamedSymbol] =
       (StaticSemantics.symbols(e) --
         (e match {

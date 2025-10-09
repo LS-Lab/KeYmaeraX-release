@@ -200,6 +200,7 @@ object IntervalArithmeticV2 {
         case a: AtomicFormula => (a, m, i)
       }
 
+    @nowarn("msg=match may not be exhaustive")
     val (expression, abbrev: Map[Term, Variable]) = e match {
       case t: Term =>
         val (fml, unm, _) = collectSubterms(t, Map(), 0)

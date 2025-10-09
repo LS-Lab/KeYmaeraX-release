@@ -283,6 +283,7 @@ object QuizExtractor {
           "u",
           ")",
         )
+        @nowarn("msg=match may not be exhaustive")
         val ivfml = interval
           .findAllMatchIn(s)
           .map(m => (m.group("(") -> m.group("l"), m.group("u") -> m.group(")")))
