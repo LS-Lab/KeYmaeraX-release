@@ -156,17 +156,17 @@ object QuizExtractor {
         val (kyxsol, texsol, listingssol, txtsol, solfin) = sol.head
         val (expectedArtifact, solArgs: Map[String, String]) = (
           (kyxsol, texsol, listingssol, txtsol, solfin) match {
-            case (Some(s), None, None, None, None) => (artifactsFromKyxString(s), Map.empty)
-            case (None, Some(s), None, None, None) => (artifactsFromTexMathString(s), Map.empty)
-            case (None, None, Some(s), None, None) => (ArchiveArtifact(s), Map.empty)
+            case (Some(s), None, None, None, None) => (artifactsFromKyxString(s), Map.empty[String, String])
+            case (None, Some(s), None, None, None) => (artifactsFromTexMathString(s), Map.empty[String, String])
+            case (None, None, Some(s), None, None) => (ArchiveArtifact(s), Map.empty[String, String])
             case (None, None, None, Some(s), None) =>
               val anyOfKyxSols = kyxlineExtractor("").r(KYX_SOL).findAllMatchIn(s).map(_.group(KYX_SOL)).toList
-              if (anyOfKyxSols.isEmpty) (artifactsFromTexTextString(s), Map.empty)
-              else (AnyOfArtifact(anyOfKyxSols.map(artifactsFromKyxString)), Map.empty)
+              if (anyOfKyxSols.isEmpty) (artifactsFromTexTextString(s), Map.empty[String, String])
+              else (AnyOfArtifact(anyOfKyxSols.map(artifactsFromKyxString)), Map.empty[String, String])
             case (None, None, None, None, Some(s)) =>
               val (question, artifact) = solfinArtifactsFromString(s)
               (artifact, Map("question" -> question))
-            case (None, None, None, None, None) => (TextArtifact(None), Map.empty)
+            case (None, None, None, None, None) => (TextArtifact(None), Map.empty[String, String])
           }
         ): @unchecked
         val testSolArtifacts = expectedArtifact match {

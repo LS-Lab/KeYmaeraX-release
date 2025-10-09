@@ -26,9 +26,10 @@ class GetTacticRequest(db: DBAbstraction, userId: String, proofIdStr: String)
           val ti = t.parseJson.convertTo[TacticInfo]
           (ti.tacticText, ti.nodesByLocation.map(i => (i.loc, i.node)).toMap.asInstanceOf[Map[Location, String]])
         } catch {
-          case _: ParsingException => (t, Map.empty) // @note backwards compatibility with database tactics not in JSON
+          case _: ParsingException =>
+            (t, Map.empty[Location, String]) // @note backwards compatibility with database tactics not in JSON
         }
-      case None => (BellePrettyPrinter(Idioms.nil), Map.empty)
+      case None => (BellePrettyPrinter(Idioms.nil), Map.empty[Location, String])
     }): @unchecked
     GetTacticResponse(tactic, proofStateInfo)
   }

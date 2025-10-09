@@ -503,7 +503,7 @@ object Augmentors {
       }
 
       val (dots: Map[Term, DotTerm], arg: Term, _) = (signature match {
-        case Nothing => (Map.empty, Nothing, 0)
+        case Nothing => (Map.empty[Term, DotTerm], Nothing, 0)
         case Pair(_, _) => findDots(signature, 0, Map.empty)
         case _ =>
           val dot = DotTerm(signature.sort, Some(0))
