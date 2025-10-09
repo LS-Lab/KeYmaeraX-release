@@ -21,6 +21,7 @@ import org.scalatest.{AppendedClues, Suites}
 
 import java.io.{File, PrintWriter}
 import java.nio.file.{Files, Path}
+import scala.annotation.nowarn
 import scala.collection.immutable.{IndexedSeq, Map, Nil}
 import scala.language.postfixOps
 
@@ -461,6 +462,7 @@ class BenchmarkTester(val benchmarkName: String, val url: String, val timeout: I
         qeDurationListener.reset()
         val start = System.currentTimeMillis()
         try {
+          @nowarn("id=E220")
           val proof = failAfter(Span(timeout, Seconds))({ proveBy(model, theTactic, defs = defs) })(using
             (testThread: Thread) => {
               theInterpreter.kill()
