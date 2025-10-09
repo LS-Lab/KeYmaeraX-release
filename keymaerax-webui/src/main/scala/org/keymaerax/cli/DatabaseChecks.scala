@@ -145,7 +145,7 @@ object DatabaseChecks extends Logging {
     backupDatabase(dbVersion)
 
     val upgrades = Source
-      .fromResource("/sql/upgradescripts.json")(Codec.UTF8)
+      .fromResource("/sql/upgradescripts.json")(using Codec.UTF8)
       .mkString
       .parseJson
       .asJsObject
@@ -176,7 +176,7 @@ object DatabaseChecks extends Logging {
    * mode.
    */
   private def runUpgradeScript(scriptResourcePath: String): Unit = {
-    val script = Source.fromResource(scriptResourcePath)(Codec.UTF8).mkString
+    val script = Source.fromResource(scriptResourcePath)(using Codec.UTF8).mkString
     val statements = script.split(";")
     val session = SQLite.ProdDB.sqldb.createSession()
     val conn = session.conn

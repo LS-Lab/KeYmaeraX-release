@@ -327,7 +327,7 @@ class DLArchiveParserTests extends TacticTestBase {
     val archiveParser = new DLArchiveParser(
       new DLBelleParser(BellePrettyPrinter, ReflectiveExpressionBuilder(_, _, Some(FixedGenerator(List.empty)), _))
     )
-    DLParser.runParser(archiveParser.progDef(_))("HP a ::= { x:=x+1; };") shouldBe (
+    DLParser.runParser(archiveParser.progDef(using _))("HP a ::= { x:=x+1; };") shouldBe (
       Name("a", None),
       Signature(Some(Unit), Trafo, None, Right(Some("x:=x+1;".asProgram)), Region(1, 1, 1, 21)),
     )

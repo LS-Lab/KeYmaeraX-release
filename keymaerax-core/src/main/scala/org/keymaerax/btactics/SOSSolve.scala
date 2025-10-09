@@ -189,7 +189,7 @@ object SOSSolve {
           }
         )
         .map(FuncOf(_, Nothing))
-      val vars = polys.flatMap(StaticSemantics.freeVars(_).toSet).distinct.sorted(variableOrdering)
+      val vars = polys.flatMap(StaticSemantics.freeVars(_).toSet).distinct.sorted(using variableOrdering)
       val sosSolveTool = ToolProvider.sosSolveTool().getOrElse(throw new RuntimeException("no SOSSolveTool configured"))
       val (sos, cofactors, lininst) = sosTimer.time {
         sosSolveTool.sosSolve(polys, consts ++ vars, degree, timeout) match {

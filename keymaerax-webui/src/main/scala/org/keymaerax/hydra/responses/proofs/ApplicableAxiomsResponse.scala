@@ -57,7 +57,7 @@ case class ApplicableAxiomsResponse(
   private def helpJson(codeName: String): JsString = {
     val helpResource = getClass.getResourceAsStream(s"/help/axiomsrules/$codeName-help.html")
     if (helpResource == null) JsString("")
-    else JsString(scala.io.Source.fromInputStream(helpResource)(scala.io.Codec.UTF8).mkString)
+    else JsString(scala.io.Source.fromInputStream(helpResource)(using scala.io.Codec.UTF8).mkString)
   }
 
   @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")

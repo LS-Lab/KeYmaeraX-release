@@ -167,7 +167,7 @@ class CounterExampleRequest(
             ToolProvider.qeTool() match {
               case Some(qeTool) =>
                 val fml = sequent.toFormula
-                Try(ProgramSearchNode(fml)(qeTool)).toOption match {
+                Try(ProgramSearchNode(fml)(using qeTool)).toOption match {
                   case Some(snode) =>
                     if (FormulaTools.dualFree(snode.prog)) {
                       try {

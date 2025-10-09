@@ -31,10 +31,10 @@ object SmtLibReader {
   }
 
   /** Reads a formula. */
-  def readFml(s: String): Formula = readExpr(s, convertFormula(_)(Map.empty))
+  def readFml(s: String): Formula = readExpr(s, convertFormula(_)(using Map.empty))
 
   /** Reads a term. */
-  def readTerm(s: String): Term = readExpr(s, convertTerm(_)(Map.empty))
+  def readTerm(s: String): Term = readExpr(s, convertTerm(_)(using Map.empty))
 
   /** Reads an expression using `convert` to turn it into the desired kind. */
   private def readExpr[T <: Expression](s: String, convert: Terms.Term => T): T = {
@@ -66,12 +66,15 @@ object SmtLibReader {
     val definedFuns = cmds
       .filter(_.isInstanceOf[DefineFun])
       .map({
-        case DefineFun(FunDef(SSymbol(name), _, _, body)) => name -> convertFormula(body)(Map.empty)
+        case DefineFun(FunDef(SSymbol(name), _, _, body)) => name -> convertFormula(body)(using Map.empty)
         case _ => ???
       })
       .toMap
 
-    (cmds.filter(_.isInstanceOf[Assert]).map({ case Assert(t) => convertFormula(t)(definedFuns) }).toList, infos.toMap)
+    (
+      cmds.filter(_.isInstanceOf[Assert]).map({ case Assert(t) => convertFormula(t)(using definedFuns) }).toList,
+      infos.toMap,
+    )
   }
 
   /** Sanitizes names by replacing `_`with [[USCORE]]. */

@@ -278,7 +278,7 @@ class RingsLibrary(terms: Iterable[Term]) {
       p.dv.exponents(d) > 0
     }
     def mapToKeep(keep: Monomial[Rational[BigInteger]] => Boolean): Ring =
-      p.mapTerms(Q, { p => if (keep(p)) p else p.setCoefficient(Rational(0)(Z)) })
+      p.mapTerms(Q, { p => if (keep(p)) p else p.setCoefficient(Rational(0)(using Z)) })
     val poly = mapToKeep(keep)
     val rest = mapToKeep(!keep(_))
     (poly, rest)

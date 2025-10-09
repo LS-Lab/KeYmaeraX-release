@@ -11,7 +11,7 @@ import scala.annotation.nowarn
 
 /** Prints SML QE problems with Real64 rounding. */
 object SmlQEReal64Printer extends (Formula => String) {
-  def apply(f: Formula): String = new SmlQEPrinter(_.toString + ".0", _.toString).print(f)(
+  def apply(f: Formula): String = new SmlQEPrinter(_.toString + ".0", _.toString).print(f)(using
     StaticSemantics.freeVars(f).toSet.toList.zipWithIndex.toMap
   )
 }
@@ -26,7 +26,7 @@ object SmlQENoRoundingPrinter extends (Formula => String) {
         val denom = BigDecimal(1).bigDecimal.movePointRight(n.scale).toBigIntegerExact
         "(Rat2Real " + num + " " + denom + ")"
       },
-    ).print(f)(StaticSemantics.freeVars(f).toSet.toList.zipWithIndex.toMap)
+    ).print(f)(using StaticSemantics.freeVars(f).toSet.toList.zipWithIndex.toMap)
   }
 }
 
@@ -54,9 +54,9 @@ class SmlQEPrinter(intPrinter: BigInt => String, realPrinter: BigDecimal => Stri
     case Imply(p, q) => print(Or(Not(p), q))
     case Equiv(p, q) => print(Or(And(p, q), And(Not(p), Not(q))))
     case Forall(x :: Nil, p) =>
-      s"AllQ (${print(p)(Map((vIdxs.map({ case (k, v) => k -> (v + 1) }).toList :+ (x -> 0))*))})"
+      s"AllQ (${print(p)(using Map((vIdxs.map({ case (k, v) => k -> (v + 1) }).toList :+ (x -> 0))*))})"
     case Exists(x :: Nil, p) =>
-      s"ExQ (${print(p)(Map((vIdxs.map({ case (k, v) => k -> (v + 1) }).toList :+ (x -> 0))*))})"
+      s"ExQ (${print(p)(using Map((vIdxs.map({ case (k, v) => k -> (v + 1) }).toList :+ (x -> 0))*))})"
   }
 
   /** Prints term `t`, encoding variables using DeBruijn-indices as supplied by `vIdx`. */

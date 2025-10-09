@@ -201,7 +201,7 @@ class DLBelleParser(
   })
 
   def argument[$: P](argInfo: ArgInfo): P[Seq[Any]] =
-    P("\"" ~/ argumentInterior(argInfo) ~ "\"")(s"Argument ${argInfo.name}: ${argInfo.sort}", implicitly)
+    P("\"" ~/ argumentInterior(argInfo) ~ "\"")(using s"Argument ${argInfo.name}: ${argInfo.sort}", implicitly)
 
   // @note arguments have the funky type List[Either[Seq[Any], PositionLocator]]
   // I believe this is really intended to represent
@@ -272,7 +272,7 @@ class DLBelleParser(
     argumentList(isStart = true, argInfos, numPosArgs).map({ case (args, pos) =>
       (tacName, args.map(Left(_)) ++ pos.map(Right(_)))
     })
-  }) ~ ")")("tactic(...)", implicitly).map({ case (t, args) => tacticProvider(t, args, defs) })
+  }) ~ ")")(using "tactic(...)", implicitly).map({ case (t, args) => tacticProvider(t, args, defs) })
 
   def builtinTactic[$: P]: P[BelleExpr] = ("doall" ~ "(" ~/ tactic ~ ")").map(OnAll.apply) |
     ("partial" ~ "(" ~/ tactic ~ ")").map(PartialTactic(_, None)) |
@@ -295,9 +295,9 @@ class DLBelleParser(
         (string.map(BelleLabel.fromString).map(_.head) ~ ":" ~ eitherTac)
           .rep(min = 2, sep = ","./)
           .map(CaseTactic.apply)) ~ ")"
-  )("<(tactic,tactic,...)", implicitly)
+  )(using "<(tactic,tactic,...)", implicitly)
 
-  def parenTac[$: P]: P[BelleExpr] = P("(" ~/ tactic ~ ")")("(tactic)", implicitly)
+  def parenTac[$: P]: P[BelleExpr] = P("(" ~/ tactic ~ ")")(using "(tactic)", implicitly)
 
   def baseTac[$: P]: P[BelleExpr] = P(branchTac | parenTac | builtinTactic | at | atomicTactic)
 
@@ -326,11 +326,11 @@ class DLBelleParser(
     case (_, t) => t
   })
 
-  def seqTac[$: P]: P[BelleExpr] =
-    P(optionTac.rep(min = 1, sep = CharIn(";&")./))("tactic;tactic", implicitly).map(SeqTactic.apply)
+  def seqTac[$: P]: P[BelleExpr] = P(optionTac.rep(min = 1, sep = CharIn(";&")./))(using "tactic;tactic", implicitly)
+    .map(SeqTactic.apply)
 
   def eitherTac[$: P]: P[BelleExpr] =
-    P(seqTac.rep(min = 1, sep = "|"./))("tactic|tactic", implicitly).map(EitherTactic.apply)
+    P(seqTac.rep(min = 1, sep = "|"./))(using "tactic|tactic", implicitly).map(EitherTactic.apply)
 
 //  //@note macro-expands
 //  def ifthen[$: P]: P[BelleExpr] = P( "if" ~/ parenF ~ braceP ~ ("else" ~/ braceP).? ).

@@ -163,12 +163,16 @@ class TaylorModelArithTests extends TacticTestBase {
 
   it should "collect higher order terms" in withMathematica { qeTool =>
     val tm = (tm3 + tm2 + third) ^ 3
-    val res0 = tm.collectHigherOrderTerms(new TaylorModelOptions {
-      val precision = defaultOptions.precision; val order = 0
-    })
-    val res1 = tm.collectHigherOrderTerms(new TaylorModelOptions {
-      val precision = defaultOptions.precision; val order = 1
-    })
+    val res0 = tm.collectHigherOrderTerms(using
+      new TaylorModelOptions {
+        val precision = defaultOptions.precision; val order = 0
+      }
+    )
+    val res1 = tm.collectHigherOrderTerms(using
+      new TaylorModelOptions {
+        val precision = defaultOptions.precision; val order = 1
+      }
+    )
     res0.prettyPrv.conclusion.succ.loneElement shouldBe
       "\\exists err_ ((1/3*x+y+1/3)^3=0.03699+err_&(-5.7016)<=err_&err_<=7.2716)".asFormula
     res1.prettyPrv.conclusion.succ.loneElement shouldBe

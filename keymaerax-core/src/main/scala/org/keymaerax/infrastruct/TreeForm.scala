@@ -263,7 +263,7 @@ object TreeForm {
             // if the RPO is a total ordering (we use this definition instead of his because it is faster to compute).
             val (s1, s2) = (multiset(s), multiset(t))
             val (m, n) = (toSet(subtract(s1, s2)), toSet(subtract(s2, s1)))
-            compare(m.max(TreeOrdering), n.max(TreeOrdering))
+            compare(m.max(using TreeOrdering), n.max(using TreeOrdering))
           } else if (cmp > 0) { if (t.forall({ case ti => compare(x, ti) > 0 })) 1 else -1 }
           else { if (s.forall({ case si => compare(y, si) > 0 })) -1 else 1 }
       }

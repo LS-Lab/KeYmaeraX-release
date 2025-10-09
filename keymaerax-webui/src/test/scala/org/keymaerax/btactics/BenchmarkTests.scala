@@ -461,11 +461,12 @@ class BenchmarkTester(val benchmarkName: String, val url: String, val timeout: I
         qeDurationListener.reset()
         val start = System.currentTimeMillis()
         try {
-          val proof =
-            failAfter(Span(timeout, Seconds))({ proveBy(model, theTactic, defs = defs) })((testThread: Thread) => {
+          val proof = failAfter(Span(timeout, Seconds))({ proveBy(model, theTactic, defs = defs) })(using
+            (testThread: Thread) => {
               theInterpreter.kill()
               testThread.interrupt()
-            })
+            }
+          )
           val end = System.currentTimeMillis()
           val result =
             if (proof.isProved) "proved"

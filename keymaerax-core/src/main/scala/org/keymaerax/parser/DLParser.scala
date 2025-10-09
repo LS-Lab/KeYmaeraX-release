@@ -350,7 +350,7 @@ class DLParser extends Parser {
 
   /** "532": Parse a (nonnegative) natural number literal, normalized. */
   def normNatural[$: P]: P[Int] =
-    P(("0" | CharIn("1-9") ~~ CharIn("0-9").repX).!)("normalized natural number", implicitly).map(s => s.toInt)
+    P(("0" | CharIn("1-9") ~~ CharIn("0-9").repX).!)(using "normalized natural number", implicitly).map(s => s.toInt)
 
   // *****************
   // base parsers

@@ -68,7 +68,7 @@ object UpdateChecker extends Logging {
     conn.setConnectTimeout(timeoutMillis)
     conn.setReadTimeout(timeoutMillis)
 
-    val source = Source.fromInputStream(conn.getInputStream)(Codec.UTF8)
+    val source = Source.fromInputStream(conn.getInputStream)(using Codec.UTF8)
     val data = source.mkString
     source.close()
     data
@@ -80,7 +80,7 @@ object UpdateChecker extends Logging {
   private lazy val oldestAcceptableDbVersion: Option[VersionNumber] =
     try {
       val versionString = Source
-        .fromResource("/sql/upgradescripts.json")(Codec.UTF8)
+        .fromResource("/sql/upgradescripts.json")(using Codec.UTF8)
         .mkString
         .parseJson
         .asJsObject

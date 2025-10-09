@@ -1743,7 +1743,7 @@ case class TwoThreeTreePolynomialRing(
 
   // invariants: sorted w.r.t. variable ordering, no zero exponents
   case class SparsePowerProduct(sparse: Seq[(Term, Int)]) extends PowerProduct {
-    assert(sparse.map(_._1).sorted(variableOrdering) == sparse.map(_._1))
+    assert(sparse.map(_._1).sorted(using variableOrdering) == sparse.map(_._1))
     assert(sparse.map(_._1).distinct == sparse.map(_._1))
     assert(sparse.forall(_._2 > 0))
     val degree = sparse.map(_._2).sum
@@ -1751,7 +1751,7 @@ case class TwoThreeTreePolynomialRing(
   def ofSparse(seq: (Term, Int)*): SparsePowerProduct = {
     require(seq.forall(_._2 >= 0), "SparsePowerProduct: nonnegative exponents only")
     require(seq.map(_._1).distinct == seq.map(_._1), "SparsePowerProduct: variables must be unique")
-    SparsePowerProduct(seq.filter(_._2 > 0).sortBy(_._1)(variableOrdering))
+    SparsePowerProduct(seq.filter(_._2 > 0).sortBy(_._1)(using variableOrdering))
   }
 
   /** trust that wellformedness (wf) properties of [[SparsePowerProduct]] are maintained */

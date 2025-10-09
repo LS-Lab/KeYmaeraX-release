@@ -80,7 +80,7 @@ object SignAnalysis {
     val (facts, unknown) = signs.partition(!_._2.keySet.contains(Sign.Unknown))
     assert(unknown.forall(_._2.keySet.size == 1), "Unknown signs are not known")
     val aggregate = facts ++
-      unknown.map(p => p._1 -> p._2.map(q => Sign.sign(p._1)(facts.map(p => p._1 -> p._2.keySet.head)) -> q._2))
+      unknown.map(p => p._1 -> p._2.map(q => Sign.sign(p._1)(using facts.map(p => p._1 -> p._2.keySet.head)) -> q._2))
     if (aggregate != signs) aggregateSigns(aggregate) else aggregate
   }
 
@@ -90,7 +90,7 @@ object SignAnalysis {
     val (facts, unknown) = signs.partition(!_._2.keySet.contains(Sign.Unknown))
     assert(unknown.forall(_._2.keySet.size == 1), "Unknown signs are not known")
     val pushedFacts = facts.flatMap(p => {
-      val pushed = Sign.pushDown(p._1, p._2.keySet)(facts.map(p => p._1 -> p._2.keySet))
+      val pushed = Sign.pushDown(p._1, p._2.keySet)(using facts.map(p => p._1 -> p._2.keySet))
       // compute positions where the sign info was found
       // pushed.map(q => q._1 -> q._2.map(r => r -> (facts.getOrElse(q._1, Map()).getOrElse(r, Set()) ++ p._2.getOrElse(r, unknown.getOrElse(q._1, Map()).getOrElse(r, Set())))).toMap)
       pushed.map { case (t, ss) =>
@@ -127,7 +127,7 @@ object SignAnalysis {
           )
       }
       .toMap
-    bounds.map(p => (p._1, p._2.flatMap(p => Bound.pushDown(p._1, Map(p._2 -> Set()))(signs))))
+    bounds.map(p => (p._1, p._2.flatMap(p => Bound.pushDown(p._1, Map(p._2 -> Set()))(using signs))))
   }
 
   /** Computes a list of candidates for hiding, based on inconsistent signs (bounds w.r.t. 0) */

@@ -422,7 +422,7 @@ object TaylorModelArith {
       case n if n > 0 && n % 2 == 0 =>
         val m = n / 2
         val mPrv = ProvableSig.proveArithmetic(BigDecimalQETool, Equal(Number(n), Times(Number(2), Number(m))))
-        val p = (this ^ m).square(options)
+        val p = (this ^ m).square(using options)
         val newPrv = useDirectlyConst(
           weakenWith(context, taylorModelPowerEven),
           Seq(

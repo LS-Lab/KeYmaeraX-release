@@ -153,7 +153,7 @@ object Helpers {
             val fmlString = JsString(UIKeYmaeraXPrettyPrinter(idx.toString, plainText = true)(fml))
 
             val format = new UIAbbreviatingKeYmaeraXPrettierPrinter(if (isAnte) marginLeft else marginRight)(fml)
-            val fmlJson = printJson(PosInExpr(), fml, HtmlPrettyPrintFormatProvider(format))(Position(idx), fml)
+            val fmlJson = printJson(PosInExpr(), fml, HtmlPrettyPrintFormatProvider(format))(using Position(idx), fml)
             JsObject("id" -> JsString(idx.toString), "formula" -> JsObject("json" -> fmlJson, "string" -> fmlString))
           }
           .toVector
