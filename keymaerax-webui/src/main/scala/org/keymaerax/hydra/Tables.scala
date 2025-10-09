@@ -51,11 +51,13 @@ trait Tables {
   )
 
   /** GetResult implicit for fetching AgendaitemsRow objects using plain SQL queries */
-  implicit def GetResultAgendaitemsRow(implicit e0: GR[Option[Int]], e1: GR[Option[String]]): GR[AgendaitemsRow] =
-    GR { prs =>
+  implicit def GetResultAgendaitemsRow(implicit e0: GR[Option[Int]], e1: GR[Option[String]]): GR[AgendaitemsRow] = GR(
+    using
+    { prs =>
       import prs._
       (AgendaitemsRow.apply).tupled((<<?[Int], <<?[Int], <<?[Int], <<?[Int], <<?[String]))
     }
+  )
 
   /** Table description of table agendaItems. Objects of this class serve as prototypes for rows in queries. */
   class Agendaitems(_tableTag: Tag) extends profile.api.Table[AgendaitemsRow](_tableTag, "agendaItems") {
@@ -104,10 +106,12 @@ trait Tables {
   case class ConfigRow(configid: Option[Int], configname: Option[String], key: Option[String], value: Option[String])
 
   /** GetResult implicit for fetching ConfigRow objects using plain SQL queries */
-  implicit def GetResultConfigRow(implicit e0: GR[Option[Int]], e1: GR[Option[String]]): GR[ConfigRow] = GR { prs =>
-    import prs._
-    (ConfigRow.apply).tupled((<<?[Int], <<?[String], <<?[String], <<?[String]))
-  }
+  implicit def GetResultConfigRow(implicit e0: GR[Option[Int]], e1: GR[Option[String]]): GR[ConfigRow] = GR(using
+    { prs =>
+      import prs._
+      (ConfigRow.apply).tupled((<<?[Int], <<?[String], <<?[String], <<?[String]))
+    }
+  )
 
   /** Table description of table config. Objects of this class serve as prototypes for rows in queries. */
   class Config(_tableTag: Tag) extends profile.api.Table[ConfigRow](_tableTag, "config") {
@@ -137,11 +141,13 @@ trait Tables {
   case class ExecutablesRow(_Id: Option[Int], belleexpr: Option[String])
 
   /** GetResult implicit for fetching ExecutablesRow objects using plain SQL queries */
-  implicit def GetResultExecutablesRow(implicit e0: GR[Option[Int]], e1: GR[Option[String]]): GR[ExecutablesRow] =
-    GR { prs =>
+  implicit def GetResultExecutablesRow(implicit e0: GR[Option[Int]], e1: GR[Option[String]]): GR[ExecutablesRow] = GR(
+    using
+    { prs =>
       import prs._
       (ExecutablesRow.apply).tupled((<<?[Int], <<?[String]))
     }
+  )
 
   /** Table description of table executables. Objects of this class serve as prototypes for rows in queries. */
   class Executables(_tableTag: Tag) extends profile.api.Table[ExecutablesRow](_tableTag, "executables") {
@@ -196,25 +202,27 @@ trait Tables {
       e0: GR[Option[Int]],
       e1: GR[Int],
       e2: GR[Option[String]],
-  ): GR[ExecutionstepsRow] = GR { prs =>
-    import prs._
-    (ExecutionstepsRow.apply).tupled((
-      <<?[Int],
-      <<?[Int],
-      <<?[Int],
-      <<[Int],
-      <<?[String],
-      <<?[Int],
-      <<?[Int],
-      <<?[Int],
-      <<?[Int],
-      <<?[String],
-      <<?[String],
-      <<?[String],
-      <<[Int],
-      <<[Int],
-    ))
-  }
+  ): GR[ExecutionstepsRow] = GR(using
+    { prs =>
+      import prs._
+      (ExecutionstepsRow.apply).tupled((
+        <<?[Int],
+        <<?[Int],
+        <<?[Int],
+        <<[Int],
+        <<?[String],
+        <<?[Int],
+        <<?[Int],
+        <<?[Int],
+        <<?[Int],
+        <<?[String],
+        <<?[String],
+        <<?[String],
+        <<[Int],
+        <<[Int],
+      ))
+    }
+  )
 
   /** Table description of table executionSteps. Objects of this class serve as prototypes for rows in queries. */
   class Executionsteps(_tableTag: Tag) extends profile.api.Table[ExecutionstepsRow](_tableTag, "executionSteps") {
@@ -361,10 +369,12 @@ trait Tables {
   case class LemmasRow(_Id: Option[Int], lemma: Option[String])
 
   /** GetResult implicit for fetching LemmasRow objects using plain SQL queries */
-  implicit def GetResultLemmasRow(implicit e0: GR[Option[Int]], e1: GR[Option[String]]): GR[LemmasRow] = GR { prs =>
-    import prs._
-    (LemmasRow.apply).tupled((<<?[Int], <<?[String]))
-  }
+  implicit def GetResultLemmasRow(implicit e0: GR[Option[Int]], e1: GR[Option[String]]): GR[LemmasRow] = GR(using
+    { prs =>
+      import prs._
+      (LemmasRow.apply).tupled((<<?[Int], <<?[String]))
+    }
+  )
 
   /** Table description of table lemmas. Objects of this class serve as prototypes for rows in queries. */
   class Lemmas(_tableTag: Tag) extends profile.api.Table[LemmasRow](_tableTag, "lemmas") {
@@ -407,21 +417,23 @@ trait Tables {
   )
 
   /** GetResult implicit for fetching ModelsRow objects using plain SQL queries */
-  implicit def GetResultModelsRow(implicit e0: GR[Option[Int]], e1: GR[Option[String]]): GR[ModelsRow] = GR { prs =>
-    import prs._
-    (ModelsRow.apply).tupled((
-      <<?[Int],
-      <<?[String],
-      <<?[String],
-      <<?[String],
-      <<?[String],
-      <<?[String],
-      <<?[String],
-      <<?[String],
-      <<?[String],
-      <<?[Int],
-    ))
-  }
+  implicit def GetResultModelsRow(implicit e0: GR[Option[Int]], e1: GR[Option[String]]): GR[ModelsRow] = GR(using
+    { prs =>
+      import prs._
+      (ModelsRow.apply).tupled((
+        <<?[Int],
+        <<?[String],
+        <<?[String],
+        <<?[String],
+        <<?[String],
+        <<?[String],
+        <<?[String],
+        <<?[String],
+        <<?[String],
+        <<?[Int],
+      ))
+    }
+  )
 
   /** Table description of table models. Objects of this class serve as prototypes for rows in queries. */
   class Models(_tableTag: Tag) extends profile.api.Table[ModelsRow](_tableTag, "models") {
@@ -493,12 +505,14 @@ trait Tables {
   )
 
   /** GetResult implicit for fetching ProofsRow objects using plain SQL queries */
-  implicit def GetResultProofsRow(implicit e0: GR[Option[Int]], e1: GR[Option[String]]): GR[ProofsRow] = GR { prs =>
-    import prs._
-    (ProofsRow.apply).tupled(
-      (<<?[Int], <<?[Int], <<?[String], <<?[String], <<?[String], <<?[Int], <<?[Int], <<?[Int], <<?[String])
-    )
-  }
+  implicit def GetResultProofsRow(implicit e0: GR[Option[Int]], e1: GR[Option[String]]): GR[ProofsRow] = GR(using
+    { prs =>
+      import prs._
+      (ProofsRow.apply).tupled(
+        (<<?[Int], <<?[Int], <<?[String], <<?[String], <<?[String], <<?[Int], <<?[Int], <<?[Int], <<?[String])
+      )
+    }
+  )
 
   /** Table description of table proofs. Objects of this class serve as prototypes for rows in queries. */
   class Proofs(_tableTag: Tag) extends profile.api.Table[ProofsRow](_tableTag, "proofs") {
@@ -559,10 +573,12 @@ trait Tables {
   )
 
   /** GetResult implicit for fetching UsersRow objects using plain SQL queries */
-  implicit def GetResultUsersRow(implicit e0: GR[Option[String]], e1: GR[Option[Int]]): GR[UsersRow] = GR { prs =>
-    import prs._
-    (UsersRow.apply).tupled((<<?[String], <<?[String], <<?[String], <<?[Int], <<?[Int]))
-  }
+  implicit def GetResultUsersRow(implicit e0: GR[Option[String]], e1: GR[Option[Int]]): GR[UsersRow] = GR(using
+    { prs =>
+      import prs._
+      (UsersRow.apply).tupled((<<?[String], <<?[String], <<?[String], <<?[Int], <<?[Int]))
+    }
+  )
 
   /** Table description of table users. Objects of this class serve as prototypes for rows in queries. */
   class Users(_tableTag: Tag) extends profile.api.Table[UsersRow](_tableTag, "users") {
