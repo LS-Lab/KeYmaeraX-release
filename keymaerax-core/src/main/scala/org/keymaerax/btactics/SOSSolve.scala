@@ -524,7 +524,7 @@ object SOSSolve {
   // what to do about rational functions while preprocessing?
   trait RatFormStrategy
   // not expecting to deal with rational functions (division by constant numbers happen to work)
-  final case object NoRatForm extends RatFormStrategy
+  case object NoRatForm extends RatFormStrategy
   // normalize to rational form and eliminate divisions (with or without creating additional subgoals)
   final case class RatForm(branchNonzeroDenominators: Boolean) extends RatFormStrategy
 

@@ -573,7 +573,7 @@ private class FreshPostUnificationMatch extends SchematicComposedUnificationMatc
  * This matcher only excerpts variable renaming, ignoring all other reasons to unify.
  * @author Andre Platzer
  */
-private final object RenUnificationMatch extends UnificationMatchBase {
+private object RenUnificationMatch extends UnificationMatchBase {
   // incomplete unification cannot succeed during REVERIFY
   override private[infrastruct] val REVERIFY = Matcher.REVERIFY
   // Always skip unifiers except variables, which are handled by unifyVar

@@ -180,43 +180,43 @@ class SOSsolveQELoggerTests extends TacticTestBase with PrivateMethodTester {
     trait Status {
       val name: String; val message: String
     }
-    final case object Success extends Status {
+    case object Success extends Status {
       val name = "success"; val message = "Success."
     }
-    final case object Aborted extends Status {
+    case object Aborted extends Status {
       val name = "aborted"; val message = "Aborted, likely due to timeout."
     }
-    final case object NoSOS extends Status {
+    case object NoSOS extends Status {
       val name = "nosos--"; val message = "No SOS found (internal error or degree bound exceeded?)."
     }
-    final case object DivisorElimination extends Status {
+    case object DivisorElimination extends Status {
       val name = "divelim"; val message = "Division was not eliminated."
     }
-    final case object DivisorWellDefined extends Status {
+    case object DivisorWellDefined extends Status {
       val name = "divwell"; val message = "Division could not be proved to be well-defined."
     }
-    final case object Unknown extends Status {
+    case object Unknown extends Status {
       val name = "unknown"; val message = "Unknown error - investigate exception trace!"
     }
-    final case object OutOfScopeUniversal extends Status {
+    case object OutOfScopeUniversal extends Status {
       val name = "nonuniv"; val message = "Out of scope, non-universal."
     }
-    final case object OutOfScopePower extends Status {
+    case object OutOfScopePower extends Status {
       val name = "nonpow-"; val message = "Out of scope, non-natural power."
     }
-    final case object QEFalse extends Status {
+    case object QEFalse extends Status {
       val name = "qefalse"; val message = "QE reduces to false."
     }
-    final case object SubgoalFalse extends Status {
+    case object SubgoalFalse extends Status {
       val name = "prprcF-";
       val message =
         "QE reduces to false after preprocessing - likely the result of eliminating an ill-defined division."
     }
-    final case object SubgoalTimeout extends Status {
+    case object SubgoalTimeout extends Status {
       val name = "prprcTO";
       val message = "QE timed out after preprocessing - likely the result of eliminating an ill-defined division."
     }
-    final case object QETimeout extends Status {
+    case object QETimeout extends Status {
       val name = "qeto---"; val message = "QE timed out."
     }
 

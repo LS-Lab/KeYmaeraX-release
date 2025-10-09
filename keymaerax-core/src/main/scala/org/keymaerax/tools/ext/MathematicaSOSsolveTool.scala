@@ -16,8 +16,8 @@ import org.keymaerax.{Configuration, Logging}
 
 object SOSsolveTool {
   trait Result
-  final case object Aborted extends Result
-  final case object NoSOS extends Result
+  case object Aborted extends Result
+  case object NoSOS extends Result
   final case class Witness(sos: Term, cofactors: List[Term], lininst: List[(Int, Term, Term, Term)]) extends Result
   final case class Exception(exception: Throwable) extends Result
 }

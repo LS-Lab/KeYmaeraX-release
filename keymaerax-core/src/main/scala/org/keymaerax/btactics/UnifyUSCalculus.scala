@@ -1129,8 +1129,8 @@ object UnifyUSCalculus extends Logging {
   }
 
   sealed trait CondEquivCongruenceOp
-  final object CecoEquiv extends CondEquivCongruenceOp
-  final object CecoImply extends CondEquivCongruenceOp
+  object CecoEquiv extends CondEquivCongruenceOp
+  object CecoImply extends CondEquivCongruenceOp
 
   /* Specialized congruence reasoning for the questions arising in the axiomatic ODE solver DC step */
   @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
