@@ -18,7 +18,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future, Promise}
 import scala.util.control.Breaks.*
-import scala.util.{Failure, Success, Try}
+import scala.util.{boundary, Failure, Success, Try}
 
 /**
  * Sequential interpreter for Bellerophon tactic expressions.
@@ -267,21 +267,21 @@ abstract class BelleBaseInterpreter(
           }
         })
 
-    case EitherTactic(s) =>
-      for ((t, i) <- s.zipWithIndex.dropRight(1)) {
-        try {
-          val result = apply(t, v)
-          if (progress(v, result)) return result
-        } catch {
-          case _: BelleProofSearchControl => // continue
-          case e: BelleThrowable if throwWithDebugInfo =>
-            throw e.inContext(
-              EitherTactic(s.patch(i, Seq(e.context), 1)),
-              "Failed component of | alternative composition : " + t.prettyString,
-            )
+    case EitherTactic(s) => boundary:
+        for ((t, i) <- s.zipWithIndex.dropRight(1)) {
+          try {
+            val result = apply(t, v)
+            if (progress(v, result)) boundary.break(result)
+          } catch {
+            case _: BelleProofSearchControl => // continue
+            case e: BelleThrowable if throwWithDebugInfo =>
+              throw e.inContext(
+                EitherTactic(s.patch(i, Seq(e.context), 1)),
+                "Failed component of | alternative composition : " + t.prettyString,
+              )
+          }
         }
-      }
-      apply(s.last, v)
+        apply(s.last, v)
 
     case SaturateTactic(child) =>
       var prev: BelleValue = null

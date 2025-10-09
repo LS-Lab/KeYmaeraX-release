@@ -5,23 +5,24 @@
 
 package org.keymaerax.btactics
 
-import org.keymaerax.bellerophon._
-import org.keymaerax.btactics.AnonymousLemmas._
-import org.keymaerax.btactics.Idioms._
-import org.keymaerax.btactics.SequentCalculus._
-import org.keymaerax.btactics.TacticFactory._
-import org.keymaerax.btactics.TactixLibrary._
-import org.keymaerax.btactics.UnifyUSCalculus._
-import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
+import org.keymaerax.bellerophon.*
+import org.keymaerax.btactics.AnonymousLemmas.*
+import org.keymaerax.btactics.Idioms.*
+import org.keymaerax.btactics.SequentCalculus.*
+import org.keymaerax.btactics.TacticFactory.*
+import org.keymaerax.btactics.TactixLibrary.*
+import org.keymaerax.btactics.UnifyUSCalculus.*
+import org.keymaerax.btactics.macros.DerivationInfoAugmentors.*
 import org.keymaerax.btactics.macros.ProvableInfo
-import org.keymaerax.core._
-import org.keymaerax.infrastruct.Augmentors._
-import org.keymaerax.infrastruct._
-import org.keymaerax.parser.StringConverter._
+import org.keymaerax.core.*
+import org.keymaerax.infrastruct.Augmentors.*
+import org.keymaerax.infrastruct.*
+import org.keymaerax.parser.StringConverter.*
 import org.keymaerax.pt.ProvableSig
 
 import scala.annotation.nowarn
-import scala.collection.immutable.{Map, _}
+import scala.collection.immutable.{Map, *}
+import scala.util.boundary
 
 /** Created by yongkiat on 9/29/16. */
 object SimplifierV2 {
@@ -86,11 +87,12 @@ object SimplifierV2 {
     return s
   }
 
-  def qeHeuristics(eq: ProvableSig): Option[ProvableSig] = {
+  def qeHeuristics(eq: ProvableSig): Option[ProvableSig] = boundary {
     // todo: filter the list, like what happens in chase
     for ((tt, pr) <- arithProps)
-      try { return Some(useFor(pr, PosInExpr(0 :: Nil), inst = s => mksubst(s))(SuccPosition(1, 1 :: Nil))(eq)) }
-      catch {
+      try {
+        boundary.break(Some(useFor(pr, PosInExpr(0 :: Nil), inst = s => mksubst(s))(SuccPosition(1, 1 :: Nil))(eq)))
+      } catch {
         case _: ProverException =>
         case _: AssertionError => // raised by useFor if unification does not work out
       }

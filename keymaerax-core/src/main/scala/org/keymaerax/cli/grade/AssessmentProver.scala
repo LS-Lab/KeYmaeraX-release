@@ -18,9 +18,9 @@ import org.keymaerax.bellerophon.{
   SeqTactic,
   TacticInapplicableFailure,
 }
-import org.keymaerax.btactics.SequentCalculus._
-import org.keymaerax.btactics.TactixLibrary._
-import org.keymaerax.btactics.UnifyUSCalculus._
+import org.keymaerax.btactics.SequentCalculus.*
+import org.keymaerax.btactics.TactixLibrary.*
+import org.keymaerax.btactics.UnifyUSCalculus.*
 import org.keymaerax.btactics.{
   Ax,
   ConfigurableGenerator,
@@ -40,8 +40,8 @@ import org.keymaerax.btactics.{
 import org.keymaerax.cli.KeYmaeraXProofChecker
 import org.keymaerax.cli.grade.AssessmentProver.AskGrader.Modes
 import org.keymaerax.cli.grade.QuizExtractor.AskQuestion.extractSolfinAnswers
-import org.keymaerax.core._
-import org.keymaerax.infrastruct.Augmentors._
+import org.keymaerax.core.*
+import org.keymaerax.infrastruct.Augmentors.*
 import org.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import org.keymaerax.infrastruct.{ExpressionTraversal, FormulaTools, PosInExpr, Position}
 import org.keymaerax.lemma.Lemma
@@ -56,7 +56,7 @@ import org.keymaerax.parser.{
 }
 import org.keymaerax.pt.ProvableSig
 import org.keymaerax.tools.qe.BigDecimalQETool
-import spray.json._
+import spray.json.*
 
 import java.io.{BufferedWriter, File, FileReader, FileWriter, IOException, OutputStream, PrintStream, PrintWriter}
 import java.util.Properties
@@ -67,7 +67,7 @@ import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.DurationInt
 import scala.io.Source
 import scala.util.matching.Regex
-import scala.util.{Failure, Success, Try}
+import scala.util.{boundary, Failure, Success, Try}
 
 /** Assesses dL terms and formulas for equality, equivalence, implication etc. with restricted automation. */
 object AssessmentProver {
@@ -359,14 +359,14 @@ object AssessmentProver {
     }
 
     /** Checks the shape of artifact `have`; if successful, runs the grader afterwards. */
-    private def checkShapeThenRun(have: Artifact, expected: Artifact): Either[ProvableSig, String] =
+    private def checkShapeThenRun(have: Artifact, expected: Artifact): Either[ProvableSig, String] = boundary:
       have.checkShape(args.get("shape")) match {
         case Some(e) => Right(e)
         case None => expected match {
             case AnyOfArtifact(exp) =>
               for (e <- exp) {
                 check(have, e) match {
-                  case Left(p) => return Left(p)
+                  case Left(p) => boundary.break(Left(p))
                   case _ => // continue
                 }
               }
@@ -913,40 +913,42 @@ object AssessmentProver {
     }
 
     override val expected: Artifact = grader.expected
-    override def check(have: Artifact): Either[ProvableSig, String] = have match {
-      // @note assumed sorted from earliest to main artifact
-      case MultiArtifact(as) =>
-        if (as.size < 1 + earlier.size) {
-          // @note some earlier answers not parseable
-          Right("FAILED:IGNORE explanation for a wrong answer")
-        } else grader.mode match {
-          case Some(AskGrader.Modes.EXPLANATION_CHECK) =>
-            val mainArtifact = as.last
-            grader.args.get("ifCorrect") match {
-              case Some(_) =>
-                val prereqAnsweredCorrectly = earlier
-                  .zip(as.dropRight(1))
-                  .forall({ case ((_, g), a) =>
-                    g.check(a) match {
-                      case Left(p) => p.isProved
-                      case _ => false
-                    }
-                  })
-                if (prereqAnsweredCorrectly) grader.check(mainArtifact)
-                else Right("FAILED:IGNORE explanation for a wrong answer")
-              case None => grader.check(mainArtifact)
-            }
-          case _ =>
-            @nowarn("msg=match may not be exhaustive")
-            val mergedHave = as.reduceRight[Artifact]({
-              case (a: ExpressionArtifact, b: ExpressionArtifact) => ListExpressionArtifact(a.expr :: b.expr :: Nil)
-              case (a: ExpressionArtifact, ListExpressionArtifact(all)) => ListExpressionArtifact(all :+ a.expr)
-              case (TextArtifact(None), _) => return Right("FAILED: missing answer for prerequisite question")
-              case (_, TextArtifact(None)) => return Right(Messages.BLANK)
-            })
-            grader.check(mergedHave)
-        }
-    }
+    override def check(have: Artifact): Either[ProvableSig, String] = boundary:
+      have match {
+        // @note assumed sorted from earliest to main artifact
+        case MultiArtifact(as) =>
+          if (as.size < 1 + earlier.size) {
+            // @note some earlier answers not parseable
+            Right("FAILED:IGNORE explanation for a wrong answer")
+          } else grader.mode match {
+            case Some(AskGrader.Modes.EXPLANATION_CHECK) =>
+              val mainArtifact = as.last
+              grader.args.get("ifCorrect") match {
+                case Some(_) =>
+                  val prereqAnsweredCorrectly = earlier
+                    .zip(as.dropRight(1))
+                    .forall({ case ((_, g), a) =>
+                      g.check(a) match {
+                        case Left(p) => p.isProved
+                        case _ => false
+                      }
+                    })
+                  if (prereqAnsweredCorrectly) grader.check(mainArtifact)
+                  else Right("FAILED:IGNORE explanation for a wrong answer")
+                case None => grader.check(mainArtifact)
+              }
+            case _ =>
+              @nowarn("msg=match may not be exhaustive")
+              val mergedHave = as.reduceRight[Artifact]({
+                case (a: ExpressionArtifact, b: ExpressionArtifact) => ListExpressionArtifact(a.expr :: b.expr :: Nil)
+                case (a: ExpressionArtifact, ListExpressionArtifact(all)) => ListExpressionArtifact(all :+ a.expr)
+                case (TextArtifact(None), _) =>
+                  boundary.break(Right("FAILED: missing answer for prerequisite question"))
+                case (_, TextArtifact(None)) => boundary.break(Right(Messages.BLANK))
+              })
+              grader.check(mergedHave)
+          }
+      }
   }
 
   case class OneChoiceGrader(args: Map[String, String], expected: ChoiceArtifact) extends Grader {

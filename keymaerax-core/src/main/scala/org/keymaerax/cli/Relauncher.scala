@@ -11,18 +11,19 @@ import org.keymaerax.info.FullName
 import java.lang.management.ManagementFactory
 import java.nio.file.Path
 import scala.sys.process.Process
+import scala.util.boundary
 
 object Relauncher extends Logging {
   private val ExtraJvmArgs = Seq("-Xss20M")
 
   private case class LaunchCommand(jvmCmd: String, allArgs: Seq[String])
 
-  private def getLaunchCommand(cliArgs: Seq[String]): Option[LaunchCommand] = {
+  private def getLaunchCommand(cliArgs: Seq[String]): Option[LaunchCommand] = boundary {
     import scala.jdk.CollectionConverters.*
     import scala.jdk.OptionConverters.*
 
     val info = ProcessHandle.current().info()
-    val jvmCmd = info.command().toScala.getOrElse(return None)
+    val jvmCmd = info.command().toScala.getOrElse(boundary.break(None))
 
     val allArgs = info
       .arguments()

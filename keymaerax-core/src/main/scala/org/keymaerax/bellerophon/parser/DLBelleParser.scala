@@ -11,9 +11,9 @@
  */
 package org.keymaerax.bellerophon.parser
 
-import fastparse._
+import fastparse.*
 import org.keymaerax.GlobalState
-import org.keymaerax.bellerophon._
+import org.keymaerax.bellerophon.*
 import org.keymaerax.btactics.macros.{
   ArgInfo,
   DerivationInfo,
@@ -29,7 +29,7 @@ import org.keymaerax.btactics.macros.{
   TermArg,
   VariableArg,
 }
-import org.keymaerax.core._
+import org.keymaerax.core.*
 import org.keymaerax.infrastruct.Augmentors.ExpressionAugmentor
 import org.keymaerax.infrastruct.PosInExpr.HereP
 import org.keymaerax.infrastruct.{FormulaTools, PosInExpr, Position}
@@ -37,8 +37,8 @@ import org.keymaerax.parser.DLParser.parseException
 import org.keymaerax.parser.{Declaration, ParseException, Parser, TacticReservedSymbols}
 
 import scala.annotation.nowarn
-import scala.collection.immutable._
-import scala.util.Try
+import scala.collection.immutable.*
+import scala.util.{boundary, Try}
 
 /**
  * Bellerophon tactic parser for Differential Dynamic Logic reads input strings in the concrete syntax of Bellerophon
@@ -345,73 +345,74 @@ class DLBelleParser(
   @nowarn("msg=match may not be exhaustive")
   def escapedPositionExpression[$: P]: P[(Expression, PosInExpr)] = P(escapedString)
     ./
-    .flatMap(str => {
-      // todo: make this not hacky -- starts a new parse every time an escaped expression is encountered
-      val hashStart = str.indexOf('#')
-      val hashEnd = str.lastIndexOf('#')
+    .flatMap { str =>
+      boundary:
+        // todo: make this not hacky -- starts a new parse every time an escaped expression is encountered
+        val hashStart = str.indexOf('#')
+        val hashEnd = str.lastIndexOf('#')
 
-      if (hashStart == -1) {
-        // str contains no hashes, just return Here for PosIn.
-        // str can be any expression, including a term (or a program), e.g. "x" in `2.1==x`.
-        // Potentially unsafe for ambiguous "p()" with an archive without definition
-        return fastparse.parse(str, implicit p => GlobalState.parser.fullExpression) match {
-          case Parsed.Success(value, _) => Pass((defs.elaborateFull(value), HereP))
-          case _: Parsed.Failure => Fail
-        }
-      }
-
-      if (hashStart == hashEnd) {
-        // str contains a single hash which is invalid syntax.
-        return Fail
-      }
-
-      // str contains hashes.
-      // Extract subexpression and find its position in full expression (hashes act as parentheses)
-      // Outer expression must be a formula
-      val beforeHashes = str.substring(0, hashStart)
-      val betweenHashes = str.substring(hashStart + 1, hashEnd)
-      val afterHashes = str.substring(hashEnd + 1)
-
-      // subExpr need to have the correct sort without ambiguity between predicate and function
-      // elaborateFull would also work (if used consistently) but more costly
-      val subExpr = fastparse.parse(betweenHashes, implicit p => GlobalState.parser.fullExpression) match {
-        case Parsed.Success(e, _) => defs.elaborateToFunctions[Expression](e)
-        case _: Parsed.Failure => return Fail
-      }
-
-      // Replace hashes with parentheses
-      val (lp, rp) = subExpr match {
-        case _: Program => ("{", "}")
-        case _: Formula | _: Term => ("(", ")")
-      }
-      val strWithoutHashes = beforeHashes + lp + betweenHashes + rp + afterHashes
-
-      val reparsedSubExpr = fastparse.parse(strWithoutHashes, implicit p => GlobalState.parser.fullFormula) match {
-        case Parsed.Success(expr, _) => expr
-        case _: Parsed.Failure => return Fail
-      }
-
-      val posIn =
-        if (strWithoutHashes.indexOf(betweenHashes) != hashStart + 1) {
-          // marked sub-expression is not leftmost instance in expr
-          // mark with "hash" placeholder function/predicate/program depending on subExpr sort
-          val (markedStr, placeholder) =
-            PositionLocator.withMarkers(strWithoutHashes, subExpr, hashStart, hashEnd - hashStart + 1)
-          val markedExpr = fastparse.parse(markedStr, implicit p => GlobalState.parser.fullFormula).get.value
-          FormulaTools.posOf(markedExpr, placeholder)
-        } else {
-          // reparsedSubExpr need to be elaborated consistently with subExpr
-          FormulaTools.posOf(defs.elaborateToFunctions(reparsedSubExpr), subExpr)
+        if (hashStart == -1) {
+          // str contains no hashes, just return Here for PosIn.
+          // str can be any expression, including a term (or a program), e.g. "x" in `2.1==x`.
+          // Potentially unsafe for ambiguous "p()" with an archive without definition
+          boundary.break(fastparse.parse(str, implicit p => GlobalState.parser.fullExpression) match {
+            case Parsed.Success(value, _) => Pass((defs.elaborateFull(value), HereP))
+            case _: Parsed.Failure => Fail
+          })
         }
 
-      posIn match {
-        case Some(pi) => Pass((defs.elaborateFull(reparsedSubExpr), pi))
-        case None => Fail.opaque(
-            "Parsed a position locator with subexpression successfully, but could not find subexpression: " +
-              subExpr.prettyString + " in expression " + reparsedSubExpr.prettyString
-          )
-      }
-    })
+        if (hashStart == hashEnd) {
+          // str contains a single hash which is invalid syntax.
+          boundary.break(Fail)
+        }
+
+        // str contains hashes.
+        // Extract subexpression and find its position in full expression (hashes act as parentheses)
+        // Outer expression must be a formula
+        val beforeHashes = str.substring(0, hashStart)
+        val betweenHashes = str.substring(hashStart + 1, hashEnd)
+        val afterHashes = str.substring(hashEnd + 1)
+
+        // subExpr need to have the correct sort without ambiguity between predicate and function
+        // elaborateFull would also work (if used consistently) but more costly
+        val subExpr = fastparse.parse(betweenHashes, implicit p => GlobalState.parser.fullExpression) match {
+          case Parsed.Success(e, _) => defs.elaborateToFunctions[Expression](e)
+          case _: Parsed.Failure => boundary.break(Fail)
+        }
+
+        // Replace hashes with parentheses
+        val (lp, rp) = subExpr match {
+          case _: Program => ("{", "}")
+          case _: Formula | _: Term => ("(", ")")
+        }
+        val strWithoutHashes = beforeHashes + lp + betweenHashes + rp + afterHashes
+
+        val reparsedSubExpr = fastparse.parse(strWithoutHashes, implicit p => GlobalState.parser.fullFormula) match {
+          case Parsed.Success(expr, _) => expr
+          case _: Parsed.Failure => boundary.break(Fail)
+        }
+
+        val posIn =
+          if (strWithoutHashes.indexOf(betweenHashes) != hashStart + 1) {
+            // marked sub-expression is not leftmost instance in expr
+            // mark with "hash" placeholder function/predicate/program depending on subExpr sort
+            val (markedStr, placeholder) =
+              PositionLocator.withMarkers(strWithoutHashes, subExpr, hashStart, hashEnd - hashStart + 1)
+            val markedExpr = fastparse.parse(markedStr, implicit p => GlobalState.parser.fullFormula).get.value
+            FormulaTools.posOf(markedExpr, placeholder)
+          } else {
+            // reparsedSubExpr need to be elaborated consistently with subExpr
+            FormulaTools.posOf(defs.elaborateToFunctions(reparsedSubExpr), subExpr)
+          }
+
+        posIn match {
+          case Some(pi) => Pass((defs.elaborateFull(reparsedSubExpr), pi))
+          case None => Fail.opaque(
+              "Parsed a position locator with subexpression successfully, but could not find subexpression: " +
+                subExpr.prettyString + " in expression " + reparsedSubExpr.prettyString
+            )
+        }
+    }
     .opaque("escaped expression string")
 
   // externals

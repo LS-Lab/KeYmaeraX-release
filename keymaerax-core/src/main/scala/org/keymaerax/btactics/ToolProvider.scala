@@ -6,11 +6,12 @@
 package org.keymaerax.btactics
 
 import org.keymaerax.Logging
-import org.keymaerax.tools._
-import org.keymaerax.tools.ext._
+import org.keymaerax.tools.*
+import org.keymaerax.tools.ext.*
 import org.keymaerax.tools.install.{ToolConfiguration, Z3Installer}
 
 import scala.reflect.{classTag, ClassTag}
+import scala.util.boundary
 
 /**
  * Central repository providing access to arithmetic tools.
@@ -281,22 +282,20 @@ case class MultiToolProvider(providers: List[ToolProvider])
 /** Base class for Wolfram tools with alternative names. */
 abstract class WolframToolProvider(val tool: Mathematica, config: ToolConfiguration, alternativeNames: List[String])
     extends PreferredToolProvider(tool :: Nil) {
-  protected def alternativeTool[S: ClassTag](
-      nameOpt: Option[String],
-      factory: Option[String] => Option[S],
-  ): Option[S] = {
-    // First, try the factory
-    factory(nameOpt).foreach(it => return Some(it))
+  protected def alternativeTool[S: ClassTag](nameOpt: Option[String], factory: Option[String] => Option[S]): Option[S] =
+    boundary {
+      // First, try the factory
+      factory(nameOpt).foreach(it => boundary.break(Some(it)))
 
-    // Require the name to be in our alternativeNames
-    val name = nameOpt.getOrElse(return None)
-    if (!alternativeNames.contains(name)) return None
+      // Require the name to be in our alternativeNames
+      val name = nameOpt.getOrElse(boundary.break(None))
+      if (!alternativeNames.contains(name)) return None
 
-    // Use the default tool if it has type S.
-    // Because S is generic and thus elided at runtime, a plain `asInstanceOf[S]` results in no runtime check.
-    // Hence we need to do our own ClassTag-based runtime check to ensure the type actually matches.
-    defaultTool().filter(tool => classTag[S].runtimeClass.isInstance(tool)).map(tool => tool.asInstanceOf[S])
-  }
+      // Use the default tool if it has type S.
+      // Because S is generic and thus elided at runtime, a plain `asInstanceOf[S]` results in no runtime check.
+      // Hence we need to do our own ClassTag-based runtime check to ensure the type actually matches.
+      defaultTool().filter(tool => classTag[S].runtimeClass.isInstance(tool)).map(tool => tool.asInstanceOf[S])
+    }
 
   override def qeTool(name: Option[String] = None): Option[QETacticTool] = alternativeTool(name, super.qeTool)
   override def invGenTool(name: Option[String] = None): Option[InvGenTool] = alternativeTool(name, super.invGenTool)

@@ -18,6 +18,7 @@ import java.io.{File, FileInputStream}
 import scala.collection.immutable.*
 import scala.collection.mutable.ListBuffer
 import scala.io.Source
+import scala.util.boundary
 
 /**
  * Parse a differential dynamic logic archive file string to a list of archive entries. Splits a KeYmaera X archive into
@@ -373,48 +374,51 @@ class DLArchiveParser(val tacticParser: DLTacticParser) extends ArchiveParser {
       )
   )
 
-  def implicitDefODE[$: P](curDecls: Declaration): P[List[(Name, Signature)]] = (
+  def implicitDefODE[$: P](curDecls: Declaration): P[List[(Name, Signature)]] =
     (declPartList ~ "=" ~/ "{" ~ program ~ "}").flatMap { case (sigs, preProg) =>
-      if (sigs.exists(s => !s._2.domain.contains(Real) || s._2.codomain != Real)) return Fail.opaque(
-        "Implicit ODE declarations can only declare real-valued " + "functions of a single real variable."
-      )
+      boundary:
+        if (sigs.exists(s => !s._2.domain.contains(Real) || s._2.codomain != Real)) boundary.break(
+          Fail.opaque("Implicit ODE declarations can only declare real-valued functions of a single real variable.")
+        )
 
-      val (t, Real) = sigs.head._2.arguments.get.head: @unchecked
-      if (sigs.exists(_._2.arguments.get.head._1 != t))
-        return Fail.opaque("Implicit ODE declarations should all use the same " + "time argument.")
+        val (t, Real) = sigs.head._2.arguments.get.head: @unchecked
+        if (sigs.exists(_._2.arguments.get.head._1 != t))
+          boundary.break(Fail.opaque("Implicit ODE declarations should all use the same time argument."))
 
-      val nameSet = sigs.map(_._1).toSet
+        val nameSet = sigs.map(_._1).toSet
 
-      if (nameSet.size != sigs.size)
-        return Fail.opaque("Tried declaring same function twice in an implicit ODE definition")
+        if (nameSet.size != sigs.size)
+          boundary.break(Fail.opaque("Tried declaring same function twice in an implicit ODE definition"))
 
-      // Hack: expand prior declarations in the program, to allow programs containing prior
-      // definitions in block
-      val prog = curDecls.expandFull(preProg)
+        // Hack: expand prior declarations in the program, to allow programs containing prior
+        // definitions in block
+        val prog = curDecls.expandFull(preProg)
 
-      val varT = Variable(t.name, t.index)
-      val interpFuncs =
-        try { ODEToInterpreted.fromProgram(prog, varT) }
-        catch { case FromProgramException(s) => return Fail.opaque("Failed to parse implicit definition by ODE: " + s) }
-
-      if (interpFuncs.exists(f => !nameSet.contains(Name(f.name, f.index))))
-        return Fail.opaque("ODE variable missing from implicit declaration")
-
-      Pass(
-        interpFuncs
-          .map { f =>
-            Name(f.name, f.index) -> Signature(
-              domain = Some(Real),
-              codomain = Real,
-              arguments = Some(List((t, Real))),
-              interpretation = Right(Some(FuncOf(f, varT))),
-              loc = UnknownLocation,
-            )
+        val varT = Variable(t.name, t.index)
+        val interpFuncs =
+          try { ODEToInterpreted.fromProgram(prog, varT) }
+          catch {
+            case FromProgramException(s) =>
+              boundary.break(Fail.opaque("Failed to parse implicit definition by ODE: " + s))
           }
-          .toList
-      )
+
+        if (interpFuncs.exists(f => !nameSet.contains(Name(f.name, f.index))))
+          boundary.break(Fail.opaque("ODE variable missing from implicit declaration"))
+
+        Pass(
+          interpFuncs
+            .map { f =>
+              Name(f.name, f.index) -> Signature(
+                domain = Some(Real),
+                codomain = Real,
+                arguments = Some(List((t, Real))),
+                interpretation = Right(Some(FuncOf(f, varT))),
+                loc = UnknownLocation,
+              )
+            }
+            .toList
+        )
     }
-  )
 
   /* Commented out because this syntax was removed in favor of syntactic
    * restriction to ODE implicit defs

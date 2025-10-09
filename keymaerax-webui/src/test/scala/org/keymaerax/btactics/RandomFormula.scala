@@ -5,14 +5,14 @@
 
 package org.keymaerax.btactics
 
-import org.keymaerax.core._
+import org.keymaerax.core.*
 
-import scala.util.Random
+import scala.util.{boundary, Random}
 import scala.collection.immutable
-import scala.collection.immutable._
-import org.keymaerax.infrastruct.Augmentors._
+import scala.collection.immutable.*
+import org.keymaerax.infrastruct.Augmentors.*
 import org.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
-import org.keymaerax.infrastruct._
+import org.keymaerax.infrastruct.*
 import org.keymaerax.pt.ProvableSig
 
 import scala.annotation.tailrec
@@ -96,7 +96,7 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
   }
 
   /** randomly generate a formula context C{_} of the given expected size */
-  def nextFormulaContext(size: Int): Context[Formula] = {
+  def nextFormulaContext(size: Int): Context[Formula] = boundary {
     import org.keymaerax.infrastruct.Augmentors._
     val fml = nextF(
       nextNames("z", size / 3 + 1),
@@ -111,7 +111,7 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
     for (j <- 1 to randomReps) {
       // @todo min(size, fml.size)
       val pos = nextPosition(size).inExpr
-      try { return fml.at(pos)._1 } catch { case _: IllegalArgumentException => }
+      try { boundary.break(fml.at(pos)._1) } catch { case _: IllegalArgumentException => }
     }
     throw new IllegalStateException(
       "Monte Carlo generation of context failed despite " + randomReps + " rounds for " + fml

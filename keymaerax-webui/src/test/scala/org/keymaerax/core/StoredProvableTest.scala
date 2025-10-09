@@ -15,10 +15,11 @@ import org.scalatest.PrivateMethodTester
 import org.scalatest.concurrent.{Signaler, TimeLimits}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import org.scalatest.time._
+import org.scalatest.time.*
 
 import scala.annotation.nowarn
-import scala.collection.immutable._
+import scala.collection.immutable.*
+import scala.util.boundary
 
 /**
  * Random Provable constructions that are stored, read again, tampered with, read again.
@@ -160,7 +161,7 @@ class StoredProvableTest extends AnyFlatSpec with Matchers with PrivateMethodTes
   }
 
   /** Tamper with a formula by randomly replacing one of its subexpressions */
-  private def tamperFormula(f: Formula, tamperComplexity: Int = tamperComplexity): Formula = {
+  private def tamperFormula(f: Formula, tamperComplexity: Int = tamperComplexity): Formula = boundary {
     // rejection sampling
     for (_ <- 1 to 100)
       try {
@@ -175,7 +176,7 @@ class StoredProvableTest extends AnyFlatSpec with Matchers with PrivateMethodTes
               diffs = StaticSemantics.isDifferential(t),
               funcs = true,
             )
-            return FormulaAugmentor(f).replaceAt(pos, repl)
+            boundary.break(FormulaAugmentor(f).replaceAt(pos, repl))
           case Some(fml: Formula) =>
             // @note avoid higher-order differentials by allowing differentials only when replacing differential formulas
             val repl = rand.nextF(
@@ -187,8 +188,9 @@ class StoredProvableTest extends AnyFlatSpec with Matchers with PrivateMethodTes
               diffs = StaticSemantics.isDifferential(fml),
               funcs = true,
             )
-            return FormulaAugmentor(f).replaceAt(pos, repl)
-          case Some(_: Program) => return FormulaAugmentor(f).replaceAt(pos, rand.nextProgram(tamperComplexity))
+            boundary.break(FormulaAugmentor(f).replaceAt(pos, repl))
+          case Some(_: Program) =>
+            boundary.break(FormulaAugmentor(f).replaceAt(pos, rand.nextProgram(tamperComplexity)))
           case None => throw new AssertionError(
               "nextSubPosition should only find defined positions: " + f + " at " + pos + " is " + FormulaAugmentor(f)
                 .sub(pos)

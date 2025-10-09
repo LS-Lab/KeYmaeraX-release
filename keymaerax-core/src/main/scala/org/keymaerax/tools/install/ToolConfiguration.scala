@@ -8,7 +8,7 @@ package org.keymaerax.tools.install
 import org.keymaerax.Configuration
 import org.keymaerax.tools.{ToolName, ToolPathFinder}
 
-import scala.util.Try
+import scala.util.{boundary, Try}
 
 case class ToolConfiguration(
     tool: Option[ToolName.Value] = None,
@@ -24,11 +24,11 @@ case class ToolConfiguration(
  * @author Stefan Mitsch
  */
 object ToolConfiguration {
-  def defaultMathematicaConfig: ToolConfiguration = {
+  def defaultMathematicaConfig: ToolConfiguration = boundary {
     val paths = ToolPathFinder
       .findMathematicaInstallDir()
       .flatMap(ToolPathFinder.findMathematicaPaths)
-      .getOrElse(return ToolConfiguration())
+      .getOrElse(boundary.break(ToolConfiguration()))
 
     ToolConfiguration(
       mathKernel = Some(paths.mathKernel.toString),
@@ -38,7 +38,7 @@ object ToolConfiguration {
   }
 
   /** Returns the Mathematica configuration. */
-  def mathematicaConfig(preferred: ToolConfiguration = ToolConfiguration()): ToolConfiguration = {
+  def mathematicaConfig(preferred: ToolConfiguration = ToolConfiguration()): ToolConfiguration = boundary {
     def tcpip: String = Configuration
       .getString(Configuration.Keys.MATH_LINK_TCPIP)
       .map(s => Try(Integer.parseInt(s)).getOrElse(s).toString)
@@ -49,7 +49,9 @@ object ToolConfiguration {
 
     val defaultConfig = defaultMathematicaConfig
 
-    val linkName = Configuration.getString(Configuration.Keys.MATHEMATICA_LINK_NAME).getOrElse(return defaultConfig)
+    val linkName = Configuration
+      .getString(Configuration.Keys.MATHEMATICA_LINK_NAME)
+      .getOrElse(boundary.break(defaultConfig))
 
     val libDir = Configuration
       .getString(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR)
@@ -58,11 +60,11 @@ object ToolConfiguration {
     ToolConfiguration(mathKernel = Some(linkName), jlinkLibDir = Some(libDir), tcpip = Some(tcpip))
   }
 
-  def defaultWolframEngineConfig: ToolConfiguration = {
+  def defaultWolframEngineConfig: ToolConfiguration = boundary {
     val paths = ToolPathFinder
       .findWolframEngineInstallDir()
       .flatMap(ToolPathFinder.findMathematicaPaths)
-      .getOrElse(return ToolConfiguration())
+      .getOrElse(boundary.break(ToolConfiguration()))
 
     ToolConfiguration(
       mathKernel = Some(paths.mathKernel.toString),
@@ -72,7 +74,7 @@ object ToolConfiguration {
   }
 
   /** Returns the Wolfram Engine configuration. */
-  def wolframEngineConfig(preferred: ToolConfiguration = ToolConfiguration()): ToolConfiguration = {
+  def wolframEngineConfig(preferred: ToolConfiguration = ToolConfiguration()): ToolConfiguration = boundary {
     def tcpip: String = Configuration
       .getString(Configuration.Keys.WOLFRAMENGINE_TCPIP)
       .map(s => Try(Integer.parseInt(s)).getOrElse(s).toString)
@@ -83,7 +85,9 @@ object ToolConfiguration {
 
     val defaultConfig = defaultWolframEngineConfig
 
-    val linkName = Configuration.getString(Configuration.Keys.WOLFRAMENGINE_LINK_NAME).getOrElse(return defaultConfig)
+    val linkName = Configuration
+      .getString(Configuration.Keys.WOLFRAMENGINE_LINK_NAME)
+      .getOrElse(boundary.break(defaultConfig))
 
     val libDir = Configuration
       .getString(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR)

@@ -34,6 +34,7 @@ import org.keymaerax.infrastruct.{AntePosition, PosInExpr, Position, SuccPositio
 import org.keymaerax.pt.ProvableSig
 
 import scala.annotation.nowarn
+import scala.util.boundary
 
 /**
  * Sequent Calculus for propositional and first-order logic.
@@ -990,7 +991,7 @@ object SequentCalculus {
   /** Find a succedent True or an antecedent False or the same formula left and right and give back its closing tactic. */
   private def findClose: BuiltInTactic = anon { (provable: ProvableSig) =>
     @inline
-    def findCloseImp(pr: ProvableSig): ProvableSig = {
+    def findCloseImp(pr: ProvableSig): ProvableSig = boundary {
       // The control structure is complicated but ensures False/True are only searched for exactly once en passent.
       ProofRuleTactics.requireOneSubgoal(pr, "findClose")
       val seq = pr.subgoals.head
@@ -998,7 +999,7 @@ object SequentCalculus {
       val succ = seq.succ
       if (succ.isEmpty) {
         for (j <- ante.indices) {
-          if (ante(j) == False) return ProofRuleTactics.closeFalse(AntePos(j)).computeResult(pr)
+          if (ante(j) == False) boundary.break(ProofRuleTactics.closeFalse(AntePos(j)).computeResult(pr))
         }
       } else {
         val fml0 = succ.head
@@ -1006,15 +1007,16 @@ object SequentCalculus {
         // @todo optimizable: measure whether antecedent converted to HashMap for lookup is faster if succ.length>1 and ante.length large
         for (j <- ante.indices) {
           ante(j) match {
-            case False => return ProofRuleTactics.closeFalse(AntePos(j)).computeResult(pr)
-            case other => if (fml0 == other) return closeId(AntePos(j), SuccPos(0)).computeResult(pr)
+            case False => boundary.break(ProofRuleTactics.closeFalse(AntePos(j)).computeResult(pr))
+            case other => if (fml0 == other) boundary.break(closeId(AntePos(j), SuccPos(0)).computeResult(pr))
           }
         }
         for (i <- succ.indices.tail) {
           succ(i) match {
-            case True => return ProofRuleTactics.closeTrue(SuccPos(i)).computeResult(pr)
-            case fml =>
-              for (j <- ante.indices) { if (fml == ante(j)) return closeId(AntePos(j), SuccPos(i)).computeResult(pr) }
+            case True => boundary.break(ProofRuleTactics.closeTrue(SuccPos(i)).computeResult(pr))
+            case fml => for (j <- ante.indices) {
+                if (fml == ante(j)) boundary.break(closeId(AntePos(j), SuccPos(i)).computeResult(pr))
+              }
           }
         }
       }

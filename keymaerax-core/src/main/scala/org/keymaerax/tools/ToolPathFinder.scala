@@ -9,15 +9,15 @@ import org.keymaerax.info.{ArchType, Os, OsType}
 
 import java.nio.file.{Files, Path, Paths}
 import scala.sys.process.Process
-import scala.util.Try
+import scala.util.{boundary, Try}
 
 object ToolPathFinder {
   case class MathematicaPaths(mathKernel: Path, jlinkLib: Path)
 
-  private def parseVersion(s: String): Option[(Int, Int)] = {
-    val matched = """^(\d+)\.(\d+)$""".r.findFirstMatchIn(s).getOrElse(return None)
-    val major = Try(Integer.parseInt(matched.group(1))).getOrElse(return None)
-    val minor = Try(Integer.parseInt(matched.group(2))).getOrElse(return None)
+  private def parseVersion(s: String): Option[(Int, Int)] = boundary {
+    val matched = """^(\d+)\.(\d+)$""".r.findFirstMatchIn(s).getOrElse(boundary.break(None))
+    val major = Try(Integer.parseInt(matched.group(1))).getOrElse(boundary.break(None))
+    val minor = Try(Integer.parseInt(matched.group(2))).getOrElse(boundary.break(None))
     Some((major, minor))
   }
 
@@ -145,7 +145,7 @@ object ToolPathFinder {
   private def installDirFromWolfram(binary: String = "wolfram"): Option[Path] =
     installDirFromCommand(binary, "-noprompt", "-run", "WriteString[$Output,$InstallationDirectory];Exit[]")
 
-  private def findInstallDir(candidates: Seq[Path]): Option[Path] = {
+  private def findInstallDir(candidates: Seq[Path]): Option[Path] = boundary {
     // On Windows, Mathematica/WolframEngine adds wolframscript.exe to the PATH.
     // On other platforms, wolframscript or wolfram might be on the PATH.
     // However, we can't rely on this, so we need to check the default install dirs too.
@@ -154,19 +154,19 @@ object ToolPathFinder {
     // while WolframKernel might spawn a GUI.
     // https://mathematica.stackexchange.com/a/84038
 
-    installDirFromWolframscript().foreach(p => return Some(p))
-    installDirFromWolfram().foreach(p => return Some(p))
+    installDirFromWolframscript().foreach(p => boundary.break(Some(p)))
+    installDirFromWolfram().foreach(p => boundary.break(Some(p)))
 
     for (candidate <- candidates) {
       wolframscriptPath
         .map(candidate.resolve)
         .flatMap(p => installDirFromWolframscript(binary = p.toString))
-        .foreach(p => return Some(p))
+        .foreach(p => boundary.break(Some(p)))
 
       wolframPath
         .map(candidate.resolve)
         .flatMap(p => installDirFromWolfram(binary = p.toString))
-        .foreach(p => return Some(p))
+        .foreach(p => boundary.break(Some(p)))
     }
 
     None
@@ -180,8 +180,9 @@ object ToolPathFinder {
    * Find paths to specific files inside a Mathematica installation. Use [[findMathematicaInstallDir]] or
    * [[findWolframEngineInstallDir]] to find the installation itself.
    */
-  def findMathematicaPaths(installDir: Path): Option[MathematicaPaths] = Some(MathematicaPaths(
-    mathKernel = installDir.resolve(this.mathKernelPath.getOrElse(return None)),
-    jlinkLib = installDir.resolve(this.jlinkLibPath.getOrElse(return None)),
-  ))
+  def findMathematicaPaths(installDir: Path): Option[MathematicaPaths] = boundary:
+    Some(MathematicaPaths(
+      mathKernel = installDir.resolve(this.mathKernelPath.getOrElse(boundary.break(None))),
+      jlinkLib = installDir.resolve(this.jlinkLibPath.getOrElse(boundary.break(None))),
+    ))
 }

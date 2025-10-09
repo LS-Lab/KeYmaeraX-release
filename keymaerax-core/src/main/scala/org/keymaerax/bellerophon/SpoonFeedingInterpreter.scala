@@ -16,7 +16,7 @@ import org.keymaerax.pt.ProvableSig
 
 import scala.annotation.{nowarn, tailrec}
 import scala.collection.mutable
-import scala.util.{Failure, Success, Try}
+import scala.util.{boundary, Failure, Success, Try}
 
 trait ExecutionContext {
   def store(e: BelleExpr): ExecutionContext
@@ -159,9 +159,9 @@ case class SpoonFeedingInterpreter(
       strict: Boolean,
       convertPending: Boolean,
       executePending: Boolean,
-  ): (BelleValue, ExecutionContext) = synchronized {
-    if (isDead) (goal, ctx)
-    else
+  ): (BelleValue, ExecutionContext) = synchronized:
+    boundary:
+      if (isDead) return (goal, ctx)
       try {
         val (result, resultCtx) = tactic match {
           case SeqTactic(s) =>
@@ -175,7 +175,7 @@ case class SpoonFeedingInterpreter(
                     val remainder = nonNilSteps.drop(i + 1)
                     if (convertPending && remainder.nonEmpty) remainder.head match {
                       case pt: StringInputTactic if pt.name == "pending" =>
-                        return runTactic(
+                        boundary.break(runTactic(
                           SeqTactic(
                             DebuggingTactics.pending(BellePrettyPrinter(t) + "; " + pt.inputs.head) +: remainder.tail
                           ),
@@ -185,8 +185,8 @@ case class SpoonFeedingInterpreter(
                           strict,
                           convertPending = false,
                           executePending = false,
-                        )
-                      case _ => return runTactic(
+                        ))
+                      case _ => boundary.break(runTactic(
                           DebuggingTactics.pending(BellePrettyPrinter(SeqTactic(remainder))),
                           g,
                           level,
@@ -194,7 +194,7 @@ case class SpoonFeedingInterpreter(
                           strict,
                           convertPending = false,
                           executePending = false,
-                        )
+                        ))
                     }
                     else throw e.inContext(
                       SeqTactic(nonNilSteps.patch(i, Seq(e.context), 1)),
@@ -206,7 +206,7 @@ case class SpoonFeedingInterpreter(
             for ((t, i) <- s.zipWithIndex.dropRight(1)) {
               try {
                 val result = runTactic(t, goal, level, ctx, strict, convertPending = false, executePending)
-                if (progress(goal, result._1)) return result
+                if (progress(goal, result._1)) boundary.break(result)
               } catch {
                 case _: BelleProofSearchControl => // continue
                 case e: BelleThrowable =>
@@ -898,7 +898,6 @@ case class SpoonFeedingInterpreter(
           }
           else throw e
       }
-  }
 
   override def kill(): Unit = /* cannot stop if synchronized */ {
     isDead = true

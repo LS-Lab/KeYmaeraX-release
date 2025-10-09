@@ -45,6 +45,7 @@ import org.keymaerax.tools.ext.Mathematica
 import scala.annotation.nowarn
 import scala.collection.immutable
 import scala.collection.mutable.ListBuffer
+import scala.util.boundary
 
 /**
  * Implements ODE tactics for liveness.
@@ -422,8 +423,7 @@ object ODELiveness {
    * @param ode
    * @return (optional) ProvableSig proving the global existence axiom, None if failed
    */
-  def deriveGlobalExistence(ode: DifferentialProgram): Option[ProvableSig] = {
-
+  def deriveGlobalExistence(ode: DifferentialProgram): Option[ProvableSig] = boundary:
     val timevar = "gextimevar_".asVariable
     val rhs = "p()".asTerm
     val post = Greater(timevar, rhs)
@@ -433,7 +433,7 @@ object ODELiveness {
       .listify(ode)
       .map {
         case ve @ AtomicODE(x, e) => (x.x, ve)
-        case _ => return None
+        case _ => boundary.break(None)
       }
       .toMap
 
@@ -455,7 +455,7 @@ object ODELiveness {
 
       val vdg =
         try affineVDGprecond(odeG)
-        catch { case e: IllegalArgumentException => return None }
+        catch { case e: IllegalArgumentException => boundary.break(None) }
 
       val vdgflip = flipModality(vdg)
       pr = useFor(vdgflip, PosInExpr(0 :: Nil))(Position(1))(pr)
@@ -473,7 +473,6 @@ object ODELiveness {
     )
 
     Some(res)
-  }
 
   // Helper to remove a nonlinear univariate ODE.
   // This is a bit different from the others in that it needs to inspect the current sequent in order to

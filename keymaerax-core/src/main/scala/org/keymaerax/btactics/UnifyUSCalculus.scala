@@ -47,7 +47,7 @@ import org.keymaerax.pt.ProvableSig
 
 import scala.annotation.nowarn
 import scala.collection.immutable.*
-import scala.util.Try
+import scala.util.{boundary, Try}
 
 /**
  * Automatic unification-based Uniform Substitution Calculus with indexing. Provides a tactic framework for
@@ -3176,11 +3176,11 @@ object UnifyUSCalculus extends Logging {
           // take the first axiom among breadth that works for one useFor step
           case l: List[ProvableInfo] =>
             // useFor the first applicable axiom if any, or None
-            def firstAxUse: Option[(ProvableSig, List[PosInExpr])] = {
+            def firstAxUse: Option[(ProvableSig, List[PosInExpr])] = boundary {
               for (ax <- l)
                 try {
                   val (key, recursor) = index(ax)
-                  return Some((modifier(ax, pos)(useFor(ax, key, inst(ax))(pos)(de)), recursor))
+                  boundary.break(Some((modifier(ax, pos)(useFor(ax, key, inst(ax))(pos)(de)), recursor)))
                 } catch {
                   case _: ProverException => /* ignore and try next */
                 }
@@ -3229,9 +3229,9 @@ object UnifyUSCalculus extends Logging {
             // take the first axiom among breadth that works for one useFor step
             case l: List[(ProvableSig, PosInExpr, List[PosInExpr])] =>
               // useFor the first applicable axiom if any, or None
-              def firstAxUse: Option[(ProvableSig, List[PosInExpr])] = {
+              def firstAxUse: Option[(ProvableSig, List[PosInExpr])] = boundary {
                 for ((ax, key, recursor) <- l)
-                  try { return Some((useFor(ax, key)(pos)(de), recursor)) }
+                  try { boundary.break(Some((useFor(ax, key)(pos)(de), recursor))) }
                   catch {
                     case _: ProverException => /* ignore and try next */
                   }
