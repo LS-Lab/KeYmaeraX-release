@@ -156,7 +156,7 @@ lazy val webui = project
     // report long-running tests (report every hour for tests that run longer than 1hr)
     Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-W", "3600", "3600"),
 
-    resolvers ++= Resolver.sonatypeOssRepos("snapshots"), // ScalaMeter
+    resolvers += Resolver.sonatypeCentralSnapshots, // ScalaMeter
     testFrameworks += new TestFramework("org.scalameter.ScalaMeterFramework"),
 
     logBuffered := false,
