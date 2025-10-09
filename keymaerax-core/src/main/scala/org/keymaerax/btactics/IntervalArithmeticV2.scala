@@ -219,8 +219,6 @@ object IntervalArithmeticV2 {
           case Some(FuncOf(f, Pair(l, r))) => FuncOf(f, Pair(unfold(l), unfold(r)))
           case Some(FuncOf(f, c)) if c.sort == Real => FuncOf(f, unfold(c))
           case Some(a) => a
-          // Constant symbols
-          case _ => t
         }
       case t => t
     }

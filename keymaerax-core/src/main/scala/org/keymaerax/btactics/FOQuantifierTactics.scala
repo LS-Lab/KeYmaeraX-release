@@ -190,9 +190,6 @@ protected object FOQuantifierTactics {
         case (_, f) => throw new TacticInapplicableFailure(
             "Cannot instantiate: formula " + f.prettyString + " at pos " + pos + " is not a universal quantifier"
           )
-        case _ => throw new IllFormedTacticApplicationException(
-            "Position " + pos + " is not defined in " + sequent.prettyString
-          )
       }
     }
 
@@ -278,9 +275,6 @@ protected object FOQuantifierTactics {
           )
         case (_, f) => throw new TacticInapplicableFailure(
             "Cannot instantiate: formula " + f.prettyString + " at pos " + pos + " is not a existential quantifier"
-          )
-        case _ => throw new IllFormedTacticApplicationException(
-            "Position " + pos + " is not defined in " + sequent.prettyString
           )
       }
     }

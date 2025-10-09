@@ -35,7 +35,6 @@ object DerivationInfoRegistry extends Logging {
       case (_: FormulaArg, (f: Formula) :: Nil) => Left(f)
       case (_: FormulaArg, f :: Nil) => Right("Expected a formula but got " + f.prettyString)
       case (_: ExpressionArg, (e: Expression) :: Nil) => Left(e)
-      case (_: ExpressionArg, e :: Nil) => Right("Expected an expression but got " + e.prettyString)
       case (ListArg(ai: ArgInfo), fmls) if fmls.forall(_.kind == FormulaKind) =>
         val res = fmls.map(e => convert(ai, List(e)))
         res.find({

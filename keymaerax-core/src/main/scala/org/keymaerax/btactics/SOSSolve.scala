@@ -263,7 +263,6 @@ object SOSSolve {
         case t: UnaryCompositeTerm => naturalExponentCheck(t.child)
         case t: AtomicTerm => None
         case t: FuncOf => naturalExponentCheck(t.child)
-        case _ => ???
       }
     } catch { case PolynomialArithV2.NonSupportedExponentException(_) => Some(t) }
 
@@ -276,7 +275,6 @@ object SOSSolve {
     case fml: PredOf => naturalExponentCheck(fml.child)
     case fml: PredicationalOf => naturalExponentCheck(fml.child)
     case fml: AtomicFormula => None
-    case _ => ???
   }
 
   def naturalExponentCheck(seq: Sequent): Option[Term] = (seq.ante ++ seq.succ).collectFirst(
@@ -302,7 +300,6 @@ object SOSSolve {
     case a: AtomicFormula => throw new IllegalArgumentException(
         "universalCheck: preprocessing should have eliminated atomic formulas - " + fml
       )
-    case a: ApplicationOf => true
     case m: Modal => true
     case Exists(_, _) => throw new IllegalArgumentException(
         "universalCheck: preprocessing should have eliminated existential quantifiers - " + fml

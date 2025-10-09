@@ -176,7 +176,6 @@ object FormulaTools extends Logging {
     case f: BinaryCompositeFormula => atomicFormulas(f.left) ++ atomicFormulas(f.right)
     case f: Quantified => atomicFormulas(f.child)
     case f: Modal => atomicFormulas(f.child)
-    case _ => throw new IllegalArgumentException("atomicFormulas of formula " + formula + " not implemented")
   }
 
   /**
@@ -350,7 +349,6 @@ object FormulaTools extends Logging {
     case f @ Power(_, Number(n)) if n >= 0 => singularities(f.left) ++ singularities(f.right)
     case f @ Power(_, Number(n)) if n < 0 => singularities(f.left) ++ singularities(f.right) + f.left
     case f: BinaryCompositeTerm => singularities(f.left) ++ singularities(f.right)
-    case _ => throw new IllegalArgumentException("singularities of term " + term + " not implemented")
   }
 
   def singularities(formula: Formula): Set[Term] = formula match {
@@ -366,7 +364,6 @@ object FormulaTools extends Logging {
     case f: BinaryCompositeFormula => singularities(f.left) ++ singularities(f.right)
     case f: Quantified => singularities(f.child)
     case f: Modal => singularities(f.program) ++ singularities(f.child)
-    case _ => throw new IllegalArgumentException("singularities of formula " + formula + " not implemented")
   }
 
   def singularities(program: Program): Set[Term] = program match {
@@ -384,7 +381,6 @@ object FormulaTools extends Logging {
     case AtomicODE(_, t) => singularities(t)
     case _: DifferentialProgramConst => Set.empty
     case f: DifferentialProduct => singularities(f.left) ++ singularities(f.right)
-    case _ => throw new IllegalArgumentException("singularities of program " + program + " not implemented")
   }
 
   /**

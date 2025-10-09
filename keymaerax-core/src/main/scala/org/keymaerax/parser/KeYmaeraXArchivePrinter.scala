@@ -235,16 +235,14 @@ object KeYmaeraXArchivePrinter {
       .mkString("\n")
 
     val printedDefs = defs
-      .map({
-        case (Name(name, idx), Signature(domain, codomain, args, interpretation, _)) =>
-          val printedDomain = codomain match {
-            case Trafo => "" // @todo program arguments not yet supported
-            case _ => "(" + printDomain(domain.getOrElse(Unit), args.getOrElse(List.empty).map(_._1)) + ")"
-          }
-          s"  ${printSort(codomain)} ${printName(name, idx)}${printInterpretation(
-              interpretation
-            )}$printedDomain${printDef(codomain, args, interpretation)};"
-        case _ => ""
+      .map({ case (Name(name, idx), Signature(domain, codomain, args, interpretation, _)) =>
+        val printedDomain = codomain match {
+          case Trafo => "" // @todo program arguments not yet supported
+          case _ => "(" + printDomain(domain.getOrElse(Unit), args.getOrElse(List.empty).map(_._1)) + ")"
+        }
+        s"  ${printSort(codomain)} ${printName(name, idx)}${printInterpretation(
+            interpretation
+          )}$printedDomain${printDef(codomain, args, interpretation)};"
       })
       .filter(_.nonEmpty)
 

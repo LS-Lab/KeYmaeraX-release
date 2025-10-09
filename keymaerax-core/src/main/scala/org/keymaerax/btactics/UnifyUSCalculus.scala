@@ -2303,15 +2303,11 @@ object UnifyUSCalculus extends Logging {
                                 case _: BaseVariable => t.replaceFree(vars.head, Variable("x_"))
                                 case _: DifferentialSymbol =>
                                   t.replaceFree(vars.head, DifferentialSymbol(Variable("x_")))
-                                case _ =>
-                                  throw new ProverException("Only variables/differential symbols in block quantifier")
                               }
                             case f: Formula => vars.head match {
                                 case _: BaseVariable => f.replaceAll(vars.head, Variable("x_"))
                                 case _: DifferentialSymbol =>
                                   f.replaceAll(vars.head, DifferentialSymbol(Variable("x_")))
-                                case _ =>
-                                  throw new ProverException("Only variables/differential symbols in block quantifier")
                               }
                           },
                         )
@@ -2330,15 +2326,11 @@ object UnifyUSCalculus extends Logging {
                                 case _: BaseVariable => t.replaceFree(vars.head, Variable("x_"))
                                 case _: DifferentialSymbol =>
                                   t.replaceFree(vars.head, DifferentialSymbol(Variable("x_")))
-                                case _ =>
-                                  throw new ProverException("Only variables/differential symbols in block quantifier")
                               }
                             case f: Formula => vars.head match {
                                 case _: BaseVariable => f.replaceAll(vars.head, Variable("x_"))
                                 case _: DifferentialSymbol =>
                                   f.replaceAll(vars.head, DifferentialSymbol(Variable("x_")))
-                                case _ =>
-                                  throw new ProverException("Only variables/differential symbols in block quantifier")
                               }
                           },
                         )
@@ -2348,7 +2340,6 @@ object UnifyUSCalculus extends Logging {
               }) ++ RenUSubst(vars.head match {
                 case _: BaseVariable => Seq((Variable("x_"), vars.head))
                 case DifferentialSymbol(v) => Seq((Variable("x_"), v))
-                case _ => throw new ProverException("Only variables/differential symbols in block quantifier")
               })
             // NB: all eliminate axiom not implemented
             if (

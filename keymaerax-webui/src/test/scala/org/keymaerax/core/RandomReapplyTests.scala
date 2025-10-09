@@ -119,7 +119,6 @@ class RandomReapplyTests extends AnyFlatSpec with Matchers {
     // homomorphic cases
     case f: UnaryCompositeTerm => f.reapply(reapplied(f.child))
     case f: BinaryCompositeTerm => f.reapply(reapplied(f.left), reapplied(f.right))
-    case _ => throw new IllegalArgumentException("reapplied of term " + term + " of class " + term.getClass)
   }
 
   def reapplied(formula: Formula): Formula = formula match {
@@ -137,8 +136,6 @@ class RandomReapplyTests extends AnyFlatSpec with Matchers {
     case f: BinaryCompositeFormula => f.reapply(reapplied(f.left), reapplied(f.right))
     case f: Quantified => f.reapply(f.vars, reapplied(f.child))
     case f: Modal => f.reapply(reapplied(f.program), reapplied(f.child))
-    case _ =>
-      throw new IllegalArgumentException("reapplied position of formula " + formula + " of class " + formula.getClass)
   }
 
   def reapplied(program: Program): Program = program match {

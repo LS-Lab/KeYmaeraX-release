@@ -135,7 +135,6 @@ class SOSsolveQELoggerTests extends TacticTestBase with PrivateMethodTester {
     case n: Number => true
     case t: AtomicTerm => false
     case t: FuncOf => false
-    case _ => ???
   }
 
   def denominators(t: Term): Seq[Term] = t match {
@@ -144,7 +143,6 @@ class SOSsolveQELoggerTests extends TacticTestBase with PrivateMethodTester {
     case t: UnaryCompositeTerm => denominators(t.child)
     case t: AtomicTerm => Seq()
     case t: FuncOf => denominators(t.child)
-    case _ => ???
   }
 
   def denominators(fml: Formula): Seq[Term] = fml match {

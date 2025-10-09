@@ -1075,12 +1075,7 @@ class MathematicaSimplificationTool(override val link: MathematicaLink)
 
       val input = ExtMathematicaOpSpec.fullSimplify(ex, MathematicaOpSpec.list(assuming*))
       val (_, result) = run(input)
-      result match {
-        case r: Expression => r
-        case _ => throw ToolExecutionException(
-            "Mathematica did not successfuly simplify: " + expr + " under assumptions " + assumptions
-          )
-      }
+      result match { case r: Expression => r }
   }
 }
 

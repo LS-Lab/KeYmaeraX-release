@@ -886,7 +886,6 @@ object AssessmentProver {
             if (expected.zip(have).exists({ case (ee, he) => ee.kind != he.kind })) Right(errorMsg(e, h)) else Left(h)
           } else if (have.exists(_.kind != expected.head.kind)) { Right(errorMsg(e, h)) } else Left(h)
         case (h, e) => if (!e.getClass.isAssignableFrom(h.getClass)) Right(errorMsg(e, h)) else Left(have)
-        case _ => Left(have)
       }
   }
 

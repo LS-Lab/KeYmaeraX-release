@@ -139,9 +139,6 @@ case class ApplicableAxiomsResponse(
           case (_, di: TacticDisplayInfo) =>
             if (topLevel) ruleJson(info, di.conclusion, di.premises, di.inputGenerator)
             else ruleJson(info, di.ctxConclusion, di.ctxPremises, di.inputGenerator)
-          case (_, _: AxiomDisplayInfo | _: InputAxiomDisplayInfo) => throw new IllegalArgumentException(
-              s"Unexpected derivation info $derivationInfo displays as axiom but is not AxiomInfo"
-            )
         }
     }
     JsObject(

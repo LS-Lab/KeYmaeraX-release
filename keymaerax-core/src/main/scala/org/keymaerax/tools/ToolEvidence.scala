@@ -26,16 +26,15 @@ case class ToolEvidence(info: immutable.List[(String, String)]) extends Evidence
     case other: ToolEvidence => info.length == other.info.length &&
       info
         .zip(other.info)
-        .forall {
-          case ((k1, v1), (k2, v2)) => k1 == k2 &&
-            (KeYmaeraXLexer.normalizeNewlines(v1) == KeYmaeraXLexer.normalizeNewlines(v2)
-            // backwards-compatibility: spaces around evidence value are not present up to and including 4.9.3
-            ||
-              KeYmaeraXLexer.normalizeNewlines(v1.stripSuffix(" ").stripPrefix(" ")) ==
-              KeYmaeraXLexer.normalizeNewlines(v2) ||
-              KeYmaeraXLexer.normalizeNewlines(v1) ==
-              KeYmaeraXLexer.normalizeNewlines(v2.stripSuffix(" ").stripPrefix(" ")))
-          case _ => false
+        .forall { case ((k1, v1), (k2, v2)) =>
+          k1 == k2 &&
+          (KeYmaeraXLexer.normalizeNewlines(v1) == KeYmaeraXLexer.normalizeNewlines(v2)
+          // backwards-compatibility: spaces around evidence value are not present up to and including 4.9.3
+          ||
+            KeYmaeraXLexer.normalizeNewlines(v1.stripSuffix(" ").stripPrefix(" ")) ==
+            KeYmaeraXLexer.normalizeNewlines(v2) ||
+            KeYmaeraXLexer.normalizeNewlines(v1) ==
+            KeYmaeraXLexer.normalizeNewlines(v2.stripSuffix(" ").stripPrefix(" ")))
         }
     case _ => false
   }

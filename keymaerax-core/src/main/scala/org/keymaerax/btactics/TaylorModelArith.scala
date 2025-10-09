@@ -705,7 +705,6 @@ object TaylorModelArith {
       case unop: UnaryCompositeTerm => subtermOf(t, unop.child)
       case app: FuncOf => subtermOf(t, app.child)
       case a: AtomicTerm => false
-      case _ => ???
     }
 
   /** t subterm of fml ? */
@@ -718,7 +717,6 @@ object TaylorModelArith {
     case m: Modal => throw new IllegalArgumentException("not expecting modal formula here")
     case q: Quantified => subtermOf(t, q.child)
     case a: AtomicFormula => false
-    case _ => ???
   }
 
   val refineTmExists = Ax.refineTmExists.provable

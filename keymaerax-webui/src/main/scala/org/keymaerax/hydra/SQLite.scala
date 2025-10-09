@@ -1001,7 +1001,6 @@ object SQLite {
             step.userExecuted,
           ) :: zipTrace(steps, provables)
         case Nil => Nil
-        case _ => throw new ProverException("Bug in zipTrace")
       }
     }
 

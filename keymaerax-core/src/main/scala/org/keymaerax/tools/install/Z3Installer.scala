@@ -75,7 +75,6 @@ object Z3Installer extends Logging {
       case OsType.Linux => this.getClass.getResourceAsStream("/z3/ubuntu64/z3")
       case OsType.MacOs => this.getClass.getResourceAsStream("/z3/mac64/z3")
       case OsType.Unknown => throw new Exception("Z3 solver is currently not supported in your operating system.")
-      case _ => null
     }
     if (resource == null) {
       val z3 = new File(z3TempDir + File.separator + "z3")

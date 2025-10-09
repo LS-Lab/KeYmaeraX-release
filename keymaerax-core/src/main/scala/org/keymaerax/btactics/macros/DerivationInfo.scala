@@ -799,9 +799,6 @@ object ProvableInfo {
   def ofStoredName(storedName: String): ProvableInfo = {
     DerivationInfo._byStoredName.get(storedName) match {
       case Some(info: ProvableInfo) => info
-      case Some(info) => throw new Exception(
-          "Derivation \"" + info.canonicalName + "\" is not an axiom or axiomatic rule, whether derived or not."
-        )
       case _ => throw new Exception("Derivation \"" + storedName + "\" is not a derived axiom or rule.")
     }
   }

@@ -167,7 +167,6 @@ class SubstitutionHelper(replace: Term => Option[Term]) {
     case PredOf(fn, theta) => PredOf(fn, usubst(o, u, theta))
     case DifferentialFormula(g) => DifferentialFormula(usubst(o, u, g))
     case x: AtomicFormula => x
-    case _ => throw UnknownOperatorException("Not implemented yet", f)
   }
 
   private def usubst(o: SetLattice[Variable], u: SetLattice[Variable], p: Program): USR = p match {
@@ -195,7 +194,6 @@ class SubstitutionHelper(replace: Term => Option[Term]) {
     case Dual(a) => val USR(q, v, as) = usubst(o, u, a); USR(q, v, Dual(as))
     case a: ProgramConst => USR(o, SetLattice.allVars, a)
     case a: SystemConst => USR(o, SetLattice.allVars, a)
-    case _ => throw UnknownOperatorException("Not implemented yet", p)
   }
 
   /**

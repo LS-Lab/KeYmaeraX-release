@@ -677,7 +677,6 @@ private[keymaerax] object PropositionalTactics extends Logging {
     val equivalence: Equiv = p.subgoals.head(equivPos.checkAnte.top) match {
       case e: Equiv => e
       case f: Formula => throw new Exception(s"Expected an Equiv but found ${f.prettyString}")
-      case e => throw new Exception(s"Expected an Equiv formula but found $e")
     }
     val targetValue: Formula = p.subgoals.head(targetPos)
     val otherValue: Formula = if (equivalence.left == targetValue) equivalence.right else equivalence.left

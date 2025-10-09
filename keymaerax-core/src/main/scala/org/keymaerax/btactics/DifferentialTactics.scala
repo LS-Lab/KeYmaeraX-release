@@ -1750,7 +1750,6 @@ private object DifferentialTactics extends Logging {
       case Greater(_, _) => (Ax.DBXgtOpen, RenUSubst(("g(|y_|)".asTerm, qcoRepl) :: Nil))
       case Less(_, _) => (Ax.DBXltOpen, RenUSubst(("g(|y_|)".asTerm, qcoRepl) :: Nil))
       case NotEqual(_, _) => (Ax.DBXneOpen, RenUSubst(("g(|y_|)".asTerm, qcoRepl) :: Nil))
-      case _ => ??? // caught by exception in previous case match
     }
 
     // Skip ghosts if input cofactor was just 0
@@ -1839,7 +1838,6 @@ private object DifferentialTactics extends Logging {
       case Greater(_, _) => dbxGtRw
       case Equal(_, _) => dbxEqRw
       case NotEqual(_, _) => dbxNeqRw
-      case _ => throw new TacticInapplicableFailure("Unknown comparison operator")
     }
 
     val barrier = cf.left
@@ -1990,7 +1988,6 @@ private object DifferentialTactics extends Logging {
           case Equal(_, _) => proveBy(Imply(dom, Equal(r, zero)), timeoutQE)
           // todo: is there a special case of open DI that would work for disequalities?
           case NotEqual(_, _) => proveBy(Imply(dom, Equal(r, zero)), timeoutQE)
-          case _ => throw new TacticInapplicableFailure(s"Darboux only on atomic >,>=,<,<=,!=,= postconditions")
         }
       } catch {
         // todo: Instead of eliminating quantifiers, Z3 will throw an exception that isn't caught by ?(timeoutQE)
@@ -2013,7 +2010,6 @@ private object DifferentialTactics extends Logging {
             case Equal(_, _) => proveBy(Imply(dom, Equal(lie, zero)), timeoutQE)
             // todo: is there a special case of open DI that would work for disequalities?
             case NotEqual(_, _) => proveBy(Imply(dom, Equal(lie, zero)), timeoutQE)
-            case _ => throw new TacticInapplicableFailure(s"Darboux only on atomic >,>=,<,<=,!=,= postconditions")
           }
         } catch {
           // todo: Instead of eliminating quantifiers, Z3 will throw an exception that isn't caught by ?(timeoutQE)

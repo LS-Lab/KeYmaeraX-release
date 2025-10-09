@@ -542,9 +542,8 @@ object DifferentialHelper {
   def hasExp(dp: DifferentialProgram): Option[Variable] = {
     val expODE = DifferentialHelper
       .atomicOdes(dp)
-      .find({
-        case AtomicODE(DifferentialSymbol(x1), x2) => x1 == x2 // @todo QE-check x1=x2 instead of syntactic check.
-        case _ => false
+      .find({ case AtomicODE(DifferentialSymbol(x1), x2) =>
+        x1 == x2 // @todo QE-check x1=x2 instead of syntactic check.
       })
 
     expODE match {
