@@ -19,9 +19,9 @@ import org.keymaerax.btactics.Ax.*
 import org.keymaerax.btactics.AxiomaticODESolver.ofAtoms
 import org.keymaerax.btactics.DLBySubst.discreteGhost
 import org.keymaerax.btactics.HilbertCalculus.{diamondd, DW}
-import org.keymaerax.btactics.SequentCalculus.{andL, andR, cohide, commuteEquivR, equivifyR, id, implyR, orR}
+import org.keymaerax.btactics.SequentCalculus.*
 import org.keymaerax.btactics.TacticFactory.{anon, TacticForNameFactory}
-import org.keymaerax.btactics.TactixLibrary.prop
+import org.keymaerax.btactics.TactixLibrary.{prop, proveBy}
 import org.keymaerax.btactics.UnifyUSCalculus.{useAt, CMon}
 import org.keymaerax.btactics.helpers.DifferentialHelper.atomicOdes
 import org.keymaerax.btactics.macros.DerivationInfoAugmentors.ProvableInfoAugmentor
@@ -168,7 +168,7 @@ object RefinementCalculus {
     displayLevel = DisplayLevel.Menu,
     displayConclusion = "?p;a <= ?p;b <-> __[?p](a <= b)__",
     key = "1", // key = "0" is refSeq
-    unifier = Unifier.Surjective,
+    unifier = Unifier.SurjectiveLinear,
   )
   @Derivation
   val refAssignDet: CoreAxiomInfo = CoreAxiomInfo.create(
@@ -178,7 +178,7 @@ object RefinementCalculus {
     displayConclusion = "x:=f;a <= x:=f;b <-> __[x:=f;](a <= b)__",
     displayLevel = DisplayLevel.Menu,
     key = "1", // key = "0" is refSeq
-    unifier = Unifier.Surjective,
+    unifier = Unifier.SurjectiveLinear,
   )
   @Derivation
   val refAnyMerge: CoreAxiomInfo = CoreAxiomInfo.create(
@@ -249,7 +249,7 @@ object RefinementCalculus {
     name = "refOdeIdemp",
     canonicalName = "ode idempotent",
     displayName = Some("Refinement ODE idempotent"),
-    displayConclusion = "__{x' = f(x) & p(x)};{x' = f(x) & p(x)}__ <= {x' = f(x) & p(x)}",
+    displayConclusion = "__{x' = f(x) & p(x)};{x' = f(x) & p(x)}__ == {x' = f(x) & p(x)}",
     displayLevel = DisplayLevel.Menu,
     key = "0",
     // Technically not surjective as ODE invariant prevents US to substitute differentials in ODE
@@ -628,6 +628,137 @@ object RefinementCalculus {
     useAt(refChoiceR)(1, Nil) & useAt(refRefl)(1, 0 :: Nil) & prop,
   )
 
+  // Program equivalence version of some refinement axioms
+
+  @Derivation
+  val prgEqBox: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(
+      name = "prgEqBox",
+      canonicalName = "program equivalence box",
+      displayName = Some("Program Equivalence Box"),
+      displayConclusion = "a == b -> __[a]P <-> [b]P__",
+      displayLevel = DisplayLevel.Internal,
+      key = "1",
+      unifier = Unifier.Surjective,
+    ),
+    "a{|^@|}; == b{|^@|}; -> ([a{|^@|};]p(||) <-> [b{|^@|};]p(||))".asFormula,
+    implyR(1) & useAt(refAntiSym)(-1) & equivR(1) &
+      Idioms.<(implyRi()(-2, 1) & useAt(refBox)(1) & prop, implyRi()(-2, 1) & useAt(refBox)(1) & prop),
+  )
+
+  @Derivation
+  val prgEqTest: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(
+      name = "prgEqTest",
+      canonicalName = "program equivalence test",
+      displayName = Some("Program Equivalence Test"),
+      displayConclusion = "__?p == ?q__ <-> (p <-> q)",
+      displayLevel = DisplayLevel.Internal,
+      key = "1",
+      unifier = Unifier.SurjectiveLinear,
+    ),
+    "?p(); == ?q(); <-> (p() <-> q())".asFormula,
+    useAt(refAntiSym)(1, 0 :: Nil) & useAt(refTest)(1, 0 :: 0 :: Nil) & useAt(refTest)(1, 0 :: 1 :: Nil) & prop,
+  )
+  @Derivation
+  val prgEqSeq: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(
+      name = "prgEqSeq",
+      canonicalName = "program equivalence sequence",
+      displayName = Some("Program Equivalence Sequence"),
+      displayLevel = DisplayLevel.Menu,
+      displayConclusion = "__a;b == c;d__ <- a == c ∧ [a](b == d)",
+      key = "1",
+      unifier = Unifier.SurjectiveLinear,
+    ),
+    "a{|^@|};b{|^@|}; == c{|^@|};d{|^@|}; <- (a{|^@|}; == c{|^@|}; & [a{|^@|};](b{|^@|}; == d{|^@|};))".asFormula,
+    useAt(refAntiSym)(1, 1 :: Nil) & useAt(refAntiSym)(1, 0 :: 0 :: Nil) & useAt(refAntiSym)(1, 0 :: 1 :: 1 :: Nil) &
+      useAt(boxAnd)(1, 0 :: 1 :: Nil) & useAt(refSeq)(1, 1 :: 0 :: Nil) & useAt(refSeq)(1, 1 :: 1 :: Nil) &
+      SequentCalculus.cut("[a{|^@|};](d{|^@|}; <= b{|^@|};) -> [c{|^@|};](d{|^@|}; <= b{|^@|};)".asFormula) &
+      Idioms.<(prop, useAt(refBox)(2) & prop),
+  )
+
+  @Derivation
+  val prgEqRefl: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(
+      name = "prgEqRefl",
+      canonicalName = "program equivalence reflexive",
+      displayName = Some("Program Equivalence Reflexive"),
+      displayLevel = DisplayLevel.Menu,
+      displayConclusion = "a == a",
+      key = "",
+      unifier = Unifier.Surjective,
+    ),
+    "a{|^@|}; == a{|^@|};".asFormula,
+    useAt(refAntiSym)(1) & useAt(refRefl)(1, 0 :: Nil) & useAt(refRefl)(1, 1 :: Nil) & prop,
+  )
+
+  @Derivation
+  val prgEqTestDet: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(
+      name = "prgEqTestDet",
+      canonicalName = "program equivalence test det",
+      displayName = Some("Program Equivalence Test Det"),
+      displayLevel = DisplayLevel.Internal,
+      displayConclusion = "?p;a == ?p;b <-> __[?p](a == b)__",
+      key = "1", // key = "0" is refSeq
+      unifier = Unifier.SurjectiveLinear,
+    ),
+    "?p();a{|^@|}; == ?p();b{|^@|}; <-> [?p();](a{|^@|}; == b{|^@|};)".asFormula,
+    useAt(refAntiSym)(1, 0 :: Nil) & useAt(refAntiSym)(1, 1 :: 1 :: Nil) & useAt(boxAnd)(1, 1 :: Nil) &
+      useAt(refTestDet)(1, 1 :: 0 :: Nil) & useAt(refTestDet)(1, 1 :: 1 :: Nil) & prop,
+  )
+
+  @Derivation
+  val prgEqAssignDet: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(
+      name = "prgEqAssignDet",
+      canonicalName = "program equivalence assign det",
+      displayName = Some("Program Equivalence Assignment Det"),
+      displayConclusion = "x:=f;a == x:=f;b <-> __[x:=f;](a == b)__",
+      displayLevel = DisplayLevel.Internal,
+      key = "1", // key = "0" is refSeq
+      unifier = Unifier.SurjectiveLinear,
+    ),
+    "x_:=f();a{|^@|}; == x_:=f();b{|^@|}; <-> [x_:=f();](a{|^@|}; == b{|^@|};)".asFormula,
+    useAt(refAntiSym)(1, 0 :: Nil) & useAt(refAntiSym)(1, 1 :: 1 :: Nil) & useAt(boxAnd)(1, 1 :: Nil) &
+      useAt(refAssignDet)(1, 1 :: 0 :: Nil) & useAt(refAssignDet)(1, 1 :: 1 :: Nil) & prop,
+  )
+
+  // Lazy as [[refUnloopWeak]] is initialised later in the current order
+  @Derivation
+  lazy val prgEqUnloop: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(
+      name = "prgEqUnloop",
+      canonicalName = "program equivalence unloop",
+      displayName = Some("Program Equivalence unloop"),
+      displayConclusion = "__a* == b*__ <- [a*](a == b)",
+      displayLevel = DisplayLevel.Internal,
+      key = "1",
+      unifier = Unifier.SurjectiveLinear,
+    ),
+    "{a{|^@|};}* == {b{|^@|};}* <- [{a{|^@|};}*](a{|^@|}; == b{|^@|};)".asFormula,
+    useAt(refAntiSym)(1, 1 :: Nil) & useAt(refAntiSym)(1, 0 :: 1 :: Nil) & useAt(boxAnd)(1, 0 :: Nil) &
+      useAt(refUnloop)(1, 1 :: 0 :: Nil) & useAt(refUnloopWeak)(1, 1 :: 1 :: Nil) & prop,
+  )
+
+  @Derivation
+  val prgEqDiamond: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(
+      name = "prgEqDiamond",
+      canonicalName = "program equivalence diamond",
+      displayName = Some("Program Equivalence Diamond"),
+      displayConclusion = "a == b -> __&langle;a&rangle;P <-> &langle;b&rangle;P__",
+      displayLevel = DisplayLevel.Internal,
+      key = "1",
+      unifier = Unifier.Surjective,
+    ),
+    "a{|^@|}; == b{|^@|}; -> (<a{|^@|};>p(||) <-> <b{|^@|};>p(||))".asFormula,
+    diamondd(1, 1 :: 0 :: Nil) & diamondd(1, 1 :: 1 :: Nil) &
+      useAt(proveBy("(!p() <-> !q()) <-> (p() <-> q())".asFormula, TactixLibrary.prop))(1, 1 :: Nil) &
+      useAt(prgEqBox)(1, 1 :: Nil) & prop,
+  )
+
   /** see [[prgEqTrans]] */
   @Derivation
   val prgEqTransAx: DerivedAxiomInfo = derivedFormula(
@@ -734,6 +865,7 @@ object RefinementCalculus {
               throw new TacticInapplicableFailure(s"ODEs do not have compatible variables: $xp and $xp2")
           }
         }
+
         val (postCond, uniDim) = odesToFml(c, d)
 
         if (uniDim) {
@@ -785,6 +917,7 @@ object RefinementCalculus {
                 )
             }
           }
+
           // Proving schematic `[x'=f(x) & p(x)](f(x) = g(x)) -> {x'=f(x) & p(x)} == {x'=g(x) & p(x)}`
           val pr = TactixLibrary.proveBy(
             Imply(Box(ODESystem(c, p), postCond), prgEq),
