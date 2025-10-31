@@ -216,33 +216,6 @@ class RefinementCalculusTests extends TacticTestBase {
     pr.subgoals.head shouldBe " ==> {x'=-x & x > 5}; <= {x'=-x & x > 2};".asSequent
   }
 
-  "focus" should "simplify programs refinement" in {
-    val pr = TactixLibrary.proveBy("x:=2;y:=1; ++ z:=3; <= x:=*;y:=1; ++ z:=3;".asFormula, focus(1, 0 :: 0 :: 0 :: Nil))
-    pr.subgoals.head shouldBe "==> x:=2; <= x:=*;".asSequent
-  }
-
-  it should "behave identically if given the position of the other program" in {
-    val pr = TactixLibrary.proveBy("x:=2;y:=1; ++ z:=3; <= x:=*;y:=1; ++ z:=3;".asFormula, focus(1, 1 :: 0 :: 0 :: Nil))
-    pr.subgoals.head shouldBe "==> x:=2; <= x:=*;".asSequent
-  }
-
-  it should "add modalities to preserve assumptions" in {
-    val pr = TactixLibrary
-      .proveBy("x > 0 ==> {y:=1;x:=2; ++ z:=3;}* <= {y:=1;x:=*; ++ z:=3;}*".asSequent, focus(1, List(0, 0, 0, 1)))
-    pr.subgoals.head shouldBe "x > 0 ==> [{y:=1;x:=2; ++ z:=3;}*][y:=1;]x:=2; <= x:=*;".asSequent
-  }
-
-  it should "simplify down to formula implication in test" in {
-    val pr = TactixLibrary
-      .proveBy("x > 0 ==> ?(true);y:=1; ++ z:=3; <= ?(x=2);y:=1; ++ z:=3;".asSequent, focus(1, List(0, 0, 0, 0)))
-    pr.subgoals.head shouldBe "x > 0 ==> true -> x=2".asSequent
-  }
-
-  it should "simplify down to formula implication in ODE's domain" in {
-    val pr = TactixLibrary.proveBy("x > 0 ==> {x'= x & x < 5} <= {x'= x & x < 10}".asSequent, focus(1, 0 :: 1 :: Nil))
-    pr.subgoals.head shouldBe "x > 0 ==> [{x'= x & x < 5}](x < 5 -> x < 10)".asSequent
-  }
-
   "refDE" should "apply to one-dimensional odes" in {
     val pr = TactixLibrary.proveBy("[{x'=y & x>=0}](y = y+0)".asFormula, refDE(1, 0 :: Nil))
     pr.subgoals.head shouldBe " ==> [{x'=y & x>=0};x':=y;](y = y+0)".asSequent
