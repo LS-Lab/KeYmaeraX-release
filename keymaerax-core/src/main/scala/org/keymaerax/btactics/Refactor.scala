@@ -26,6 +26,7 @@ import org.keymaerax.core.StaticSemantics.symbols
 import org.keymaerax.core.btactics.annotations.Derivation
 import org.keymaerax.infrastruct.Augmentors.{FormulaAugmentor, ProgramAugmentor, SequentAugmentor}
 import org.keymaerax.infrastruct.FormulaTools.polarityAt
+import org.keymaerax.infrastruct.PosInExpr.HereP
 import org.keymaerax.infrastruct.{Context, PosInExpr, Position, SuccPosition}
 import org.keymaerax.parser.StringConverter.StringToStringConverter
 import org.keymaerax.pt.ProvableSig
@@ -73,6 +74,8 @@ object Refactor {
    *
    * @note
    *   `pos` can refer to the position of either side (e.g. `a` or `b`) in the sequent.
+   * @note
+   *   The position of the hole in `C'` is computable via [[focusPos]]
    */
   def focus: BuiltInRightTactic = "focus".by { (provable: ProvableSig, pos: SuccPosition) =>
     require(provable.subgoals.size == 1, "Sole subgoal expected, but got " + provable.prettyString)
@@ -197,4 +200,43 @@ object Refactor {
         case _: DifferentialProgram => throw new TacticAssertionError("Expected non-differential program context")
       }
     }
+
+  /**
+   * Computes the updated position after applying [[focus]] along with an unreliable expression of C'.
+   * @note
+   *   In presence of loops, the context of [[focusPos]] may use the wrong program.
+   */
+  def focusPos(e: Expression, pos: PosInExpr): (PosInExpr, Context[Formula]) = {
+    if (pos == HereP) { (pos, Context(DotFormula)) }
+    else {
+      val (expr, rec) = e match {
+        case f: Modal if pos.head == 1 => (f.child, Some(Context(Box(f.program, DotFormula)), 1))
+        case f: Quantified => (f.child, Some(Context(Forall(f.vars, DotFormula)), 0))
+        case Compose(a, b) if pos.head == 1 => (b, Some(Context(Box(a, DotFormula)), 1))
+        case Loop(a) => (a, Some(Context(Box(Loop(a), DotFormula)), 1))
+        case ODESystem(c, f) => (f, Some(Context(Box(ODESystem(c, f), DotFormula)), 1))
+        // Base cases
+        case f: Modal => (f.program, None)
+        case f: BinaryCompositeFormula =>
+          if (pos.head == 0) { (f.left, None) }
+          else { (f.right, None) }
+        case f: ProgramComparison =>
+          if (pos.head == 0) { (f.left, None) }
+          else { (f.right, None) }
+        case f: UnaryCompositeFormula => (f.child, None)
+        case a: BinaryCompositeProgram =>
+          if (pos.head == 0) { (a.left, None) }
+          else { (a.right, None) }
+        case Test(p) => (p, None)
+        case _: Term | _: ComparisonFormula | Dual(_) | _: DifferentialProgram | _: Function | _: NamedSymbol | True |
+            False | Assign(_, _) | AssignAny(_) | PredOf(_, _) | PredicationalOf(_, _) => ???
+      }
+      rec match {
+        case None => focusPos(expr, pos.child)
+        case Some((ctxt, updatePos)) =>
+          val (posRec, ctxtRec) = focusPos(expr, pos.child)
+          (PosInExpr(updatePos :: Nil) ++ posRec, ctxt(ctxtRec))
+      }
+    }
+  }
 }
