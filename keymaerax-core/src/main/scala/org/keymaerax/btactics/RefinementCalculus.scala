@@ -930,7 +930,7 @@ object RefinementCalculus {
   }
 
   @Derivation
-  def refOdeInfo: PositionTacticInfo = PositionTacticInfo.create(
+  val refOdeInfo: PositionTacticInfo = PositionTacticInfo.create(
     name = "refOde",
     displayNameLong = Some("Refinement ODE"),
     displayPremises = "Γ |- [x'=f(x) & p(x)](f(x) = g(x)), Δ",
@@ -952,7 +952,7 @@ object RefinementCalculus {
   }
 
   @Derivation
-  def refDEinfo: PositionTacticInfo = PositionTacticInfo.create(
+  val refDEinfo: PositionTacticInfo = PositionTacticInfo.create(
     name = "refDE",
     displayNameLong = Some("Refinement DE"),
     displayConclusion = "__{x' = f(x) & p(x)}__ == {x' = f(x) & p(x)};x':=f(x)",

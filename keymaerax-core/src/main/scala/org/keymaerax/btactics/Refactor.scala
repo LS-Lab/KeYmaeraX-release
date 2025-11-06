@@ -109,7 +109,7 @@ object Refactor {
   }
 
   @Derivation
-  def focusInfo: PositionTacticInfo = PositionTacticInfo.create(
+  val focusInfo: PositionTacticInfo = PositionTacticInfo.create(
     name = "focus",
     displayPremises = "C'(a<=b)",
     displayConclusion = "C{a}<=C{b}",
@@ -204,7 +204,7 @@ object Refactor {
   /**
    * Computes the updated position after applying [[focus]] along with an unreliable expression of C'.
    * @note
-   *   In presence of loops, the context of [[focusPos]] may use the wrong program.
+   *   When focusing inside of loops or ODEs, the context of [[focusPos]] may use the wrong program.
    */
   def focusPos(e: Expression, pos: PosInExpr): (PosInExpr, Context[Formula]) = {
     if (pos == HereP) { (pos, Context(DotFormula)) }
