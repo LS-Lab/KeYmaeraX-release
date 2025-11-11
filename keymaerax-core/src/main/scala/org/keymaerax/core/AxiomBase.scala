@@ -754,6 +754,13 @@ private[core] object AxiomBase extends Logging {
       axs("nondet assign test") == ProgramEquivalence(Compose(AssignAny(x), Test(p0)), Compose(Test(p0), AssignAny(x))),
       "nondet assign test",
     )
+    insist(
+      axs("nondet commute fresh") == ProgramEquivalence(
+        Compose(AssignAny(x), SystemConst("a_", Except(x :: Nil))),
+        Compose(SystemConst("a_", Except(x :: Nil)), AssignAny(x)),
+      ),
+      "nondet commute gen",
+    )
 
     true
   }
@@ -1250,6 +1257,10 @@ End.
 
 Axiom "nondet assign test"
   x_:=*;?p(); == ?p();x_:=*;
+End.
+
+Axiom "nondet commute fresh"
+  x_:=*;a_{|^@x_|}; == a_{|^@x_|};x_:=*;
 End.
 """
 }

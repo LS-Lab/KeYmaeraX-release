@@ -502,6 +502,17 @@ object RefinementCalculus {
     unifier = Unifier.Full,
   )
 
+  @Derivation
+  val refAnyFresh: CoreAxiomInfo = CoreAxiomInfo.create(
+    name = "refAnyFresh",
+    canonicalName = "nondet commute fresh",
+    displayName = Some("AssignAny Fresh Commutativity"),
+    displayLevel = DisplayLevel.Menu,
+    displayConclusion = "__x:=*;a__ == a;x:=*",
+    key = "0",
+    unifier = Unifier.Full,
+  )
+
   // Congruence derived axioms
   // derived axioms used in CMonPrg (so useAt implicitely), thus given as Provables not lemmas, just in case to avoid dependencies
   // CMon seems to use lemmas just fine, so it may not be required
