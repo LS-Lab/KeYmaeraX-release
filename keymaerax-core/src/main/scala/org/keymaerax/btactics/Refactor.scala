@@ -10,6 +10,7 @@ import org.keymaerax.bellerophon.{
   BuiltInTactic,
   DependentPositionTactic,
   DependentPositionWithAppliedInputTactic,
+  LastSucc,
   TacticAssertionError,
   TacticInapplicableFailure,
 }
@@ -20,7 +21,13 @@ import org.keymaerax.btactics.SequentCalculus.{cutL, cutR}
 import org.keymaerax.btactics.TacticFactory.{anon, TacticForNameFactory}
 import org.keymaerax.btactics.TactixLibrary.proveBy
 import org.keymaerax.btactics.UnifyUSCalculus.{skip, useAt}
-import org.keymaerax.btactics.macros.{DerivedAxiomInfo, DisplayLevel, PositionTacticInfo, TacticConstructor0}
+import org.keymaerax.btactics.macros.{
+  DisplayLevel,
+  FormulaArg,
+  PositionTacticInfo,
+  TacticConstructor0,
+  TacticConstructor1,
+}
 import org.keymaerax.core.*
 import org.keymaerax.core.StaticSemantics.symbols
 import org.keymaerax.core.btactics.annotations.Derivation
@@ -239,4 +246,98 @@ object Refactor {
       }
     }
   }
+
+  /**
+   * When pointing to the ODE, removes the right conjunction of the domain, i.e. from `x'=f(x) & p(x) & q(x)` to
+   * `x'=f(x) & p(x)`. If the transformation is not trivially correct (e.g. right side diamond), creates an additional
+   * subgoal for proving its correction.
+   */
+  def dropODEr: DependentPositionTactic = "dropODEr".by { (pos: Position, sequent: Sequent) =>
+    val (ctx, e) = sequent.at(pos)
+    e match {
+      case a @ ODESystem(sys, And(left, right)) =>
+        val pol = polarityAt(sequent(pos.top), pos.inExpr) * (if (pos.isSucc) 1 else -1)
+        if (pol < 0) {
+          // Easy case: follows by congruence
+          useAt(proveBy("p() & q() -> p()".asFormula, prop), PosInExpr(0 :: Nil))(pos ++ PosInExpr(1 :: Nil))
+        } else if (pol > 0) {
+          val newF = ctx(ODESystem(sys, left))
+          domainUpdateAux(newF)(pos)
+        } else { throw new TacticInapplicableFailure(s"ODE is at unknown polarity") }
+      case ODESystem(_, dom) => throw new TacticInapplicableFailure(s"Expected conjunction in domain, but got $dom")
+      case _ => throw new TacticInapplicableFailure(s"Expected ODE systems, but got $e")
+    }
+  }
+
+  @Derivation
+  val dropODErInfo: PositionTacticInfo = PositionTacticInfo.create(
+    name = "dropODEr",
+    displayNameLong = Some("Drop ODE domain constraint"),
+    displayPremises = "x'=f(x) & p(x) & q(x)",
+    displayConclusion = "x'=f(x) & p(x)",
+    displayLevel = DisplayLevel.Menu,
+    constructor = TacticConstructor0.create()(() => dropODEr),
+  )
+
+  def introduceODE(f: Formula): DependentPositionWithAppliedInputTactic = "introduceODE".byWithInputs(
+    List(f),
+    (pos: Position, sequent: Sequent) => {
+      val (ctx, e) = sequent.at(pos)
+      e match {
+        case a @ ODESystem(sys, dom) =>
+          val pol = polarityAt(sequent(pos.top), pos.inExpr) * (if (pos.isSucc) 1 else -1)
+          if (pol > 0) {
+            // Easy case: follows by congruence
+            useAt(proveBy(Imply(And(dom, f), dom), prop), PosInExpr(1 :: Nil))(pos ++ PosInExpr(1 :: Nil))
+          } else if (pol < 0) {
+            val newF = ctx(ODESystem(sys, And(dom, f)))
+            domainUpdateAux(newF)(pos)
+          } else { throw new TacticInapplicableFailure(s"ODE is at unknown polarity") }
+        case _ => throw new TacticInapplicableFailure(s"Expected ODE systems, but got $e")
+      }
+    },
+  )
+
+  def domainUpdateAux(newF: Formula): DependentPositionTactic = anon { (pos: Position, sequent: Sequent) =>
+    if (pos.isSucc) {
+      // Box case
+      val postFocusPosinExpr = focusPos(sequent(pos.top), pos.inExpr)._1
+      val postFocusPos = pos.topLevel ++ postFocusPosinExpr
+      cutR(newF)(pos.checkSucc) & Idioms.<(
+        // Transformed goal
+        skip,
+        // Additional proof required (remains open)
+        // Focus down to the proof that `p() -> p() & q()` locally
+        focus(pos.topLevel ++ PosInExpr(1 :: Nil) ++ pos.inExpr) & useAt(refDomainAx)(postFocusPos) &
+          // Closes easy case for left side of the conjunction by dW
+          useAt(boxAnd)(postFocusPos) & useAt(DWbase)(postFocusPos ++ PosInExpr(0 :: Nil)) &
+          useAt(trueAnd)(postFocusPos),
+      )
+    } else {
+      // Diamond case
+      // cutL creates a new succedent, so we use [[LastSucc]] compared to `pos.topLevel` in the case above
+      val preFocusPosLoc = LastSucc(0, PosInExpr(0 :: Nil) ++ pos.inExpr)
+      val postFocusPosinExpr = focusPos(sequent(pos.top), pos.inExpr)._1
+      val postFocusPosLoc = LastSucc(0, postFocusPosinExpr)
+      val posLocLeft = LastSucc(0, postFocusPosinExpr ++ 0)
+      cutL(newF)(pos.checkAnte) & Idioms.<(
+        // Transformed goal
+        skip,
+        // Additional proof required (remains open), same as above
+        focus(preFocusPosLoc) & useAt(refDomainAx)(postFocusPosLoc) & useAt(boxAnd)(postFocusPosLoc) &
+          useAt(DWbase)(posLocLeft) & useAt(trueAnd)(postFocusPosLoc),
+      )
+    }
+  }
+
+  @Derivation
+  val introduceODEInfo: PositionTacticInfo = PositionTacticInfo.create(
+    name = "introduceODE",
+    displayNameLong = Some("Introduce ODE domain constraint"),
+    displayPremises = "x'=f(x) & p(x)",
+    displayConclusion = "x'=f(x) & p(x) & Q",
+    displayLevel = DisplayLevel.Menu,
+    constructor = TacticConstructor1.create(FormulaArg("Q"))(introduceODE),
+  )
+
 }

@@ -9,7 +9,7 @@ import org.keymaerax.btactics.Refactor.*
 import org.keymaerax.btactics.macros.DerivationInfoAugmentors.ProvableInfoAugmentor
 import org.keymaerax.core.Sequent
 import org.keymaerax.infrastruct.Augmentors.SequentAugmentor
-import org.keymaerax.infrastruct.Position
+import org.keymaerax.infrastruct.{PosInExpr, Position}
 import org.keymaerax.parser.StringConverter.StringToStringConverter
 
 class RefactorTests extends TacticTestBase {
@@ -95,4 +95,66 @@ class RefactorTests extends TacticTestBase {
       .proveBy("x > 0 ==> {?[{x:=*;}*]x = 0;}* <= {?[{x:=0;}*]x = 0;}*".asSequent, focus(1, List(1, 0, 0, 0, 0)))
     pr.subgoals.head shouldBe "x > 0 ==> [{?[{x:=*;}*]x=0;}*][{x:=0;}*]{x:=0;}<={x:=*;}".asSequent
   }
+
+  "dropODE" should "apply on box" in {
+    val pr = TactixLibrary.proveBy("[{x'=y & x>=0 & x <= 0}]x >= 0".asFormula, dropODEr(1, 0 :: Nil))
+    pr.subgoals.head shouldBe "==> [{x'=y & x>=0}]x >= 0".asSequent
+    pr.subgoals.length shouldBe 1
+  }
+
+  it should "apply on diamond" in {
+    val seq = "==> <{x'=y & x>=0 & x <= 0}>x >= 0".asSequent
+    val pr = TactixLibrary.proveBy(seq, dropODEr(1, 0 :: Nil))
+    pr.subgoals.head shouldBe "==> <{x'=y & x>=0}> x >= 0".asSequent
+    pr.subgoals.length shouldBe 2
+    val (pos, ctxt) = focusPos("<{x'=y & x>=0}> x >= 0".asFormula, PosInExpr(0 :: 1 :: Nil))
+    pr.subgoals.tail.head.at(Position(1) ++ pos) shouldBe (ctxt, "x<=0".asFormula)
+  }
+
+  it should "apply on an antecedent diamond" in {
+    val pr = TactixLibrary.proveBy("<{x'=y & x>=0 & x <= 0}>x >= 0 ==> x >= 0".asSequent, dropODEr(-1, 0 :: Nil))
+    pr.subgoals.head shouldBe "<{x'=y & x>=0}>x >= 0 ==> x >= 0".asSequent
+    pr.subgoals.length shouldBe 1
+  }
+
+  it should "apply on an antecedent box" in {
+    val seq = "[{x'=y & x>=0 & x <= 0}]x >= 0 ==> x >= 0".asSequent
+    val pr = TactixLibrary.proveBy(seq, dropODEr(-1, 0 :: Nil))
+    pr.subgoals.head shouldBe "[{x'=y & x>=0}]x >= 0 ==> x >= 0".asSequent
+    pr.subgoals.length shouldBe 2
+    val (pos, ctxt) = focusPos("[{x'=y & x>=0}]x >= 0".asFormula, PosInExpr(0 :: 1 :: Nil))
+    pr.subgoals.tail.head.at(Position(2) ++ pos) shouldBe (ctxt, "x<=0".asFormula)
+  }
+
+  "introduceODE" should "apply on diamond" in {
+    val pr = TactixLibrary.proveBy("<{x'=y & x>=0}>x >= 0".asFormula, introduceODE("x <= 0".asFormula)(1, 0 :: Nil))
+    pr.subgoals.head shouldBe "==> <{x'=y & x>=0 & x <= 0}>x >= 0".asSequent
+    pr.subgoals.length shouldBe 1
+  }
+
+  it should "apply on box" in {
+    val seq = "==> [{x'=y & x>=0}]x >= 0".asSequent
+    val pr = TactixLibrary.proveBy(seq, introduceODE("x <= 0".asFormula)(1, 0 :: Nil))
+    pr.subgoals.head shouldBe "==> [{x'=y & x>=0 & x <= 0}] x >= 0".asSequent
+    pr.subgoals.length shouldBe 2
+    val (pos, ctxt) = focusPos("[{x'=y & x>=0}] x >= 0".asFormula, PosInExpr(0 :: 1 :: Nil))
+    pr.subgoals.tail.head.at(Position(1) ++ pos) shouldBe (ctxt, "x<=0".asFormula)
+  }
+
+  it should "apply on an antecedent box" in {
+    val pr = TactixLibrary
+      .proveBy("[{x'=y & x>=0}]x >= 0 ==> x >= 0".asSequent, introduceODE("x <= 0".asFormula)(-1, 0 :: Nil))
+    pr.subgoals.head shouldBe "[{x'=y & x>=0 & x <= 0}]x >= 0 ==> x >= 0".asSequent
+    pr.subgoals.length shouldBe 1
+  }
+
+  it should "apply on an antecedent diamond" in {
+    val seq = "<{x'=y & x>=0}>x >= 0 ==> x >= 0".asSequent
+    val pr = TactixLibrary.proveBy(seq, introduceODE("x <= 0".asFormula)(-1, 0 :: Nil))
+    pr.subgoals.head shouldBe "<{x'=y & x>=0 & x <= 0}>x >= 0 ==> x >= 0".asSequent
+    pr.subgoals.length shouldBe 2
+    val (pos, ctxt) = focusPos("<{x'=y & x>=0}>x >= 0".asFormula, PosInExpr(0 :: 1 :: Nil))
+    pr.subgoals.tail.head.at(Position(2) ++ pos) shouldBe (ctxt, "x<=0".asFormula)
+  }
+
 }
