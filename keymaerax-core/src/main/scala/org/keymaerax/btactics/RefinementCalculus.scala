@@ -19,6 +19,7 @@ import org.keymaerax.btactics.AxiomaticODESolver.ofAtoms
 import org.keymaerax.btactics.DLBySubst.discreteGhost
 import org.keymaerax.btactics.HilbertCalculus.{diamondd, DW}
 import org.keymaerax.btactics.SequentCalculus.*
+import org.keymaerax.btactics.SimplifierV3.simplify
 import org.keymaerax.btactics.TacticFactory.{anon, TacticForNameFactory}
 import org.keymaerax.btactics.TactixLibrary.{prop, proveBy}
 import org.keymaerax.btactics.UnifyUSCalculus.{useAt, CMon}
@@ -783,6 +784,22 @@ object RefinementCalculus {
     "a{|^@|}; == c{|^@|}; & c{|^@|}; == b{|^@|}; -> a{|^@|}; == b{|^@|};".asFormula,
     useAt(refAntiSym)(1, 1 :: Nil) & useAt(refAntiSym)(1, 0 :: 0 :: Nil) & useAt(refAntiSym)(1, 0 :: 1 :: Nil) &
       refTrans("c{|^@|};".asProgram)(1, 1 :: 0 :: Nil) & refTrans("c{|^@|};".asProgram)(1, 1 :: 1 :: Nil) & prop,
+  )
+
+  @Derivation
+  val prgEqRandomIdem: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(
+      name = "prgEqRandomIdem",
+      canonicalName = ":= idempotent",
+      displayName = Some(":= Idempotent"),
+      displayConclusion = "__x:=*;x:=*__ == x:=*",
+      displayLevel = DisplayLevel.Menu,
+      key = "0",
+      unifier = Unifier.Surjective,
+    ),
+    "x_:=*;x_:=*; == x_:=*;".asFormula,
+    useAt(refSeqIdL, PosInExpr(1 :: Nil))(1, 0 :: 1 :: Nil) & useAt(refAnyMerge)(1, 0 :: Nil) &
+      simplify(1, 0 :: 1 :: 0 :: Nil) & useAt(refSeqIdR)(1, 0 :: Nil) & useAt(prgEqRefl)(1),
   )
 
   /** Tactics generalising axioms (if schematic or if need additional inputs) */
