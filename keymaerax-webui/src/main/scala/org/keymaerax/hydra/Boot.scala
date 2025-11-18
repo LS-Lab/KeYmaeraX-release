@@ -5,9 +5,9 @@
 
 package org.keymaerax.hydra
 
-import akka.actor.ActorSystem
-import akka.http.scaladsl.Http
-import akka.http.scaladsl.server.Route
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.http.scaladsl.Http
+import org.apache.pekko.http.scaladsl.server.Route
 import org.keymaerax.btactics._
 import org.keymaerax.cli.{LoadingDialogFactory, Options, SystemWebBrowser}
 import org.keymaerax.tools.ToolName
