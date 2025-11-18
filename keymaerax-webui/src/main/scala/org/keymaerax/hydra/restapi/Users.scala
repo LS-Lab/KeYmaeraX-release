@@ -5,9 +5,9 @@
 
 package org.keymaerax.hydra.restapi
 
-import akka.http.scaladsl.server.Route
+import org.apache.pekko.http.scaladsl.server.Route
 import spray.json._
-import akka.http.scaladsl.server.Directives._
+import org.apache.pekko.http.scaladsl.server.Directives._
 import org.keymaerax.hydra.RestApi.{completeRequest, database}
 import org.keymaerax.hydra._
 import org.keymaerax.hydra.requests.configuration.{GetUserThemeRequest, SetUserThemeRequest}

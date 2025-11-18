@@ -11,8 +11,8 @@
  */
 package org.keymaerax.hydra
 
-import akka.http.scaladsl.marshallers.xml.ScalaXmlSupport._
-import akka.http.scaladsl.marshalling.ToResponseMarshallable
+import org.apache.pekko.http.scaladsl.marshallers.xml.ScalaXmlSupport._
+import org.apache.pekko.http.scaladsl.marshalling.ToResponseMarshallable
 import org.keymaerax.Logging
 import org.keymaerax.bellerophon._
 import org.keymaerax.bellerophon.parser.BelleParser
@@ -97,8 +97,8 @@ class ErrorResponse(val msg: String, val exn: Throwable = null, val severity: St
         .replaceAll("[\\t]at java\\.util\\.concurrent\\..*", "")
         .replaceAll("[\\t]at java\\.lang\\.Thread\\.run.*", "")
         .replaceAll("[\\t]at scala\\.Predef\\$\\.require.*", "")
-        .replaceAll("[\\t]at akka\\.spray\\.UnregisteredActorRefBase.*", "")
-        .replaceAll("[\\t]at akka\\.dispatch\\..*", "")
+        .replaceAll("[\\t]at org\\.apache\\.pekko\\.spray\\.UnregisteredActorRefBase.*", "")
+        .replaceAll("[\\t]at org\\.apache\\.pekko\\.dispatch\\..*", "")
         .replaceAll("[\\t]at scala\\.concurrent\\.forkjoin\\..*", "")
         .replaceAll("[\\t]at scala\\.runtime\\.AbstractPartialFunction.*", "")
         .replaceAll("\\s+$|\\s*(\n)\\s*|(\\s)\\s*", "$1$2") // @note collapse newlines
