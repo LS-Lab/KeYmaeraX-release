@@ -1176,6 +1176,10 @@ Axiom "refinement ghost const"
   {c{|y_|}&q(|y_|)};y_':=*;y_:=*; == y_:=f();{c{|y_|},y_'=b(|y_|)&q(|y_|)};y_':=*;y_:=*;
 End.
 
+Axiom "refinement DE left"
+  x_':=*;{c, x_'=f(||) & p(||)}; == {c, x_'=f(||) & p(||)};
+End.
+
 /** KAT Axioms */
 
 Axiom "refinement reflexive"

@@ -310,6 +310,17 @@ object RefinementCalculus {
     unifier = Unifier.Full,
   )
 
+  @Derivation
+  val refDELeft: CoreAxiomInfo = CoreAxiomInfo.create(
+    name = "refDELeft",
+    canonicalName = "refinement DE left",
+    displayName = Some("Refinement DE Left"),
+    displayConclusion = "__x':=*;{x'=f(x) & p(x)}__ == {x'= f(x) & p(x)}",
+    displayLevel = DisplayLevel.Menu,
+    key = "0",
+    unifier = Unifier.Full,
+  )
+
   /* KAT axioms */
   @Derivation
   val refRefl: CoreAxiomInfo = CoreAxiomInfo.create(
