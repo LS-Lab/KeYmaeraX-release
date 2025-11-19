@@ -298,6 +298,18 @@ object RefinementCalculus {
     unifier = Unifier.Full,
   )
 
+  /** see [[refDGCst]] */
+  @Derivation
+  val refDGCstAx: CoreAxiomInfo = CoreAxiomInfo.create(
+    name = "refDGCstAx",
+    canonicalName = "refinement ghost const",
+    displayName = Some("Refinement Ghost Const"),
+    displayConclusion = "{c&P};y':=*;y:=*; == __y:=f{c,y'=b&P};y':=*;y:=*;__",
+    displayLevel = DisplayLevel.Menu,
+    key = "1",
+    unifier = Unifier.Full,
+  )
+
   /* KAT axioms */
   @Derivation
   val refRefl: CoreAxiomInfo = CoreAxiomInfo.create(
@@ -985,6 +997,19 @@ object RefinementCalculus {
     displayNameLong = Some("Refinement DE"),
     displayConclusion = "__{x' = f(x) & p(x)}__ == {x' = f(x) & p(x)};x':=f(x)",
     constructor = TacticConstructor0.create()(() => refDE),
+  )
+
+  def refDGCst(y: Variable, init: Term, rhs: Term): DependentPositionWithAppliedInputTactic = "refDGCst".byWithInputs(
+    List(y, init, rhs),
+    (pos: Position) =>
+      useAt(
+        refDGCstAx
+          .provable
+          .apply(URename("y_".asVariable, y, semantic = true))
+          .apply(USubst(
+            List(SubstitutionPair("f()".asTerm, init), SubstitutionPair(UnitFunctional("b", Except(Seq(y)), Real), rhs))
+          ))
+      )(pos),
   )
 
   private[btactics] def CPrgEimpFw(inEqPos: PosInExpr, reverse: Boolean): BuiltInTactic =

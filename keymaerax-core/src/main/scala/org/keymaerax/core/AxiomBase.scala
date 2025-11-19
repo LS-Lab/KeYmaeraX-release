@@ -1172,6 +1172,10 @@ Axiom "refinement DX"
   x_':=f(x_);?p(x_); <= {x_' = f(x_) & p(x_)}
 End.
 
+Axiom "refinement ghost const"
+  {c{|y_|}&q(|y_|)};y_':=*;y_:=*; == y_:=f();{c{|y_|},y_'=b(|y_|)&q(|y_|)};y_':=*;y_:=*;
+End.
+
 /** KAT Axioms */
 
 Axiom "refinement reflexive"
