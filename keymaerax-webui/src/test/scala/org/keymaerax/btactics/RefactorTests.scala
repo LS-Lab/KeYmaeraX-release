@@ -6,15 +6,32 @@
 package org.keymaerax.btactics
 
 import org.keymaerax.btactics.Refactor.*
+import org.keymaerax.btactics.RefinementCalculus.*
+import org.keymaerax.btactics.UnifyUSCalculus.useAt
 import org.keymaerax.btactics.macros.DerivationInfoAugmentors.ProvableInfoAugmentor
 import org.keymaerax.core.Sequent
 import org.keymaerax.infrastruct.Augmentors.SequentAugmentor
 import org.keymaerax.infrastruct.{PosInExpr, Position}
 import org.keymaerax.parser.StringConverter.StringToStringConverter
+import org.keymaerax.pt.ProvableSig
 
 class RefactorTests extends TacticTestBase {
   "Refactor axioms" should "prove" in {
-    val axioms = List(congrAndL, congrAndR, congrOrL, congrOrR, congrImpL, congrImpR, congrRefL, congrRefR)
+    val axioms = List(
+      congrAndL,
+      congrAndR,
+      congrOrL,
+      congrOrR,
+      congrImpL,
+      congrImpR,
+      congrRefL,
+      congrRefR,
+      randomLoop,
+      randomDLoop,
+      prgEqLoopComm,
+      prgEqIsolComm,
+      prgEqIsolCommFix,
+    )
     axioms.map(axiom => axiom.isProved shouldBe true)
   }
 
@@ -155,6 +172,56 @@ class RefactorTests extends TacticTestBase {
     pr.subgoals.length shouldBe 2
     val (pos, ctxt) = focusPos("<{x'=y & x>=0}>x >= 0".asFormula, PosInExpr(0 :: 1 :: Nil))
     pr.subgoals.tail.head.at(Position(2) ++ pos) shouldBe (ctxt, "x<=0".asFormula)
+  }
+
+  "moveRandom" should "prove correct equivalences" in {
+    val pr = moveRandom("{x:=*;y:=*; ++ x:=0;};z:=*;".asProgram, PosInExpr(0 :: 0 :: 1 :: Nil))
+    pr.proved shouldBe "==>  {{x:=*;y:=*;z:=*;++x:=0;}z:=*;}=={{x:=*;y:=*;++x:=0;}z:=*;}".asSequent
+    val pr2 = moveRandom("{x:=*;y:=*; ++ x:=0;};z:=*;".asProgram, PosInExpr(0 :: 0 :: 0 :: Nil))
+    pr2.proved shouldBe "==>  {{{x:=*;z:=*;}y:=*;++x:=0;}z:=*;}=={{x:=*;y:=*;++x:=0;}z:=*;}".asSequent
+    val pr3 = moveRandom("{x:=*;y:=*; ++ x:=0;};z:=*;".asProgram, PosInExpr(0 :: 1 :: Nil))
+    pr3.proved shouldBe "==>  {{x:=*;y:=*;++x:=0;z:=*;}z:=*;}=={{x:=*;y:=*;++x:=0;}z:=*;}".asSequent
+    val pr4 = moveRandom("{x:=*;y:=*; ++ x:=0;}*;z:=*;".asProgram, PosInExpr(0 :: 0 :: 1 :: Nil))
+    pr4.proved shouldBe "==>  {{x:=*;y:=*;++x:=0;z:=*;}*z:=*;}=={{x:=*;y:=*;++x:=0;}*z:=*;}".asSequent
+  }
+
+  // Ghost existential: {c & p};x':=*;x:=* == x:=f();{c,x'=g(x)&p};x':=*;x:=*
+  // use refDE to use line above for x'
+
+  "refAnyGenAux" should "prove correct program" in {
+    val pr = refAnyGenAux("x:=*;y:=*; ++ x:=0;".asProgram, "z".asVariable)
+    pr.proved shouldBe "==> z:=*;{x:=*;y:=*;++x:=0;} == {x:=*;y:=*;++x:=0;}z:=*;".asSequent
+    val pr2 = refAnyGenAux("x:=*;y:=*; ++ x:=0;".asProgram, "y".asVariable)
+    pr2.proved shouldBe "==> y:=*;{x:=*;y:=*;++x:=0;} == {x:=*;y:=*;++x:=0;}y:=*;".asSequent
+    val pr3 = refAnyGenAux("{x:=*;y:=*; ++ x:=0;}*".asProgram, "y".asVariable)
+    pr3.proved shouldBe "==> y:=*;{x:=*;y:=*;++x:=0;}* == {x:=*;y:=*;++x:=0;}*y:=*;".asSequent
+
+    val pr4 = refAnyGenAux("{x:=0;t:=0;{t'=1};t:=*;}*".asProgram, "t".asVariable)
+    pr4.proved shouldBe "==> t:=*;{x:=0;t:=0;{t'=1};t:=*;}* == {x:=0;t:=0;{t'=1};t:=*;}*t:=*;".asSequent
+  }
+
+  "refDG" should "be applicable locally" in {
+    val pr = ProvableSig
+      .startPlainProof("{x:=0;{x'=1};}*;t:=*;t':=*; == {x:=0;t:=0;{x'=1,t'=1};}*;t:=*;t':=*;".asFormula)
+    val move = moveRandom("{x:=0;{x'=1};}*;t:=*;".asProgram, PosInExpr(0 :: 0 :: 1 :: Nil))
+    move.proved shouldBe "==> {x:=0;{x'=1};t:=*;}*;t:=*; == {x:=0;{x'=1};}*;t:=*;".asSequent
+    val pr2 = pr
+      .apply(useAt(refSeqAssoc, PosInExpr(0 :: Nil))(1, 0 :: Nil), 0)
+      .apply(useAt(move, PosInExpr(1 :: Nil))(1, 0 :: 0 :: Nil), 0)
+    pr2.subgoals.head shouldBe
+      "==> {{x:=0;{x'=1};t:=*;}*;t:=*;}t':=*; == {x:=0;t:=0;{x'=1,t'=1};}*;t:=*;t':=*;".asSequent
+    val move2 = moveRandom("{{x:=0;{x'=1};t:=*;}*;t:=*;}t':=*;".asProgram, PosInExpr(List(0, 0, 0, 1, 0)))
+    move2.proved shouldBe
+      "==> {{x:=0;{{x'=1};t':=*;}t:=*;}*;t:=*;}t':=*; == {{x:=0;{x'=1};t:=*;}*;t:=*;}t':=*;".asSequent
+    val pr3 = pr2
+      .apply(useAt(move2, PosInExpr(1 :: Nil))(1, 0 :: Nil), 0)
+      .apply(useAt(refSeqAssoc)(1, 0 :: Nil), 0)
+      .apply(useAt(refSeqAssoc)(1, 0 :: 0 :: 0 :: 1 :: Nil), 0)
+    pr3.subgoals.head shouldBe
+      "==> {x:=0;{x'=1};t':=*;t:=*;}*;t:=*;t':=*; == {x:=0;t:=0;{x'=1,t'=1};}*;t:=*;t':=*;".asSequent
+    val pr4 = proveBy(pr3, refDGCst("t".asVariable, "0".asTerm, "1".asTerm)(1, 0 :: 0 :: 0 :: 1 :: Nil))
+    pr4.subgoals.head shouldBe
+      "==> {x:=0;t:=0;{x'=1,t'=1};t':=*;t:=*;}*;t:=*;t':=*; == {x:=0;t:=0;{x'=1,t'=1};}*;t:=*;t':=*;".asSequent
   }
 
 }

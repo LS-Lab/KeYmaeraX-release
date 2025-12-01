@@ -6,6 +6,7 @@
 package org.keymaerax.btactics
 
 import org.keymaerax.bellerophon.{
+  BelleExpr,
   BuiltInRightTactic,
   BuiltInTactic,
   DependentPositionTactic,
@@ -15,12 +16,14 @@ import org.keymaerax.bellerophon.{
   TacticInapplicableFailure,
 }
 import org.keymaerax.btactics.Ax.*
-import org.keymaerax.btactics.PropositionalTactics.prop
+import org.keymaerax.btactics.HilbertCalculus.G
+import org.keymaerax.btactics.PropositionalTactics.{implyRi, prop}
 import org.keymaerax.btactics.RefinementCalculus.*
-import org.keymaerax.btactics.SequentCalculus.{cutL, cutR}
+import org.keymaerax.btactics.SequentCalculus.{andR, cohide, cutL, cutR, id, implyR}
 import org.keymaerax.btactics.TacticFactory.{anon, TacticForNameFactory}
 import org.keymaerax.btactics.TactixLibrary.proveBy
-import org.keymaerax.btactics.UnifyUSCalculus.{skip, useAt}
+import org.keymaerax.btactics.UnifyUSCalculus.{byUS, skip, useAt}
+import org.keymaerax.btactics.macros.DerivationInfoAugmentors.ProvableInfoAugmentor
 import org.keymaerax.btactics.macros.{
   DisplayLevel,
   FormulaArg,
@@ -340,4 +343,220 @@ object Refactor {
     constructor = TacticConstructor1.create(FormulaArg("Q"))(introduceODE),
   )
 
+  /** Generalisation of [[refAnyFresh]] to the specific case where `x` is only used in nondeterministic assignment */
+  def refAnyGen: DependentPositionTactic = "refAnyGen".by { (pos: Position, seq: Sequent) =>
+    seq.at(pos) match {
+      case (ctx, Compose(a, AssignAny(x))) => useAt(refAnyGenAux(a, x), PosInExpr(1 :: Nil))(pos)
+      case _ => ???
+    }
+  }
+
+  @Derivation
+  val refAnyGenInfo: PositionTacticInfo = PositionTacticInfo.create(
+    name = "refAnyGen",
+    displayName = Some("AssignAny Gen Commutativity"),
+    displayLevel = DisplayLevel.Menu,
+    displayConclusion = "__x:=*;a__ == a;x:=*",
+    constructor = TacticConstructor0.create()(() => refAnyGen),
+  )
+
+  /** `[a*](b;a = a;b) -> b;a* = a*;b` */
+  lazy val prgEqLoopComm: ProvableSig = {
+    val side1 = proveBy(
+      "[{a{|^@|};}*]{b{|^@|};a{|^@|};}<={a{|^@|};b{|^@|};}->{b{|^@|};{a{|^@|};}*}<={{a{|^@|};}*b{|^@|};}".asFormula,
+      implyR(1) & refTrans("{{a{|^@|};}*b{|^@|};}{a{|^@|};}*".asProgram)(1) & andR(1) & Idioms.<(
+        useAt(refSeqAssoc)(1, 1 :: Nil) & useAt(refUnfoldR, PosInExpr(1 :: Nil))(1, 1 :: 0 :: Nil) &
+          useAt(hideChoiceR)(1, 1 :: 0 :: Nil) & useAt(refSeqIdL)(1, 1 :: Nil) & cohide(1) & useAt(refRefl)(1),
+        useAt(refLoopR)(1) & useAt(refUnfoldR, PosInExpr(1 :: Nil))(1, 1 :: 0 :: Nil) &
+          useAt(hideChoiceL)(1, 1 :: 0 :: Nil) & useAt(refSeqAssoc)(1, 0 :: Nil) & useAt(refSeqAssoc)(1, 1 :: Nil) &
+          useAt(congrSeqR, PosInExpr(1 :: Nil))(1) & id,
+      ),
+    )
+    val side2 = proveBy(
+      "[{a{|^@|};}*]{a{|^@|};b{|^@|};}<={b{|^@|};a{|^@|};}->{{a{|^@|};}*b{|^@|};}<={b{|^@|};{a{|^@|};}*}".asFormula,
+      implyR(1) & refTrans("{a{|^@|};}*b{|^@|};{a{|^@|};}*".asProgram)(1) & andR(1) & Idioms.<(
+        useAt(refUnfoldL, PosInExpr(1 :: Nil))(1, 1 :: 1 :: 1 :: Nil) & useAt(hideChoiceR)(1, 1 :: 1 :: 1 :: Nil) &
+          useAt(refSeqIdR)(1, 1 :: 1 :: Nil) & cohide(1) & useAt(refRefl)(1),
+        useAt(refLoopL)(1) & useAt(refUnfoldL, PosInExpr(1 :: Nil))(1, 1 :: 1 :: 1 :: Nil) &
+          useAt(hideChoiceL)(1, 1 :: 1 :: 1 :: Nil) & useAt(refSeqAssoc, PosInExpr(0 :: Nil))(1, 1 :: 0 :: Nil) &
+          useAt(refSeqAssoc, PosInExpr(0 :: Nil))(1, 1 :: 1 :: Nil) &
+          useAt(congrSeqL, PosInExpr(1 :: Nil))(1, 1 :: Nil) & id,
+      ),
+    )
+    proveBy(
+      "[{a{|^@|};}*]{b{|^@|};a{|^@|};}=={a{|^@|};b{|^@|};}->{b{|^@|};{a{|^@|};}*}=={{a{|^@|};}*b{|^@|};}".asFormula,
+      implyR(1) & useAt(refAntiSym)(1) & useAt(refAntiSym)(-1, 1 :: Nil) & useAt(boxAnd)(-1) &
+        useAt(side1)(-1, 0 :: Nil) & useAt(side2)(-1, 1 :: Nil) & prop,
+    )
+  }
+
+  lazy val prgEqIsolComm: ProvableSig = {
+    proveBy(
+      "x:=*;{x:=*;a{|^@|};x:=*;} == {x:=*;a{|^@|};x:=*;}x:=*;".asFormula,
+      useAt(refSeqAssoc)(1, 1 :: Nil) & useAt(refSeqAssoc)(1, 1 :: 1 :: Nil) &
+        useAt(prgEqRandomIdem)(1, 1 :: 1 :: 1 :: Nil) & useAt(refSeqAssoc, PosInExpr(0 :: Nil))(1, 0 :: Nil) &
+        useAt(prgEqRandomIdem)(1, 0 :: 0 :: Nil) & useAt(prgEqRefl)(1),
+    )
+  }
+
+  lazy val prgEqIsolCommFix: ProvableSig = {
+    proveBy(
+      "x:=*;{x:=f();a{|^@|};x:=*;} == {x:=f();a{|^@|};x:=*;}x:=*;".asFormula,
+      useAt(refAssign)(1, 0 :: 1 :: 0 :: Nil) & useAt(refSeqAssoc)(1, 0 :: 1 :: Nil) &
+        useAt(refSeqAssoc, PosInExpr(0 :: Nil))(1, 0 :: 1 :: 1 :: Nil) & useAt(refAssign)(1, 1 :: 0 :: 0 :: Nil) &
+        useAt(refSeqAssoc)(1, 1 :: 0 :: Nil) & useAt(refSeqAssoc, PosInExpr(0 :: Nil))(1, 1 :: 0 :: 1 :: Nil) &
+        byUS(prgEqIsolComm),
+    )
+  }
+
+  def refAnyGenAux(a: Program, x: Variable): ProvableSig = {
+    val pr = ProvableSig.startPlainProof(ProgramEquivalence(Compose(AssignAny(x), a), Compose(a, AssignAny(x))))
+    if (!StaticSemantics(a).fv.contains(x) && !StaticSemantics(a).bv.contains(x)) {
+      val ax = x match {
+        case _: BaseVariable => refAnyFresh
+            .provable
+            .apply(URename("x_".asVariable, x, semantic = true))
+            .apply(USubst(SubstitutionPair(SystemConst("a_", Except(Seq(x))), a) :: Nil))
+        case _: DifferentialSymbol => refAnyDFresh.provable
+      }
+      pr.apply(useAt(ax)(1, 0 :: Nil), 0).apply(byUS(prgEqRefl.provable), 0)
+    } else {
+      a match {
+        case AssignAny(y) =>
+          assert(x == y)
+          pr(byUS(prgEqRefl.provable), 0)
+        case Compose(AssignAny(y), Compose(_, AssignAny(z))) if x == y && x == z => pr(byUS(prgEqIsolComm), 0)
+        case Compose(Assign(y, t), Compose(_, AssignAny(z))) if x == y && x == z && !StaticSemantics(t).contains(x) =>
+          pr.apply(byUS(prgEqIsolCommFix), 0)
+        case Compose(b, c) =>
+          val prB = refAnyGenAux(b, x)
+          val prC = refAnyGenAux(c, x)
+          pr.apply(useAt(refSeqAssoc, PosInExpr(0 :: Nil))(1, 0 :: Nil), 0)
+            .apply(useAt(prB)(1, 0 :: 0 :: Nil), 0)
+            .apply(useAt(refSeqAssoc)(1, 0 :: Nil), 0)
+            .apply(useAt(prC)(1, 0 :: 1 :: Nil), 0)
+            .apply(useAt(refSeqAssoc, PosInExpr(0 :: Nil))(1, 0 :: Nil), 0)
+            .apply(byUS(prgEqRefl.provable), 0)
+        case Choice(b, c) =>
+          val prB = refAnyGenAux(b, x)
+          val prC = refAnyGenAux(c, x)
+          pr.apply(useAt(refDistrL)(1, 0 :: Nil), 0)
+            .apply(useAt(prB)(1, 0 :: 0 :: Nil), 0)
+            .apply(useAt(prC)(1, 0 :: 1 :: Nil), 0)
+            .apply(useAt(refDistrR, HereP)(1), 0)
+        case Loop(b) =>
+          val prB = refAnyGenAux(b, x)
+          pr.apply(useAt(prgEqLoopComm, PosInExpr(1 :: Nil))(1), 0).apply(byUS(Goedel.provable), 0).apply(prB, 0)
+        case _ => ???
+      }
+    }
+  }
+
+  lazy val randomLoop: ProvableSig = proveBy(
+    "[{a_{|^@|};x_:=*;}*][a_{|^@|};]{x_:=*;{a_{|^@|};}*}=={{a_{|^@|};}*x_:=*;}->{a_{|^@|};x_:=*;}*;x_:=*; == {a_{|^@|};}*;x_:=*;"
+      .asFormula,
+    implyR(1) & useAt(refAntiSym)(1) & andR(1) & Idioms.<(
+      refTrans("{a_{|^@|};x_:=*;}*{a_{|^@|};}*x_:=*;".asProgram)(1) & andR(1) & Idioms.<(
+        useAt(refUnfoldL, PosInExpr(1 :: Nil))(1, 1 :: 1 :: 0 :: Nil) & useAt(hideChoiceR)(1, 1 :: 1 :: 0 :: Nil) &
+          useAt(refSeqIdL)(1, 1 :: 1 :: Nil) & cohide(1) & useAt(refRefl)(1),
+        useAt(refLoopL)(1) & implyRi & useAt(K)(1) & G(1) & implyR(1) & useAt(refSeqAssoc)(1, 0 :: Nil) &
+          useAt(refSeqAssoc, PosInExpr(0 :: Nil))(1, 0 :: 1 :: Nil) &
+          refTrans("a_{|^@|};{{a_{|^@|};}*x_:=*;}x_:=*;".asProgram)(1) & andR(1) & Idioms.<(
+            focus(1, 0 :: 1 :: 0 :: Nil) & useAt(refEq)(-1, 1 :: Nil) & id,
+            useAt(refSeqAssoc)(1, 0 :: 1 :: Nil) & useAt(refSeqAssoc, PosInExpr(0 :: Nil))(1, 0 :: Nil) &
+              useAt(prgEqRandomIdem)(1, 0 :: 1 :: Nil) & useAt(refUnfoldL, PosInExpr(1 :: Nil))(1, 1 :: 0 :: Nil) &
+              useAt(hideChoiceL)(1, 1 :: 0 :: Nil) & cohide(1) & useAt(refRefl)(1),
+          ),
+      ),
+      useAt(refSeqIdR, PosInExpr(1 :: Nil))(1, 0 :: 0 :: 0 :: Nil) & focus(1, List(0, 0, 0, 1)) &
+        useAt(skipRandom)(1, 1 :: 1 :: 1 :: Nil) & G(1) & G(1) & useAt(refRefl)(1),
+    ),
+  )
+
+  lazy val randomDLoop: ProvableSig = proveBy(
+    "[{a_{|^@|};x_':=*;}*][a_{|^@|};]{x_':=*;{a_{|^@|};}*}=={{a_{|^@|};}*x_':=*;}->{a_{|^@|};x_':=*;}*;x_':=*; == {a_{|^@|};}*;x_':=*;"
+      .asFormula,
+    implyR(1) & useAt(refAntiSym)(1) & andR(1) & Idioms.<(
+      refTrans("{a_{|^@|};x_':=*;}*{a_{|^@|};}*x_':=*;".asProgram)(1) & andR(1) & Idioms.<(
+        useAt(refUnfoldL, PosInExpr(1 :: Nil))(1, 1 :: 1 :: 0 :: Nil) & useAt(hideChoiceR)(1, 1 :: 1 :: 0 :: Nil) &
+          useAt(refSeqIdL)(1, 1 :: 1 :: Nil) & cohide(1) & useAt(refRefl)(1),
+        useAt(refLoopL)(1) & implyRi & useAt(K)(1) & G(1) & implyR(1) & useAt(refSeqAssoc)(1, 0 :: Nil) &
+          useAt(refSeqAssoc, PosInExpr(0 :: Nil))(1, 0 :: 1 :: Nil) &
+          refTrans("a_{|^@|};{{a_{|^@|};}*x_':=*;}x_':=*;".asProgram)(1) & andR(1) & Idioms.<(
+            focus(1, 0 :: 1 :: 0 :: Nil) & useAt(refEq)(-1, 1 :: Nil) & id,
+            useAt(refSeqAssoc)(1, 0 :: 1 :: Nil) & useAt(refSeqAssoc, PosInExpr(0 :: Nil))(1, 0 :: Nil) &
+              useAt(prgEqRandomDIdem)(1, 0 :: 1 :: Nil) & useAt(refUnfoldL, PosInExpr(1 :: Nil))(1, 1 :: 0 :: Nil) &
+              useAt(hideChoiceL)(1, 1 :: 0 :: Nil) & cohide(1) & useAt(refRefl)(1),
+          ),
+      ),
+      useAt(refSeqIdR, PosInExpr(1 :: Nil))(1, 0 :: 0 :: 0 :: Nil) & focus(1, List(0, 0, 0, 1)) &
+        useAt(skipRandomD)(1, 1 :: 1 :: 1 :: Nil) & G(1) & G(1) & useAt(refRefl)(1),
+    ),
+  )
+
+  /** Given a program `a;x:=*`, adds a `x:=*` within `a` at position `pos` */
+  def moveRandom(a: Program, pos: PosInExpr): ProvableSig = {
+    a match {
+      case Compose(b, AssignAny(x)) if pos.head == 0 =>
+        b.at(pos.child) match {
+          case (ctx, c: Program) =>
+            val a_updated = Compose(ctx(Compose(c, AssignAny(x))), AssignAny(x))
+            proveBy(
+              ProgramEquivalence(a_updated, a),
+              moveRandomAux(ctx, c, x, PosInExpr(0 :: Nil)) & useAt(prgEqRefl)(1),
+            )
+          case (ctx, e) => ???
+        }
+
+      case _ => ???
+    }
+  }
+
+  def moveRandomAux(ctx: Context[Program], p: Program, x: Variable, pos: PosInExpr): BelleExpr = {
+    ctx.ctx match {
+      case DotProgram =>
+        val ax = x match {
+          case _: BaseVariable => prgEqRandomIdem
+          case _: DifferentialSymbol => prgEqRandomDIdem
+        }
+        useAt(refSeqAssoc)(1, pos) & useAt(ax)(1, pos ++ 1)
+      case Choice(a, b) =>
+        val (nextPrg, nextPos) =
+          if (!symbols(a).contains(DotProgram)) { (b, 1) }
+          else if (!symbols(b).contains(DotProgram)) { (a, 0) }
+          else ???
+        useAt(refDistrR)(1, pos) & moveRandomAux(Context(nextPrg), p, x, pos ++ nextPos) &
+          useAt(refDistrR, PosInExpr(0 :: Nil))(1, pos)
+      case Compose(a, c) if !symbols(a).contains(DotProgram) =>
+        useAt(refSeqAssoc)(1, pos) & moveRandomAux(Context(c), p, x, pos ++ 1) &
+          useAt(refSeqAssoc, PosInExpr(0 :: Nil))(1, pos)
+      case Compose(c, a) if !symbols(a).contains(DotProgram) =>
+        val ax = x match {
+          case _: BaseVariable => refAnyFresh
+          case _: DifferentialSymbol => refAnyDFresh
+        }
+        useAt(refSeqAssoc)(1, pos) & useAt(ax, PosInExpr(1 :: Nil))(1, pos ++ 1) &
+          useAt(refSeqAssoc, PosInExpr(0 :: Nil))(1, pos) & moveRandomAux(Context(c), p, x, pos ++ 0) &
+          useAt(refSeqAssoc)(1, pos) & useAt(ax)(1, pos ++ 1) & useAt(refSeqAssoc, PosInExpr(0 :: Nil))(1, pos)
+      case Loop(c) =>
+        val (axLoop, axFresh) = x match {
+          case _: BaseVariable => (randomLoop, refAnyFresh)
+          case _: DifferentialSymbol => (randomDLoop, refAnyDFresh)
+        }
+        val assgn = AssignAny(x)
+        val prg = Context(c)(Compose(p, assgn))
+        val test = refAnyGenAux(Loop(prg), x)
+        val loopCommBefore = proveBy(
+          ProgramEquivalence(Compose(Loop(Compose(prg, assgn)), assgn), Compose(Loop(prg), assgn)),
+          useAt(axLoop, PosInExpr(1 :: Nil))(1) & G(1) & G(1) & byUS(test),
+        )
+        val loopCommAfter = proveBy(
+          ProgramEquivalence(Compose(Loop(Compose(Context(c)(p), assgn)), assgn), Compose(ctx(p), assgn)),
+          useAt(axLoop, PosInExpr(1 :: Nil))(1) & G(1) & G(1) & byUS(axFresh),
+        )
+        useAt(loopCommBefore, PosInExpr(1 :: Nil))(1, pos) & moveRandomAux(Context(c), p, x, pos ++ 0 ++ 0) &
+          useAt(loopCommAfter, PosInExpr(0 :: Nil))(1, pos)
+      case _ => ???
+    }
+  }
 }
