@@ -190,6 +190,16 @@ object RefinementCalculus {
     unifier = Unifier.Full,
   )
   @Derivation
+  val refAnyDMerge: CoreAxiomInfo = CoreAxiomInfo.create(
+    name = "refAnyDMerge",
+    canonicalName = "refinement :*' merge",
+    displayName = Some("Refinement :*' merge"),
+    displayConclusion = "__ x':=*;?p(x');x':=* __ == x':=*;?(∃y p(y))",
+    displayLevel = DisplayLevel.Menu,
+    key = "0",
+    unifier = Unifier.Full,
+  )
+  @Derivation
   val refAnyAssignMerge: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "refAnyAssignMerge",
     canonicalName = "refinement :=* merge",
@@ -537,6 +547,17 @@ object RefinementCalculus {
     unifier = Unifier.Full,
   )
 
+  @Derivation
+  val refAnyDFresh: CoreAxiomInfo = CoreAxiomInfo.create(
+    name = "refAnyDFresh",
+    canonicalName = "nondet' commute fresh",
+    displayName = Some("AssignAny' Fresh Commutativity"),
+    displayLevel = DisplayLevel.Menu,
+    displayConclusion = "__x':=*;a__ == a;x':=*",
+    key = "0",
+    unifier = Unifier.Full,
+  )
+
   // Congruence derived axioms
   // derived axioms used in CMonPrg (so useAt implicitely), thus given as Provables not lemmas, just in case to avoid dependencies
   // CMon seems to use lemmas just fine, so it may not be required
@@ -825,6 +846,22 @@ object RefinementCalculus {
       simplify(1, 0 :: 1 :: 0 :: Nil) & useAt(refSeqIdR)(1, 0 :: Nil) & useAt(prgEqRefl)(1),
   )
 
+  @Derivation
+  val prgEqRandomDIdem: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(
+      name = "prgEqRandomDIdem",
+      canonicalName = ":=' idempotent",
+      displayName = Some(":=' Idempotent"),
+      displayConclusion = "__x':=*;x':=*__ == x':=*",
+      displayLevel = DisplayLevel.Menu,
+      key = "0",
+      unifier = Unifier.Surjective,
+    ),
+    "x_':=*;x_':=*; == x_':=*;".asFormula,
+    useAt(refSeqIdL, PosInExpr(1 :: Nil))(1, 0 :: 1 :: Nil) & useAt(refAnyDMerge)(1, 0 :: Nil) &
+      simplify(1, 0 :: 1 :: 0 :: Nil) & useAt(refSeqIdR)(1, 0 :: Nil) & useAt(prgEqRefl)(1),
+  )
+
   /** Tactics generalising axioms (if schematic or if need additional inputs) */
 
   def refTrans(c: Expression): DependentPositionWithAppliedInputTactic = "refTrans".byWithInputs(
@@ -1068,6 +1105,17 @@ object RefinementCalculus {
       discreteGhost(Variable("x"), None)(1) & useAt(refAssign)(1, 0 :: Nil) &
         useAt(refSeqIdR, PosInExpr(1 :: Nil))(1, 1 :: Nil) & CMon(1, 0 :: 1 :: 0 :: Nil) & prop,
     ),
+  )
+
+  @Derivation
+  val skipRandomD: CoreAxiomInfo = CoreAxiomInfo.create(
+    name = "skipRandomD",
+    canonicalName = "skip random'",
+    displayName = Some("Skip Random'"),
+    displayConclusion = "?⊤ <= __x':=*__",
+    displayLevel = DisplayLevel.Menu,
+    key = "1",
+    unifier = Unifier.SurjectiveLinear,
   )
 
   @Derivation

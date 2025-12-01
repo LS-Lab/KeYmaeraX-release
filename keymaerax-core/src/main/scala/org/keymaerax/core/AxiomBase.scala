@@ -1270,5 +1270,18 @@ End.
 Axiom "nondet commute fresh"
   x_:=*;a_{|^@x_|}; == a_{|^@x_|};x_:=*;
 End.
+
+Axiom "nondet' commute fresh"
+  x_':=*;a_{|^@x_'|}; == a_{|^@x_'|};x_':=*;
+End.
+
+Axiom "refinement :*' merge"
+  x_':=*;?p(x_');x_':=*; == x_':=*;?(\exists y_ p(y_));
+End.
+
+Axiom "skip random'"
+  ?true; <= x_':=*;
+End.
+
 """
 }
