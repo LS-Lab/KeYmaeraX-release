@@ -34,7 +34,10 @@ import org.keymaerax.btactics.macros.{
   PositionTacticInfo,
   TacticConstructor0,
   TacticConstructor1,
+  TacticConstructor3,
+  TermArg,
   Unifier,
+  VariableArg,
 }
 import org.keymaerax.core.*
 import org.keymaerax.core.btactics.annotations.Derivation
@@ -1058,6 +1061,15 @@ object RefinementCalculus {
             List(SubstitutionPair("f()".asTerm, init), SubstitutionPair(UnitFunctional("b", Except(Seq(y)), Real), rhs))
           ))
       )(pos),
+  )
+
+  @Derivation
+  val refDGCstInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
+    name = "refDGCst",
+    displayNameLong = Some("Ref Diff Ghost"),
+    displayConclusion = "{c&q};y':=*;y:=*; == y:=f;{c,y'=b&q};y':=*;y:=*;",
+    displayLevel = DisplayLevel.Menu,
+    constructor = TacticConstructor3.create(VariableArg("y"), TermArg("f"), TermArg("b"))(refDGCst),
   )
 
   private[btactics] def CPrgEimpFw(inEqPos: PosInExpr, reverse: Boolean): BuiltInTactic =
