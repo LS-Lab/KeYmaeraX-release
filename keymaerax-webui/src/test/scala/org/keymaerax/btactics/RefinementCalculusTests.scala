@@ -231,6 +231,22 @@ class RefinementCalculusTests extends TacticTestBase {
     pr.subgoals.head shouldBe " ==> [{x'=y, y'=-x, t'=1 & x>=0};t':=1;y':=-x;x':=y;](y = y+0 & -x = -1*x)".asSequent
   }
 
+  "refDELeft" should "apply to one-dimensional odes" in {
+    val pr = TactixLibrary.proveBy("[{x'=y & x>=0}](y = y+0)".asFormula, refDELeft(1, 0 :: Nil))
+    pr.subgoals.head shouldBe " ==> [x':=*;{x'=y & x>=0};](y = y+0)".asSequent
+  }
+
+  it should "extend to two-dimensional odes" in {
+    val pr = TactixLibrary.proveBy("[{x'=y, y'=-x & x>=0}](y = y+0 & -x = -1*x)".asFormula, refDELeft(1, 0 :: Nil))
+    pr.subgoals.head shouldBe " ==> [x':=*;y':=*;{x'=y, y'=-x & x>=0};](y = y+0 & -x = -1*x)".asSequent
+  }
+
+  it should "extend to three-dimensional odes" in {
+    val pr = TactixLibrary
+      .proveBy("[{x'=y, y'=-x, t'=1 & x>=0}](y = y+0 & -x = -1*x)".asFormula, refDELeft(1, 0 :: Nil))
+    pr.subgoals.head shouldBe " ==> [x':=*;y':=*;t':=*;{x'=y, y'=-x, t'=1 & x>=0};](y = y+0 & -x = -1*x)".asSequent
+  }
+
   "refDGCst" should "work" in {
     val pr = TactixLibrary.proveBy(
       "[{x'=x & x >= 0};t':=*;t:=*;](x >= 0)".asFormula,

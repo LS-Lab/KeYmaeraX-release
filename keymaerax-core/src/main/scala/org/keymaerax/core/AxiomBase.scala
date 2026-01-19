@@ -1177,7 +1177,11 @@ Axiom "refinement ghost const"
 End.
 
 Axiom "refinement DE left"
-  x_':=*;{c, x_'=f(||) & p(||)}; == {c, x_'=f(||) & p(||)};
+  {x_'=f(||) & p(||)}; == x_':=*;{x_'=f(||) & p(||)};
+End.
+
+Axiom "refinement DE left (system)"
+  {x_'=f(||),c & p(||)}; == x_':=*;{c, x_'=f(||) & p(||)};
 End.
 
 /** KAT Axioms */

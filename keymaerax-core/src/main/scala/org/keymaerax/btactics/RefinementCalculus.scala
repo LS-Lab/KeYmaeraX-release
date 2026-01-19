@@ -22,7 +22,7 @@ import org.keymaerax.btactics.SequentCalculus.*
 import org.keymaerax.btactics.SimplifierV3.simplify
 import org.keymaerax.btactics.TacticFactory.{anon, TacticForNameFactory}
 import org.keymaerax.btactics.TactixLibrary.{prop, proveBy}
-import org.keymaerax.btactics.UnifyUSCalculus.{useAt, CMon}
+import org.keymaerax.btactics.UnifyUSCalculus.{skip, useAt, CMon}
 import org.keymaerax.btactics.helpers.DifferentialHelper.atomicOdes
 import org.keymaerax.btactics.macros.DerivationInfoAugmentors.ProvableInfoAugmentor
 import org.keymaerax.btactics.macros.{
@@ -289,6 +289,27 @@ object RefinementCalculus {
     unifier = Unifier.SurjectiveLinear,
   )
 
+  /** see generalisation: [[refDELeft]] */
+  @Derivation
+  val refDELeftAx: CoreAxiomInfo = CoreAxiomInfo.create(
+    name = "refDELeftAx",
+    canonicalName = "refinement DE left",
+    displayLevel = DisplayLevel.Internal,
+    key = "0",
+    // Technically not surjective as ODE invariant prevents US to substitute differentials in ODE
+    unifier = Unifier.Surjective,
+  )
+
+  /** see generalisation: [[refDELeft]] */
+  val refDEsLeftAx: CoreAxiomInfo = CoreAxiomInfo.create(
+    name = "refDEsLeftAx",
+    canonicalName = "refinement DE left (system)",
+    displayLevel = DisplayLevel.Internal,
+    key = "0",
+    // Technically not surjective as ODE invariant prevents US to substitute differentials in ODE
+    unifier = Unifier.SurjectiveLinear,
+  )
+
   @Derivation
   val refDW: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "refDW",
@@ -320,17 +341,6 @@ object RefinementCalculus {
     displayConclusion = "{c&P};y':=*;y:=*; == __y:=f{c,y'=b&P};y':=*;y:=*;__",
     displayLevel = DisplayLevel.Menu,
     key = "1",
-    unifier = Unifier.Full,
-  )
-
-  @Derivation
-  val refDELeft: CoreAxiomInfo = CoreAxiomInfo.create(
-    name = "refDELeft",
-    canonicalName = "refinement DE left",
-    displayName = Some("Refinement DE Left"),
-    displayConclusion = "__x':=*;{x'=f(x) & p(x)}__ == {x'= f(x) & p(x)}",
-    displayLevel = DisplayLevel.Menu,
-    key = "0",
     unifier = Unifier.Full,
   )
 
@@ -1048,6 +1058,30 @@ object RefinementCalculus {
     displayNameLong = Some("Refinement DE"),
     displayConclusion = "__{x' = f(x) & p(x)}__ == {x' = f(x) & p(x)};x':=f(x)",
     constructor = TacticConstructor0.create()(() => refDE),
+  )
+
+  def refDELeft: DependentPositionTactic = "refDELeft".by { (pos: Position, s: Sequent) =>
+    s.at(pos) match {
+      case (_, ODESystem(AtomicODE(DifferentialSymbol(x), _), _)) =>
+        // Manually rename: unifier misses that domains are bound by odes
+        useAt(refDELeftAx.provable.apply(URename("x_".asVariable, x, semantic = true)))(pos)
+      case (_, ODESystem(c, _)) =>
+        val odeDim = StaticSemantics.boundVars(c).symbols.count(_.isInstanceOf[DifferentialSymbol])
+        def tacAux(pos: Position, n: Int): BelleExpr = {
+          if (n == 0) { skip }
+          else { useAt(refDEsLeftAx)(pos) & tacAux(pos ++ PosInExpr(1 :: Nil), n - 1) }
+        }
+        tacAux(pos, odeDim)
+      case (_, f) => throw new TacticInapplicableFailure(s"Expected equivalence of ODE, but got: $f")
+    }
+  }
+
+  @Derivation
+  val refDELeftinfo: PositionTacticInfo = PositionTacticInfo.create(
+    name = "refDELeft",
+    displayNameLong = Some("Refinement DE Left"),
+    displayConclusion = "__{x' = f(x) & p(x)}__ == x':=*;{x' = f(x) & p(x)}",
+    constructor = TacticConstructor0.create()(() => refDELeft),
   )
 
   def refDGCst(y: Variable, init: Term, rhs: Term): DependentPositionWithAppliedInputTactic = "refDGCst".byWithInputs(
