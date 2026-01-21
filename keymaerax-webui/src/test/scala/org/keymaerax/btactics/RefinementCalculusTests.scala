@@ -10,6 +10,7 @@ import org.keymaerax.btactics.Ax.{notGreaterEqual, timesInverse}
 import org.keymaerax.btactics.RefinementCalculus.*
 import org.keymaerax.btactics.UnifyUSCalculus.{useAt, CMon}
 import org.keymaerax.btactics.macros.DerivationInfoAugmentors.ProvableInfoAugmentor
+import org.keymaerax.core.{ODESystem, ProgramEquivalence}
 import org.keymaerax.infrastruct.PosInExpr
 import org.keymaerax.parser.StringConverter.StringToStringConverter
 
@@ -245,6 +246,13 @@ class RefinementCalculusTests extends TacticTestBase {
     val pr = TactixLibrary
       .proveBy("[{x'=y, y'=-x, t'=1 & x>=0}](y = y+0 & -x = -1*x)".asFormula, refDELeft(1, 0 :: Nil))
     pr.subgoals.head shouldBe " ==> [x':=*;y':=*;t':=*;{x'=y, y'=-x, t'=1 & x>=0};](y = y+0 & -x = -1*x)".asSequent
+  }
+
+  it should "prove equality computed from refDELeftHelper" in {
+    val dp = ODESystem("x'=y, y'=-x, z'=x+y, t'=1".asDifferentialProgram, "x>=0".asFormula)
+    val pr = TactixLibrary
+      .proveBy(ProgramEquivalence(dp, refDELeftHelper(dp)), refDELeft(1, 0 :: Nil) & useAt(prgEqRefl)(1))
+    pr.isProved shouldBe true
   }
 
   "refDGCst" should "work" in {

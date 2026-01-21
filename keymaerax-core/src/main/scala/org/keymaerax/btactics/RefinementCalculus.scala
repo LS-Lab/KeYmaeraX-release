@@ -1086,6 +1086,19 @@ object RefinementCalculus {
     }
   }
 
+  /** Computes the program resulting from applying [[refDELeft]] to an ODE */
+  def refDELeftHelper(dp0: ODESystem): Program = {
+    def rec(dp: DifferentialProgram): Program = {
+      dp match {
+        case AtomicODE(xp, _) => Compose(AssignAny(xp), dp0)
+        case DifferentialProduct(AtomicODE(xp, _), c) => Compose(AssignAny(xp), rec(c))
+        case _ => ???
+      }
+    }
+    val ODESystem(ode, _) = dp0
+    rec(ode)
+  }
+
   @Derivation
   val refDELeftinfo: PositionTacticInfo = PositionTacticInfo.create(
     name = "refDELeft",
