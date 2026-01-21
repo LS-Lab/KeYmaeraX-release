@@ -326,6 +326,18 @@ object Ax extends Logging {
   )
 
   @Derivation
+  val Drandomb: CoreAxiomInfo = CoreAxiomInfo.create(
+    name = "Drandomb",
+    canonicalName = "[':*] assign nondet",
+    displayName = Some("[':*]"),
+    displayLevel = DisplayLevel.All,
+    displayConclusion = "__[x':=*]P__↔∀x' P",
+    key = "0",
+    recursor = "0;*",
+    unifier = Unifier.SurjectiveLinear,
+  )
+
+  @Derivation
   val testb: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "testb",
     canonicalName = "[?] test",

@@ -832,6 +832,10 @@ Axiom "[:*] assign nondet"
   [x_:=*;]p(||) <-> \forall x_ p(||)
 End.
 
+Axiom "[':*] assign nondet"
+  [x_':=*;]p(||) <-> \forall x_' p(||)
+End.
+
 Axiom "[?] test"
   [?q();]p() <-> (q() -> p())
 End.
