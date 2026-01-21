@@ -103,6 +103,16 @@ object RefinementCalculus {
     unifier = Unifier.Full,
   )
   @Derivation
+  val refAssignD: CoreAxiomInfo = CoreAxiomInfo.create(
+    name = "refAssignD",
+    canonicalName = "refinement assign'",
+    displayName = Some("Refinement Assign'"),
+    displayConclusion = "__x':=f__ == x':=*;?(x'=f)",
+    displayLevel = DisplayLevel.Menu,
+    key = "0",
+    unifier = Unifier.Full,
+  )
+  @Derivation
   val refStutter: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "refStutter",
     canonicalName = "refinement stutter",

@@ -1097,6 +1097,10 @@ Axiom "refinement assign"
   x_:=f(); == x_:=*;?(x_=f());
 End.
 
+Axiom "refinement assign'"
+  x_':=f(); == x_':=*;?(x_'=f());
+End.
+
 Axiom "refinement stutter"
   x_:=x_; == ?true;
 End.
