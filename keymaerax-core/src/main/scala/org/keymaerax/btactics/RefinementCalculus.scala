@@ -348,7 +348,7 @@ object RefinementCalculus {
     name = "refDGCstAx",
     canonicalName = "refinement ghost const",
     displayName = Some("Refinement Ghost Const"),
-    displayConclusion = "{c&P};y':=*;y:=*; == __y:=f{c,y'=b&P};y':=*;y:=*;__",
+    displayConclusion = "{c&P};y:=*;y':=*; == __y:=f{c,y'=b&P};y:=*;y':=*;__",
     displayLevel = DisplayLevel.Menu,
     key = "1",
     unifier = Unifier.Full,
@@ -1124,7 +1124,7 @@ object RefinementCalculus {
   val refDGCstInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
     name = "refDGCst",
     displayNameLong = Some("Ref Diff Ghost"),
-    displayConclusion = "{c&q};y':=*;y:=*; == y:=f;{c,y'=b&q};y':=*;y:=*;",
+    displayConclusion = "{c&q};y:=*;y':=*; == y:=f;{c,y'=b&q};y:=*;y':=*;",
     displayLevel = DisplayLevel.Menu,
     constructor = TacticConstructor3.create(VariableArg("y"), TermArg("f"), TermArg("b"))(refDGCst),
   )

@@ -1181,7 +1181,7 @@ Axiom "refinement DX"
 End.
 
 Axiom "refinement ghost const"
-  {c{|y_|}&q(|y_|)};y_':=*;y_:=*; == y_:=f();{c{|y_|},y_'=b(|y_|)&q(|y_|)};y_':=*;y_:=*;
+  {c{|y_|}&q(|y_|)};y_:=*;y_':=*; == y_:=f();{c{|y_|},y_'=b(|y_|)&q(|y_|)};y_:=*;y_':=*;
 End.
 
 Axiom "refinement DE left"

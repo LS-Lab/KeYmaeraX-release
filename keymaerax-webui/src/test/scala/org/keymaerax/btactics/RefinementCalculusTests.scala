@@ -257,9 +257,9 @@ class RefinementCalculusTests extends TacticTestBase {
 
   "refDGCst" should "work" in {
     val pr = TactixLibrary.proveBy(
-      "[{x'=x & x >= 0};t':=*;t:=*;](x >= 0)".asFormula,
+      "[{x'=x & x >= 0};t:=*;t':=*;](x >= 0)".asFormula,
       refDGCst("t".asVariable, "0".asTerm, "1".asTerm)(1, 0 :: Nil),
     )
-    pr.subgoals.head shouldBe " ==> [t:=0;{x'=x, t'=1 & x >= 0};t':=*;t:=*;](x >= 0)".asSequent
+    pr.subgoals.head shouldBe " ==> [t:=0;{x'=x, t'=1 & x >= 0};t:=*;t':=*;](x >= 0)".asSequent
   }
 }
