@@ -495,13 +495,12 @@ object DifferentialEquationCalculus {
    *   [{x' = y, y' = x, t' = 1 & 0 <= t & t <= 0+0.5}](x^2 + y^2 <= 1.1)
    *   }}}
    *
-   * @param order
-   *   Order of the Taylor model to use, e.g. 2 for a second-order Taylor model.
-   * @param prec
-   *   Precision of the Taylor model, e.g. 10 for a precision of 10 decimal places.
+   * @param order Order of the Taylor model to use, e.g. 2 for a second-order Taylor model.
+   * @param prec Precision of the Taylor model, e.g. 10 for a precision of 10 decimal places.
    */
-  def cutTaylorModel(order: Number, prec: Number): DependentPositionWithAppliedInputTactic =
-    inputanon { (pos: Position, seq: Sequent) =>
+  def cutTaylorModel(order: Number, prec: Number): DependentPositionWithAppliedInputTactic = "cutTM".byWithInputs(
+    List(order, prec),
+    (pos: Position, seq: Sequent) =>
       seq(pos.checkTop) match {
         case Box(ODESystem(ode, _), _) =>
           val tm = TaylorModelTactics.TaylorModel(ode, order.value.toIntExact)
@@ -510,8 +509,8 @@ object DifferentialEquationCalculus {
         // tm.cutTM(prec.value.toIntExact, AntePosition(1), ToolProvider.qeTool().getOrElse(new BigDecimalTool()))(pos)
         case e =>
           throw new IllegalArgumentException("Expected a differential program x′=f(x), but got " + e.prettyString)
-      }
-    }
+      },
+  )
 
   @Derivation
   val cutTaylorModelInfo: InputPositionTacticInfo = InputPositionTacticInfo.create(
