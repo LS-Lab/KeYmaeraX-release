@@ -31,6 +31,14 @@ class RefactorTests extends TacticTestBase {
       prgEqLoopComm,
       prgEqIsolComm,
       prgEqIsolCommFix,
+      prgEqBoundRandom,
+      prgEqBoundRandomD,
+      prgEqBoundAssign,
+      prgEqBoundAssignD,
+      fuseLoopAux,
+      fuseLoopAuxD,
+      fuseLoop,
+      fuseLoopD,
     )
     axioms.map(axiom => axiom.isProved shouldBe true)
   }
@@ -198,6 +206,44 @@ class RefactorTests extends TacticTestBase {
 
     val pr4 = refAnyGenAux("{x:=0;t:=0;{t'=1};t:=*;}*".asProgram, "t".asVariable)
     pr4.proved shouldBe "==> t:=*;{x:=0;t:=0;{t'=1};t:=*;}* == {x:=0;t:=0;{t'=1};t:=*;}*t:=*;".asSequent
+  }
+
+  it should "prove correct program with primes" in {
+    val pr = refAnyGenAux("x:=*;y:=*; ++ x:=0;".asProgram, "z'".asVariable)
+    pr.proved shouldBe "==> z':=*;{x:=*;y:=*;++x:=0;} == {x:=*;y:=*;++x:=0;}z':=*;".asSequent
+    val pr2 = refAnyGenAux("x:=*;y':=*; ++ x:=0;".asProgram, "y'".asVariable)
+    pr2.proved shouldBe "==> y':=*;{x:=*;y':=*;++x:=0;} == {x:=*;y':=*;++x:=0;}y':=*;".asSequent
+    val pr3 = refAnyGenAux("{x:=*;y':=*; ++ x:=0;}*".asProgram, "y'".asVariable)
+    pr3.proved shouldBe "==> y':=*;{x:=*;y':=*;++x:=0;}* == {x:=*;y':=*;++x:=0;}*y':=*;".asSequent
+  }
+  it should "fail as some axioms don't have a differential variable version" ignore {
+    val pr4 = refAnyGenAux("{x:=0;t':=1;{t'=1};t':=*;}*".asProgram, "t'".asVariable)
+    pr4.proved shouldBe "==> t':=*;{x:=0;t':=1;{t'=1};t':=*;}* == {x:=0;t':=1;{t'=1};t':=*;}*t':=*;".asSequent
+  }
+
+  "fuseAux" should "prove correct program" in {
+    val pr = fuseRandom("x:=*;y:=*; ++ x:=0;".asProgram, "z".asVariable)
+    pr.proved shouldBe "==> z:=*;{x:=*;y:=*;++x:=0;}z:=*; == {x:=*;y:=*;++x:=0;}z:=*;".asSequent
+    val pr2 = fuseRandom("x:=*;y:=*; ++ x:=0;".asProgram, "y".asVariable)
+    pr2.proved shouldBe "==> y:=*;{x:=*;y:=*;++x:=0;}y:=*; == {x:=*;y:=*;++x:=0;}y:=*;".asSequent
+    val pr3 = fuseRandom("{x:=*;y:=2;z:=0; ++ x:=0;}*".asProgram, "y".asVariable)
+    pr3.proved shouldBe "==> y:=*;{x:=*;y:=2;z:=0;++x:=0;}*y:=*; == {x:=*;y:=2;z:=0;++x:=0;}*y:=*;".asSequent
+
+    val pr4 = fuseRandom("{x:=0;t:=0;{t'=1};t:=*;}*".asProgram, "t".asVariable)
+    pr4.proved shouldBe "==> t:=*;{x:=0;t:=0;{t'=1};t:=*;}*t:=*; == {x:=0;t:=0;{t'=1};t:=*;}*t:=*;".asSequent
+  }
+
+  it should "prove correct program with primes" in {
+    val pr = fuseRandom("x:=*;y:=*; ++ x:=0;".asProgram, "z'".asVariable)
+    pr.proved shouldBe "==> z':=*;{x:=*;y:=*;++x:=0;}z':=*; == {x:=*;y:=*;++x:=0;}z':=*;".asSequent
+    val pr2 = fuseRandom("x:=*;y':=*; ++ x:=0;".asProgram, "y'".asVariable)
+    pr2.proved shouldBe "==> y':=*;{x:=*;y':=*;++x:=0;}y':=*; == {x:=*;y':=*;++x:=0;}y':=*;".asSequent
+    val pr3 = fuseRandom("{x:=*;y':=*;z:=0; ++ x:=0;}*".asProgram, "y'".asVariable)
+    pr3.proved shouldBe "==> y':=*;{x:=*;y':=*;z:=0;++x:=0;}*y':=*; == {x:=*;y':=*;z:=0;++x:=0;}*y':=*;".asSequent
+
+    val pr4 = fuseRandom("{x:=0;t:=0;{x'=x,t'=1};t':=*;}*".asProgram, "t'".asVariable)
+    pr4.proved shouldBe
+      "==> t':=*;{x:=0;t:=0;{x'=x,t'=1};t':=*;}*t':=*; == {x:=0;t:=0;{x'=x,t'=1};t':=*;}*t':=*;".asSequent
   }
 
   "refDG" should "be applicable locally" in {

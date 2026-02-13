@@ -27,6 +27,7 @@ import org.keymaerax.btactics.macros.DerivationInfoAugmentors.ProvableInfoAugmen
 import org.keymaerax.btactics.macros.{
   DisplayLevel,
   FormulaArg,
+  PosInExprArg,
   PositionTacticInfo,
   TacticConstructor0,
   TacticConstructor1,
@@ -343,7 +344,236 @@ object Refactor {
     constructor = TacticConstructor1.create(FormulaArg("Q"))(introduceODE),
   )
 
-  /** Generalisation of [[refAnyFresh]] to the specific case where `x` is only used in nondeterministic assignment */
+  /**
+   * Proves `x:=*;a;x:=* == a;x:=*` when x is not free in a.
+   * @note
+   *   For composition `b;c` inside `a`, the variable `x` can be free in `c` only if `b` is an atomic program bounding
+   *   `x` : a (nondeterministic) assignment, or an ode (if x is a primed variable). This form can be reachable by using
+   *   [[refSeqAssoc]] and [[refDistrR]] if needed.
+   */
+  def fuseRandom(a: Program, x: Variable): ProvableSig = {
+    val pr = ProvableSig
+      .startPlainProof(ProgramEquivalence(Compose(AssignAny(x), Compose(a, AssignAny(x))), Compose(a, AssignAny(x))))
+    if (!StaticSemantics(a).fv.contains(x) && !StaticSemantics(a).bv.contains(x)) {
+      val (axFresh, axRandomIdem) = x match {
+        case _: BaseVariable => (refAnyFresh.provable, prgEqRandomIdem)
+        case _: DifferentialSymbol => (refAnyDFresh.provable, prgEqRandomDIdem)
+      }
+      pr.apply(useAt(refSeqAssoc, PosInExpr(0 :: Nil))(1, 0 :: Nil), 0)
+        .apply(useAt(axFresh)(1, 0 :: 0 :: Nil), 0)
+        .apply(useAt(refSeqAssoc)(1, 0 :: Nil), 0)
+        .apply(useAt(axRandomIdem)(1, 0 :: 1 :: Nil), 0)
+        .apply(byUS(prgEqRefl.provable), 0)
+    } else {
+      a match {
+        case AssignAny(y) =>
+          assert(x == y)
+          val axRandomIdem = x match {
+            case _: BaseVariable => prgEqRandomIdem
+            case _: DifferentialSymbol => prgEqRandomDIdem
+          }
+          pr.apply(useAt(axRandomIdem)(1, 0 :: 1 :: Nil), 0).apply(byUS(prgEqRefl.provable), 0)
+        case Assign(y, _) if x == y =>
+          val axRandomIdem = x match {
+            case _: BaseVariable => prgEqRandomIdem
+            case _: DifferentialSymbol => prgEqRandomDIdem
+          }
+          pr.apply(useAt(refAssign)(1, 0 :: 1 :: 0 :: Nil), 0)
+            .apply(useAt(refAssign)(1, 1 :: 0 :: Nil), 0)
+            .apply(useAt(refSeqAssoc, PosInExpr(0 :: Nil))(1, 0 :: Nil), 0)
+            .apply(useAt(refSeqAssoc, PosInExpr(0 :: Nil))(1, 0 :: 0 :: Nil), 0)
+            .apply(useAt(axRandomIdem)(1, 0 :: 0 :: 0 :: Nil), 0)
+            .apply(byUS(prgEqRefl.provable), 0)
+
+        // Only if `x` is a primed variable.
+        // If `x` were neither free nor must bound in `x' = 1`, it would simply the condition
+        case ODESystem(ode, fml) if StaticSemantics(ode).mbv.contains(x) && !StaticSemantics(ode).fv.contains(x) =>
+          val updatedODE = refDELeftHelper(ODESystem(ode, fml))
+          val refDErw = TactixLibrary
+            .proveBy(ProgramEquivalence(ODESystem(ode, fml), updatedODE), refDELeft(1, 0 :: Nil) & useAt(prgEqRefl)(1))
+          // `updatedODE` has the form "xi':=*;..." so the recursive call should terminate when `xi = x`
+          val prAux = fuseRandom(updatedODE, x)
+          pr.apply(useAt(refDErw)(1, 0 :: 1 :: 0 :: Nil), 0).apply(useAt(refDErw)(1, 1 :: 0 :: Nil), 0).apply(prAux, 0)
+
+        case Compose(AssignAny(y), _) if x == y =>
+          x match {
+            case _: BaseVariable => pr(byUS(prgEqBoundRandom), 0)
+            case _: DifferentialSymbol => pr(byUS(prgEqBoundRandomD), 0)
+          }
+        case Compose(Assign(y, t), _) if x == y && !StaticSemantics(t).contains(x) =>
+          x match {
+            case _: BaseVariable => pr(byUS(prgEqBoundAssign), 0)
+            case _: DifferentialSymbol => pr(byUS(prgEqBoundAssignD), 0)
+          }
+        case Compose(b, c) =>
+          val prB = fuseRandom(b, x)
+          val prC = fuseRandom(c, x)
+          val aux = pr
+            .apply(useAt(refSeqAssoc)(1, 1 :: Nil), 0)
+            .apply(useAt(prC, PosInExpr(1 :: Nil))(1, 1 :: 1 :: Nil), 0)
+            .apply(useAt(refSeqAssoc, PosInExpr(0 :: Nil))(1, 1 :: Nil), 0)
+            .apply(useAt(prB, PosInExpr(1 :: Nil))(1, 1 :: 0 :: Nil), 0)
+            .apply(useAt(refSeqAssoc)(1, 1 :: Nil), 0)
+            .apply(useAt(refSeqAssoc)(1, 1 :: 1 :: Nil), 0)
+            .apply(useAt(prC)(1, 1 :: 1 :: 1 :: Nil), 0)
+            .apply(useAt(refSeqAssoc, PosInExpr(0 :: Nil))(1, 1 :: 1 :: Nil), 0)
+          aux.apply(byUS(prgEqRefl.provable), 0)
+
+        case Choice(b, c) =>
+          val prB = fuseRandom(b, x)
+          val prC = fuseRandom(c, x)
+          val aux = pr
+            .apply(useAt(refDistrR)(1, 0 :: 1 :: Nil), 0)
+            .apply(useAt(refDistrL)(1, 0 :: Nil), 0)
+            .apply(useAt(prB)(1, 0 :: 0 :: Nil), 0)
+            .apply(useAt(prC)(1, 0 :: 1 :: Nil), 0)
+          aux.apply(byUS(refDistrR.provable), 0)
+        case Loop(b) =>
+          val axFuseLoop = x match {
+            case _: BaseVariable => fuseLoop
+            case _: DifferentialSymbol => fuseLoopD
+          }
+          val prB = fuseRandom(b, x)
+          pr.apply(useAt(axFuseLoop, PosInExpr(1 :: Nil))(1), 0)
+            .apply(byUS(Goedel.provable), 0)
+            .apply(byUS(Goedel.provable), 0)
+            .apply(prB, 0)
+        case _ => ???
+      }
+    }
+  }
+
+  /* Axioms used for [[fuseRandom]] */
+
+  lazy val prgEqBoundRandom: ProvableSig = {
+    proveBy(
+      "x:=*;{x:=*;a{|^@|};}x:=*; == {x:=*;a{|^@|};}x:=*;".asFormula,
+      useAt(refSeqAssoc, PosInExpr(0 :: Nil))(1, 0 :: Nil) & useAt(refSeqAssoc, PosInExpr(0 :: Nil))(1, 0 :: 0 :: Nil) &
+        useAt(prgEqRandomIdem)(1, 0 :: 0 :: 0 :: Nil) & useAt(prgEqRefl)(1),
+    )
+  }
+  // Same lemma but with differential variable
+  lazy val prgEqBoundRandomD: ProvableSig = {
+    proveBy(
+      "x':=*;{x':=*;a{|^@|};}x':=*; == {x':=*;a{|^@|};}x':=*;".asFormula,
+      useAt(refSeqAssoc, PosInExpr(0 :: Nil))(1, 0 :: Nil) & useAt(refSeqAssoc, PosInExpr(0 :: Nil))(1, 0 :: 0 :: Nil) &
+        useAt(prgEqRandomDIdem)(1, 0 :: 0 :: 0 :: Nil) & useAt(prgEqRefl)(1),
+    )
+  }
+  lazy val prgEqBoundAssign: ProvableSig = {
+    proveBy(
+      "x:=*;{x:=f();a{|^@|};}x:=*; == {x:=f();a{|^@|};}x:=*;".asFormula,
+      useAt(refAssign)(1, 0 :: 1 :: 0 :: 0 :: Nil) & useAt(refSeqAssoc)(1, 0 :: 1 :: 0 :: Nil) &
+        useAt(refAssign)(1, 1 :: 0 :: 0 :: Nil) & useAt(refSeqAssoc)(1, 1 :: 0 :: Nil) &
+        byUS(prgEqBoundRandom),
+    )
+  }
+  // Same lemma but with differential variable
+  lazy val prgEqBoundAssignD: ProvableSig = {
+    proveBy(
+      "x':=*;{x':=f();a{|^@|};}x':=*; == {x':=f();a{|^@|};}x':=*;".asFormula,
+      useAt(refAssignD)(1, 0 :: 1 :: 0 :: 0 :: Nil) & useAt(refSeqAssoc)(1, 0 :: 1 :: 0 :: Nil) &
+        useAt(refAssignD)(1, 1 :: 0 :: 0 :: Nil) & useAt(refSeqAssoc)(1, 1 :: 0 :: Nil) &
+        byUS(prgEqBoundRandomD),
+    )
+  }
+
+  /** Intermediate lemma only used for [[fuseLoop]] */
+  // [a*](x:=*;a;x:=* == a;x:=*) -> x:=*;(a;x:=*)* == a*;x:=*
+  lazy val fuseLoopAux: ProvableSig = {
+    proveBy(
+      "[{a{|^@|};}*](x_:=*;a{|^@|};x_:=*; == a{|^@|};x_:=*;) -> x_:=*;{a{|^@|};x_:=*;}* == {a{|^@|};}*;x_:=*;"
+        .asFormula,
+      implyR(1) & useAt(refAntiSym)(1) & andR(1) & Idioms.<(
+        refTrans("{a{|^@|};}*x_:=*;{a{|^@|};x_:=*;}*".asProgram)(1) & andR(1) & Idioms.<(
+          useAt(refUnfoldL, PosInExpr(1 :: Nil))(1, 1 :: 0 :: Nil) & useAt(hideChoiceR)(1, 1 :: 0 :: Nil) &
+            useAt(refSeqIdL)(1, 1 :: Nil) & cohide(1) & useAt(refRefl)(1),
+          useAt(refSeqAssoc, PosInExpr(0 :: Nil))(1, 0 :: Nil) & useAt(refLoopR)(1) & useAt(refSeqAssoc)(1, 0 :: Nil) &
+            refTrans("{a{|^@|};}*;a{|^@|};x_:=*;".asProgram)(1) & andR(1) & Idioms.<(
+              focus(1, 1 :: 1 :: Nil) & useAt(refEq)(-1, 1 :: Nil) & id,
+              useAt(refUnfoldR, PosInExpr(1 :: Nil))(1, 1 :: 0 :: Nil) & useAt(hideChoiceL)(1, 1 :: 0 :: Nil) &
+                useAt(refSeqAssoc)(1, 1 :: Nil) & cohide(1) & useAt(refRefl)(1),
+            ),
+        ),
+        refTrans("{a{|^@|};}*x_:=*;{a{|^@|};x_:=*;}*".asProgram)(1) & andR(1) & Idioms.<(
+          useAt(refUnfoldL, PosInExpr(1 :: Nil))(1, 1 :: 1 :: 1 :: Nil) & useAt(hideChoiceR)(1, 1 :: 1 :: 1 :: Nil) &
+            useAt(refSeqIdR)(1, 1 :: 1 :: Nil) & cohide(1) & useAt(refRefl)(1),
+          useAt(refLoopL)(1) & G(1) & refTrans("{a{|^@|};x_:=*;}*;".asProgram)(1) & andR(1) & Idioms.<(
+            useAt(refUnfoldL, PosInExpr(1 :: Nil))(1, 1 :: Nil) & useAt(hideChoiceL)(1, 1 :: Nil) &
+              useAt(refSeqAssoc)(1, 1 :: Nil) & useAt(refRefl)(1),
+            useAt(skipRandom)(1, 1 :: 0 :: Nil) & useAt(refSeqIdL)(1, 1 :: Nil) & useAt(refRefl)(1),
+          ),
+        ),
+      ),
+    )
+  }
+  // Same lemma with differential variable
+  lazy val fuseLoopAuxD: ProvableSig = {
+    proveBy(
+      "[{a{|^@|};}*](x_':=*;a{|^@|};x_':=*; == a{|^@|};x_':=*;) -> x_':=*;{a{|^@|};x_':=*;}* == {a{|^@|};}*;x_':=*;"
+        .asFormula,
+      implyR(1) & useAt(refAntiSym)(1) & andR(1) & Idioms.<(
+        refTrans("{a{|^@|};}*x_':=*;{a{|^@|};x_':=*;}*".asProgram)(1) & andR(1) & Idioms.<(
+          useAt(refUnfoldL, PosInExpr(1 :: Nil))(1, 1 :: 0 :: Nil) & useAt(hideChoiceR)(1, 1 :: 0 :: Nil) &
+            useAt(refSeqIdL)(1, 1 :: Nil) & cohide(1) & useAt(refRefl)(1),
+          useAt(refSeqAssoc, PosInExpr(0 :: Nil))(1, 0 :: Nil) & useAt(refLoopR)(1) & useAt(refSeqAssoc)(1, 0 :: Nil) &
+            refTrans("{a{|^@|};}*;a{|^@|};x_':=*;".asProgram)(1) & andR(1) & Idioms.<(
+              focus(1, 1 :: 1 :: Nil) & useAt(refEq)(-1, 1 :: Nil) & id,
+              useAt(refUnfoldR, PosInExpr(1 :: Nil))(1, 1 :: 0 :: Nil) & useAt(hideChoiceL)(1, 1 :: 0 :: Nil) &
+                useAt(refSeqAssoc)(1, 1 :: Nil) & cohide(1) & useAt(refRefl)(1),
+            ),
+        ),
+        refTrans("{a{|^@|};}*x_':=*;{a{|^@|};x_':=*;}*".asProgram)(1) & andR(1) & Idioms.<(
+          useAt(refUnfoldL, PosInExpr(1 :: Nil))(1, 1 :: 1 :: 1 :: Nil) & useAt(hideChoiceR)(1, 1 :: 1 :: 1 :: Nil) &
+            useAt(refSeqIdR)(1, 1 :: 1 :: Nil) & cohide(1) & useAt(refRefl)(1),
+          useAt(refLoopL)(1) & G(1) & refTrans("{a{|^@|};x_':=*;}*;".asProgram)(1) & andR(1) & Idioms.<(
+            useAt(refUnfoldL, PosInExpr(1 :: Nil))(1, 1 :: Nil) & useAt(hideChoiceL)(1, 1 :: Nil) &
+              useAt(refSeqAssoc)(1, 1 :: Nil) & useAt(refRefl)(1),
+            useAt(skipRandomD)(1, 1 :: 0 :: Nil) & useAt(refSeqIdL)(1, 1 :: Nil) & useAt(refRefl)(1),
+          ),
+        ),
+      ),
+    )
+  }
+
+  // [x:=*][a*](x:=*;a;x:=* == a;x:=*) -> x:=*;a*;x:=* == a*;x:=*
+  lazy val fuseLoop: ProvableSig = {
+    proveBy(
+      "[x_:=*;][{a{|^@|};}*](x_:=*;a{|^@|};x_:=*; == a{|^@|};x_:=*;) -> x_:=*;{a{|^@|};}*;x_:=*; == {a{|^@|};}*;x_:=*;"
+        .asFormula,
+      implyR(1) & useAt(fuseLoopAux)(-1, 1 :: Nil) & prgEqTrans("x_:=*;x_:=*;{a{|^@|};x_:=*;}*".asProgram)(1) & andR(
+        1
+      ) & Idioms.<(
+        useAt(prgEqSym)(-1, 1 :: Nil) & useAt(prgEqSeq)(1) & useAt(prgEqRefl)(1, 0 :: Nil) & useAt(trueAnd)(1) & id,
+        useAt(refSeqAssoc, PosInExpr(0 :: Nil))(1, 0 :: Nil) & useAt(prgEqRandomIdem)(1, 0 :: 0 :: Nil) &
+          useAt(randomb)(-1) & useAt(alle)(-1) & id,
+      ),
+    )
+  }
+  // Same lemma with differential variable
+  lazy val fuseLoopD: ProvableSig = {
+    proveBy(
+      "[x_':=*;][{a{|^@|};}*](x_':=*;a{|^@|};x_':=*; == a{|^@|};x_':=*;) -> x_':=*;{a{|^@|};}*;x_':=*; == {a{|^@|};}*;x_':=*;"
+        .asFormula,
+      implyR(1) & useAt(fuseLoopAuxD)(-1, 1 :: Nil) & prgEqTrans("x_':=*;x_':=*;{a{|^@|};x_':=*;}*".asProgram)(1) &
+        andR(1) & Idioms.<(
+          useAt(prgEqSym)(-1, 1 :: Nil) & useAt(prgEqSeq)(1) & useAt(prgEqRefl)(1, 0 :: Nil) & useAt(trueAnd)(1) & id,
+          useAt(refSeqAssoc, PosInExpr(0 :: Nil))(1, 0 :: Nil) & useAt(prgEqRandomDIdem)(1, 0 :: 0 :: Nil) &
+            useAt(Drandomb)(-1) & useAt(alleprime)(-1) & id,
+        ),
+    )
+  }
+
+  /**
+   * Generalisation of [[refAnyFresh]] to the specific cases where the only occurrences of `x` are of the form:
+   *   - `x:=*`
+   *   - `x:=*;a(x);x:=*`
+   *   - `x:=f();a(x);x:=*`
+   * Its meaningfulness is debatable.
+   * @note
+   *   The last two cases expect `x` to not be a primed variable, though it could be extended by reproving
+   *   [[prgEqIsolComm]] and [[prgEqIsolCommFix]] for differential variables.
+   */
   def refAnyGen: DependentPositionTactic = "refAnyGen".by { (pos: Position, seq: Sequent) =>
     seq.at(pos) match {
       case (ctx, Compose(a, AssignAny(x))) => useAt(refAnyGenAux(a, x), PosInExpr(1 :: Nil))(pos)
@@ -413,10 +643,7 @@ object Refactor {
     val pr = ProvableSig.startPlainProof(ProgramEquivalence(Compose(AssignAny(x), a), Compose(a, AssignAny(x))))
     if (!StaticSemantics(a).fv.contains(x) && !StaticSemantics(a).bv.contains(x)) {
       val ax = x match {
-        case _: BaseVariable => refAnyFresh
-            .provable
-            .apply(URename("x_".asVariable, x, semantic = true))
-            .apply(USubst(SubstitutionPair(SystemConst("a_", Except(Seq(x))), a) :: Nil))
+        case _: BaseVariable => refAnyFresh.provable
         case _: DifferentialSymbol => refAnyDFresh.provable
       }
       pr.apply(useAt(ax)(1, 0 :: Nil), 0).apply(byUS(prgEqRefl.provable), 0)
