@@ -26,11 +26,6 @@ class RefactorTests extends TacticTestBase {
       congrImpR,
       congrRefL,
       congrRefR,
-      randomLoop,
-      randomDLoop,
-      prgEqLoopComm,
-      prgEqIsolComm,
-      prgEqIsolCommFix,
       prgEqBoundRandom,
       prgEqBoundRandomD,
       prgEqBoundAssign,
@@ -39,6 +34,11 @@ class RefactorTests extends TacticTestBase {
       fuseLoopAuxD,
       fuseLoop,
       fuseLoopD,
+      moveRandomLoop,
+      moveRandomLoopD,
+      prgEqLoopComm,
+      prgEqIsolComm,
+      prgEqIsolCommFix,
     )
     axioms.map(axiom => axiom.isProved shouldBe true)
   }
@@ -193,9 +193,6 @@ class RefactorTests extends TacticTestBase {
     pr4.proved shouldBe "==>  {{x:=*;y:=*;++x:=0;z:=*;}*z:=*;}=={{x:=*;y:=*;++x:=0;}*z:=*;}".asSequent
   }
 
-  // Ghost existential: {c & p};x':=*;x:=* == x:=f();{c,x'=g(x)&p};x':=*;x:=*
-  // use refDE to use line above for x'
-
   "refAnyGenAux" should "prove correct program" in {
     val pr = refAnyGenAux("x:=*;y:=*; ++ x:=0;".asProgram, "z".asVariable)
     pr.proved shouldBe "==> z:=*;{x:=*;y:=*;++x:=0;} == {x:=*;y:=*;++x:=0;}z:=*;".asSequent
@@ -245,29 +242,18 @@ class RefactorTests extends TacticTestBase {
     pr4.proved shouldBe
       "==> t':=*;{x:=0;t:=0;{x'=x,t'=1};t':=*;}*t':=*; == {x:=0;t:=0;{x'=x,t'=1};t':=*;}*t':=*;".asSequent
   }
-
-  "refDG" should "be applicable locally" in {
-    val pr = ProvableSig
-      .startPlainProof("{x:=0;{x'=1};}*;t:=*;t':=*; == {x:=0;t:=0;{x'=1,t'=1};}*;t:=*;t':=*;".asFormula)
-    val move = moveRandom("{x:=0;{x'=1};}*;t:=*;".asProgram, PosInExpr(0 :: 0 :: 1 :: Nil))
-    move.proved shouldBe "==> {x:=0;{x'=1};t:=*;}*;t:=*; == {x:=0;{x'=1};}*;t:=*;".asSequent
-    val pr2 = pr
-      .apply(useAt(refSeqAssoc, PosInExpr(0 :: Nil))(1, 0 :: Nil), 0)
-      .apply(useAt(move, PosInExpr(1 :: Nil))(1, 0 :: 0 :: Nil), 0)
-    pr2.subgoals.head shouldBe
-      "==> {{x:=0;{x'=1};t:=*;}*;t:=*;}t':=*; == {x:=0;t:=0;{x'=1,t'=1};}*;t:=*;t':=*;".asSequent
-    val move2 = moveRandom("{{x:=0;{x'=1};t:=*;}*;t:=*;}t':=*;".asProgram, PosInExpr(List(0, 0, 0, 1, 0)))
-    move2.proved shouldBe
-      "==> {{x:=0;{{x'=1};t':=*;}t:=*;}*;t:=*;}t':=*; == {{x:=0;{x'=1};t:=*;}*;t:=*;}t':=*;".asSequent
-    val pr3 = pr2
-      .apply(useAt(move2, PosInExpr(1 :: Nil))(1, 0 :: Nil), 0)
-      .apply(useAt(refSeqAssoc)(1, 0 :: Nil), 0)
-      .apply(useAt(refSeqAssoc)(1, 0 :: 0 :: 0 :: 1 :: Nil), 0)
-    pr3.subgoals.head shouldBe
-      "==> {x:=0;{x'=1};t':=*;t:=*;}*;t:=*;t':=*; == {x:=0;t:=0;{x'=1,t'=1};}*;t:=*;t':=*;".asSequent
-    val pr4 = proveBy(pr3, refDGCst("t".asVariable, "0".asTerm, "1".asTerm)(1, 0 :: 0 :: 0 :: 1 :: Nil))
-    pr4.subgoals.head shouldBe
-      "==> {x:=0;t:=0;{x'=1,t'=1};t':=*;t:=*;}*;t:=*;t':=*; == {x:=0;t:=0;{x'=1,t'=1};}*;t:=*;t':=*;".asSequent
+  "refDGCst" should "be applicable locally by moving nondeterministic assignment" in {
+    val pr = TactixLibrary.proveBy(
+      "{x:=0;{x'=1};}*;t:=*;t':=*; == {x:=0;t:=0;{x'=1,t'=1};}*;t:=*;t':=*;".asFormula,
+      useAt(refSeqAssoc, PosInExpr(0 :: Nil))(1, 0 :: Nil) &
+        moveRandomIn(PosInExpr(0 :: 0 :: 1 :: Nil))(1, 0 :: 0 :: Nil) &
+        moveRandomIn(PosInExpr(List(0, 0, 0, 1, 1)))(1, 0 :: Nil) &
+        refDGCst("t".asVariable, "0".asTerm, "1".asTerm)(1, 0 :: 0 :: 0 :: 0 :: 1 :: Nil) &
+        moveRandomOut(PosInExpr(List(0, 0, 0, 1, 1, 1)))(1, 0 :: Nil) &
+        moveRandomOut(PosInExpr(List(0, 0, 1, 1)))(1, 0 :: 0 :: Nil) & useAt(refSeqAssoc)(1, 0 :: Nil) &
+        useAt(prgEqRefl)(1),
+    )
+    pr.isProved shouldBe true
   }
 
 }
