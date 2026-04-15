@@ -502,13 +502,13 @@ object Augmentors {
         case _: SystemConst => Nothing
       }
 
-      val (dots: Map[Term, DotTerm], arg: Term, _) = (signature match {
+      val (dots: Map[Term, DotTerm], arg: Term, _) = signature match {
         case Nothing => (Map.empty[Term, DotTerm], Nothing, 0)
         case Pair(_, _) => findDots(signature, 0, Map.empty)
         case _ =>
           val dot = DotTerm(signature.sort, Some(0))
           (Map(signature -> dot), dot, 1)
-      }): @unchecked
+      }
 
       val what = e match {
         case FuncOf(fn, _) => FuncOf(fn, arg)
