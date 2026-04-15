@@ -1076,7 +1076,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
     tacticParser(""" hideR('R=="\exists x x=0") """) shouldBe hideR(Symbol("R"), "\\exists x x=0".asFormula)
     tacticParser(""" hideR('R=="\forall x x^2>=0") """) shouldBe hideR(Symbol("R"), "\\forall x x^2>=0".asFormula)
     the[ParseException] thrownBy tacticParser(""" hideR('R=="\x x^2=1") """) should
-      (pointAt(1, 22) and mention("Error parsing shape"))
+      (pointAt(1, 12) and mention("Error parsing shape"))
   }
 
   // endregion
