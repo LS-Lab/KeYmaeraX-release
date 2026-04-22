@@ -895,16 +895,18 @@ object TaylorModelTactics extends Logging {
           require(seq.sub(antepos).isDefined)
           val concrete_initial_condition = seq.sub(antepos).get
           val um = UnificationMatch(And(initial_condition, right_tm_domain), concrete_initial_condition)
-          val lemma2 = lemma(instantiateLemma(
-            prec,
-            t0,
-            timebound,
-            (i, j) => um(names.precond(i, j)),
-            i => um(names.precondC(i)),
-            i => um(names.rightL(i)),
-            i => um(names.rightU(i)),
-            i => remainder_estimation(i),
-          ))
+          val lemma2 = lemma(
+            instantiateLemma(
+              prec,
+              t0,
+              timebound,
+              (i, j) => um(names.precond(i, j)),
+              i => um(names.precondC(i)),
+              i => um(names.rightL(i)),
+              i => um(names.rightU(i)),
+              i => remainder_estimation(i),
+            ) ++ USubst((0 until dim).map(i => SubstitutionPair(names.right(i), um(names.right(i)))))
+          )
           require(lemma2.conclusion.succ.length == 1)
           val cut_fml = lemma2.conclusion.succ(0) match {
             case Imply(_, Box(_, cut_fml)) => cut_fml
