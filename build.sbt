@@ -28,9 +28,57 @@ ThisBuild / assemblyMergeStrategy := {
 // Never execute tests in parallel across all sub-projects
 Global / concurrentRestrictions += Tags.limit(Tags.Test, 1)
 
+/**
+ * Resolves the Mathematica JLink jar from the property `mathematica.jlink.path` in `local.properties`,
+ * if that property is set to an existing file. Builds without a Mathematica/Wolfram Engine installation
+ * will not have such a file; in that case KeYmaera X falls back to the bundled JLink stub module
+ * (see `keymaerax-jlink-stub`), which allows building and running with Z3 as the arithmetic backend.
+ */
+def mathLinkJar: Option[File] = {
+  val properties = new Properties()
+  try {
+    val stream = new FileInputStream("local.properties")
+    try {
+      val reader = new InputStreamReader(stream, StandardCharsets.UTF_8)
+      properties.load(reader)
+    } finally stream.close()
+  } catch {
+    case _: Throwable => // no local.properties -> fall back to stub module
+  }
+  Option(properties.getProperty("mathematica.jlink.path"))
+    .map(_.trim)
+    .filter(_.nonEmpty)
+    .map(path => file(path))
+    .filter(_.isFile)
+}
+
+/**
+ * The JLink dependency for building KeYmaera X: the real Mathematica JLink.jar when findable via
+ * `local.properties`, otherwise the bundled JLink stub module from `keymaerax-jlink-stub`.
+ */
+def jlinkDependencies: Seq[ClasspathDep[ProjectReference]] =
+  if (mathLinkJar.isDefined) Seq.empty[ClasspathDep[ProjectReference]]
+  else Seq[ClasspathDep[ProjectReference]](jlinkStub)
+
+/**
+ * Compile- and runtime-only stub of the Mathematica JLink API (`com.wolfram.jlink`).
+ * Used when no real `JLink.jar` is findable (see `mathLinkJar`), so that KeYmaera X can be
+ * built and run without a Mathematica/Wolfram Engine installation (Z3 as arithmetic backend).
+ */
+lazy val jlinkStub = project
+  .in(file("keymaerax-jlink-stub"))
+  .disablePlugins(AssemblyPlugin)
+  .settings(
+    name := "KeYmaeraX JLink Stub",
+    publish / skip := true,
+    // Java-only module: no Scala sources.
+    Compile / doc / sources := Seq.empty,
+  )
+
 lazy val core = project
   .in(file("keymaerax-core"))
   .enablePlugins(BuildInfoPlugin)
+  .dependsOn(jlinkDependencies: _*)
   .settings(
     name := "KeYmaeraX Core",
     mainClass := Some("org.keymaerax.cli.KeymaeraxCore"),
@@ -82,23 +130,10 @@ lazy val core = project
     buildInfoPackage := "org.keymaerax.info",
     buildInfoOptions += BuildInfoOption.PackagePrivate,
 
-    // Use Mathematica's JLink.jar as unmanaged dependency
-    // The path is read from the property mathematica.jlink.path in the file local.properties
-    Compile / unmanagedJars += {
-      val properties = new Properties()
-      try {
-        val stream = new FileInputStream("local.properties")
-        val reader = new InputStreamReader(stream, StandardCharsets.UTF_8)
-        properties.load(reader)
-      } catch {
-        case e: Throwable => throw new Exception("Failed to load file local.properties", e)
-      }
-      val jlinkPath: String = properties.getProperty("mathematica.jlink.path")
-      if (jlinkPath == null) {
-        throw new Exception("Property mathematica.jlink.path not found in file local.properties")
-      }
-      file(jlinkPath)
-    },
+    // Use Mathematica's JLink.jar as unmanaged dependency if findable via local.properties
+    // (property mathematica.jlink.path). If no real JLink.jar is found, the JLink stub module
+    // (keymaerax-jlink-stub) provides com.wolfram.jlink instead, see jlinkDependencies above.
+    Compile / unmanagedJars ++= mathLinkJar.toSeq.map(file => Attributed.blank(file)),
   )
 
 lazy val webui = project
